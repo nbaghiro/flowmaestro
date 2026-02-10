@@ -52,7 +52,10 @@ export function MessageInput({
             textarea.style.height = "auto";
             // Set height based on scrollHeight, with a max of 120px (roughly 5 lines)
             const maxHeight = 120;
-            textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+            const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+            textarea.style.height = `${newHeight}px`;
+            // Only show scrollbar when content exceeds max height
+            textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
         }
     }, [value]);
 
@@ -146,7 +149,7 @@ export function MessageInput({
                     placeholder={placeholder}
                     disabled={isSending}
                     rows={1}
-                    className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none overflow-y-auto"
+                    className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none overflow-hidden"
                     autoComplete="off"
                 />
 

@@ -24,6 +24,7 @@ export interface OAuthProvider {
     revokeUrl?: string;
     refreshable?: boolean;
     pkceEnabled?: boolean; // Enable PKCE (Proof Key for Code Exchange)
+    tokenAuthMethod?: "basic" | "body"; // How to send credentials during token exchange (default: "body")
 }
 
 /**
@@ -425,6 +426,52 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                 };
             } catch (error) {
                 logger.error({ err: error }, "Failed to get Google Forms user info");
+                return {
+                    email: "unknown@google",
+                    name: "Google User"
+                };
+            }
+        },
+        revokeUrl: "https://oauth2.googleapis.com/revoke",
+        refreshable: true
+    },
+
+    "google-analytics": {
+        name: "google-analytics",
+        displayName: "Google Analytics",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
+        authParams: {
+            access_type: "offline",
+            prompt: "consent"
+        },
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = (await response.json()) as {
+                    email?: string;
+                    name?: string;
+                    picture?: string;
+                    id?: string;
+                };
+
+                return {
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    userId: data.id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Google Analytics user info");
                 return {
                     email: "unknown@google",
                     name: "Google User"
@@ -991,6 +1038,52 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    "google-cloud-storage": {
+        name: "google-cloud-storage",
+        displayName: "Google Cloud Storage",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        scopes: ["https://www.googleapis.com/auth/devstorage.full_control"],
+        authParams: {
+            access_type: "offline",
+            prompt: "consent"
+        },
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = (await response.json()) as {
+                    email?: string;
+                    name?: string;
+                    picture?: string;
+                    id?: string;
+                };
+
+                return {
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    userId: data.id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Google Cloud Storage user info");
+                return {
+                    email: "unknown@google",
+                    name: "Google User"
+                };
+            }
+        },
+        revokeUrl: "https://oauth2.googleapis.com/revoke",
+        refreshable: true
+    },
+
     gmail: {
         name: "gmail",
         displayName: "Gmail",
@@ -1531,6 +1624,61 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                 };
             } catch (error) {
                 logger.error({ err: error }, "Failed to get Outlook user info");
+                return {
+                    email: "unknown@microsoft",
+                    name: "Microsoft User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    "power-bi": {
+        name: "power-bi",
+        displayName: "Power BI",
+        authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scopes: [
+            "User.Read",
+            "https://analysis.windows.net/powerbi/api/Report.Read.All",
+            "https://analysis.windows.net/powerbi/api/Dataset.Read.All",
+            "https://analysis.windows.net/powerbi/api/Dashboard.Read.All",
+            "https://analysis.windows.net/powerbi/api/Workspace.Read.All",
+            "offline_access"
+        ],
+        authParams: {
+            response_mode: "query",
+            prompt: "consent"
+        },
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://graph.microsoft.com/v1.0/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    displayName?: string;
+                    mail?: string;
+                    userPrincipalName?: string;
+                };
+
+                return {
+                    userId: data.id,
+                    email: data.mail || data.userPrincipalName,
+                    name: data.displayName
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Power BI user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"
@@ -3047,6 +3195,66 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         pkceEnabled: true
     },
 
+    // ==========================================================================
+    // PandaDoc
+    // ==========================================================================
+
+    pandadoc: {
+        name: "pandadoc",
+        displayName: "PandaDoc",
+        authUrl: "https://app.pandadoc.com/oauth2/authorize",
+        tokenUrl: "https://api.pandadoc.com/oauth2/access_token",
+        scopes: ["read+write"],
+        clientId: config.oauth.pandadoc.clientId,
+        clientSecret: config.oauth.pandadoc.clientSecret,
+        redirectUri: getOAuthRedirectUri("pandadoc"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.pandadoc.com/public/v1/members/current", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user_id?: string;
+                    email?: string;
+                    first_name?: string;
+                    last_name?: string;
+                    workspace_name?: string;
+                    membership_id?: string;
+                };
+
+                const fullName =
+                    data.first_name && data.last_name
+                        ? `${data.first_name} ${data.last_name}`
+                        : "PandaDoc User";
+
+                return {
+                    userId: data.user_id || data.membership_id || "unknown",
+                    email: data.email || "unknown@pandadoc",
+                    name: fullName,
+                    user: fullName,
+                    workspace: data.workspace_name
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get PandaDoc user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@pandadoc",
+                    name: "PandaDoc User",
+                    user: "PandaDoc User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
     surveymonkey: {
         name: "surveymonkey",
         displayName: "SurveyMonkey",
@@ -3555,6 +3763,112 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    sage: {
+        name: "sage",
+        displayName: "Sage",
+        authUrl: "https://www.sageone.com/oauth2/auth/central?filter=apiv3.1",
+        tokenUrl: "https://oauth.accounting.sage.com/token",
+        scopes: ["full_access"],
+        clientId: config.oauth.sage.clientId,
+        clientSecret: config.oauth.sage.clientSecret,
+        redirectUri: getOAuthRedirectUri("sage"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.accounting.sage.com/v3.1/business", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const business = (await response.json()) as {
+                    name?: string;
+                    country_code?: string;
+                };
+
+                return {
+                    userId: "sage-business",
+                    email: "unknown@sage",
+                    name: business.name || "Sage Business"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Sage business info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@sage",
+                    name: "Sage Business"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    xero: {
+        name: "xero",
+        displayName: "Xero",
+        authUrl: "https://login.xero.com/identity/connect/authorize",
+        tokenUrl: "https://identity.xero.com/connect/token",
+        scopes: [
+            "openid",
+            "profile",
+            "email",
+            "offline_access",
+            "accounting.transactions",
+            "accounting.contacts",
+            "accounting.settings"
+        ],
+        clientId: config.oauth.xero.clientId,
+        clientSecret: config.oauth.xero.clientSecret,
+        redirectUri: getOAuthRedirectUri("xero"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Xero requires fetching /connections to get tenant ID
+                const response = await fetch("https://api.xero.com/connections", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const connections = (await response.json()) as Array<{
+                    id?: string;
+                    tenantId?: string;
+                    tenantType?: string;
+                    tenantName?: string;
+                    createdDateUtc?: string;
+                    updatedDateUtc?: string;
+                }>;
+
+                const firstConnection = connections[0];
+
+                return {
+                    userId: firstConnection?.id || "unknown",
+                    email: "unknown@xero",
+                    name: firstConnection?.tenantName || "Xero Organisation",
+                    tenantId: firstConnection?.tenantId,
+                    tenantName: firstConnection?.tenantName,
+                    tenantType: firstConnection?.tenantType
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Xero connection info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@xero",
+                    name: "Xero Organisation"
+                };
+            }
+        },
+        refreshable: true
+    },
+
     workday: {
         name: "workday",
         displayName: "Workday",
@@ -3585,6 +3899,58 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         clientId: config.oauth.rippling.clientId,
         clientSecret: config.oauth.rippling.clientSecret,
         redirectUri: getOAuthRedirectUri("rippling"),
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    bamboohr: {
+        name: "bamboohr",
+        displayName: "BambooHR",
+        // Note: BambooHR URLs are subdomain-specific. The companyDomain is collected via oauthSettings
+        // and substituted at runtime by the OAuth service. Default placeholder used here.
+        authUrl: "https://COMPANY_DOMAIN.bamboohr.com/authorize.php",
+        tokenUrl: "https://COMPANY_DOMAIN.bamboohr.com/token.php",
+        scopes: ["offline_access"],
+        clientId: config.oauth.bamboohr.clientId,
+        clientSecret: config.oauth.bamboohr.clientSecret,
+        redirectUri: getOAuthRedirectUri("bamboohr"),
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // ADP - HR and Payroll
+    // Uses OAuth 2.0 with standard flow
+    // ==========================================================================
+
+    adp: {
+        name: "adp",
+        displayName: "ADP",
+        authUrl: "https://accounts.adp.com/auth/oauth/v2/authorize",
+        tokenUrl: "https://accounts.adp.com/auth/oauth/v2/token",
+        scopes: ["api"],
+        clientId: config.oauth.adp.clientId,
+        clientSecret: config.oauth.adp.clientSecret,
+        redirectUri: getOAuthRedirectUri("adp"),
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Gusto - Payroll and Benefits
+    // Uses OAuth 2.0 with standard flow
+    // Refresh tokens are single-use but never expire
+    // ==========================================================================
+
+    gusto: {
+        name: "gusto",
+        displayName: "Gusto",
+        authUrl: "https://api.gusto.com/oauth/authorize",
+        tokenUrl: "https://api.gusto.com/oauth/token",
+        scopes: ["employees:read", "companies:read", "payrolls:read", "benefits:read"],
+        clientId: config.oauth.gusto.clientId,
+        clientSecret: config.oauth.gusto.clientSecret,
+        redirectUri: getOAuthRedirectUri("gusto"),
         refreshable: true,
         pkceEnabled: false
     },
@@ -3647,6 +4013,1053 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                 return {
                     merchantId: "unknown",
                     businessName: "Square Merchant"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // PayPal
+    // ==========================================================================
+
+    paypal: {
+        name: "paypal",
+        displayName: "PayPal",
+        authUrl: "https://www.paypal.com/signin/authorize",
+        tokenUrl: "https://api-m.paypal.com/v1/oauth2/token",
+        tokenAuthMethod: "basic",
+        scopes: [
+            "openid",
+            "email",
+            "https://uri.paypal.com/services/payments/payment",
+            "https://uri.paypal.com/services/payments/refund",
+            "https://uri.paypal.com/services/reporting/search/read",
+            "https://uri.paypal.com/services/invoicing",
+            "https://uri.paypal.com/services/payments/payouts"
+        ],
+        clientId: config.oauth.paypal.clientId,
+        clientSecret: config.oauth.paypal.clientSecret,
+        redirectUri: getOAuthRedirectUri("paypal"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://api-m.paypal.com/v1/identity/openidconnect/userinfo?schema=openid",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            "Content-Type": "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user_id?: string;
+                    name?: string;
+                    email?: string;
+                    verified_account?: boolean;
+                    payer_id?: string;
+                };
+
+                return {
+                    userId: data.user_id || "unknown",
+                    name: data.name || "PayPal User",
+                    email: data.email || "unknown@paypal",
+                    verifiedAccount: data.verified_account,
+                    payerId: data.payer_id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get PayPal user info");
+                return {
+                    userId: "unknown",
+                    name: "PayPal User",
+                    email: "unknown@paypal"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // DigitalOcean
+    // ==========================================================================
+
+    digitalocean: {
+        name: "digitalocean",
+        displayName: "DigitalOcean",
+        authUrl: "https://cloud.digitalocean.com/v1/oauth/authorize",
+        tokenUrl: "https://cloud.digitalocean.com/v1/oauth/token",
+        scopes: ["read", "write"],
+        clientId: config.oauth.digitalocean.clientId,
+        clientSecret: config.oauth.digitalocean.clientSecret,
+        redirectUri: getOAuthRedirectUri("digitalocean"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.digitalocean.com/v2/account", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    account?: {
+                        uuid?: string;
+                        email?: string;
+                        name?: string;
+                        team?: {
+                            uuid?: string;
+                            name?: string;
+                        };
+                    };
+                };
+
+                return {
+                    userId: data.account?.uuid,
+                    email: data.account?.email,
+                    name: data.account?.name || data.account?.email,
+                    team: data.account?.team
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get DigitalOcean account info");
+                return {
+                    email: "unknown@digitalocean",
+                    name: "DigitalOcean User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Amazon Seller Central (Login with Amazon / SP-API)
+    // ==========================================================================
+
+    "amazon-seller-central": {
+        name: "amazon-seller-central",
+        displayName: "Amazon Seller Central",
+        authUrl: "https://sellercentral.amazon.com/apps/authorize/consent",
+        tokenUrl: "https://api.amazon.com/auth/o2/token",
+        scopes: ["sellingpartnerapi::migration"],
+        clientId: config.oauth.amazonSellerCentral.clientId,
+        clientSecret: config.oauth.amazonSellerCentral.clientSecret,
+        redirectUri: getOAuthRedirectUri("amazon-seller-central"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://sellingpartnerapi-na.amazon.com/sellers/v1/marketplaceParticipations",
+                    {
+                        headers: {
+                            "x-amz-access-token": accessToken,
+                            "Content-Type": "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    payload?: Array<{
+                        marketplace?: {
+                            id?: string;
+                            name?: string;
+                            countryCode?: string;
+                        };
+                        participation?: {
+                            isParticipating?: boolean;
+                        };
+                    }>;
+                };
+
+                const marketplaces =
+                    data.payload
+                        ?.filter((p) => p.participation?.isParticipating)
+                        .map((p) => ({
+                            id: p.marketplace?.id,
+                            name: p.marketplace?.name,
+                            countryCode: p.marketplace?.countryCode
+                        })) || [];
+
+                return {
+                    sellerId: "amazon-seller",
+                    marketplaces,
+                    marketplaceCount: marketplaces.length
+                };
+            } catch (error) {
+                logger.error(
+                    { err: error },
+                    "Failed to get Amazon Seller Central marketplace info"
+                );
+                return {
+                    sellerId: "unknown",
+                    marketplaces: [],
+                    marketplaceCount: 0
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    canva: {
+        name: "canva",
+        displayName: "Canva",
+        authUrl: "https://api.canva.com/oauth/authorize",
+        tokenUrl: "https://api.canva.com/rest/v1/oauth/token",
+        scopes: [
+            "design:content:read",
+            "design:meta:read",
+            "design:content:write",
+            "folder:read",
+            "folder:write",
+            "asset:read",
+            "asset:write"
+        ],
+        clientId: config.oauth.canva.clientId,
+        clientSecret: config.oauth.canva.clientSecret,
+        redirectUri: getOAuthRedirectUri("canva"),
+        pkceEnabled: true,
+        tokenAuthMethod: "basic",
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.canva.com/rest/v1/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    display_name?: string;
+                };
+
+                return {
+                    userId: data.id || "unknown",
+                    name: data.display_name || "Canva User",
+                    email: "unknown@canva.com"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Canva user info");
+                return {
+                    userId: "unknown",
+                    name: "Canva User",
+                    email: "unknown@canva.com"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    miro: {
+        name: "miro",
+        displayName: "Miro",
+        authUrl: "https://miro.com/oauth/authorize",
+        tokenUrl: "https://api.miro.com/v1/oauth/token",
+        scopes: ["boards:read", "boards:write"],
+        clientId: config.oauth.miro.clientId,
+        clientSecret: config.oauth.miro.clientSecret,
+        redirectUri: getOAuthRedirectUri("miro"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.miro.com/v1/oauth-token", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user?: {
+                        id?: string;
+                        name?: string;
+                    };
+                    team?: {
+                        id?: string;
+                        name?: string;
+                    };
+                };
+
+                return {
+                    userId: data.user?.id || "unknown",
+                    name: data.user?.name || "Miro User",
+                    email: "unknown@miro.com",
+                    teamId: data.team?.id,
+                    teamName: data.team?.name
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Miro user info");
+                return {
+                    userId: "unknown",
+                    name: "Miro User",
+                    email: "unknown@miro.com"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    confluence: {
+        name: "confluence",
+        displayName: "Confluence",
+        authUrl: "https://auth.atlassian.com/authorize",
+        tokenUrl: "https://auth.atlassian.com/oauth/token",
+        scopes: [
+            "read:confluence-content.all",
+            "write:confluence-content",
+            "read:confluence-space.summary",
+            "write:confluence-space",
+            "read:confluence-user",
+            "offline_access"
+        ],
+        authParams: {
+            audience: "api.atlassian.com",
+            prompt: "consent"
+        },
+        clientId: config.oauth.confluence.clientId,
+        clientSecret: config.oauth.confluence.clientSecret,
+        redirectUri: getOAuthRedirectUri("confluence"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://api.atlassian.com/oauth/token/accessible-resources",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const sites = (await response.json()) as Array<{
+                    id: string;
+                    url: string;
+                    name: string;
+                    scopes: string[];
+                    avatarUrl?: string;
+                }>;
+
+                return {
+                    sites: sites.map((s) => ({
+                        cloudId: s.id,
+                        url: s.url,
+                        name: s.name,
+                        scopes: s.scopes,
+                        avatarUrl: s.avatarUrl
+                    }))
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Confluence accessible resources");
+                return {
+                    sites: []
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Help Scout
+    // ==========================================================================
+
+    helpscout: {
+        name: "helpscout",
+        displayName: "Help Scout",
+        authUrl: "https://secure.helpscout.net/authentication/authorizeClientApplication",
+        tokenUrl: "https://api.helpscout.net/v2/oauth2/token",
+        scopes: [],
+        clientId: config.oauth.helpscout.clientId,
+        clientSecret: config.oauth.helpscout.clientSecret,
+        redirectUri: getOAuthRedirectUri("helpscout"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.helpscout.net/v2/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: number;
+                    firstName?: string;
+                    lastName?: string;
+                    email?: string;
+                };
+
+                return {
+                    userId: data.id ? String(data.id) : "unknown",
+                    name:
+                        data.firstName && data.lastName
+                            ? `${data.firstName} ${data.lastName}`
+                            : "Help Scout User",
+                    email: data.email || "unknown@helpscout"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Help Scout user info");
+                return {
+                    userId: "unknown",
+                    name: "Help Scout User",
+                    email: "unknown@helpscout"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // LiveChat
+    // ==========================================================================
+
+    livechat: {
+        name: "livechat",
+        displayName: "LiveChat",
+        authUrl: "https://accounts.livechat.com/",
+        tokenUrl: "https://accounts.livechat.com/v2/token",
+        scopes: [
+            "chats--all:ro",
+            "chats--access:rw",
+            "chats--all:rw",
+            "agents--all:ro",
+            "agents--my:ro",
+            "customers:ro",
+            "customers:rw",
+            "tags--all:ro",
+            "tags--all:rw",
+            "groups--all:ro"
+        ],
+        clientId: config.oauth.livechat.clientId,
+        clientSecret: config.oauth.livechat.clientSecret,
+        redirectUri: getOAuthRedirectUri("livechat"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://accounts.livechat.com/v2/accounts/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    account_id?: string;
+                    name?: string;
+                    email?: string;
+                };
+
+                return {
+                    userId: data.account_id || "unknown",
+                    name: data.name || "LiveChat User",
+                    email: data.email || "unknown@livechat"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get LiveChat user info");
+                return {
+                    userId: "unknown",
+                    name: "LiveChat User",
+                    email: "unknown@livechat"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: true
+    },
+
+    // ==========================================================================
+    // Drift
+    // ==========================================================================
+
+    drift: {
+        name: "drift",
+        displayName: "Drift",
+        authUrl: "https://dev.drift.com/authorize",
+        tokenUrl: "https://driftapi.com/oauth2/token",
+        scopes: [
+            "contact_read",
+            "contact_write",
+            "conversation_read",
+            "conversation_write",
+            "user_read",
+            "user_write"
+        ],
+        clientId: config.oauth.drift.clientId,
+        clientSecret: config.oauth.drift.clientSecret,
+        redirectUri: getOAuthRedirectUri("drift"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://driftapi.com/users/list", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    data?: Array<{
+                        id?: number;
+                        name?: string;
+                        email?: string;
+                    }>;
+                };
+
+                const user = data.data?.[0];
+                return {
+                    userId: user?.id ? String(user.id) : "unknown",
+                    name: user?.name || "Drift User",
+                    email: user?.email || "unknown@drift"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Drift user info");
+                return {
+                    userId: "unknown",
+                    name: "Drift User",
+                    email: "unknown@drift"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    sharepoint: {
+        name: "sharepoint",
+        displayName: "SharePoint",
+        authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scopes: ["User.Read", "Sites.ReadWrite.All", "offline_access"],
+        authParams: {
+            response_mode: "query",
+            prompt: "consent"
+        },
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://graph.microsoft.com/v1.0/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    displayName?: string;
+                    mail?: string;
+                    userPrincipalName?: string;
+                };
+
+                return {
+                    userId: data.id,
+                    email: data.mail || data.userPrincipalName,
+                    name: data.displayName
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get SharePoint user info");
+                return {
+                    email: "unknown@microsoft",
+                    name: "Microsoft User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    // ==========================================================================
+    // Zoom
+    // ==========================================================================
+
+    zoom: {
+        name: "zoom",
+        displayName: "Zoom",
+        authUrl: "https://zoom.us/oauth/authorize",
+        tokenUrl: "https://zoom.us/oauth/token",
+        tokenAuthMethod: "basic",
+        scopes: ["meeting:read", "meeting:write", "user:read", "cloud_recording:read"],
+        clientId: config.oauth.zoom.clientId,
+        clientSecret: config.oauth.zoom.clientSecret,
+        redirectUri: getOAuthRedirectUri("zoom"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.zoom.us/v2/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    first_name?: string;
+                    last_name?: string;
+                    email?: string;
+                    type?: number;
+                    pic_url?: string;
+                    account_id?: string;
+                };
+
+                return {
+                    userId: data.id || "unknown",
+                    name:
+                        [data.first_name, data.last_name].filter(Boolean).join(" ") || "Zoom User",
+                    email: data.email || "unknown@zoom",
+                    picture: data.pic_url,
+                    accountId: data.account_id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Zoom user info");
+                return {
+                    userId: "unknown",
+                    name: "Zoom User",
+                    email: "unknown@zoom"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Google Meet (shared Google OAuth)
+    // ==========================================================================
+
+    "google-meet": {
+        name: "google-meet",
+        displayName: "Google Meet",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        scopes: [
+            "https://www.googleapis.com/auth/meetings.space.created",
+            "https://www.googleapis.com/auth/meetings.space.readonly"
+        ],
+        authParams: {
+            access_type: "offline",
+            prompt: "consent"
+        },
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = (await response.json()) as {
+                    email?: string;
+                    name?: string;
+                    picture?: string;
+                    id?: string;
+                };
+
+                return {
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    googleId: data.id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Google Meet user info");
+                return {
+                    email: "unknown@google",
+                    name: "Google User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    // ==========================================================================
+    // SAP S/4HANA Cloud
+    // ==========================================================================
+
+    sap: {
+        name: "sap",
+        displayName: "SAP",
+        // Template URLs - {host} must be replaced at runtime
+        authUrl: "https://{host}/sap/bc/sec/oauth2/authorize",
+        tokenUrl: "https://{host}/sap/bc/sec/oauth2/token",
+        scopes: [
+            "API_BUSINESS_PARTNER",
+            "API_SALES_ORDER_SRV",
+            "API_PURCHASEORDER_PROCESS_SRV",
+            "API_BILLING_DOCUMENT_SRV",
+            "API_PRODUCT_SRV"
+        ],
+        clientId: config.oauth.sap.clientId,
+        clientSecret: config.oauth.sap.clientSecret,
+        redirectUri: getOAuthRedirectUri("sap"),
+        getUserInfo: async (accessToken: string, host?: string) => {
+            try {
+                if (!host) {
+                    throw new Error("SAP host is required");
+                }
+
+                const response = await fetch(
+                    `https://${host}/sap/opu/odata/sap/API_BUSINESS_PARTNER/A_BusinessPartner?$top=1&$format=json`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return {
+                    userId: "sap-user",
+                    name: "SAP User",
+                    email: "unknown@sap",
+                    host
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get SAP user info");
+                return {
+                    userId: "unknown",
+                    name: "SAP User",
+                    email: "unknown@sap",
+                    host
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false,
+        tokenAuthMethod: "basic"
+    },
+
+    // ==========================================================================
+    // NetSuite
+    // ==========================================================================
+
+    netsuite: {
+        name: "netsuite",
+        displayName: "NetSuite",
+        // Template URLs - {accountId} must be replaced at runtime
+        authUrl:
+            "https://{accountId}.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/authorize",
+        tokenUrl:
+            "https://{accountId}.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/token",
+        scopes: ["rest_webservices", "restlets"],
+        clientId: config.oauth.netsuite.clientId,
+        clientSecret: config.oauth.netsuite.clientSecret,
+        redirectUri: getOAuthRedirectUri("netsuite"),
+        getUserInfo: async (accessToken: string, accountId?: string) => {
+            try {
+                if (!accountId) {
+                    throw new Error("NetSuite account ID is required");
+                }
+
+                const response = await fetch(
+                    `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/employee?limit=1`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return {
+                    userId: "netsuite-user",
+                    name: "NetSuite User",
+                    email: "unknown@netsuite",
+                    accountId
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get NetSuite user info");
+                return {
+                    userId: "unknown",
+                    name: "NetSuite User",
+                    email: "unknown@netsuite",
+                    accountId
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false,
+        tokenAuthMethod: "body"
+    },
+
+    // ==========================================================================
+    // Etsy
+    // ==========================================================================
+
+    etsy: {
+        name: "etsy",
+        displayName: "Etsy",
+        authUrl: "https://www.etsy.com/oauth/connect",
+        tokenUrl: "https://api.etsy.com/v3/public/oauth/token",
+        scopes: [
+            "listings_r",
+            "listings_w",
+            "listings_d",
+            "transactions_r",
+            "transactions_w",
+            "shops_r",
+            "shops_w",
+            "email_r"
+        ],
+        clientId: config.oauth.etsy.clientId,
+        clientSecret: config.oauth.etsy.clientSecret,
+        redirectUri: getOAuthRedirectUri("etsy"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Etsy access tokens contain the user ID in the format: {user_id}.{token}
+                // Parse the user_id from the token to get shop info
+                const tokenParts = accessToken.split(".");
+                if (tokenParts.length < 2) {
+                    throw new Error("Invalid Etsy access token format");
+                }
+
+                // The API key (client_id) must be sent as x-api-key header
+                const response = await fetch("https://api.etsy.com/v3/application/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "x-api-key": config.oauth.etsy.clientId
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user_id?: number;
+                    primary_email?: string;
+                    first_name?: string;
+                    last_name?: string;
+                    shop_id?: number;
+                };
+
+                return {
+                    userId: data.user_id?.toString() || "unknown",
+                    email: data.primary_email || "unknown@etsy",
+                    name:
+                        [data.first_name, data.last_name].filter(Boolean).join(" ") || "Etsy User",
+                    shopId: data.shop_id?.toString()
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Etsy user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@etsy",
+                    name: "Etsy User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: true,
+        tokenAuthMethod: "body"
+    },
+
+    // ==========================================================================
+    // Squarespace E-commerce
+    // ==========================================================================
+
+    squarespace: {
+        name: "squarespace",
+        displayName: "Squarespace",
+        authUrl: "https://login.squarespace.com/api/1/login/oauth/provider/authorize",
+        tokenUrl: "https://login.squarespace.com/api/1/login/oauth/provider/tokens",
+        scopes: [
+            "website.orders",
+            "website.orders.read",
+            "website.products",
+            "website.products.read",
+            "website.inventory",
+            "website.inventory.read",
+            "website.transactions.read"
+        ],
+        clientId: config.oauth.squarespace.clientId,
+        clientSecret: config.oauth.squarespace.clientSecret,
+        redirectUri: getOAuthRedirectUri("squarespace"),
+        getUserInfo: async (_accessToken: string) => {
+            // Squarespace doesn't have a dedicated user info endpoint
+            // The site ID is obtained after OAuth authorization via the token response
+            // Return basic info; site details will be fetched separately using the commerce API
+            return {
+                userId: "squarespace-user",
+                email: "unknown@squarespace",
+                name: "Squarespace User"
+            };
+        },
+        refreshable: true, // Access tokens expire after 30 minutes, refresh tokens after 7 days
+        pkceEnabled: false,
+        tokenAuthMethod: "basic" // Squarespace uses Basic auth for token requests
+    },
+
+    // ==========================================================================
+    // eBay E-commerce
+    // ==========================================================================
+
+    ebay: {
+        name: "ebay",
+        displayName: "eBay",
+        authUrl: "https://auth.ebay.com/oauth2/authorize",
+        tokenUrl: "https://api.ebay.com/identity/v1/oauth2/token",
+        scopes: [
+            "https://api.ebay.com/oauth/api_scope/sell.inventory",
+            "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
+            "https://api.ebay.com/oauth/api_scope/sell.account",
+            "https://api.ebay.com/oauth/api_scope/commerce.identity.readonly"
+        ],
+        clientId: config.oauth.ebay.clientId,
+        clientSecret: config.oauth.ebay.clientSecret,
+        redirectUri: getOAuthRedirectUri("ebay"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://apiz.ebay.com/commerce/identity/v1/user/", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    userId?: string;
+                    username?: string;
+                    email?: string;
+                };
+
+                return {
+                    userId: data.userId || data.username || "unknown",
+                    email: data.email || "unknown@ebay",
+                    name: data.username || "eBay User"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get eBay user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@ebay",
+                    name: "eBay User"
+                };
+            }
+        },
+        refreshable: true,
+        tokenAuthMethod: "basic"
+    },
+
+    // ==========================================================================
+    // Gorgias Customer Support
+    // NOTE: Gorgias requires subdomain in OAuth URLs. The {subdomain} placeholder
+    // is replaced at runtime based on user-provided subdomain.
+    // ==========================================================================
+
+    gorgias: {
+        name: "gorgias",
+        displayName: "Gorgias",
+        // Template URLs - {subdomain} must be replaced at runtime
+        authUrl: "https://{subdomain}.gorgias.com/oauth/authorize",
+        tokenUrl: "https://{subdomain}.gorgias.com/oauth/token",
+        scopes: [
+            "openid",
+            "offline", // For refresh tokens
+            "tickets:read",
+            "tickets:write",
+            "customers:read",
+            "customers:write",
+            "users:read"
+        ],
+        clientId: config.oauth.gorgias.clientId,
+        clientSecret: config.oauth.gorgias.clientSecret,
+        redirectUri: getOAuthRedirectUri("gorgias"),
+        getUserInfo: async (accessToken: string, subdomain?: string) => {
+            try {
+                if (!subdomain) {
+                    throw new Error("Gorgias subdomain is required");
+                }
+
+                const response = await fetch(`https://${subdomain}.gorgias.com/api/users/0`, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: number;
+                    name?: string;
+                    email?: string;
+                    firstname?: string;
+                    lastname?: string;
+                };
+
+                return {
+                    userId: data.id?.toString() || "unknown",
+                    name:
+                        data.name ||
+                        `${data.firstname || ""} ${data.lastname || ""}`.trim() ||
+                        "Gorgias User",
+                    email: data.email || "unknown@gorgias",
+                    subdomain
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Gorgias user info");
+                return {
+                    userId: "unknown",
+                    name: "Gorgias User",
+                    email: "unknown@gorgias",
+                    subdomain
                 };
             }
         },

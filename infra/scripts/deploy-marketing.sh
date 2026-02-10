@@ -55,12 +55,14 @@ REGISTRY="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/flowmaestro"
 # Get configuration from Pulumi config
 GA_MEASUREMENT_ID=$(pulumi config get gaMeasurementId 2>/dev/null || echo "")
 APP_URL=$(pulumi config get appUrl 2>/dev/null || echo "https://app.flowmaestro.ai")
+DOCS_URL=$(pulumi config get docsUrl 2>/dev/null || echo "https://docs.flowmaestro.ai")
 
 print_info "Configuration:"
 echo "  Project:  $GCP_PROJECT"
 echo "  Region:   $GCP_REGION"
 echo "  Registry: $REGISTRY"
 echo "  App URL:  $APP_URL"
+echo "  Docs URL: $DOCS_URL"
 [ -n "$GA_MEASUREMENT_ID" ] && echo "  GA ID:    $GA_MEASUREMENT_ID"
 echo ""
 
@@ -87,6 +89,7 @@ docker build \
     --platform linux/amd64 \
     --build-arg VITE_GA_MEASUREMENT_ID="$GA_MEASUREMENT_ID" \
     --build-arg VITE_APP_URL="$APP_URL" \
+    --build-arg VITE_DOCS_URL="$DOCS_URL" \
     -f infra/docker/marketing/Dockerfile \
     -t "$REGISTRY/marketing:latest" \
     -t "$REGISTRY/marketing:$ENVIRONMENT" \

@@ -3,6 +3,17 @@ import { getFolderContents } from "./api";
 import { logger } from "./logger";
 
 /**
+ * Extract folder ID from a URL pathname.
+ * Handles paths like /folders/:id and /folders/:id/items
+ */
+export function extractFolderIdFromPath(pathname: string): string | null {
+    if (pathname.startsWith("/folders/")) {
+        return pathname.split("/folders/")[1]?.split("/")[0] || null;
+    }
+    return null;
+}
+
+/**
  * Helper function to extract item IDs by type from folder items
  */
 function getItemsForType(

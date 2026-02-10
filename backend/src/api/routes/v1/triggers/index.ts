@@ -32,7 +32,7 @@ export async function triggersV1Routes(fastify: FastifyInstance): Promise<void> 
             preHandler: [requireScopes("triggers:read")]
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const { page, per_page, offset } = parsePaginationQuery(
                 request.query as Record<string, unknown>
             );
@@ -40,8 +40,10 @@ export async function triggersV1Routes(fastify: FastifyInstance): Promise<void> 
             const workflowRepo = new WorkflowRepository();
             const triggerRepo = new TriggerRepository();
 
-            // First get user's workflows
-            const { workflows } = await workflowRepo.findByUserId(userId, { limit: 1000 });
+            // First get workspace's workflows
+            const { workflows } = await workflowRepo.findByWorkspaceId(workspaceId, {
+                limit: 1000
+            });
 
             // Get triggers for all user's workflows
             const allTriggers: WorkflowTrigger[] = [];
@@ -92,6 +94,7 @@ export async function triggersV1Routes(fastify: FastifyInstance): Promise<void> 
             reply: FastifyReply
         ) => {
             const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const triggerId = request.params.id;
             const body = request.body || {};
 
@@ -105,9 +108,12 @@ export async function triggersV1Routes(fastify: FastifyInstance): Promise<void> 
                     return sendNotFound(reply, "Trigger", triggerId);
                 }
 
-                // Verify ownership via workflow
-                const workflow = await workflowRepo.findById(trigger.workflow_id);
-                if (!workflow || workflow.user_id !== userId) {
+                // Verify workspace access via workflow
+                const workflow = await workflowRepo.findByIdAndWorkspaceId(
+                    trigger.workflow_id,
+                    workspaceId
+                );
+                if (!workflow) {
                     return sendNotFound(reply, "Trigger", triggerId);
                 }
 

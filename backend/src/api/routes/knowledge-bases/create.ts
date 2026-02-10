@@ -6,6 +6,7 @@ import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 interface CreateKnowledgeBaseBody {
     name: string;
     description?: string;
+    category?: string;
     config?: {
         [key: string]: string | number | boolean | null;
     };
@@ -26,6 +27,7 @@ export async function createKnowledgeBaseRoute(fastify: FastifyInstance) {
                 workspace_id: request.workspace!.id,
                 name: body.name,
                 description: body.description,
+                category: body.category,
                 config: body.config
             });
 

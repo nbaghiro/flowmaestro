@@ -62,7 +62,7 @@ function ProviderCard({ provider, connections, onConnect, onViewDetails }: Provi
                         Soon
                     </span>
                 ) : isConnected ? (
-                    <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-green-50 text-green-700 rounded-md">
+                    <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-md">
                         Connected
                     </span>
                 ) : (

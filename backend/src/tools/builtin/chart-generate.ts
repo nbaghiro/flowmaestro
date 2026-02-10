@@ -9,6 +9,7 @@ import { join } from "path";
 import { z } from "zod";
 import { createServiceLogger } from "../../core/logging";
 import type { BuiltInTool, ToolExecutionContext, ToolExecutionResult } from "../types";
+import type { ChartConfiguration, ChartType as ChartJsType, ChartItem } from "chart.js";
 
 const logger = createServiceLogger("ChartGenerateTool");
 
@@ -312,13 +313,17 @@ async function renderChart(
     // Build chart config
     const config = buildChartConfig(input);
 
-    // Create chart - cast ctx to any for Chart.js compatibility with node-canvas
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    new (Chart as any)(ctx, {
-        type: config.type,
-        data: config.data,
-        options: config.options
-    });
+    // Create chart - node-canvas CanvasRenderingContext2D is structurally compatible
+    // with DOM CanvasRenderingContext2D but nominally different, so we cast via unknown.
+    // The config object structure matches ChartConfiguration but uses looser types.
+    new Chart(
+        ctx as unknown as ChartItem,
+        {
+            type: config.type as ChartJsType,
+            data: config.data,
+            options: config.options
+        } as unknown as ChartConfiguration
+    );
 
     // Get buffer
     let buffer: Buffer;

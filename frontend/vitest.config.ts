@@ -1,8 +1,14 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import path from "path";
 
 export default defineConfig({
     plugins: [react()],
+    resolve: {
+        alias: {
+            "@": path.resolve(__dirname, "./src")
+        }
+    },
     test: {
         globals: true,
         environment: "jsdom",
@@ -23,7 +29,7 @@ export default defineConfig({
                 "src/**/*.test.ts",
                 "src/**/*.test.tsx",
                 "src/test-setup.ts",
-                "src/lib/__tests__/test-helpers.ts",
+                "src/test-helpers.ts",
                 "src/canvas/__mocks__/**",
                 "src/canvas/__tests__/test-utils.tsx"
             ]

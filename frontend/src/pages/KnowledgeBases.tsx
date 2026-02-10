@@ -43,6 +43,7 @@ function toKnowledgeBaseSummary(
         id: kb.id,
         name: kb.name,
         description: kb.description ?? null,
+        category: kb.category ?? null,
         documentCount: stats?.document_count ?? 0,
         chunkCount: stats?.chunk_count,
         totalSizeBytes: stats?.total_size_bytes,
@@ -167,11 +168,12 @@ export function KnowledgeBases() {
         }
     }, [knowledgeBases]);
 
-    const handleCreate = async (name: string, description?: string) => {
+    const handleCreate = async (name: string, description?: string, category?: string) => {
         try {
             const kb = await createKB({
                 name,
-                description
+                description,
+                category
             });
             setShowCreateModal(false);
             navigate(`/knowledge-bases/${kb.id}`);

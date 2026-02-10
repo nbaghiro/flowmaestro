@@ -402,6 +402,27 @@ export const bufferFixtures: TestFixture[] = [
                 description: "Get all pending updates for a specific profile",
                 input: {
                     profileId: "4eb854340acb04e870000010"
+                },
+                expectedOutput: {
+                    total: 2,
+                    updates: [
+                        {
+                            id: "4ecda256512f7ee521000001",
+                            text: "Excited to announce our new product launch! Stay tuned for more details. #innovation #tech",
+                            profileId: "4eb854340acb04e870000010",
+                            service: "twitter",
+                            status: "buffer",
+                            scheduledAt: "2024-02-15T14:00:00.000Z"
+                        },
+                        {
+                            id: "4ecda256512f7ee521000005",
+                            text: "Behind the scenes at our office! Our team is hard at work bringing you amazing products.",
+                            profileId: "4eb854340acb04e870000010",
+                            service: "twitter",
+                            status: "buffer",
+                            scheduledAt: "2024-02-18T10:00:00.000Z"
+                        }
+                    ]
                 }
             }
         ],
@@ -610,12 +631,46 @@ export const bufferFixtures: TestFixture[] = [
             {
                 name: "list_all_profiles",
                 description: "List all connected social media profiles",
-                input: {}
+                input: {},
+                expectedOutput: {
+                    profiles: [
+                        {
+                            id: "4eb854340acb04e870000010",
+                            service: "twitter",
+                            username: "acmecorp",
+                            formattedUsername: "@acmecorp",
+                            pendingCount: 5,
+                            sentCount: 142
+                        },
+                        {
+                            id: "4eb854340acb04e870000011",
+                            service: "facebook",
+                            username: "AcmeCorporation",
+                            formattedUsername: "Acme Corporation",
+                            pendingCount: 3,
+                            sentCount: 89
+                        }
+                    ]
+                }
             },
             {
-                name: "list_profiles_empty_params",
-                description: "List profiles with no parameters",
-                input: {}
+                name: "list_profiles_by_service",
+                description: "List profiles filtered by service type",
+                input: {
+                    service: "twitter"
+                },
+                expectedOutput: {
+                    profiles: [
+                        {
+                            id: "4eb854340acb04e870000010",
+                            service: "twitter",
+                            username: "acmecorp",
+                            formattedUsername: "@acmecorp",
+                            pendingCount: 5,
+                            sentCount: 142
+                        }
+                    ]
+                }
             }
         ],
         errorCases: [

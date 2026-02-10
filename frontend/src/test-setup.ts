@@ -193,6 +193,34 @@ Object.defineProperty(globalThis, "ResizeObserver", {
     writable: true
 });
 
+// Mock IntersectionObserver (jsdom doesn't support this, needed for infinite scroll)
+class MockIntersectionObserver {
+    root: Element | Document | null = null;
+    rootMargin: string = "";
+    thresholds: ReadonlyArray<number> = [];
+
+    constructor(_callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        // Callback is accepted but not used in mock
+        this.root = options?.root ?? null;
+        this.rootMargin = options?.rootMargin ?? "";
+        this.thresholds = options?.threshold
+            ? Array.isArray(options.threshold)
+                ? options.threshold
+                : [options.threshold]
+            : [0];
+    }
+
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn(() => []);
+}
+
+Object.defineProperty(globalThis, "IntersectionObserver", {
+    value: MockIntersectionObserver,
+    writable: true
+});
+
 // Mock DOMMatrix for React Flow transforms (jsdom doesn't support this)
 class MockDOMMatrix {
     a = 1;
@@ -241,6 +269,11 @@ class MockDOMMatrix {
 }
 
 Object.defineProperty(globalThis, "DOMMatrix", {
+    value: MockDOMMatrix,
+    writable: true
+});
+
+Object.defineProperty(window, "DOMMatrixReadOnly", {
     value: MockDOMMatrix,
     writable: true
 });

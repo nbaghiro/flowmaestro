@@ -208,7 +208,7 @@ export function FlowBuilder() {
         if (selectedNode && activeRightPanel) {
             closeRightPanel();
         }
-        // eslint-disable-next-line
+        // eslint-disable-next-line -- closeRightPanel intentionally excluded to prevent re-triggering
     }, [selectedNode]);
 
     // Click-outside detection for right panels

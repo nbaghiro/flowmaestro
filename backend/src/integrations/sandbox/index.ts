@@ -19,3 +19,6 @@ export { FixtureRegistry, fixtureRegistry } from "./FixtureRegistry";
 // Sandbox Services
 export { SandboxDataService, sandboxDataService } from "./SandboxDataService";
 export { getSandboxConfig, type SandboxConfig } from "./SandboxConfig";
+
+// Fixture Loader
+export { loadAllFixtures, areFixturesLoaded } from "./fixtureLoader";

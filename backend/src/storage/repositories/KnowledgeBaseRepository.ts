@@ -21,6 +21,7 @@ interface KnowledgeBaseRow {
     workspace_id: string;
     name: string;
     description: string | null;
+    category: string | null;
     config: string | KnowledgeBaseConfig;
     created_at: string | Date;
     updated_at: string | Date;
@@ -31,8 +32,8 @@ export class KnowledgeBaseRepository {
         const config = { ...DEFAULT_CONFIG, ...input.config };
 
         const query = `
-            INSERT INTO flowmaestro.knowledge_bases (user_id, workspace_id, name, description, config)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO flowmaestro.knowledge_bases (user_id, workspace_id, name, description, category, config)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
 
@@ -41,6 +42,7 @@ export class KnowledgeBaseRepository {
             input.workspace_id,
             input.name,
             input.description || null,
+            input.category || null,
             JSON.stringify(config)
         ];
 
@@ -268,6 +270,7 @@ export class KnowledgeBaseRepository {
             workspace_id: row.workspace_id,
             name: row.name,
             description: row.description,
+            category: row.category,
             config: typeof row.config === "string" ? JSON.parse(row.config) : row.config,
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at)

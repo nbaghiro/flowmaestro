@@ -136,6 +136,7 @@ export interface KnowledgeBase {
     user_id: string;
     name: string;
     description: string | null;
+    category: string | null;
     config: {
         embeddingModel: string;
         embeddingProvider: string;
@@ -188,6 +189,7 @@ export interface ChunkSearchResult {
 export interface CreateKnowledgeBaseInput {
     name: string;
     description?: string;
+    category?: string;
     config?: Partial<KnowledgeBase["config"]>;
 }
 
@@ -1968,6 +1970,7 @@ export interface Agent {
     max_iterations: number;
     available_tools: Tool[];
     memory_config: MemoryConfig;
+    metadata?: JsonObject;
     created_at: string;
     updated_at: string;
     deleted_at: string | null;
@@ -1999,6 +2002,7 @@ export interface UpdateAgentRequest {
     max_iterations?: number;
     available_tools?: Tool[];
     memory_config?: MemoryConfig;
+    metadata?: JsonObject;
 }
 
 // Thread types
@@ -6411,6 +6415,151 @@ export async function generateFromTemplate(
             body: JSON.stringify({ variables })
         }
     );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// ===== Sandbox Explorer Types =====
+
+export interface SandboxFixtureSummary {
+    operationId: string;
+    validCaseCount: number;
+    errorCaseCount: number;
+    edgeCaseCount: number;
+    hasFilterableData: boolean;
+}
+
+export interface SandboxTestCase {
+    name: string;
+    description?: string;
+    input: Record<string, unknown>;
+    expectedOutput?: Record<string, unknown>;
+    expectedError?: {
+        type: string;
+        message?: string;
+        retryable?: boolean;
+    };
+}
+
+export interface SandboxFilterableData {
+    recordsField: string;
+    offsetField?: string;
+    defaultPageSize?: number;
+    maxPageSize?: number;
+    pageSizeParam?: string;
+    offsetParam?: string;
+    filterConfig?: {
+        type: "airtable" | "hubspot" | "generic";
+        filterableFields?: string[];
+    };
+    recordCount: number;
+    sampleRecords: Record<string, unknown>[];
+}
+
+export interface SandboxFixtureDetail {
+    operationId: string;
+    provider: string;
+    validCases: SandboxTestCase[];
+    errorCases: SandboxTestCase[];
+    edgeCases?: SandboxTestCase[];
+    filterableData: SandboxFilterableData | null;
+}
+
+export interface SandboxTestResponse {
+    operationId: string;
+    provider: string;
+    params: Record<string, unknown>;
+    response: {
+        success: boolean;
+        data?: Record<string, unknown>;
+        error?: {
+            type: string;
+            message: string;
+        };
+    };
+}
+
+/**
+ * Get list of sandbox fixtures for a provider
+ */
+export async function getSandboxFixtures(provider: string): Promise<{
+    success: boolean;
+    data: {
+        provider: string;
+        operations: SandboxFixtureSummary[];
+        totalOperations: number;
+    };
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/sandbox/${provider}/fixtures`, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get sandbox fixture details for a specific operation
+ */
+export async function getSandboxFixture(
+    provider: string,
+    operationId: string
+): Promise<{
+    success: boolean;
+    data: SandboxFixtureDetail;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/sandbox/${provider}/fixtures/${operationId}`, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Test a sandbox operation with custom params
+ */
+export async function testSandboxOperation(
+    provider: string,
+    operationId: string,
+    params: Record<string, unknown>
+): Promise<{
+    success: boolean;
+    data: SandboxTestResponse;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/sandbox/${provider}/test`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ operationId, params })
+    });
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

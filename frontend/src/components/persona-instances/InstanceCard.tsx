@@ -5,8 +5,6 @@ import type { PersonaInstanceSummary, PersonaCategory } from "../../lib/api";
 interface InstanceCardProps {
     instance: PersonaInstanceSummary;
     onClick: () => void;
-    onApprove?: () => void;
-    onDeny?: () => void;
     onCancel?: () => void;
 }
 
@@ -105,27 +103,11 @@ function formatTimeAgo(date: string): string {
     return `${diffDays}d ago`;
 }
 
-export const InstanceCard: React.FC<InstanceCardProps> = ({
-    instance,
-    onClick,
-    onApprove,
-    onDeny,
-    onCancel
-}) => {
+export const InstanceCard: React.FC<InstanceCardProps> = ({ instance, onClick, onCancel }) => {
     const status = statusConfig[instance.status] || statusConfig.running;
     const isActive = ["initializing", "clarifying", "running", "waiting_approval"].includes(
         instance.status
     );
-
-    const handleApproveClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        onApprove?.();
-    };
-
-    const handleDenyClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        onDeny?.();
-    };
 
     const handleCancelClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -200,28 +182,7 @@ export const InstanceCard: React.FC<InstanceCardProps> = ({
             </div>
 
             {/* Actions */}
-            {instance.status === "waiting_approval" && (onApprove || onDeny) && (
-                <div className="flex gap-2">
-                    {onApprove && (
-                        <button
-                            onClick={handleApproveClick}
-                            className="flex-1 px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-primary/90 transition-colors"
-                        >
-                            Approve
-                        </button>
-                    )}
-                    {onDeny && (
-                        <button
-                            onClick={handleDenyClick}
-                            className="flex-1 px-3 py-1.5 border border-border rounded text-sm font-medium hover:bg-muted transition-colors"
-                        >
-                            Deny
-                        </button>
-                    )}
-                </div>
-            )}
-
-            {isActive && instance.status !== "waiting_approval" && onCancel && (
+            {isActive && onCancel && (
                 <button
                     onClick={handleCancelClick}
                     className="w-full px-3 py-1.5 border border-border rounded text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"

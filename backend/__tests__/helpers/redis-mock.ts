@@ -32,6 +32,7 @@ export class MockRedisClient {
     private store: Map<string, string | number> = new Map();
     private ttls: Map<string, number> = new Map();
     private subscriptions: Map<string, Set<(message: string) => void>> = new Map();
+    private sortedSets: Map<string, Map<string, number>> = new Map();
     private connected = false;
     private options: MockRedisClientOptions;
 
@@ -230,6 +231,109 @@ export class MockRedisClient {
     }
 
     // ============================================================================
+    // SORTED SET OPERATIONS (for rate limiting)
+    // ============================================================================
+
+    /**
+     * Add a member with score to a sorted set.
+     * Returns 1 if member was added, 0 if it already existed (score updated).
+     */
+    async zadd(key: string, score: number, member: string): Promise<number> {
+        await this.delay();
+        if (!this.sortedSets.has(key)) {
+            this.sortedSets.set(key, new Map());
+        }
+        const set = this.sortedSets.get(key)!;
+        const existed = set.has(member);
+        set.set(member, score);
+        return existed ? 0 : 1;
+    }
+
+    /**
+     * Get the number of members in a sorted set.
+     */
+    async zcard(key: string): Promise<number> {
+        await this.delay();
+        return this.sortedSets.get(key)?.size ?? 0;
+    }
+
+    /**
+     * Get a range of members from a sorted set by index.
+     * Supports WITHSCORES option to include scores in the result.
+     */
+    async zrange(
+        key: string,
+        start: number,
+        stop: number,
+        ...options: string[]
+    ): Promise<string[]> {
+        await this.delay();
+        const set = this.sortedSets.get(key);
+        if (!set) return [];
+
+        // Sort by score ascending
+        const entries = [...set.entries()].sort((a, b) => a[1] - b[1]);
+
+        // Handle negative indices
+        const len = entries.length;
+        const startIdx = start < 0 ? Math.max(0, len + start) : start;
+        const stopIdx = stop < 0 ? len + stop : stop;
+
+        // Slice the entries (stop is inclusive in Redis)
+        const sliced = entries.slice(startIdx, stopIdx + 1);
+
+        // Check if WITHSCORES was requested
+        if (options.includes("WITHSCORES")) {
+            return sliced.flatMap(([member, score]) => [member, String(score)]);
+        }
+
+        return sliced.map(([member]) => member);
+    }
+
+    /**
+     * Remove members with scores within the specified range.
+     * Returns the number of members removed.
+     */
+    async zremrangebyscore(key: string, min: number, max: number): Promise<number> {
+        await this.delay();
+        const set = this.sortedSets.get(key);
+        if (!set) return 0;
+
+        let removed = 0;
+        for (const [member, score] of set) {
+            if (score >= min && score <= max) {
+                set.delete(member);
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    /**
+     * Get members with scores within the specified range.
+     */
+    async zrangebyscore(
+        key: string,
+        min: number,
+        max: number,
+        ...options: string[]
+    ): Promise<string[]> {
+        await this.delay();
+        const set = this.sortedSets.get(key);
+        if (!set) return [];
+
+        const entries = [...set.entries()]
+            .filter(([, score]) => score >= min && score <= max)
+            .sort((a, b) => a[1] - b[1]);
+
+        if (options.includes("WITHSCORES")) {
+            return entries.flatMap(([member, score]) => [member, String(score)]);
+        }
+
+        return entries.map(([member]) => member);
+    }
+
+    // ============================================================================
     // TEST HELPERS
     // ============================================================================
 
@@ -240,6 +344,7 @@ export class MockRedisClient {
         this.store.clear();
         this.ttls.clear();
         this.subscriptions.clear();
+        this.sortedSets.clear();
     }
 
     /**
@@ -304,6 +409,26 @@ export class MockRedisPipeline {
 
     del(key: string): this {
         this.commands.push(() => this.client.del(key));
+        return this;
+    }
+
+    zadd(key: string, score: number, member: string): this {
+        this.commands.push(() => this.client.zadd(key, score, member));
+        return this;
+    }
+
+    zcard(key: string): this {
+        this.commands.push(() => this.client.zcard(key));
+        return this;
+    }
+
+    zrange(key: string, start: number, stop: number, ...options: string[]): this {
+        this.commands.push(() => this.client.zrange(key, start, stop, ...options));
+        return this;
+    }
+
+    zremrangebyscore(key: string, min: number, max: number): this {
+        this.commands.push(() => this.client.zremrangebyscore(key, min, max));
         return this;
     }
 

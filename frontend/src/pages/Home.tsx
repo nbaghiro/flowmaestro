@@ -16,18 +16,20 @@ import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
 import { CreateChatInterfaceDialog } from "../components/chat/builder/CreateChatInterfaceDialog";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
-import { GetStartedPanel } from "../components/empty-states";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import {
     HomePageSkeleton,
     MixedInterfaces,
     MixedTemplates,
+    QuickCreateRow,
     RecentAgents,
     RecentKnowledgeBases,
     RecentPersonas,
     RecentWorkflows,
+    SectionDivider,
     WelcomeSection
 } from "../components/home";
+import { CreateKnowledgeBaseModal } from "../components/knowledge-bases/modals/CreateKnowledgeBaseModal";
 import { PersonaDetailModal } from "../components/personas/modals/PersonaDetailModal";
 import { TaskLaunchDialog } from "../components/personas/modals/TaskLaunchDialog";
 import { AgentTemplatePreviewDialog } from "../components/templates/dialogs/AgentTemplatePreviewDialog";
@@ -35,6 +37,7 @@ import { TemplatePreviewDialog } from "../components/templates/dialogs/TemplateP
 import {
     copyAgentTemplate,
     copyTemplate,
+    createKnowledgeBase,
     getAgentTemplates,
     getAgents,
     getChatInterfaces,
@@ -105,6 +108,7 @@ function toKnowledgeBaseSummary(
         id: kb.id,
         name: kb.name,
         description: kb.description ?? null,
+        category: kb.category ?? null,
         documentCount: stats?.document_count ?? 0,
         chunkCount: stats?.chunk_count,
         totalSizeBytes: stats?.total_size_bytes,
@@ -139,6 +143,7 @@ export function Home() {
     const [isCreateAgentOpen, setIsCreateAgentOpen] = useState(false);
     const [isCreateChatInterfaceOpen, setIsCreateChatInterfaceOpen] = useState(false);
     const [isCreateFormInterfaceOpen, setIsCreateFormInterfaceOpen] = useState(false);
+    const [isCreateKnowledgeBaseOpen, setIsCreateKnowledgeBaseOpen] = useState(false);
 
     // Fetch recent workflows sorted by most recent activity (created or updated)
     const workflowsQuery = useQuery({
@@ -481,6 +486,18 @@ export function Home() {
         [navigate, queryClient]
     );
 
+    const handleCreateKnowledgeBase = useCallback(
+        async (name: string, description?: string, category?: string) => {
+            const response = await createKnowledgeBase({ name, description, category });
+            if (response.success && response.data) {
+                setIsCreateKnowledgeBaseOpen(false);
+                queryClient.invalidateQueries({ queryKey: ["home", "knowledge-bases"] });
+                navigate(`/knowledge-bases/${response.data.id}`);
+            }
+        },
+        [navigate, queryClient]
+    );
+
     // Check if all primary sections are empty
     const isAllEmpty = recentWorkflows.length === 0 && recentAgents.length === 0;
 
@@ -497,41 +514,38 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
             <WelcomeSection />
 
-            {isAllEmpty ? (
-                <>
-                    {/* Show GetStartedPanel when no workflows or agents */}
-                    <GetStartedPanel
-                        onCreateWorkflow={() => setIsCreateWorkflowOpen(true)}
-                        onCreateAgent={() => setIsCreateAgentOpen(true)}
-                        onCreateChatInterface={() => setIsCreateChatInterfaceOpen(true)}
-                        onCreateFormInterface={() => setIsCreateFormInterfaceOpen(true)}
-                        className="mb-8"
-                    />
+            {/* Quick Create CTAs */}
+            <QuickCreateRow
+                onCreateWorkflow={() => setIsCreateWorkflowOpen(true)}
+                onCreateAgent={() => setIsCreateAgentOpen(true)}
+                onCreateChat={() => setIsCreateChatInterfaceOpen(true)}
+                onCreateForm={() => setIsCreateFormInterfaceOpen(true)}
+                onCreateKnowledgeBase={() => setIsCreateKnowledgeBaseOpen(true)}
+            />
 
-                    {/* Still show templates for inspiration */}
-                    <MixedTemplates
-                        templates={mixedTemplates}
-                        onWorkflowTemplateClick={handleWorkflowTemplateClick}
-                        onAgentTemplateClick={handleAgentTemplateClick}
-                    />
-                </>
-            ) : (
+            {/* Featured content for inspiration */}
+            <RecentPersonas
+                personas={allPersonas}
+                onPersonaClick={handlePersonaClick}
+                onPersonaLaunch={handlePersonaLaunch}
+            />
+
+            <MixedTemplates
+                templates={mixedTemplates}
+                onWorkflowTemplateClick={handleWorkflowTemplateClick}
+                onAgentTemplateClick={handleAgentTemplateClick}
+            />
+
+            {/* Recent work section - only show when user has items */}
+            {!isAllEmpty && (
                 <>
+                    {/* Divider between inspiration and user's work */}
+                    <SectionDivider label="Your Recent Work" />
+
+                    {/* User's recent items */}
                     <RecentWorkflows workflows={recentWorkflows} />
 
                     <RecentAgents agents={recentAgents} />
-
-                    <RecentPersonas
-                        personas={allPersonas}
-                        onPersonaClick={handlePersonaClick}
-                        onPersonaLaunch={handlePersonaLaunch}
-                    />
-
-                    <MixedTemplates
-                        templates={mixedTemplates}
-                        onWorkflowTemplateClick={handleWorkflowTemplateClick}
-                        onAgentTemplateClick={handleAgentTemplateClick}
-                    />
 
                     <MixedInterfaces interfaces={mixedInterfaces} />
 
@@ -565,6 +579,13 @@ export function Home() {
                 isOpen={isCreateFormInterfaceOpen}
                 onClose={() => setIsCreateFormInterfaceOpen(false)}
                 onCreated={handleCreateFormInterface}
+            />
+
+            {/* Create Knowledge Base Dialog */}
+            <CreateKnowledgeBaseModal
+                isOpen={isCreateKnowledgeBaseOpen}
+                onClose={() => setIsCreateKnowledgeBaseOpen(false)}
+                onSubmit={handleCreateKnowledgeBase}
             />
 
             {/* Workflow Template Preview Dialog */}

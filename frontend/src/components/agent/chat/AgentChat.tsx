@@ -1,28 +1,35 @@
-import { Send, Loader2, Bot, User, Wrench, CheckCircle2, XCircle, Eye } from "lucide-react";
+/**
+ * AgentChat Component
+ *
+ * Main chat interface for interacting with deployed agents.
+ * Supports SSE streaming, tool call tracking, and voice mode.
+ * Refactored to use unified chat components.
+ */
+
+import { Bot, Send } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { useChatScroll } from "../../../hooks/useChatScroll";
 import * as api from "../../../lib/api";
 import { logger } from "../../../lib/logger";
 import { streamAgentExecution } from "../../../lib/sse";
 import { cn } from "../../../lib/utils";
 import { useAgentStore } from "../../../stores/agentStore";
+import {
+    ChatBubble,
+    ToolCallList,
+    ToolResultDialogContent,
+    type ToolCallInfo
+} from "../../chat/core";
 import { Button } from "../../common/Button";
 import { Dialog } from "../../common/Dialog";
 import { Input } from "../../common/Input";
 import { MediaOutput, hasMediaContent } from "../../common/MediaOutput";
 import { TypingDots } from "../../common/TypingDots";
 import { AgentConnectionSelector } from "../controls/AgentConnectionSelector";
-import type { Agent, ThreadMessage, JsonObject, ThreadTokenUsage } from "../../../lib/api";
-
-interface ToolCallInfo {
-    id: string;
-    toolName: string;
-    status: "running" | "success" | "failed";
-    arguments?: JsonObject;
-    result?: JsonObject;
-    error?: string;
-}
+import { ToolMessageDisplay } from "./ToolMessageDisplay";
+import { VoiceChat } from "./VoiceChat";
+import { VoiceModeToggle } from "./VoiceModeToggle";
+import type { Agent, ThreadMessage, ThreadTokenUsage } from "../../../lib/api";
 
 interface AgentChatProps {
     agent: Agent;
@@ -71,16 +78,15 @@ export function AgentChat({ agent }: AgentChatProps) {
         normalizeTokenUsage(currentThread?.metadata?.tokenUsage || null)
     );
     const [toolCalls, setToolCalls] = useState<ToolCallInfo[]>([]);
-    const [selectedToolError, setSelectedToolError] = useState<{
-        toolName: string;
-        error: string;
-    } | null>(null);
+    const [selectedToolCall, setSelectedToolCall] = useState<ToolCallInfo | null>(null);
 
     // Thread-level model override (doesn't save to agent)
     const [overrideConnectionId, setOverrideConnectionId] = useState<string | null>(null);
     const [overrideModel, setOverrideModel] = useState<string | null>(null);
 
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    // Voice mode state
+    const [isVoiceMode, setIsVoiceMode] = useState(false);
+
     const sseCleanupRef = useRef<(() => void) | null>(null);
     const streamingContentRef = useRef<string>("");
 
@@ -88,6 +94,9 @@ export function AgentChat({ agent }: AgentChatProps) {
     // Use currentExecutionThreadId as fallback for timing issues during new thread creation
     const activeThreadId = currentThread?.id || currentExecutionThreadId;
     const messages = activeThreadId ? threadMessages[activeThreadId] || [] : [];
+
+    // Auto-scroll when messages or tool calls change
+    const messagesEndRef = useChatScroll([messages, toolCalls]);
 
     const refreshTokenUsage = useCallback(async () => {
         const threadId = currentThread?.id;
@@ -121,11 +130,6 @@ export function AgentChat({ agent }: AgentChatProps) {
         }
     }, [currentThread?.id, refreshTokenUsage, currentThread?.metadata?.tokenUsage]);
 
-    // Scroll to bottom when messages or tool calls change
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, toolCalls]);
-
     // Start SSE stream when execution starts
     useEffect(() => {
         if (!currentExecutionId || !currentExecutionThreadId) return;
@@ -141,7 +145,6 @@ export function AgentChat({ agent }: AgentChatProps) {
         }
 
         // Reset streaming content and tool calls
-        // Initialize with space to match the placeholder message
         streamingContentRef.current = " ";
         setToolCalls([]);
 
@@ -149,9 +152,7 @@ export function AgentChat({ agent }: AgentChatProps) {
 
         const streamingMessageId = `streaming-${executionId}`;
 
-        // CRITICAL: Create streaming message IMMEDIATELY before starting stream
-        // This prevents race condition where first tokens arrive before message exists
-        // Use a single space to ensure message renders empty messages are filtered out
+        // Create streaming message IMMEDIATELY before starting stream
         addMessageToThread(threadId, {
             id: streamingMessageId,
             role: "assistant",
@@ -165,13 +166,9 @@ export function AgentChat({ agent }: AgentChatProps) {
                 logger.debug("SSE connected for execution", { executionId });
             },
             onToken: (token: string) => {
-                // Use function updater pattern for atomic updates like AIChatPanel
-                // This ensures we always append to the current state, not accumulated ref
                 updateThreadMessage(threadId, streamingMessageId, (current: string) => {
-                    // Remove leading space placeholder on first real token
                     const cleanCurrent = current.trimStart() || "";
                     const newContent = cleanCurrent + token;
-                    // Also update ref for onCompleted fallback
                     streamingContentRef.current = newContent;
                     return newContent;
                 });
@@ -182,8 +179,6 @@ export function AgentChat({ agent }: AgentChatProps) {
             },
             onMessage: (message: ThreadMessage) => {
                 logger.debug("Received message", { message });
-                // Ignore assistant messages during streaming they're handled via onToken
-                // Adding them here would create duplicate/incomplete messages
                 if (message.role === "user") {
                     addMessageToThread(threadId, message);
                 }
@@ -227,28 +222,21 @@ export function AgentChat({ agent }: AgentChatProps) {
             onCompleted: (data) => {
                 logger.info("Execution completed", { executionId });
 
-                // ALWAYS use backend finalMessage it's guaranteed complete
-                // The accumulated content may be missing initial tokens
                 const finalContent = data.finalMessage || streamingContentRef.current;
 
                 logger.info("Finalizing message", {
                     hasBackendFinalMessage: !!data.finalMessage,
                     backendLength: data.finalMessage?.length || 0,
-                    accumulatedLength: streamingContentRef.current.length,
-                    accumulatedPreview: streamingContentRef.current.substring(0, 100),
-                    backendPreview: data.finalMessage?.substring(0, 100)
+                    accumulatedLength: streamingContentRef.current.length
                 });
 
                 const store = useAgentStore.getState();
                 const currentMessages = store.threadMessages[threadId] || [];
                 const streamingMsg = currentMessages.find((m) => m.id === streamingMessageId);
 
-                // Update streaming message in place with final content (don't replace)
-                // This prevents the message from disappearing/reappearing
                 if (streamingMsg) {
                     updateThreadMessage(threadId, streamingMessageId, finalContent);
                 } else {
-                    // Message doesn't exist - create final message
                     const filteredMessages = currentMessages.filter(
                         (m) => m.id !== streamingMessageId
                     );
@@ -272,7 +260,6 @@ export function AgentChat({ agent }: AgentChatProps) {
             onError: (error: string) => {
                 logger.error("SSE error", undefined, { error });
 
-                // Remove streaming message
                 const store = useAgentStore.getState();
                 const currentMessages = store.threadMessages[threadId] || [];
                 store.setThreadMessages(
@@ -320,7 +307,6 @@ export function AgentChat({ agent }: AgentChatProps) {
             const execStatus = store.currentExecutionStatus;
 
             if (!execId || execStatus !== "running") {
-                // Start new execution in current thread (or new thread if none exists)
                 const threadId = currentThread?.id;
                 await executeAgent(
                     agent.id,
@@ -330,7 +316,6 @@ export function AgentChat({ agent }: AgentChatProps) {
                     overrideModel || undefined
                 );
             } else {
-                // Try to continue existing execution
                 try {
                     await sendMessage(message);
                 } catch (error) {
@@ -341,7 +326,6 @@ export function AgentChat({ agent }: AgentChatProps) {
                     ) {
                         logger.warn("Unexpected error sending message", { error: errorMessage });
                     }
-                    // Start new execution in same thread
                     await executeAgent(
                         agent.id,
                         message,
@@ -364,6 +348,32 @@ export function AgentChat({ agent }: AgentChatProps) {
         }
     };
 
+    // Voice chat callbacks - message updates are now handled directly by useVoiceSession
+    // These callbacks are kept for logging and additional side effects
+    const handleVoiceExecutionStarted = useCallback(
+        (data: { executionId: string; threadId: string; userMessage: string }) => {
+            // Messages are now added directly by useVoiceSession hook
+            // Just log for debugging purposes
+            logger.info("Voice execution started (messages added by hook)", {
+                ...data,
+                currentThreadId: currentThread?.id,
+                activeThreadId
+            });
+        },
+        [currentThread?.id, activeThreadId]
+    );
+
+    const handleVoiceAgentToken = useCallback((_token: string) => {
+        // Tokens are now handled directly by useVoiceSession hook
+        // Keep callback for potential future analytics or UI updates
+    }, []);
+
+    const handleVoiceAgentDone = useCallback(() => {
+        // Message finalization is now handled directly by useVoiceSession hook
+        logger.info("Voice agent done");
+        refreshTokenUsage();
+    }, [refreshTokenUsage]);
+
     const usageLabel =
         tokenUsage && tokenUsage.totalTokens > 0
             ? `${tokenUsage.totalTokens.toLocaleString()} tokens${
@@ -373,7 +383,7 @@ export function AgentChat({ agent }: AgentChatProps) {
 
     return (
         <div className="h-full flex flex-col">
-            {/* Chat header - Fixed */}
+            {/* Chat header */}
             <div className="border-b border-border p-4 flex items-center justify-between flex-shrink-0 bg-card">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -388,6 +398,14 @@ export function AgentChat({ agent }: AgentChatProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {(agent.metadata as { voice?: { enabled?: boolean } } | null)?.voice
+                        ?.enabled && (
+                        <VoiceModeToggle
+                            isVoiceMode={isVoiceMode}
+                            onToggle={() => setIsVoiceMode(!isVoiceMode)}
+                            disabled={isSending}
+                        />
+                    )}
                     <AgentConnectionSelector
                         agent={agent}
                         overrideConnectionId={overrideConnectionId}
@@ -400,7 +418,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 </div>
             </div>
 
-            {/* Messages - Scrollable */}
+            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background">
                 {messages.length === 0 ? (
                     <div className="h-full flex items-center justify-center">
@@ -412,228 +430,65 @@ export function AgentChat({ agent }: AgentChatProps) {
                 ) : (
                     <>
                         {messages.map((message) => {
-                            // Skip empty assistant messages that only had tool_calls
+                            // Skip empty assistant messages
                             if (message.role === "assistant" && !message.content?.trim()) {
                                 return null;
                             }
 
-                            // Render tool messages with special UI
+                            // Tool messages have special rendering
                             if (message.role === "tool") {
-                                const isError =
-                                    message.content.includes('"error":true') ||
-                                    message.content.includes("Validation errors") ||
-                                    message.content.toLowerCase().includes('"error"');
-
-                                let toolName = message.tool_name || "unknown";
-                                if (toolName === "unknown") {
-                                    try {
-                                        const parsed = JSON.parse(message.content);
-                                        toolName = parsed.toolName || parsed.tool || toolName;
-                                    } catch {
-                                        // Keep "unknown"
-                                    }
-                                }
-
                                 return (
-                                    <div key={message.id} className="flex gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                                            <Wrench className="w-4 h-4 text-amber-500" />
-                                        </div>
-                                        <div className="max-w-[80%] rounded-lg px-4 py-3 bg-muted/50 border border-border">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="text-sm font-medium">
-                                                    Using tool - {toolName}
-                                                </span>
-                                                {isError ? (
-                                                    <span className="flex items-center gap-1 text-xs bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full">
-                                                        <XCircle className="w-3 h-3" />
-                                                        Failed
-                                                    </span>
-                                                ) : (
-                                                    <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full">
-                                                        <CheckCircle2 className="w-3 h-3" />
-                                                        Success
-                                                    </span>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-xs h-auto py-0.5 px-2"
-                                                    onClick={() =>
-                                                        setSelectedToolError({
-                                                            toolName: toolName,
-                                                            error: message.content
-                                                        })
-                                                    }
-                                                >
-                                                    <Eye className="w-3 h-3 mr-1" />
-                                                    {isError ? "View Error" : "View Result"}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <ToolMessageDisplay
+                                        key={message.id}
+                                        message={message}
+                                        onViewDetails={(content) =>
+                                            setSelectedToolCall({
+                                                id: message.id,
+                                                toolName: message.tool_name || "unknown",
+                                                status: content.includes('"error"')
+                                                    ? "failed"
+                                                    : "success",
+                                                error: content.includes('"error"')
+                                                    ? content
+                                                    : undefined,
+                                                result: !content.includes('"error"')
+                                                    ? JSON.parse(content)
+                                                    : undefined
+                                            })
+                                        }
+                                    />
                                 );
                             }
 
-                            // Render regular messages
+                            // System messages
+                            if (message.role === "system") {
+                                return (
+                                    <ChatBubble
+                                        key={message.id}
+                                        role="system"
+                                        content={message.content}
+                                    />
+                                );
+                            }
+
+                            // User and assistant messages
                             return (
-                                <div
+                                <ChatBubble
                                     key={message.id}
-                                    className={cn(
-                                        "flex gap-3",
-                                        message.role === "user" ? "justify-end" : "justify-start"
-                                    )}
-                                >
-                                    {message.role !== "user" && message.role !== "system" && (
-                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                            <Bot className="w-4 h-4 text-primary" />
-                                        </div>
-                                    )}
-                                    <div
-                                        className={cn(
-                                            "max-w-[80%] rounded-lg px-4 py-3",
-                                            message.role === "user"
-                                                ? "bg-primary text-primary-foreground"
-                                                : message.role === "system"
-                                                  ? "bg-muted/50 text-muted-foreground text-sm italic"
-                                                  : "bg-card border border-border text-foreground"
-                                        )}
-                                    >
-                                        {message.role === "assistant" ? (
-                                            <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
-                                                <ReactMarkdown
-                                                    remarkPlugins={[remarkGfm]}
-                                                    components={{
-                                                        h1: ({ children }) => (
-                                                            <h1 className="text-lg font-bold mt-4 mb-2 pb-2 border-b border-border">
-                                                                {children}
-                                                            </h1>
-                                                        ),
-                                                        h2: ({ children }) => (
-                                                            <h2 className="text-base font-bold mt-3 mb-2 pb-1 border-b border-border">
-                                                                {children}
-                                                            </h2>
-                                                        ),
-                                                        h3: ({ children }) => (
-                                                            <h3 className="text-sm font-bold mt-2 mb-1">
-                                                                {children}
-                                                            </h3>
-                                                        ),
-                                                        ul: ({ children }) => (
-                                                            <ul className="list-disc list-inside my-2 space-y-1">
-                                                                {children}
-                                                            </ul>
-                                                        ),
-                                                        ol: ({ children }) => (
-                                                            <ol className="list-decimal list-inside my-2 space-y-1">
-                                                                {children}
-                                                            </ol>
-                                                        ),
-                                                        li: ({ children }) => (
-                                                            <li className="ml-2 [&>p]:inline [&>p]:my-0">
-                                                                {children}
-                                                            </li>
-                                                        ),
-                                                        p: ({ children }) => (
-                                                            <p className="my-1.5">{children}</p>
-                                                        ),
-                                                        strong: ({ children }) => (
-                                                            <strong className="font-semibold">
-                                                                {children}
-                                                            </strong>
-                                                        ),
-                                                        code: ({ children, className }) => {
-                                                            const isInline = !className;
-                                                            return isInline ? (
-                                                                <code className="px-1.5 py-0.5 rounded bg-muted-foreground/10 text-foreground font-mono text-xs">
-                                                                    {children}
-                                                                </code>
-                                                            ) : (
-                                                                <code className="block px-3 py-2 rounded bg-muted-foreground/10 text-foreground font-mono text-xs overflow-x-auto">
-                                                                    {children}
-                                                                </code>
-                                                            );
-                                                        },
-                                                        blockquote: ({ children }) => (
-                                                            <blockquote className="border-l-2 border-primary pl-3 italic my-2">
-                                                                {children}
-                                                            </blockquote>
-                                                        )
-                                                    }}
-                                                >
-                                                    {message.content}
-                                                </ReactMarkdown>
-                                            </div>
-                                        ) : (
-                                            <div className="whitespace-pre-wrap break-words">
-                                                {message.content}
-                                            </div>
-                                        )}
-                                    </div>
-                                    {message.role === "user" && (
-                                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                                            <User className="w-4 h-4 text-secondary-foreground" />
-                                        </div>
-                                    )}
-                                </div>
+                                    role={message.role}
+                                    content={message.content}
+                                    assistantVariant="bordered"
+                                />
                             );
                         })}
-                        {/* Tool calls */}
-                        {toolCalls.map((toolCall) => (
-                            <div key={toolCall.id} className="flex gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                                    <Wrench className="w-4 h-4 text-amber-500" />
-                                </div>
-                                <div className="max-w-[80%] rounded-lg px-4 py-3 bg-muted/50 border border-border">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-sm font-medium">
-                                            Using tool - {toolCall.toolName}
-                                        </span>
-                                        {toolCall.status === "running" && (
-                                            <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                                        )}
-                                        {toolCall.status === "success" && (
-                                            <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full">
-                                                <CheckCircle2 className="w-3 h-3" />
-                                                Success
-                                            </span>
-                                        )}
-                                        {toolCall.status === "failed" && (
-                                            <span className="flex items-center gap-1 text-xs bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full">
-                                                <XCircle className="w-3 h-3" />
-                                                Failed
-                                            </span>
-                                        )}
-                                        {(toolCall.status === "success" ||
-                                            toolCall.status === "failed") && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-xs h-auto py-0.5 px-2"
-                                                onClick={() =>
-                                                    setSelectedToolError({
-                                                        toolName: toolCall.toolName,
-                                                        error:
-                                                            toolCall.status === "failed"
-                                                                ? toolCall.error || "Unknown error"
-                                                                : JSON.stringify(
-                                                                      toolCall.result,
-                                                                      null,
-                                                                      2
-                                                                  )
-                                                    })
-                                                }
-                                            >
-                                                <Eye className="w-3 h-3 mr-1" />
-                                                {toolCall.status === "failed"
-                                                    ? "View Error"
-                                                    : "View Result"}
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+
+                        {/* Active tool calls */}
+                        <ToolCallList
+                            toolCalls={toolCalls}
+                            onViewDetails={(tc) => setSelectedToolCall(tc)}
+                        />
+
+                        {/* Typing indicator */}
                         {isSending && currentExecutionId && toolCalls.length === 0 && (
                             <div className="flex gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -649,70 +504,93 @@ export function AgentChat({ agent }: AgentChatProps) {
                 )}
             </div>
 
-            {/* Input - Fixed at bottom */}
+            {/* Input Area */}
             <div className="border-t border-border p-4 flex-shrink-0 bg-card">
-                <div className="flex gap-2">
-                    <Input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="What can your Agent do for you today?"
-                        disabled={isSending}
-                        className={cn("flex-1 px-4 py-3", "bg-muted")}
+                {isVoiceMode && currentThread?.id ? (
+                    <VoiceChat
+                        agentId={agent.id}
+                        threadId={currentThread.id}
+                        onClose={() => {
+                            setIsVoiceMode(false);
+                            if (currentThread?.id) {
+                                fetchThreadMessages(currentThread.id);
+                            }
+                        }}
+                        compact={true}
+                        onExecutionStarted={handleVoiceExecutionStarted}
+                        onAgentToken={handleVoiceAgentToken}
+                        onAgentDone={handleVoiceAgentDone}
                     />
-                    <Button
-                        variant="primary"
-                        onClick={handleSend}
-                        disabled={!input.trim() || isSending}
-                        className="px-4 py-3"
-                    >
-                        <Send className="w-5 h-5" />
-                    </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                    Having trouble? Report your issue to our team
-                </p>
+                ) : (
+                    <>
+                        <div className="flex gap-2">
+                            <Input
+                                type="text"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="What can your Agent do for you today?"
+                                disabled={isSending}
+                                className={cn("flex-1 px-4 py-3", "bg-muted")}
+                            />
+                            <Button
+                                variant="primary"
+                                onClick={handleSend}
+                                disabled={!input.trim() || isSending}
+                                className="px-4 py-3"
+                            >
+                                <Send className="w-5 h-5" />
+                            </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2 text-center">
+                            Having trouble? Report your issue to our team
+                        </p>
+                    </>
+                )}
             </div>
 
             {/* Tool result/error dialog */}
-            {selectedToolError && (
+            {selectedToolCall && (
                 <Dialog
                     isOpen={true}
-                    onClose={() => setSelectedToolError(null)}
-                    title={`Tool Details - ${selectedToolError.toolName}`}
+                    onClose={() => setSelectedToolCall(null)}
+                    title={`Tool Details - ${selectedToolCall.toolName}`}
                 >
                     <div className="space-y-4">
-                        {(() => {
-                            try {
-                                const parsed = JSON.parse(selectedToolError.error);
-                                // Check if the parsed result contains media
-                                if (hasMediaContent(parsed)) {
+                        <ToolResultDialogContent
+                            content={
+                                selectedToolCall.error ||
+                                JSON.stringify(selectedToolCall.result, null, 2)
+                            }
+                            isError={selectedToolCall.status === "failed"}
+                            customRenderer={(content) => {
+                                try {
+                                    const parsed = JSON.parse(content);
+                                    if (hasMediaContent(parsed)) {
+                                        return (
+                                            <MediaOutput
+                                                data={parsed}
+                                                showJson={true}
+                                                maxImages={4}
+                                            />
+                                        );
+                                    }
                                     return (
-                                        <MediaOutput data={parsed} showJson={true} maxImages={4} />
-                                    );
-                                }
-                                // No media - show as JSON
-                                return (
-                                    <div className="bg-muted border border-border rounded-lg p-4">
                                         <pre className="text-xs text-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
                                             {JSON.stringify(parsed, null, 2)}
                                         </pre>
-                                    </div>
-                                );
-                            } catch {
-                                // Not JSON - show as plain text
-                                return (
-                                    <div className="bg-muted border border-border rounded-lg p-4">
+                                    );
+                                } catch {
+                                    return (
                                         <pre className="text-xs text-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
-                                            {selectedToolError.error}
+                                            {content}
                                         </pre>
-                                    </div>
-                                );
-                            }
-                        })()}
+                                    );
+                                }
+                            }}
+                        />
                         <div className="flex justify-end">
-                            <Button variant="secondary" onClick={() => setSelectedToolError(null)}>
+                            <Button variant="secondary" onClick={() => setSelectedToolCall(null)}>
                                 Close
                             </Button>
                         </div>

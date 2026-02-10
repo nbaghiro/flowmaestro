@@ -18,15 +18,15 @@ export async function listExecutionsHandler(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { id: agentId } = listExecutionsParamsSchema.parse(request.params);
     const { limit, offset, status } = listExecutionsQuerySchema.parse(request.query);
 
     const agentRepo = new AgentRepository();
     const executionRepo = new AgentExecutionRepository();
 
-    // Verify agent exists and belongs to user
-    const agent = await agentRepo.findByIdAndUserId(agentId, userId);
+    // Verify agent exists and belongs to workspace
+    const agent = await agentRepo.findByIdAndWorkspaceId(agentId, workspaceId);
     if (!agent) {
         throw new NotFoundError("Agent not found");
     }

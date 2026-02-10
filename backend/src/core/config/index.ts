@@ -186,6 +186,36 @@ export const config = {
     },
 
     // ==========================================================================
+    // Voice Chat Configuration
+    // ==========================================================================
+    voice: {
+        // Deepgram STT settings
+        deepgram: {
+            model: (process.env.DEEPGRAM_MODEL as "nova-2" | "nova-3") || "nova-2",
+            language: process.env.DEEPGRAM_LANGUAGE || "en-US",
+            sampleRate: parseInt(process.env.DEEPGRAM_SAMPLE_RATE || "16000"),
+            endpointing: parseInt(process.env.DEEPGRAM_ENDPOINTING || "300") // ms of silence
+        },
+        // ElevenLabs TTS settings
+        elevenlabs: {
+            defaultVoiceId: process.env.ELEVENLABS_DEFAULT_VOICE_ID || "21m00Tcm4TlvDq8ikWAM",
+            model:
+                (process.env.ELEVENLABS_MODEL as
+                    | "eleven_turbo_v2_5"
+                    | "eleven_multilingual_v2"
+                    | "eleven_flash_v2_5") || "eleven_turbo_v2_5",
+            stability: parseFloat(process.env.ELEVENLABS_STABILITY || "0.5"),
+            similarityBoost: parseFloat(process.env.ELEVENLABS_SIMILARITY_BOOST || "0.75"),
+            outputFormat:
+                (process.env.ELEVENLABS_OUTPUT_FORMAT as
+                    | "mp3_44100_128"
+                    | "mp3_22050_32"
+                    | "pcm_16000"
+                    | "pcm_22050") || "mp3_44100_128"
+        }
+    },
+
+    // ==========================================================================
     // Email Services
     // ==========================================================================
     resend: {
@@ -386,6 +416,12 @@ export const config = {
             clientSecret: process.env.CLOSE_CLIENT_SECRET || ""
         },
 
+        // Zoho CRM
+        zohoCrm: {
+            clientId: process.env.ZOHO_CRM_CLIENT_ID || "",
+            clientSecret: process.env.ZOHO_CRM_CLIENT_SECRET || ""
+        },
+
         // TikTok
         tiktok: {
             clientId: process.env.TIKTOK_CLIENT_ID || "",
@@ -408,6 +444,12 @@ export const config = {
         docusign: {
             clientId: process.env.DOCUSIGN_CLIENT_ID || "",
             clientSecret: process.env.DOCUSIGN_CLIENT_SECRET || ""
+        },
+
+        // PandaDoc
+        pandadoc: {
+            clientId: process.env.PANDADOC_CLIENT_ID || "",
+            clientSecret: process.env.PANDADOC_CLIENT_SECRET || ""
         },
 
         // SurveyMonkey
@@ -488,10 +530,148 @@ export const config = {
             clientSecret: process.env.RIPPLING_CLIENT_SECRET || ""
         },
 
+        // BambooHR
+        bamboohr: {
+            clientId: process.env.BAMBOOHR_CLIENT_ID || "",
+            clientSecret: process.env.BAMBOOHR_CLIENT_SECRET || ""
+        },
+
+        // ADP
+        adp: {
+            clientId: process.env.ADP_CLIENT_ID || "",
+            clientSecret: process.env.ADP_CLIENT_SECRET || ""
+        },
+
+        // Gusto
+        gusto: {
+            clientId: process.env.GUSTO_CLIENT_ID || "",
+            clientSecret: process.env.GUSTO_CLIENT_SECRET || ""
+        },
+
         // Square
         square: {
             clientId: process.env.SQUARE_CLIENT_ID || "",
             clientSecret: process.env.SQUARE_CLIENT_SECRET || ""
+        },
+
+        // PayPal
+        paypal: {
+            clientId: process.env.PAYPAL_CLIENT_ID || "",
+            clientSecret: process.env.PAYPAL_CLIENT_SECRET || ""
+        },
+
+        // DigitalOcean
+        digitalocean: {
+            clientId: process.env.DIGITALOCEAN_CLIENT_ID || "",
+            clientSecret: process.env.DIGITALOCEAN_CLIENT_SECRET || ""
+        },
+
+        // Amazon Seller Central
+        amazonSellerCentral: {
+            clientId: process.env.AMAZON_SELLER_CENTRAL_CLIENT_ID || "",
+            clientSecret: process.env.AMAZON_SELLER_CENTRAL_CLIENT_SECRET || ""
+        },
+
+        // Canva
+        canva: {
+            clientId: process.env.CANVA_CLIENT_ID || "",
+            clientSecret: process.env.CANVA_CLIENT_SECRET || ""
+        },
+
+        // Miro
+        miro: {
+            clientId: process.env.MIRO_CLIENT_ID || "",
+            clientSecret: process.env.MIRO_CLIENT_SECRET || ""
+        },
+
+        // Confluence (Atlassian - separate from Jira)
+        confluence: {
+            clientId: process.env.CONFLUENCE_CLIENT_ID || "",
+            clientSecret: process.env.CONFLUENCE_CLIENT_SECRET || ""
+        },
+
+        // Help Scout
+        helpscout: {
+            clientId: process.env.HELPSCOUT_CLIENT_ID || "",
+            clientSecret: process.env.HELPSCOUT_CLIENT_SECRET || ""
+        },
+
+        // LiveChat
+        livechat: {
+            clientId: process.env.LIVECHAT_CLIENT_ID || "",
+            clientSecret: process.env.LIVECHAT_CLIENT_SECRET || ""
+        },
+
+        // Drift
+        drift: {
+            clientId: process.env.DRIFT_CLIENT_ID || "",
+            clientSecret: process.env.DRIFT_CLIENT_SECRET || ""
+        },
+
+        // Zoom
+        zoom: {
+            clientId: process.env.ZOOM_CLIENT_ID || "",
+            clientSecret: process.env.ZOOM_CLIENT_SECRET || ""
+        },
+
+        // SAP
+        sap: {
+            clientId: process.env.SAP_CLIENT_ID || "",
+            clientSecret: process.env.SAP_CLIENT_SECRET || ""
+        },
+
+        // NetSuite
+        netsuite: {
+            clientId: process.env.NETSUITE_CLIENT_ID || "",
+            clientSecret: process.env.NETSUITE_CLIENT_SECRET || ""
+        },
+
+        // Xero
+        xero: {
+            clientId: process.env.XERO_CLIENT_ID || "",
+            clientSecret: process.env.XERO_CLIENT_SECRET || ""
+        },
+
+        // Sage
+        sage: {
+            clientId: process.env.SAGE_CLIENT_ID || "",
+            clientSecret: process.env.SAGE_CLIENT_SECRET || ""
+        },
+
+        // Etsy
+        etsy: {
+            clientId: process.env.ETSY_CLIENT_ID || "",
+            clientSecret: process.env.ETSY_CLIENT_SECRET || ""
+        },
+
+        // Squarespace
+        squarespace: {
+            clientId: process.env.SQUARESPACE_CLIENT_ID || "",
+            clientSecret: process.env.SQUARESPACE_CLIENT_SECRET || ""
+        },
+
+        // eBay
+        ebay: {
+            clientId: process.env.EBAY_CLIENT_ID || "",
+            clientSecret: process.env.EBAY_CLIENT_SECRET || ""
+        },
+
+        // Gorgias
+        gorgias: {
+            clientId: process.env.GORGIAS_CLIENT_ID || "",
+            clientSecret: process.env.GORGIAS_CLIENT_SECRET || ""
+        },
+
+        // Bill.com
+        billCom: {
+            clientId: process.env.BILL_COM_CLIENT_ID || "",
+            clientSecret: process.env.BILL_COM_CLIENT_SECRET || ""
+        },
+
+        // Ramp
+        ramp: {
+            clientId: process.env.RAMP_CLIENT_ID || "",
+            clientSecret: process.env.RAMP_CLIENT_SECRET || ""
         }
     }
 };
@@ -516,6 +696,8 @@ export function getOAuthRedirectUri(provider: string): string {
         "google-slides": "/oauth/google/callback",
         "google-forms": "/oauth/google/callback",
         gmail: "/oauth/google/callback",
+        "google-analytics": "/oauth/google/callback",
+        "google-cloud-storage": "/oauth/google/callback",
 
         // Microsoft services all use the same callback
         microsoft: "/oauth/microsoft/callback",
@@ -525,6 +707,8 @@ export function getOAuthRedirectUri(provider: string): string {
         "microsoft-word": "/oauth/microsoft/callback",
         "microsoft-powerpoint": "/oauth/microsoft/callback",
         "microsoft-teams": "/oauth/microsoft/callback",
+        "microsoft-outlook": "/oauth/microsoft/callback",
+        "power-bi": "/oauth/microsoft/callback",
 
         // Meta services all use the same callback
         whatsapp: "/oauth/meta/callback",
@@ -562,6 +746,7 @@ export function getOAuthRedirectUri(provider: string): string {
         pinterest: "/oauth/pinterest/callback",
         hellosign: "/oauth/hellosign/callback",
         docusign: "/oauth/docusign/callback",
+        pandadoc: "/oauth/pandadoc/callback",
         surveymonkey: "/oauth/surveymonkey/callback",
         intercom: "/oauth/intercom/callback",
         buffer: "/oauth/buffer/callback",
@@ -575,7 +760,33 @@ export function getOAuthRedirectUri(provider: string): string {
         freshbooks: "/oauth/freshbooks/callback",
         workday: "/oauth/workday/callback",
         rippling: "/oauth/rippling/callback",
+        adp: "/oauth/adp/callback",
+        gusto: "/oauth/gusto/callback",
+        bamboohr: "/oauth/bamboohr/callback",
         square: "/oauth/square/callback",
+        paypal: "/oauth/paypal/callback",
+        digitalocean: "/oauth/digitalocean/callback",
+        "amazon-seller-central": "/oauth/amazon-seller-central/callback",
+        canva: "/oauth/canva/callback",
+        miro: "/oauth/miro/callback",
+        confluence: "/oauth/confluence/callback",
+        sharepoint: "/oauth/microsoft/callback",
+        helpscout: "/oauth/helpscout/callback",
+        livechat: "/oauth/livechat/callback",
+        drift: "/oauth/drift/callback",
+        zoom: "/oauth/zoom/callback",
+        "google-meet": "/oauth/google/callback",
+        sap: "/oauth/sap/callback",
+        netsuite: "/oauth/netsuite/callback",
+        xero: "/oauth/xero/callback",
+        sage: "/oauth/sage/callback",
+        etsy: "/oauth/etsy/callback",
+        squarespace: "/oauth/squarespace/callback",
+        ebay: "/oauth/ebay/callback",
+        gorgias: "/oauth/gorgias/callback",
+        "zoho-crm": "/oauth/zoho-crm/callback",
+        "bill-com": "/oauth/bill-com/callback",
+        ramp: "/oauth/ramp/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -601,6 +812,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "google-slides": "google",
         "google-forms": "google",
         gmail: "google",
+        "google-analytics": "google",
+        "google-cloud-storage": "google",
 
         // Microsoft services
         microsoft: "microsoft",
@@ -610,6 +823,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "microsoft-word": "microsoft",
         "microsoft-powerpoint": "microsoft",
         "microsoft-teams": "microsoft",
+        "microsoft-outlook": "microsoft",
+        "power-bi": "microsoft",
 
         // Meta services - special handling
         whatsapp: "meta",
@@ -647,6 +862,7 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         pinterest: "pinterest",
         hellosign: "hellosign",
         docusign: "docusign",
+        pandadoc: "pandadoc",
         surveymonkey: "surveymonkey",
         intercom: "intercom",
         buffer: "buffer",
@@ -659,7 +875,32 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         quickbooks: "quickbooks",
         freshbooks: "freshbooks",
         workday: "workday",
-        rippling: "rippling"
+        rippling: "rippling",
+        adp: "adp",
+        gusto: "gusto",
+        bamboohr: "bamboohr",
+        paypal: "paypal",
+        "amazon-seller-central": "amazonSellerCentral",
+        canva: "canva",
+        miro: "miro",
+        confluence: "confluence",
+        sharepoint: "microsoft",
+        helpscout: "helpscout",
+        livechat: "livechat",
+        drift: "drift",
+        zoom: "zoom",
+        "google-meet": "google",
+        sap: "sap",
+        netsuite: "netsuite",
+        xero: "xero",
+        sage: "sage",
+        etsy: "etsy",
+        squarespace: "squarespace",
+        ebay: "ebay",
+        gorgias: "gorgias",
+        "zoho-crm": "zohoCrm",
+        "bill-com": "billCom",
+        ramp: "ramp"
     };
 
     const configKey = providerMap[provider];

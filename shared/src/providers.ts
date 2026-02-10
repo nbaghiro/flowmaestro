@@ -109,6 +109,7 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     notion: "notion.so",
     figma: "figma.com",
     salesforce: "salesforce.com",
+    pandadoc: "pandadoc.com",
     twitter: "x.com",
     linkedin: "linkedin.com",
     facebook: "facebook.com",
@@ -142,6 +143,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     pinterest: "pinterest.com",
     amplitude: "amplitude.com",
     mixpanel: "mixpanel.com",
+    "google-analytics": "analytics.google.com",
+    "power-bi": "powerbi.microsoft.com",
     segment: "segment.com",
     hellosign: "hellosign.com",
     docusign: "docusign.com",
@@ -150,6 +153,7 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     tableau: "tableau.com",
     intercom: "intercom.com",
     freshdesk: "freshdesk.com",
+    kustomer: "kustomer.com",
     buffer: "buffer.com",
     hootsuite: "hootsuite.com",
     calendly: "calendly.com",
@@ -165,7 +169,21 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     vercel: "vercel.com",
     circleci: "circleci.com",
     quickbooks: "quickbooks.intuit.com",
-    freshbooks: "freshbooks.com"
+    freshbooks: "freshbooks.com",
+    aws: "aws.amazon.com",
+    "aws-s3": "aws.amazon.com",
+    "google-cloud": "cloud.google.com",
+    "google-cloud-storage": "cloud.google.com",
+    "azure-devops": "dev.azure.com",
+    "azure-storage": "azure.microsoft.com",
+    wix: "wix.com",
+    woocommerce: "woocommerce.com",
+    bigcommerce: "bigcommerce.com",
+    zoom: "zoom.us",
+    "google-meet": "meet.google.com",
+    supabase: "supabase.com",
+    gitbook: "gitbook.com",
+    "bill-com": "bill.com"
 };
 
 /**
@@ -321,6 +339,20 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("notion.so"),
         category: "Productivity",
         methods: ["oauth2"]
+    },
+    {
+        provider: "gitbook",
+        displayName: "GitBook",
+        description: "Documentation platform for technical content, API docs, and knowledge bases",
+        logoUrl: getBrandLogo("gitbook.com"),
+        category: "Productivity",
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "Personal Access Token",
+            keyPlaceholder: "gb_api_...",
+            helpText: "Create a personal access token in your GitBook developer settings",
+            helpUrl: "https://app.gitbook.com/account/developer"
+        }
     },
     {
         provider: "airtable",
@@ -548,11 +580,19 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "twilio",
         displayName: "Twilio",
-        description: "Send SMS and make calls",
+        description: "Send SMS messages, manage phone numbers, and look up carrier info",
         logoUrl: getBrandLogo("twilio.com"),
         category: "Marketing",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Account SID",
+            keyPlaceholder: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Auth Token",
+            secretPlaceholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            helpText: "Find your Account SID and Auth Token in your Twilio Console",
+            helpUrl: "https://console.twilio.com/"
+        }
     },
 
     // File Storage
@@ -622,8 +662,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Track and analyze website traffic",
         logoUrl: getBrandLogo("analytics.google.com"),
         category: "Analytics",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "mixpanel",
@@ -677,7 +716,16 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("hotjar.com"),
         category: "Analytics",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Client ID",
+            keyPlaceholder: "Enter your Hotjar Client ID",
+            requiresSecret: true,
+            secretLabel: "Client Secret",
+            secretPlaceholder: "Enter your Hotjar Client Secret",
+            helpText: "Generate API keys in Hotjar under Organization Settings > API Keys",
+            helpUrl:
+                "https://help.hotjar.com/hc/en-us/articles/36819965653009-How-to-Set-Up-the-Hotjar-API"
+        }
     },
     {
         provider: "heap",
@@ -728,8 +776,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Cloud accounting software",
         logoUrl: getBrandLogo("xero.com"),
         category: "Accounting",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "stripe",
@@ -746,7 +793,15 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("plaid.com"),
         category: "Accounting",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Client ID",
+            keyPlaceholder: "Enter your Plaid client ID",
+            requiresSecret: true,
+            secretLabel: "Secret",
+            secretPlaceholder: "Enter your Plaid secret",
+            helpText: "Find your credentials in the Plaid Dashboard under Team Settings > Keys",
+            helpUrl: "https://dashboard.plaid.com/team/keys"
+        }
     },
     {
         provider: "sage",
@@ -754,8 +809,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Business accounting software",
         logoUrl: getBrandLogo("sage.com"),
         category: "Accounting",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "freshbooks",
@@ -771,8 +825,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Accounts payable and receivable automation",
         logoUrl: getBrandLogo("bill.com"),
         category: "Accounting",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "expensify",
@@ -781,7 +834,15 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("expensify.com"),
         category: "Accounting",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Partner User ID",
+            keyPlaceholder: "your-partner-user-id",
+            requiresSecret: true,
+            secretLabel: "Partner User Secret",
+            secretPlaceholder: "your-partner-user-secret",
+            helpText: "Get your Partner User ID and Secret from the Expensify Integrations page",
+            helpUrl: "https://www.expensify.com/tools/integrations/"
+        }
     },
     {
         provider: "ramp",
@@ -789,8 +850,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Corporate card and expense management",
         logoUrl: getBrandLogo("ramp.com"),
         category: "Accounting",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "wise",
@@ -799,7 +859,12 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("wise.com"),
         category: "Accounting",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Token",
+            keyPlaceholder: "your-personal-api-token",
+            helpText: "Generate a Personal API Token in your Wise account settings",
+            helpUrl: "https://wise.com/settings/api-tokens"
+        }
     },
 
     // HR & Recruiting
@@ -830,8 +895,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Payroll and HR management",
         logoUrl: getBrandLogo("adp.com"),
         category: "HR",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "gusto",
@@ -839,8 +903,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Payroll and benefits platform",
         logoUrl: getBrandLogo("gusto.com"),
         category: "HR",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "rippling",
@@ -849,6 +912,77 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("rippling.com"),
         category: "HR",
         methods: ["oauth2"]
+    },
+    {
+        provider: "bamboohr",
+        displayName: "BambooHR",
+        description: "HR management for SMBs",
+        logoUrl: getBrandLogo("bamboohr.com"),
+        category: "HR",
+        methods: ["oauth2"],
+        oauthSettings: [
+            {
+                name: "companyDomain",
+                label: "Company Subdomain",
+                placeholder: "your-company",
+                helpText:
+                    "Enter your BambooHR company subdomain (found in your URL, e.g., 'acme' from acme.bamboohr.com)",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$",
+                patternError: "Subdomain must start and end with a letter or number"
+            }
+        ]
+    },
+    {
+        provider: "hibob",
+        displayName: "HiBob",
+        description: "Modern HR for mid-market",
+        logoUrl: getBrandLogo("hibob.com"),
+        category: "HR",
+        methods: ["api_key"],
+        comingSoon: true
+    },
+    {
+        provider: "deel",
+        displayName: "Deel",
+        description: "Global HR and payroll",
+        logoUrl: getBrandLogo("deel.com"),
+        category: "HR",
+        methods: ["api_key", "oauth2"],
+        comingSoon: true
+    },
+    {
+        provider: "personio",
+        displayName: "Personio",
+        description: "European HR platform",
+        logoUrl: getBrandLogo("personio.com"),
+        category: "HR",
+        methods: ["api_key"],
+        comingSoon: true
+    },
+    {
+        provider: "sap-successfactors",
+        displayName: "SAP SuccessFactors",
+        description: "Enterprise HCM suite",
+        logoUrl: getBrandLogo("sap.com"),
+        category: "HR",
+        methods: ["oauth2"],
+        comingSoon: true
+    },
+    {
+        provider: "lattice",
+        displayName: "Lattice",
+        description: "Performance and engagement",
+        logoUrl: getBrandLogo("lattice.com"),
+        category: "HR",
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "lat_...",
+            helpText: "Generate an API key from your Lattice admin dashboard under Integrations",
+            helpUrl: "https://lattice.com"
+        }
     },
 
     // Customer Support
@@ -913,8 +1047,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Help desk software",
         logoUrl: getBrandLogo("helpscout.com"),
         category: "Customer Support",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "livechat",
@@ -922,8 +1055,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Live chat customer service",
         logoUrl: getBrandLogo("livechat.com"),
         category: "Customer Support",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "drift",
@@ -931,8 +1063,34 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Conversational marketing platform",
         logoUrl: getBrandLogo("drift.com"),
         category: "Customer Support",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
+    },
+    {
+        provider: "kustomer",
+        displayName: "Kustomer",
+        description: "CRM-powered customer service platform",
+        logoUrl: getBrandLogo("kustomer.com"),
+        category: "Customer Support",
+        methods: ["api_key"],
+        oauthSettings: [
+            {
+                name: "orgName",
+                label: "Organization Name",
+                placeholder: "your-org",
+                helpText:
+                    "Enter your Kustomer organization name (e.g., 'acme' from acme.api.kustomerapp.com)",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$",
+                patternError: "Organization name must contain only letters, numbers, and hyphens"
+            }
+        ],
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "your-api-key",
+            helpText: "Create an API key in Kustomer Settings > Security > API Keys",
+            helpUrl: "https://help.kustomer.com/api-introduction-BkwVN42zM"
+        }
     },
     {
         provider: "crisp",
@@ -946,22 +1104,55 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "gorgias",
         displayName: "Gorgias",
-        description: "E-commerce helpdesk platform",
+        description:
+            "E-commerce helpdesk platform for managing customer support tickets, customers, and messages",
         logoUrl: getBrandLogo("gorgias.com"),
         category: "Customer Support",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "subdomain",
+                label: "Gorgias Subdomain",
+                placeholder: "your-company",
+                helpText: "Enter your Gorgias subdomain (e.g., 'acme' from acme.gorgias.com)",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$",
+                patternError: "Subdomain must contain only letters, numbers, and hyphens"
+            }
+        ]
     },
 
     // E-commerce (Additional)
     {
         provider: "woocommerce",
         displayName: "WooCommerce",
-        description: "WordPress e-commerce plugin",
+        description: "Manage products, orders, customers, and inventory in your WooCommerce store",
         logoUrl: getBrandLogo("woocommerce.com"),
         category: "E-commerce",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Consumer Key",
+            keyPlaceholder: "ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Consumer Secret",
+            secretPlaceholder: "cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            helpText: "Generate REST API keys in WooCommerce > Settings > Advanced > REST API",
+            helpUrl: "https://woocommerce.com/document/woocommerce-rest-api/"
+        },
+        oauthSettings: [
+            {
+                name: "storeUrl",
+                label: "Store URL",
+                placeholder: "https://mystore.com",
+                helpText:
+                    "Your WooCommerce store URL (must use HTTPS and have pretty permalinks enabled)",
+                required: true,
+                type: "text",
+                pattern: "^https://",
+                patternError: "Store URL must use HTTPS"
+            }
+        ]
     },
     {
         provider: "magento",
@@ -975,11 +1166,20 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "bigcommerce",
         displayName: "BigCommerce",
-        description: "E-commerce platform",
+        description: "Manage products, orders, customers, and inventory in your BigCommerce store",
         logoUrl: getBrandLogo("bigcommerce.com"),
         category: "E-commerce",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Access Token",
+            keyPlaceholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Store Hash",
+            secretPlaceholder: "abc123xyz",
+            helpText:
+                "Create an API Account in BigCommerce Control Panel > Advanced Settings > API Accounts",
+            helpUrl: "https://developer.bigcommerce.com/docs/start/authentication/api-accounts"
+        }
     },
     {
         provider: "square",
@@ -995,26 +1195,66 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Payment processing platform",
         logoUrl: getBrandLogo("paypal.com"),
         category: "Payment Processing",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "amazon-seller-central",
         displayName: "Amazon Seller Central",
-        description: "Amazon marketplace management",
+        description: "Manage orders, catalog items, inventory, and pricing on Amazon marketplaces",
         logoUrl: getBrandLogo("sellercentral.amazon.com"),
         category: "E-commerce",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
-        provider: "printful",
-        displayName: "Printful",
-        description: "Print-on-demand dropshipping",
-        logoUrl: getBrandLogo("printful.com"),
+        provider: "ebay",
+        displayName: "eBay",
+        description: "Manage listings, orders, and inventory on eBay marketplace",
+        logoUrl: getBrandLogo("ebay.com"),
+        category: "E-commerce",
+        methods: ["oauth2"]
+    },
+    {
+        provider: "etsy",
+        displayName: "Etsy",
+        description: "Manage shop listings, orders, and customers on Etsy marketplace",
+        logoUrl: getBrandLogo("etsy.com"),
         category: "E-commerce",
         methods: ["oauth2"],
-        comingSoon: true
+        comingSoon: false
+    },
+    {
+        provider: "squarespace",
+        displayName: "Squarespace",
+        description: "Manage products, orders, and inventory in your Squarespace store",
+        logoUrl: getBrandLogo("squarespace.com"),
+        category: "E-commerce",
+        methods: ["oauth2"],
+        comingSoon: false
+    },
+    {
+        provider: "wix",
+        displayName: "Wix",
+        description: "Manage products, orders, and customers in your Wix eCommerce store",
+        logoUrl: getBrandLogo("wix.com"),
+        category: "E-commerce",
+        methods: ["api_key"],
+        comingSoon: false,
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "IST.xxxxx.xxxxx",
+            helpText: "Generate an API key in Wix API Keys Manager",
+            helpUrl: "https://manage.wix.com/account/api-keys"
+        },
+        oauthSettings: [
+            {
+                name: "siteId",
+                label: "Site ID",
+                placeholder: "abc123de-f456-7890-gh12-ijklmnopqrst",
+                helpText: "Find your Site ID in your Wix dashboard URL after /dashboard/",
+                required: true,
+                type: "text"
+            }
+        ]
     },
     {
         provider: "shippo",
@@ -1197,7 +1437,25 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("zoho.com"),
         category: "CRM & Sales",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "dataCenter",
+                label: "Data Center Region",
+                placeholder: "Select your Zoho data center",
+                helpText: "Choose the region where your Zoho account is hosted",
+                required: true,
+                type: "select",
+                options: [
+                    { value: "us", label: "United States (zoho.com)" },
+                    { value: "eu", label: "Europe (zoho.eu)" },
+                    { value: "au", label: "Australia (zoho.com.au)" },
+                    { value: "in", label: "India (zoho.in)" },
+                    { value: "jp", label: "Japan (zoho.jp)" },
+                    { value: "cn", label: "China (zoho.com.cn)" },
+                    { value: "ca", label: "Canada (zohocloud.ca)" }
+                ]
+            }
+        ]
     },
     {
         provider: "copper",
@@ -1206,7 +1464,17 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("copper.com"),
         category: "CRM & Sales",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "Your Copper API key",
+            requiresSecret: true,
+            secretLabel: "Email Address",
+            secretPlaceholder: "you@company.com",
+            helpText:
+                "Enter your Copper API key and the email address associated with your Copper account",
+            helpUrl:
+                "https://support.copper.com/hc/en-us/articles/115001212290-How-to-generate-an-API-key"
+        }
     },
     {
         provider: "close",
@@ -1222,8 +1490,17 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "CRM and project management",
         logoUrl: getBrandLogo("insightly.com"),
         category: "CRM & Sales",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "Your Insightly API key",
+            requiresSecret: true,
+            secretLabel: "Instance Pod",
+            secretPlaceholder: "na1",
+            helpText:
+                "Enter your API key and pod (na1, eu1, au1). Find these in User Settings > API section",
+            helpUrl: "https://support.insight.ly/en/articles/1795647-find-your-api-key"
+        }
     },
 
     // Collaboration (Additional Productivity)
@@ -1281,8 +1558,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Online whiteboard platform",
         logoUrl: getBrandLogo("miro.com"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "confluence",
@@ -1290,8 +1566,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Team workspace by Atlassian",
         logoUrl: getBrandLogo("atlassian.com/confluence"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "sharepoint",
@@ -1299,8 +1574,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Microsoft document management",
         logoUrl: getBrandLogo("sharepoint.com"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "evernote",
@@ -1324,8 +1598,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Graphic design platform",
         logoUrl: getBrandLogo("canva.com"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
 
     // Video & Communication
@@ -1335,8 +1608,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Video conferencing platform",
         logoUrl: getBrandLogo("zoom.us"),
         category: "Communication",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "calendly",
@@ -1379,8 +1651,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Video conferencing by Google",
         logoUrl: getBrandLogo("meet.google.com"),
         category: "Communication",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "front",
@@ -1530,29 +1801,93 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "aws",
         displayName: "AWS",
-        description: "Amazon Web Services cloud platform",
+        description:
+            "Cloud platform for Lambda, CloudWatch, and ECS - manage serverless functions, monitor metrics and logs, orchestrate containers",
         logoUrl: getBrandLogo("aws.amazon.com"),
         category: "Developer Tools",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Access Key ID",
+            keyPlaceholder: "AKIAIOSFODNN7EXAMPLE",
+            requiresSecret: true,
+            secretLabel: "Secret Access Key",
+            secretPlaceholder: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            helpText:
+                "Create an IAM user with appropriate permissions for Lambda, CloudWatch, and ECS",
+            helpUrl:
+                "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html"
+        },
+        oauthSettings: [
+            {
+                name: "region",
+                label: "AWS Region",
+                type: "select",
+                required: true,
+                placeholder: "Select region",
+                helpText: "The AWS region where your resources are located",
+                options: [
+                    { value: "us-east-1", label: "US East (N. Virginia)" },
+                    { value: "us-east-2", label: "US East (Ohio)" },
+                    { value: "us-west-1", label: "US West (N. California)" },
+                    { value: "us-west-2", label: "US West (Oregon)" },
+                    { value: "eu-west-1", label: "Europe (Ireland)" },
+                    { value: "eu-west-2", label: "Europe (London)" },
+                    { value: "eu-west-3", label: "Europe (Paris)" },
+                    { value: "eu-central-1", label: "Europe (Frankfurt)" },
+                    { value: "eu-north-1", label: "Europe (Stockholm)" },
+                    { value: "ap-southeast-1", label: "Asia Pacific (Singapore)" },
+                    { value: "ap-southeast-2", label: "Asia Pacific (Sydney)" },
+                    { value: "ap-northeast-1", label: "Asia Pacific (Tokyo)" },
+                    { value: "ap-northeast-2", label: "Asia Pacific (Seoul)" },
+                    { value: "ap-south-1", label: "Asia Pacific (Mumbai)" },
+                    { value: "sa-east-1", label: "South America (São Paulo)" },
+                    { value: "ca-central-1", label: "Canada (Central)" }
+                ]
+            }
+        ]
     },
     {
         provider: "google-cloud",
-        displayName: "Google Cloud Platform",
-        description: "Google cloud services",
+        displayName: "Google Cloud",
+        description:
+            "Cloud platform for Cloud Build, Secret Manager, Compute Engine, and Cloud Run - CI/CD automation, secret management, VM and container orchestration",
         logoUrl: getBrandLogo("cloud.google.com"),
         category: "Developer Tools",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "projectId",
+                label: "GCP Project ID",
+                type: "text",
+                required: true,
+                placeholder: "my-project-123456",
+                helpText: "Enter your Google Cloud Project ID",
+                pattern: "^[a-z][a-z0-9-]{4,28}[a-z0-9]$",
+                patternError:
+                    "Project ID must be 6-30 characters, lowercase letters, numbers, and hyphens only"
+            }
+        ]
     },
     {
-        provider: "azure",
-        displayName: "Microsoft Azure",
-        description: "Microsoft cloud platform",
-        logoUrl: getBrandLogo("azure.microsoft.com"),
+        provider: "azure-devops",
+        displayName: "Azure DevOps",
+        description:
+            "DevOps platform covering work items, repos, pipelines, releases, and test plans - complete CI/CD and project management automation",
+        logoUrl: getBrandLogo("dev.azure.com"),
         category: "Developer Tools",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "organization",
+                label: "Azure DevOps Organization",
+                type: "text",
+                required: true,
+                placeholder: "my-organization",
+                helpText: "Enter your Azure DevOps organization name (from dev.azure.com/YOUR-ORG)",
+                pattern: "^[a-zA-Z0-9-]+$",
+                patternError: "Organization name can only contain letters, numbers, and hyphens"
+            }
+        ]
     },
     {
         provider: "circleci",
@@ -1572,20 +1907,38 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "cloudflare",
         displayName: "Cloudflare",
-        description: "CDN and security platform",
+        description:
+            "Manage DNS records, Workers, KV storage, and zones - CDN and edge computing platform",
         logoUrl: getBrandLogo("cloudflare.com"),
         category: "Developer Tools",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Token",
+            keyPlaceholder: "Enter your Cloudflare API Token",
+            helpText: "Create an API Token with appropriate permissions in Cloudflare dashboard",
+            helpUrl: "https://developers.cloudflare.com/fundamentals/api/get-started/create-token/"
+        },
+        oauthSettings: [
+            {
+                name: "accountId",
+                label: "Account ID",
+                type: "text",
+                required: true,
+                placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                helpText: "Find your Account ID on the Cloudflare dashboard Overview page",
+                pattern: "^[a-f0-9]{32}$",
+                patternError: "Account ID must be a 32-character hex string"
+            }
+        ]
     },
     {
         provider: "digitalocean",
         displayName: "DigitalOcean",
-        description: "Cloud infrastructure provider",
+        description:
+            "Cloud platform for Droplets, Kubernetes, App Platform, Databases, and Load Balancers - manage cloud infrastructure and deployments",
         logoUrl: getBrandLogo("digitalocean.com"),
         category: "Developer Tools",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "heroku",
@@ -1615,33 +1968,105 @@ export const ALL_PROVIDERS: Provider[] = [
         comingSoon: true
     },
 
-    // Cloud Storage (Additional)
+    // Cloud Storage
     {
         provider: "aws-s3",
         displayName: "AWS S3",
-        description: "Amazon cloud storage",
+        description: "Amazon Simple Storage Service for scalable cloud object storage",
         logoUrl: getBrandLogo("aws.amazon.com"),
         category: "File Storage",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Access Key ID",
+            keyPlaceholder: "AKIAIOSFODNN7EXAMPLE",
+            requiresSecret: true,
+            secretLabel: "Secret Access Key",
+            secretPlaceholder: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            helpText: "Create an IAM user with S3 permissions and generate access keys",
+            helpUrl:
+                "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html"
+        },
+        oauthSettings: [
+            {
+                name: "region",
+                label: "AWS Region",
+                type: "select",
+                required: true,
+                options: [
+                    { value: "us-east-1", label: "US East (N. Virginia)" },
+                    { value: "us-east-2", label: "US East (Ohio)" },
+                    { value: "us-west-1", label: "US West (N. California)" },
+                    { value: "us-west-2", label: "US West (Oregon)" },
+                    { value: "eu-west-1", label: "Europe (Ireland)" },
+                    { value: "eu-west-2", label: "Europe (London)" },
+                    { value: "eu-west-3", label: "Europe (Paris)" },
+                    { value: "eu-central-1", label: "Europe (Frankfurt)" },
+                    { value: "eu-north-1", label: "Europe (Stockholm)" },
+                    { value: "ap-northeast-1", label: "Asia Pacific (Tokyo)" },
+                    { value: "ap-northeast-2", label: "Asia Pacific (Seoul)" },
+                    { value: "ap-southeast-1", label: "Asia Pacific (Singapore)" },
+                    { value: "ap-southeast-2", label: "Asia Pacific (Sydney)" },
+                    { value: "ap-south-1", label: "Asia Pacific (Mumbai)" },
+                    { value: "sa-east-1", label: "South America (São Paulo)" },
+                    { value: "ca-central-1", label: "Canada (Central)" }
+                ],
+                helpText: "Select the AWS region where your S3 buckets are located"
+            }
+        ]
     },
     {
         provider: "google-cloud-storage",
         displayName: "Google Cloud Storage",
-        description: "Google cloud storage",
+        description: "Google Cloud Storage for unified object storage with global edge-caching",
         logoUrl: getBrandLogo("cloud.google.com"),
         category: "File Storage",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "projectId",
+                label: "Google Cloud Project ID",
+                placeholder: "my-project-123",
+                helpText:
+                    "Your Google Cloud project ID (found in Google Cloud Console > Project Settings)",
+                required: true,
+                type: "text",
+                pattern: "^[a-z][a-z0-9-]{4,28}[a-z0-9]$",
+                patternError:
+                    "Project ID must be 6-30 characters, lowercase letters, digits, hyphens"
+            }
+        ]
     },
     {
         provider: "azure-storage",
-        displayName: "Azure Storage",
-        description: "Microsoft cloud storage",
+        displayName: "Azure Blob Storage",
+        description: "Microsoft Azure Blob Storage for massively scalable object storage",
         logoUrl: getBrandLogo("azure.microsoft.com"),
         category: "File Storage",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Storage Account Name",
+            keyPlaceholder: "mystorageaccount",
+            requiresSecret: true,
+            secretLabel: "Account Key",
+            secretPlaceholder: "Base64 encoded key from Azure Portal...",
+            helpText: "Find these in Azure Portal > Storage Account > Access Keys",
+            helpUrl:
+                "https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage"
+        },
+        oauthSettings: [
+            {
+                name: "endpointSuffix",
+                label: "Endpoint Suffix",
+                type: "select",
+                required: false,
+                options: [
+                    { value: "core.windows.net", label: "Azure Public (default)" },
+                    { value: "core.chinacloudapi.cn", label: "Azure China" },
+                    { value: "core.usgovcloudapi.net", label: "Azure Government" }
+                ],
+                helpText: "Select Azure cloud environment (default: Azure Public)"
+            }
+        ]
     },
 
     // Social Media (Additional)
@@ -1688,6 +2113,23 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["api_key"]
     },
     {
+        provider: "supabase",
+        displayName: "Supabase",
+        description: "Open source Firebase alternative",
+        logoUrl: getBrandLogo("supabase.com"),
+        category: "Databases",
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "Service Role Key",
+            keyPlaceholder: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            requiresSecret: true,
+            secretLabel: "Project URL",
+            secretPlaceholder: "https://your-project.supabase.co",
+            helpText: "Find these in your Supabase dashboard under Settings > API",
+            helpUrl: "https://supabase.com/docs/guides/api#api-url-and-keys"
+        }
+    },
+    {
         provider: "postgresql",
         displayName: "PostgreSQL",
         description: "Relational database",
@@ -1701,8 +2143,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Relational database",
         logoUrl: getBrandLogo("mysql.com"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "redis",
@@ -1710,8 +2151,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "In-memory data store",
         logoUrl: getBrandLogo("redis.io"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "snowflake",
@@ -1719,8 +2159,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Cloud data warehouse",
         logoUrl: getBrandLogo("snowflake.com"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "bigquery",
@@ -1728,8 +2167,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Google Cloud data warehouse",
         logoUrl: getBrandLogo("cloud.google.com/bigquery"),
         category: "Databases",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "databricks",
@@ -1737,8 +2175,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Data and AI platform",
         logoUrl: getBrandLogo("databricks.com"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "elasticsearch",
@@ -1746,8 +2183,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Search and analytics engine",
         logoUrl: getBrandLogo("elastic.co"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "pinecone",
@@ -1764,8 +2200,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Cloud data warehouse",
         logoUrl: getBrandLogo("aws.amazon.com/redshift"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
 
     // AI & ML (Additional)
@@ -1826,7 +2261,20 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("sap.com"),
         category: "ERP",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "host",
+                label: "SAP API Hostname",
+                placeholder: "my12345.s4hana.cloud.sap",
+                helpText:
+                    "Enter your SAP S/4HANA Cloud API hostname (e.g., 'my12345.s4hana.cloud.sap')",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$",
+                patternError:
+                    "Hostname must start and end with a letter or number, and can contain dots and hyphens"
+            }
+        ]
     },
     {
         provider: "netsuite",
@@ -1835,7 +2283,20 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("netsuite.com"),
         category: "ERP",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "accountId",
+                label: "NetSuite Account ID",
+                placeholder: "TSTDRV1234567",
+                helpText:
+                    "Enter your NetSuite account ID (e.g., 'TSTDRV1234567'). Found in Setup > Company > Company Information.",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9_-]+$",
+                patternError:
+                    "Account ID must contain only letters, numbers, hyphens, and underscores"
+            }
+        ]
     },
     {
         provider: "odoo",
@@ -1900,8 +2361,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Document workflow automation",
         logoUrl: getBrandLogo("pandadoc.com"),
         category: "Legal & Contracts",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "hellosign",
@@ -1910,16 +2370,6 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("hellosign.com"),
         category: "Legal & Contracts",
         methods: ["oauth2"]
-    },
-
-    {
-        provider: "gitbook",
-        displayName: "GitBook",
-        description: "Documentation platform",
-        logoUrl: getBrandLogo("gitbook.com"),
-        category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
     },
 
     // Social Media (Management Tools)
@@ -2117,8 +2567,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Microsoft business analytics",
         logoUrl: getBrandLogo("powerbi.microsoft.com"),
         category: "Analytics",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
 
     // Content Management
@@ -2137,8 +2586,17 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Headless CMS platform",
         logoUrl: getBrandLogo("contentful.com"),
         category: "Content Management",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "Personal Access Token",
+            keyPlaceholder: "CFPAT-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Space ID",
+            secretPlaceholder: "your-space-id",
+            helpText:
+                "Generate a Personal Access Token from Settings > CMA tokens in your Contentful space",
+            helpUrl: "https://app.contentful.com/account/profile/cma_tokens"
+        }
     },
     {
         provider: "ghost",
@@ -2147,7 +2605,15 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("ghost.org"),
         category: "Content Management",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Admin API Key",
+            keyPlaceholder: "64f3c1e82a:8b4f2a1d3e5c7f9a0b2d4e6f8a0c2e4f6a8b0d2e4f6a",
+            requiresSecret: true,
+            secretLabel: "Site URL",
+            secretPlaceholder: "https://your-site.ghost.io",
+            helpText: "Create a Custom Integration in Ghost Admin > Settings > Integrations",
+            helpUrl: "https://ghost.org/docs/admin-api/#token-authentication"
+        }
     },
 
     {
@@ -2157,7 +2623,15 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("chargebee.com"),
         category: "Accounting",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "test_xxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Site Name",
+            secretPlaceholder: "your-site",
+            helpText: "Enter your API key and site name (e.g., 'acme' from acme.chargebee.com)",
+            helpUrl: "https://www.chargebee.com/docs/2.0/api_keys.html"
+        }
     },
 
     {

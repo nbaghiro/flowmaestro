@@ -1,17 +1,12 @@
-import { WorkflowDefinition } from "@flowmaestro/shared";
+import {
+    WorkflowDefinition,
+    TEMPLATE_CATEGORIES,
+    type TemplateCategory
+} from "@flowmaestro/shared";
 
-export const TEMPLATE_CATEGORIES = [
-    "marketing",
-    "sales",
-    "operations",
-    "engineering",
-    "support",
-    "ecommerce",
-    "saas",
-    "healthcare"
-] as const;
-
-export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number];
+// Re-export for use in schemas
+export { TEMPLATE_CATEGORIES };
+export type { TemplateCategory };
 
 export const TEMPLATE_STATUSES = ["active", "draft", "deprecated"] as const;
 
@@ -100,49 +95,4 @@ export interface UpdateTemplateInput {
     status?: TemplateStatus;
 }
 
-// Category metadata for display
-export const TEMPLATE_CATEGORY_META: Record<
-    TemplateCategory,
-    { label: string; icon: string; color: string }
-> = {
-    marketing: {
-        label: "Marketing",
-        icon: "Megaphone",
-        color: "bg-pink-100 text-pink-800"
-    },
-    sales: {
-        label: "Sales",
-        icon: "TrendingUp",
-        color: "bg-green-100 text-green-800"
-    },
-    operations: {
-        label: "Operations",
-        icon: "Settings",
-        color: "bg-orange-100 text-orange-800"
-    },
-    engineering: {
-        label: "Engineering",
-        icon: "Code",
-        color: "bg-blue-100 text-blue-800"
-    },
-    support: {
-        label: "Support",
-        icon: "Headphones",
-        color: "bg-purple-100 text-purple-800"
-    },
-    ecommerce: {
-        label: "E-commerce",
-        icon: "ShoppingCart",
-        color: "bg-amber-100 text-amber-800"
-    },
-    saas: {
-        label: "SaaS",
-        icon: "Cloud",
-        color: "bg-cyan-100 text-cyan-800"
-    },
-    healthcare: {
-        label: "Healthcare",
-        icon: "Heart",
-        color: "bg-red-100 text-red-800"
-    }
-};
+// Category metadata is available from @flowmaestro/shared as TEMPLATE_CATEGORY_META

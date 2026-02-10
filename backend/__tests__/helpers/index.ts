@@ -33,3 +33,6 @@ export * from "./llm-mock-client";
 
 // Agent Test Fixtures (reusable configurations)
 export * from "./agent-test-fixtures";
+
+// Redis Mock (for rate limiting and pub/sub testing)
+export * from "./redis-mock";

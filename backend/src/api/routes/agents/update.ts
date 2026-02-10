@@ -1,8 +1,11 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
+import { createServiceLogger } from "../../../core/logging";
 import { Tool, MemoryConfig } from "../../../storage/models/Agent";
 import { AgentRepository } from "../../../storage/repositories/AgentRepository";
 import { NotFoundError, BadRequestError } from "../../middleware";
+
+const logger = createServiceLogger("AgentUpdate");
 
 const updateAgentParamsSchema = z.object({
     id: z.string().uuid()
@@ -20,7 +23,7 @@ const updateAgentSchema = z.object({
     name: z.string().min(1).max(100).optional(),
     description: z.string().optional(),
     model: z.string().min(1).optional(),
-    provider: z.enum(["openai", "anthropic", "google", "cohere", "huggingface"]).optional(),
+    provider: z.enum(["openai", "anthropic", "google", "xai", "cohere", "huggingface"]).optional(),
     connection_id: z.string().uuid().nullable().optional(),
     system_prompt: z.string().optional(),
     temperature: z.number().min(0).max(2).optional(),
@@ -32,16 +35,28 @@ const updateAgentSchema = z.object({
             type: z.enum(["buffer", "summary", "vector"]),
             max_messages: z.number().min(1).max(1000)
         })
-        .optional()
+        .optional(),
+    metadata: z.record(z.any()).optional()
 });
 
 export async function updateAgentHandler(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<void> {
+    // Log at very start before any validation
+    logger.info(
+        { params: request.params, bodyKeys: Object.keys((request.body as object) || {}) },
+        "updateAgentHandler called"
+    );
+
     const workspaceId = request.workspace!.id;
     const { id } = updateAgentParamsSchema.parse(request.params);
     const body = updateAgentSchema.parse(request.body);
+
+    logger.info(
+        { agentId: id, hasMetadata: body.metadata !== undefined, metadata: body.metadata },
+        "Agent update validated"
+    );
 
     const agentRepo = new AgentRepository();
 
@@ -65,12 +80,18 @@ export async function updateAgentHandler(
             ...(body.max_tokens && { max_tokens: body.max_tokens }),
             ...(body.max_iterations && { max_iterations: body.max_iterations }),
             ...(body.available_tools && { available_tools: body.available_tools as Tool[] }),
-            ...(body.memory_config && { memory_config: body.memory_config as MemoryConfig })
+            ...(body.memory_config && { memory_config: body.memory_config as MemoryConfig }),
+            ...(body.metadata !== undefined && { metadata: body.metadata })
         });
 
         if (!updated) {
             throw new NotFoundError("Agent not found");
         }
+
+        logger.info(
+            { agentId: id, updatedMetadata: updated.metadata },
+            "Agent updated successfully"
+        );
 
         reply.send({
             success: true,

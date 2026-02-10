@@ -15877,6 +15877,11317 @@ const templates: TemplateData[] = [
                 { id: "e8", source: "integration-slack", target: "output-1" }
             ]
         }
+    },
+
+    // ========================================================================
+    // MICROSOFT ECOSYSTEM (4 templates)
+    // ========================================================================
+
+    // Microsoft Ecosystem: Teams Meeting Intelligence Hub (Featured)
+    {
+        name: "Teams Meeting Intelligence Hub",
+        description:
+            "Automatically process Teams meeting transcripts with AI. Categorize by meeting type (strategy, standup, client, other), extract action items, save notes to SharePoint, and send follow-up emails via Outlook.",
+        category: "operations",
+        tags: ["microsoft", "teams", "meetings", "ai", "transcription", "automation"],
+        required_integrations: [
+            "microsoft-teams",
+            "microsoft-outlook",
+            "sharepoint",
+            "notion",
+            "slack"
+        ],
+        featured: true,
+        definition: {
+            name: "Teams Meeting Intelligence Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Teams Meeting Ended",
+                        triggerType: "webhook",
+                        provider: "microsoft-teams",
+                        event: "meeting.ended",
+                        description: "Triggered when a Teams meeting ends"
+                    }
+                },
+                {
+                    id: "integration-teams-transcript",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Transcript",
+                        provider: "microsoft-teams",
+                        operation: "getTranscript",
+                        outputVariable: "transcript"
+                    }
+                },
+                {
+                    id: "llm-summarize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Summary",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this meeting transcript and generate a comprehensive summary:\n\n{{transcript}}\n\nInclude: key discussion points, decisions made, action items with owners, and next steps.",
+                        outputVariable: "summary"
+                    }
+                },
+                {
+                    id: "router-content",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Content Type Router",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Based on this meeting summary, classify the meeting type:\n\n{{summary.text}}\n\nCategories: strategy (planning, roadmap), standup (daily sync, blockers), client (external stakeholders), other (general)",
+                        routes: [
+                            {
+                                value: "strategy",
+                                label: "Strategy Meeting",
+                                description: "Planning and roadmap discussions"
+                            },
+                            {
+                                value: "standup",
+                                label: "Standup",
+                                description: "Daily sync and blockers"
+                            },
+                            {
+                                value: "client",
+                                label: "Client Meeting",
+                                description: "External stakeholders"
+                            },
+                            { value: "other", label: "Other", description: "General meetings" }
+                        ],
+                        defaultRoute: "other",
+                        outputVariable: "meetingType"
+                    }
+                },
+                {
+                    id: "llm-strategy",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Decisions",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract strategic decisions and roadmap items from this strategy meeting:\n\n{{summary.text}}\n\nFormat as: Decision, Rationale, Owner, Timeline",
+                        outputVariable: "strategyNotes"
+                    }
+                },
+                {
+                    id: "llm-standup",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Blockers",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract blockers and updates from this standup:\n\n{{summary.text}}\n\nFormat as: Person, Yesterday, Today, Blockers",
+                        outputVariable: "standupNotes"
+                    }
+                },
+                {
+                    id: "llm-client",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract CRM Updates",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract client-related updates from this meeting:\n\n{{summary.text}}\n\nFormat as: Client concerns, Commitments made, Follow-up required, Relationship notes",
+                        outputVariable: "clientNotes"
+                    }
+                },
+                {
+                    id: "llm-general",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Basic Notes",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create concise meeting notes from:\n\n{{summary.text}}\n\nFormat as: Attendees, Topics discussed, Key points, Action items",
+                        outputVariable: "generalNotes"
+                    }
+                },
+                {
+                    id: "router-actions",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Has Actions?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Does this summary contain action items that need follow-up?\n\n{{summary.text}}",
+                        routes: [
+                            {
+                                value: "yes",
+                                label: "Has Actions",
+                                description: "Action items identified"
+                            },
+                            { value: "no", label: "No Actions", description: "No follow-up needed" }
+                        ],
+                        defaultRoute: "no",
+                        outputVariable: "hasActions"
+                    }
+                },
+                {
+                    id: "sharepoint-save",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Save Notes",
+                        provider: "sharepoint",
+                        operation: "uploadFile"
+                    }
+                },
+                {
+                    id: "outlook-send",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Follow-up",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "notion-tasks",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Tasks",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Action Items"
+                    }
+                },
+                {
+                    id: "sharepoint-archive",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Archive Notes",
+                        provider: "sharepoint",
+                        operation: "uploadFile"
+                    }
+                },
+                {
+                    id: "teams-post",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Summary",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#meeting-notes"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Meeting Processed",
+                        outputName: "result",
+                        value: "{{summary}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-teams-transcript" },
+                { id: "e2", source: "integration-teams-transcript", target: "llm-summarize" },
+                { id: "e3", source: "llm-summarize", target: "router-content" },
+                {
+                    id: "e4",
+                    source: "router-content",
+                    target: "llm-strategy",
+                    sourceHandle: "strategy"
+                },
+                {
+                    id: "e5",
+                    source: "router-content",
+                    target: "llm-standup",
+                    sourceHandle: "standup"
+                },
+                {
+                    id: "e6",
+                    source: "router-content",
+                    target: "llm-client",
+                    sourceHandle: "client"
+                },
+                {
+                    id: "e7",
+                    source: "router-content",
+                    target: "llm-general",
+                    sourceHandle: "other"
+                },
+                { id: "e8", source: "llm-strategy", target: "router-actions" },
+                { id: "e9", source: "llm-standup", target: "router-actions" },
+                { id: "e10", source: "llm-client", target: "router-actions" },
+                { id: "e11", source: "llm-general", target: "sharepoint-archive" },
+                {
+                    id: "e12",
+                    source: "router-actions",
+                    target: "sharepoint-save",
+                    sourceHandle: "yes"
+                },
+                {
+                    id: "e13",
+                    source: "router-actions",
+                    target: "outlook-send",
+                    sourceHandle: "yes"
+                },
+                {
+                    id: "e14",
+                    source: "router-actions",
+                    target: "notion-tasks",
+                    sourceHandle: "yes"
+                },
+                {
+                    id: "e15",
+                    source: "router-actions",
+                    target: "sharepoint-archive",
+                    sourceHandle: "no"
+                },
+                { id: "e16", source: "sharepoint-save", target: "teams-post" },
+                { id: "e17", source: "outlook-send", target: "teams-post" },
+                { id: "e18", source: "notion-tasks", target: "teams-post" },
+                { id: "e19", source: "sharepoint-archive", target: "teams-post" },
+                { id: "e20", source: "teams-post", target: "output-1" }
+            ]
+        }
+    },
+
+    // Microsoft Ecosystem: Microsoft 365 Document Approval Hub
+    {
+        name: "Microsoft 365 Document Approval Hub",
+        description:
+            "Route SharePoint documents through AI classification and department-specific approval workflows. Contracts go to legal, policies to HR, technical docs to engineering, with automated Teams notifications.",
+        category: "operations",
+        tags: ["microsoft", "sharepoint", "approval", "documents", "workflow"],
+        required_integrations: [
+            "sharepoint",
+            "microsoft-teams",
+            "microsoft-outlook",
+            "microsoft-onedrive"
+        ],
+        featured: false,
+        definition: {
+            name: "Microsoft 365 Document Approval Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "SharePoint New File",
+                        triggerType: "webhook",
+                        provider: "sharepoint",
+                        event: "file.created",
+                        description: "Triggered when a new file is uploaded"
+                    }
+                },
+                {
+                    id: "integration-sharepoint-get",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Metadata",
+                        provider: "sharepoint",
+                        operation: "getFile",
+                        outputVariable: "fileMetadata"
+                    }
+                },
+                {
+                    id: "llm-classify",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Classify Document",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this document metadata and classify it:\n\nFilename: {{fileMetadata.name}}\nPath: {{fileMetadata.path}}\n\nClassify as: contract, policy, technical, general",
+                        outputVariable: "classification"
+                    }
+                },
+                {
+                    id: "router-type",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Document Type",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route this document based on classification:\n\n{{classification.text}}",
+                        routes: [
+                            {
+                                value: "contract",
+                                label: "Contract",
+                                description: "Legal documents"
+                            },
+                            { value: "policy", label: "Policy", description: "HR policies" },
+                            {
+                                value: "technical",
+                                label: "Technical",
+                                description: "Engineering docs"
+                            },
+                            { value: "general", label: "General", description: "Other documents" }
+                        ],
+                        defaultRoute: "general",
+                        outputVariable: "docType"
+                    }
+                },
+                {
+                    id: "teams-legal",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Legal",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#legal"
+                    }
+                },
+                {
+                    id: "teams-hr",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify HR",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#hr"
+                    }
+                },
+                {
+                    id: "teams-eng",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Engineering",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#engineering"
+                    }
+                },
+                {
+                    id: "teams-ops",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Operations",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#operations"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Approve/Reject",
+                        reviewPrompt: "Review document for approval",
+                        outputVariable: "reviewDecision"
+                    }
+                },
+                {
+                    id: "router-decision",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Decision Router",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route based on review decision:\n\n{{reviewDecision}}",
+                        routes: [
+                            {
+                                value: "approve",
+                                label: "Approved",
+                                description: "Document approved"
+                            },
+                            { value: "reject", label: "Rejected", description: "Document rejected" }
+                        ],
+                        defaultRoute: "approve",
+                        outputVariable: "finalDecision"
+                    }
+                },
+                {
+                    id: "onedrive-move",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Move to Approved",
+                        provider: "microsoft-onedrive",
+                        operation: "moveFile"
+                    }
+                },
+                {
+                    id: "outlook-notify",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Author",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "outlook-revisions",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Request Changes",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Document Processed",
+                        outputName: "result",
+                        value: "{{finalDecision}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-sharepoint-get" },
+                { id: "e2", source: "integration-sharepoint-get", target: "llm-classify" },
+                { id: "e3", source: "llm-classify", target: "router-type" },
+                {
+                    id: "e4",
+                    source: "router-type",
+                    target: "teams-legal",
+                    sourceHandle: "contract"
+                },
+                { id: "e5", source: "router-type", target: "teams-hr", sourceHandle: "policy" },
+                { id: "e6", source: "router-type", target: "teams-eng", sourceHandle: "technical" },
+                { id: "e7", source: "router-type", target: "teams-ops", sourceHandle: "general" },
+                { id: "e8", source: "teams-legal", target: "humanReview-1" },
+                { id: "e9", source: "teams-hr", target: "humanReview-1" },
+                { id: "e10", source: "teams-eng", target: "humanReview-1" },
+                { id: "e11", source: "teams-ops", target: "humanReview-1" },
+                { id: "e12", source: "humanReview-1", target: "router-decision" },
+                {
+                    id: "e13",
+                    source: "router-decision",
+                    target: "onedrive-move",
+                    sourceHandle: "approve"
+                },
+                {
+                    id: "e14",
+                    source: "router-decision",
+                    target: "outlook-notify",
+                    sourceHandle: "approve"
+                },
+                {
+                    id: "e15",
+                    source: "router-decision",
+                    target: "outlook-revisions",
+                    sourceHandle: "reject"
+                },
+                { id: "e16", source: "onedrive-move", target: "output-1" },
+                { id: "e17", source: "outlook-notify", target: "output-1" },
+                { id: "e18", source: "outlook-revisions", target: "output-1" }
+            ]
+        }
+    },
+
+    // Microsoft Ecosystem: Outlook Smart Inbox Manager
+    {
+        name: "Outlook Smart Inbox Manager",
+        description:
+            "AI-powered email triage for shared mailboxes. Categorize incoming emails by intent and urgency, route to appropriate Teams channels, draft responses, and log interactions to SharePoint.",
+        category: "support",
+        tags: ["microsoft", "outlook", "email", "triage", "ai", "automation"],
+        required_integrations: ["microsoft-outlook", "microsoft-teams", "sharepoint", "hubspot"],
+        featured: false,
+        definition: {
+            name: "Outlook Smart Inbox Manager",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "New Email",
+                        triggerType: "webhook",
+                        provider: "microsoft-outlook",
+                        event: "mail.received",
+                        description: "New email in shared mailbox"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Email",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this email and determine:\n1. Category: support, sales, billing, inquiry, spam\n2. Urgency: urgent, normal\n3. Sentiment: positive, neutral, negative\n\nEmail: {{trigger.email}}",
+                        outputVariable: "analysis"
+                    }
+                },
+                {
+                    id: "router-category",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Category",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route this email based on analysis:\n\n{{analysis.text}}",
+                        routes: [
+                            { value: "support", label: "Support", description: "Support requests" },
+                            { value: "sales", label: "Sales", description: "Sales inquiries" },
+                            { value: "billing", label: "Billing", description: "Billing issues" },
+                            {
+                                value: "inquiry",
+                                label: "Inquiry",
+                                description: "General questions"
+                            },
+                            { value: "spam", label: "Spam", description: "Junk mail" }
+                        ],
+                        defaultRoute: "inquiry",
+                        outputVariable: "category"
+                    }
+                },
+                {
+                    id: "router-urgency",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Support Urgency",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Is this support request urgent?\n\n{{analysis.text}}",
+                        routes: [
+                            {
+                                value: "urgent",
+                                label: "Urgent",
+                                description: "Requires immediate attention"
+                            },
+                            { value: "normal", label: "Normal", description: "Standard priority" }
+                        ],
+                        defaultRoute: "normal",
+                        outputVariable: "urgency"
+                    }
+                },
+                {
+                    id: "hubspot-lead",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Lead",
+                        provider: "hubspot",
+                        operation: "createContact"
+                    }
+                },
+                {
+                    id: "teams-finance",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Finance",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#finance"
+                    }
+                },
+                {
+                    id: "teams-info",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "General Info",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#general"
+                    }
+                },
+                {
+                    id: "outlook-archive",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Archive Spam",
+                        provider: "microsoft-outlook",
+                        operation: "moveEmail"
+                    }
+                },
+                {
+                    id: "teams-urgent",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Urgent Support",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#support-urgent"
+                    }
+                },
+                {
+                    id: "teams-support",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Normal Support",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#support"
+                    }
+                },
+                {
+                    id: "llm-draft",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Draft Response",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Draft a professional response to this email:\n\n{{trigger.email}}\n\nAnalysis: {{analysis.text}}",
+                        outputVariable: "draftResponse"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Review & Edit",
+                        reviewPrompt: "Review and edit the draft response before sending",
+                        outputVariable: "finalResponse"
+                    }
+                },
+                {
+                    id: "outlook-send",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Reply",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "sharepoint-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Interaction",
+                        provider: "sharepoint",
+                        operation: "createListItem"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Processed",
+                        outputName: "result",
+                        value: "{{category}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "llm-analyze" },
+                { id: "e2", source: "llm-analyze", target: "router-category" },
+                {
+                    id: "e3",
+                    source: "router-category",
+                    target: "router-urgency",
+                    sourceHandle: "support"
+                },
+                {
+                    id: "e4",
+                    source: "router-category",
+                    target: "hubspot-lead",
+                    sourceHandle: "sales"
+                },
+                {
+                    id: "e5",
+                    source: "router-category",
+                    target: "teams-finance",
+                    sourceHandle: "billing"
+                },
+                {
+                    id: "e6",
+                    source: "router-category",
+                    target: "teams-info",
+                    sourceHandle: "inquiry"
+                },
+                {
+                    id: "e7",
+                    source: "router-category",
+                    target: "outlook-archive",
+                    sourceHandle: "spam"
+                },
+                {
+                    id: "e8",
+                    source: "router-urgency",
+                    target: "teams-urgent",
+                    sourceHandle: "urgent"
+                },
+                {
+                    id: "e9",
+                    source: "router-urgency",
+                    target: "teams-support",
+                    sourceHandle: "normal"
+                },
+                { id: "e10", source: "teams-urgent", target: "llm-draft" },
+                { id: "e11", source: "teams-support", target: "llm-draft" },
+                { id: "e12", source: "llm-draft", target: "humanReview-1" },
+                { id: "e13", source: "humanReview-1", target: "outlook-send" },
+                { id: "e14", source: "outlook-send", target: "sharepoint-log" },
+                { id: "e15", source: "hubspot-lead", target: "output-1" },
+                { id: "e16", source: "teams-finance", target: "output-1" },
+                { id: "e17", source: "teams-info", target: "output-1" },
+                { id: "e18", source: "outlook-archive", target: "output-1" },
+                { id: "e19", source: "sharepoint-log", target: "output-1" }
+            ]
+        }
+    },
+
+    // Microsoft Ecosystem: SharePoint Site Provisioning Orchestrator
+    {
+        name: "SharePoint Site Provisioning Orchestrator",
+        description:
+            "Automate SharePoint site creation with parallel folder setup, Teams channel linking, and personalized welcome guides. Includes notifications to site owners and team announcements.",
+        category: "operations",
+        tags: ["microsoft", "sharepoint", "provisioning", "automation", "teams"],
+        required_integrations: [
+            "sharepoint",
+            "microsoft-onedrive",
+            "microsoft-teams",
+            "microsoft-outlook"
+        ],
+        featured: false,
+        definition: {
+            name: "SharePoint Site Provisioning Orchestrator",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Site Request",
+                        inputName: "siteRequest",
+                        inputVariable: "siteRequest",
+                        inputType: "json",
+                        description: '{"name": "", "type": "", "owner": "", "description": ""}'
+                    }
+                },
+                {
+                    id: "llm-plan",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Site Plan",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a site structure plan for:\n\nName: {{siteRequest.name}}\nType: {{siteRequest.type}}\nOwner: {{siteRequest.owner}}\n\nInclude: folder structure, permissions, and recommended document libraries.",
+                        outputVariable: "sitePlan"
+                    }
+                },
+                {
+                    id: "sharepoint-create",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Site",
+                        provider: "sharepoint",
+                        operation: "createSite"
+                    }
+                },
+                {
+                    id: "onedrive-folders",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Folders",
+                        provider: "microsoft-onedrive",
+                        operation: "createFolder"
+                    }
+                },
+                {
+                    id: "teams-channel",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Link Channel",
+                        provider: "microsoft-teams",
+                        operation: "createChannel"
+                    }
+                },
+                {
+                    id: "transform-compile",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Details",
+                        transformType: "template",
+                        template:
+                            '{"siteUrl": "{{sharepoint.url}}", "folders": "{{onedrive.folders}}", "channel": "{{teams.channel}}"}',
+                        outputVariable: "siteDetails"
+                    }
+                },
+                {
+                    id: "llm-welcome",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Welcome Guide",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a welcome guide for the new SharePoint site:\n\nSite: {{siteRequest.name}}\nDetails: {{siteDetails}}\n\nInclude: getting started steps, key features, and best practices.",
+                        outputVariable: "welcomeGuide"
+                    }
+                },
+                {
+                    id: "outlook-owner",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Owner",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "teams-announce",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Announce Site",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#announcements"
+                    }
+                },
+                {
+                    id: "sharepoint-doc",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Save Guide",
+                        provider: "sharepoint",
+                        operation: "uploadFile"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Site Provisioned",
+                        outputName: "result",
+                        value: "{{siteDetails}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "llm-plan" },
+                { id: "e2", source: "llm-plan", target: "sharepoint-create" },
+                { id: "e3", source: "llm-plan", target: "onedrive-folders" },
+                { id: "e4", source: "llm-plan", target: "teams-channel" },
+                { id: "e5", source: "sharepoint-create", target: "transform-compile" },
+                { id: "e6", source: "onedrive-folders", target: "transform-compile" },
+                { id: "e7", source: "teams-channel", target: "transform-compile" },
+                { id: "e8", source: "transform-compile", target: "llm-welcome" },
+                { id: "e9", source: "llm-welcome", target: "outlook-owner" },
+                { id: "e10", source: "llm-welcome", target: "teams-announce" },
+                { id: "e11", source: "llm-welcome", target: "sharepoint-doc" },
+                { id: "e12", source: "outlook-owner", target: "output-1" },
+                { id: "e13", source: "teams-announce", target: "output-1" },
+                { id: "e14", source: "sharepoint-doc", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // HR & PEOPLE OPS (4 templates)
+    // ========================================================================
+
+    // HR: BambooHR Employee Lifecycle Hub (Featured)
+    {
+        name: "BambooHR Employee Lifecycle Hub",
+        description:
+            "Comprehensive employee lifecycle automation. Detect status changes (new hire, promotion, termination) and trigger appropriate workflows with onboarding tasks, announcements, and offboarding checklists.",
+        category: "operations",
+        tags: ["hr", "bamboohr", "employee", "lifecycle", "onboarding", "offboarding"],
+        required_integrations: ["bamboohr", "slack", "google-calendar", "gmail", "notion"],
+        featured: true,
+        definition: {
+            name: "BambooHR Employee Lifecycle Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Employee Status Change",
+                        triggerType: "webhook",
+                        provider: "bamboohr",
+                        event: "employee.updated",
+                        description: "Triggered when employee status changes"
+                    }
+                },
+                {
+                    id: "integration-bamboo-get",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Employee Details",
+                        provider: "bamboohr",
+                        operation: "getEmployee",
+                        outputVariable: "employee"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Change Type",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this employee status change:\n\n{{employee}}\n\nDetermine: Is this a new_hire, promotion, or termination?",
+                        outputVariable: "changeAnalysis"
+                    }
+                },
+                {
+                    id: "router-lifecycle",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Status Type",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route based on employee lifecycle event:\n\n{{changeAnalysis.text}}",
+                        routes: [
+                            {
+                                value: "new_hire",
+                                label: "New Hire",
+                                description: "Employee onboarding"
+                            },
+                            { value: "promotion", label: "Promotion", description: "Role change" },
+                            {
+                                value: "termination",
+                                label: "Termination",
+                                description: "Offboarding"
+                            }
+                        ],
+                        defaultRoute: "new_hire",
+                        outputVariable: "lifecycleType"
+                    }
+                },
+                {
+                    id: "llm-onboard",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Onboarding Plan",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create an onboarding plan for:\n\n{{employee}}\n\nInclude: first week schedule, required training, team introductions, equipment setup.",
+                        outputVariable: "onboardingPlan"
+                    }
+                },
+                {
+                    id: "llm-promo",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transition Plan",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a promotion transition plan for:\n\n{{employee}}\n\nInclude: knowledge transfer, new responsibilities, announcement draft.",
+                        outputVariable: "transitionPlan"
+                    }
+                },
+                {
+                    id: "llm-offboard",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Offboarding Plan",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create an offboarding checklist for:\n\n{{employee}}\n\nInclude: knowledge transfer, access revocation, equipment return, exit interview.",
+                        outputVariable: "offboardingPlan"
+                    }
+                },
+                {
+                    id: "slack-welcome",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Welcome Message",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#general"
+                    }
+                },
+                {
+                    id: "calendar-orient",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Schedule Orientation",
+                        provider: "google-calendar",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "gmail-welcome",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Welcome Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "slack-announce",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Announce Promotion",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#announcements"
+                    }
+                },
+                {
+                    id: "gmail-congrats",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Congratulations Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "slack-it",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "IT Notification",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#it-ops"
+                    }
+                },
+                {
+                    id: "calendar-exit",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Exit Interview",
+                        provider: "google-calendar",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "notion-checklist",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Offboarding Checklist",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Offboarding"
+                    }
+                },
+                {
+                    id: "notion-onboard-tasks",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Onboarding Tasks",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Onboarding"
+                    }
+                },
+                {
+                    id: "bamboo-update-promo",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Promotion Record",
+                        provider: "bamboohr",
+                        operation: "updateEmployee"
+                    }
+                },
+                {
+                    id: "bamboo-update-term",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Term Record",
+                        provider: "bamboohr",
+                        operation: "updateEmployee"
+                    }
+                },
+                {
+                    id: "integration-bamboo-final",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Status",
+                        provider: "bamboohr",
+                        operation: "updateEmployee"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Lifecycle Complete",
+                        outputName: "result",
+                        value: "{{lifecycleType}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-bamboo-get" },
+                { id: "e2", source: "integration-bamboo-get", target: "llm-analyze" },
+                { id: "e3", source: "llm-analyze", target: "router-lifecycle" },
+                {
+                    id: "e4",
+                    source: "router-lifecycle",
+                    target: "llm-onboard",
+                    sourceHandle: "new_hire"
+                },
+                {
+                    id: "e5",
+                    source: "router-lifecycle",
+                    target: "llm-promo",
+                    sourceHandle: "promotion"
+                },
+                {
+                    id: "e6",
+                    source: "router-lifecycle",
+                    target: "llm-offboard",
+                    sourceHandle: "termination"
+                },
+                { id: "e7", source: "llm-onboard", target: "slack-welcome" },
+                { id: "e8", source: "llm-onboard", target: "calendar-orient" },
+                { id: "e9", source: "llm-onboard", target: "gmail-welcome" },
+                { id: "e10", source: "llm-promo", target: "slack-announce" },
+                { id: "e11", source: "llm-promo", target: "gmail-congrats" },
+                { id: "e12", source: "llm-offboard", target: "slack-it" },
+                { id: "e13", source: "llm-offboard", target: "calendar-exit" },
+                { id: "e14", source: "llm-offboard", target: "notion-checklist" },
+                { id: "e15", source: "slack-welcome", target: "notion-onboard-tasks" },
+                { id: "e16", source: "calendar-orient", target: "notion-onboard-tasks" },
+                { id: "e17", source: "gmail-welcome", target: "notion-onboard-tasks" },
+                { id: "e18", source: "slack-announce", target: "bamboo-update-promo" },
+                { id: "e19", source: "gmail-congrats", target: "bamboo-update-promo" },
+                { id: "e20", source: "slack-it", target: "bamboo-update-term" },
+                { id: "e21", source: "calendar-exit", target: "bamboo-update-term" },
+                { id: "e22", source: "notion-checklist", target: "bamboo-update-term" },
+                { id: "e23", source: "notion-onboard-tasks", target: "integration-bamboo-final" },
+                { id: "e24", source: "bamboo-update-promo", target: "integration-bamboo-final" },
+                { id: "e25", source: "bamboo-update-term", target: "integration-bamboo-final" },
+                { id: "e26", source: "integration-bamboo-final", target: "output-1" }
+            ]
+        }
+    },
+
+    // HR: Workday Payroll Exception Command Center
+    {
+        name: "Workday Payroll Exception Command Center",
+        description:
+            "Daily payroll exception monitoring with severity-based routing. Critical issues page on-call, high severity alerts go to Slack, and all exceptions are logged with automated daily reports.",
+        category: "operations",
+        tags: ["hr", "workday", "payroll", "monitoring", "alerts", "automation"],
+        required_integrations: ["workday", "slack", "gmail", "google-sheets", "pagerduty"],
+        featured: false,
+        definition: {
+            name: "Workday Payroll Exception Command Center",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Check",
+                        triggerType: "schedule",
+                        schedule: "0 6 * * *",
+                        description: "Runs daily at 6 AM"
+                    }
+                },
+                {
+                    id: "integration-workday",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Exceptions",
+                        provider: "workday",
+                        operation: "getPayrollExceptions",
+                        outputVariable: "exceptions"
+                    }
+                },
+                {
+                    id: "router-hasExceptions",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Has Exceptions?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Are there any payroll exceptions?\n\n{{exceptions}}",
+                        routes: [
+                            {
+                                value: "yes",
+                                label: "Has Exceptions",
+                                description: "Exceptions found"
+                            },
+                            { value: "no", label: "All Clear", description: "No exceptions" }
+                        ],
+                        defaultRoute: "no",
+                        outputVariable: "hasExceptions"
+                    }
+                },
+                {
+                    id: "slack-allclear",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "All Clear",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll"
+                    }
+                },
+                {
+                    id: "llm-categorize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Categorize & Prioritize",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Categorize these payroll exceptions by severity:\n\n{{exceptions}}\n\nCategories: critical (payment failures), high (missing data), warning (pending approvals), info (notifications)",
+                        outputVariable: "categorized"
+                    }
+                },
+                {
+                    id: "router-severity",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "By Severity",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What is the highest severity in these exceptions?\n\n{{categorized.text}}",
+                        routes: [
+                            {
+                                value: "critical",
+                                label: "Critical",
+                                description: "Payment failures"
+                            },
+                            { value: "high", label: "High", description: "Missing data" },
+                            {
+                                value: "warning",
+                                label: "Warning",
+                                description: "Pending approvals"
+                            },
+                            { value: "info", label: "Info", description: "Notifications only" }
+                        ],
+                        defaultRoute: "info",
+                        outputVariable: "severity"
+                    }
+                },
+                {
+                    id: "pagerduty",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Page On-Call",
+                        provider: "pagerduty",
+                        operation: "createIncident"
+                    }
+                },
+                {
+                    id: "slack-incident",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Critical Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll-urgent"
+                    }
+                },
+                {
+                    id: "slack-high",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "High Priority",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll"
+                    }
+                },
+                {
+                    id: "slack-warn",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Warning",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll"
+                    }
+                },
+                {
+                    id: "sheets-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Exceptions",
+                        provider: "google-sheets",
+                        operation: "appendRow"
+                    }
+                },
+                {
+                    id: "gmail-director",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email HR Director",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a daily payroll exception report:\n\n{{categorized.text}}\n\nInclude: summary stats, trends, recommended actions.",
+                        outputVariable: "dailyReport"
+                    }
+                },
+                {
+                    id: "slack-summary",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Summary",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Complete",
+                        outputName: "result",
+                        value: "{{dailyReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-workday" },
+                { id: "e2", source: "integration-workday", target: "router-hasExceptions" },
+                {
+                    id: "e3",
+                    source: "router-hasExceptions",
+                    target: "slack-allclear",
+                    sourceHandle: "no"
+                },
+                {
+                    id: "e4",
+                    source: "router-hasExceptions",
+                    target: "llm-categorize",
+                    sourceHandle: "yes"
+                },
+                { id: "e5", source: "llm-categorize", target: "router-severity" },
+                {
+                    id: "e6",
+                    source: "router-severity",
+                    target: "pagerduty",
+                    sourceHandle: "critical"
+                },
+                {
+                    id: "e7",
+                    source: "router-severity",
+                    target: "slack-incident",
+                    sourceHandle: "critical"
+                },
+                { id: "e8", source: "router-severity", target: "slack-high", sourceHandle: "high" },
+                {
+                    id: "e9",
+                    source: "router-severity",
+                    target: "slack-warn",
+                    sourceHandle: "warning"
+                },
+                {
+                    id: "e10",
+                    source: "router-severity",
+                    target: "sheets-log",
+                    sourceHandle: "info"
+                },
+                { id: "e11", source: "pagerduty", target: "gmail-director" },
+                { id: "e12", source: "slack-incident", target: "gmail-director" },
+                { id: "e13", source: "slack-high", target: "sheets-log" },
+                { id: "e14", source: "slack-warn", target: "sheets-log" },
+                { id: "e15", source: "gmail-director", target: "sheets-log" },
+                { id: "e16", source: "sheets-log", target: "llm-report" },
+                { id: "e17", source: "llm-report", target: "slack-summary" },
+                { id: "e18", source: "slack-allclear", target: "output-1" },
+                { id: "e19", source: "slack-summary", target: "output-1" }
+            ]
+        }
+    },
+
+    // HR: Gusto PTO Request Orchestrator
+    {
+        name: "Gusto PTO Request Orchestrator",
+        description:
+            "Streamline PTO approvals with AI-powered coverage analysis. Notify managers, check team availability, route through approval workflow, and automatically update calendars upon approval.",
+        category: "operations",
+        tags: ["hr", "gusto", "pto", "time-off", "approval", "calendar"],
+        required_integrations: ["gusto", "slack", "google-calendar", "gmail", "notion"],
+        featured: false,
+        definition: {
+            name: "Gusto PTO Request Orchestrator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "PTO Request Submitted",
+                        triggerType: "webhook",
+                        provider: "gusto",
+                        event: "time_off.requested",
+                        description: "Triggered when PTO is requested"
+                    }
+                },
+                {
+                    id: "integration-gusto-get",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Request Details",
+                        provider: "gusto",
+                        operation: "getTimeOffRequest",
+                        outputVariable: "ptoRequest"
+                    }
+                },
+                {
+                    id: "llm-coverage",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Coverage",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze team coverage for this PTO request:\n\n{{ptoRequest}}\n\nCheck: overlapping requests, critical dates, minimum coverage requirements.",
+                        outputVariable: "coverageAnalysis"
+                    }
+                },
+                {
+                    id: "slack-manager",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Manager",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "notion-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Request",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "PTO Requests"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Manager Approval",
+                        reviewPrompt: "Review PTO request with coverage analysis",
+                        outputVariable: "managerDecision"
+                    }
+                },
+                {
+                    id: "router-decision",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Approved?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Was this PTO request approved?\n\n{{managerDecision}}",
+                        routes: [
+                            {
+                                value: "approved",
+                                label: "Approved",
+                                description: "Request approved"
+                            },
+                            { value: "denied", label: "Denied", description: "Request denied" }
+                        ],
+                        defaultRoute: "approved",
+                        outputVariable: "decision"
+                    }
+                },
+                {
+                    id: "calendar-block",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Block Calendar",
+                        provider: "google-calendar",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "gmail-confirm",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Confirmation Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "gmail-deny",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Denial Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "integration-gusto-approve",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Approve in Gusto",
+                        provider: "gusto",
+                        operation: "approveTimeOff"
+                    }
+                },
+                {
+                    id: "integration-gusto-update",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Status",
+                        provider: "gusto",
+                        operation: "updateTimeOff"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Request Processed",
+                        outputName: "result",
+                        value: "{{decision}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-gusto-get" },
+                { id: "e2", source: "integration-gusto-get", target: "llm-coverage" },
+                { id: "e3", source: "llm-coverage", target: "slack-manager" },
+                { id: "e4", source: "llm-coverage", target: "notion-log" },
+                { id: "e5", source: "slack-manager", target: "humanReview-1" },
+                { id: "e6", source: "notion-log", target: "humanReview-1" },
+                { id: "e7", source: "humanReview-1", target: "router-decision" },
+                {
+                    id: "e8",
+                    source: "router-decision",
+                    target: "calendar-block",
+                    sourceHandle: "approved"
+                },
+                {
+                    id: "e9",
+                    source: "router-decision",
+                    target: "gmail-confirm",
+                    sourceHandle: "approved"
+                },
+                {
+                    id: "e10",
+                    source: "router-decision",
+                    target: "gmail-deny",
+                    sourceHandle: "denied"
+                },
+                { id: "e11", source: "calendar-block", target: "integration-gusto-approve" },
+                { id: "e12", source: "gmail-confirm", target: "integration-gusto-approve" },
+                { id: "e13", source: "gmail-deny", target: "integration-gusto-update" },
+                { id: "e14", source: "integration-gusto-approve", target: "output-1" },
+                { id: "e15", source: "integration-gusto-update", target: "output-1" }
+            ]
+        }
+    },
+
+    // HR: Quarterly Review Cycle Coordinator
+    {
+        name: "Quarterly Review Cycle Coordinator",
+        description:
+            "Automate performance review cycles. Create department review pages, notify managers, send reminders for incomplete reviews, and generate leadership summaries when the cycle completes.",
+        category: "operations",
+        tags: ["hr", "performance", "reviews", "quarterly", "automation", "bamboohr"],
+        required_integrations: ["bamboohr", "slack", "gmail", "notion", "google-calendar"],
+        featured: false,
+        definition: {
+            name: "Quarterly Review Cycle Coordinator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Quarterly Trigger",
+                        triggerType: "schedule",
+                        schedule: "0 9 1 1,4,7,10 *",
+                        description: "Runs quarterly on the 1st"
+                    }
+                },
+                {
+                    id: "integration-bamboo-employees",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Active Employees",
+                        provider: "bamboohr",
+                        operation: "listEmployees",
+                        outputVariable: "employees"
+                    }
+                },
+                {
+                    id: "llm-schedule",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Schedule",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a review schedule by department:\n\n{{employees}}\n\nGroup by: Engineering, Sales, Operations, Customer Success. Set deadlines 2 weeks out.",
+                        outputVariable: "reviewSchedule"
+                    }
+                },
+                {
+                    id: "notion-eng",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Engineering Reviews",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Performance Reviews"
+                    }
+                },
+                {
+                    id: "notion-sales",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Sales Reviews",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Performance Reviews"
+                    }
+                },
+                {
+                    id: "notion-ops",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Ops Reviews",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Performance Reviews"
+                    }
+                },
+                {
+                    id: "notion-cs",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "CS Reviews",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Performance Reviews"
+                    }
+                },
+                {
+                    id: "gmail-eng",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Eng Managers",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "gmail-sales",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Sales Managers",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "gmail-ops",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Ops Managers",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "gmail-cs",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email CS Managers",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "delay-1",
+                    type: "wait",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait 2 Weeks",
+                        delayType: "fixed",
+                        duration: 1209600000,
+                        description: "Wait for review completion"
+                    }
+                },
+                {
+                    id: "integration-bamboo-check",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Completion",
+                        provider: "bamboohr",
+                        operation: "getPerformanceReviews",
+                        outputVariable: "reviewStatus"
+                    }
+                },
+                {
+                    id: "router-complete",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "All Complete?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Are all reviews complete?\n\n{{reviewStatus}}",
+                        routes: [
+                            { value: "yes", label: "Complete", description: "All reviews done" },
+                            {
+                                value: "no",
+                                label: "Incomplete",
+                                description: "Some reviews pending"
+                            }
+                        ],
+                        defaultRoute: "no",
+                        outputVariable: "isComplete"
+                    }
+                },
+                {
+                    id: "slack-reminder",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Reminders",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#managers"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Summary",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a quarterly review cycle summary:\n\n{{reviewStatus}}\n\nInclude: completion rates by department, key themes, promotion recommendations.",
+                        outputVariable: "cycleSummary"
+                    }
+                },
+                {
+                    id: "slack-leadership",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Leadership Summary",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#leadership"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Cycle Complete",
+                        outputName: "result",
+                        value: "{{cycleSummary}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-bamboo-employees" },
+                { id: "e2", source: "integration-bamboo-employees", target: "llm-schedule" },
+                { id: "e3", source: "llm-schedule", target: "notion-eng" },
+                { id: "e4", source: "llm-schedule", target: "notion-sales" },
+                { id: "e5", source: "llm-schedule", target: "notion-ops" },
+                { id: "e6", source: "llm-schedule", target: "notion-cs" },
+                { id: "e7", source: "notion-eng", target: "gmail-eng" },
+                { id: "e8", source: "notion-sales", target: "gmail-sales" },
+                { id: "e9", source: "notion-ops", target: "gmail-ops" },
+                { id: "e10", source: "notion-cs", target: "gmail-cs" },
+                { id: "e11", source: "gmail-eng", target: "delay-1" },
+                { id: "e12", source: "gmail-sales", target: "delay-1" },
+                { id: "e13", source: "gmail-ops", target: "delay-1" },
+                { id: "e14", source: "gmail-cs", target: "delay-1" },
+                { id: "e15", source: "delay-1", target: "integration-bamboo-check" },
+                { id: "e16", source: "integration-bamboo-check", target: "router-complete" },
+                {
+                    id: "e17",
+                    source: "router-complete",
+                    target: "slack-reminder",
+                    sourceHandle: "no"
+                },
+                { id: "e18", source: "router-complete", target: "llm-report", sourceHandle: "yes" },
+                { id: "e19", source: "slack-reminder", target: "output-1" },
+                { id: "e20", source: "llm-report", target: "slack-leadership" },
+                { id: "e21", source: "slack-leadership", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // FORMS & SURVEYS (4 templates)
+    // ========================================================================
+
+    // Forms: Typeform Lead Intelligence Engine (Featured)
+    {
+        name: "Typeform Lead Intelligence Engine",
+        description:
+            "Transform Typeform submissions into qualified leads. Enrich data with Apollo, score leads with AI, route hot leads to sales immediately, and nurture others with automated sequences.",
+        category: "sales",
+        tags: ["typeform", "leads", "scoring", "apollo", "hubspot", "automation"],
+        required_integrations: ["typeform", "hubspot", "slack", "gmail", "apollo"],
+        featured: true,
+        definition: {
+            name: "Typeform Lead Intelligence Engine",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Typeform Submission",
+                        triggerType: "webhook",
+                        provider: "typeform",
+                        event: "form.submitted",
+                        description: "Triggered when form is submitted"
+                    }
+                },
+                {
+                    id: "integration-typeform",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Responses",
+                        provider: "typeform",
+                        operation: "getResponse",
+                        outputVariable: "formData"
+                    }
+                },
+                {
+                    id: "integration-apollo",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Enrich Lead",
+                        provider: "apollo",
+                        operation: "enrichPerson",
+                        outputVariable: "enrichedData"
+                    }
+                },
+                {
+                    id: "llm-score",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Score Lead",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Score this lead 0-100 and analyze intent:\n\nForm Data: {{formData}}\nEnriched Data: {{enrichedData}}\n\nConsider: company size, role seniority, engagement signals, budget indicators.",
+                        outputVariable: "leadScore"
+                    }
+                },
+                {
+                    id: "integration-hubspot-create",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Contact",
+                        provider: "hubspot",
+                        operation: "createContact"
+                    }
+                },
+                {
+                    id: "router-score",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Lead Score",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route this lead based on score:\n\n{{leadScore.text}}\n\nCategories: hot (80+), warm (50-79), cold (20-49), nurture (<20)",
+                        routes: [
+                            { value: "hot", label: "Hot (80+)", description: "High intent leads" },
+                            {
+                                value: "warm",
+                                label: "Warm (50-79)",
+                                description: "Medium interest"
+                            },
+                            { value: "cold", label: "Cold (20-49)", description: "Low interest" },
+                            {
+                                value: "nurture",
+                                label: "Nurture (<20)",
+                                description: "Long-term nurture"
+                            }
+                        ],
+                        defaultRoute: "warm",
+                        outputVariable: "scoreCategory"
+                    }
+                },
+                {
+                    id: "slack-hot",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Alert Sales",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#sales-hot"
+                    }
+                },
+                {
+                    id: "gmail-vip",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "VIP Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "hubspot-seq",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Nurture Sequence",
+                        provider: "hubspot",
+                        operation: "enrollInSequence"
+                    }
+                },
+                {
+                    id: "hubspot-news",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Add to Newsletter",
+                        provider: "hubspot",
+                        operation: "addToList"
+                    }
+                },
+                {
+                    id: "hubspot-drip",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Long Nurture",
+                        provider: "hubspot",
+                        operation: "enrollInSequence"
+                    }
+                },
+                {
+                    id: "router-enterprise",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Company Size",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Is this an enterprise company (500+ employees)?\n\n{{enrichedData}}",
+                        routes: [
+                            {
+                                value: "enterprise",
+                                label: "Enterprise",
+                                description: "500+ employees"
+                            },
+                            { value: "smb", label: "SMB", description: "Under 500 employees" }
+                        ],
+                        defaultRoute: "smb",
+                        outputVariable: "companySize"
+                    }
+                },
+                {
+                    id: "slack-ae",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify AE Team",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#ae-team"
+                    }
+                },
+                {
+                    id: "slack-sdr",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify SDR Team",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#sdr-team"
+                    }
+                },
+                {
+                    id: "llm-personalize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Personalize Thank You",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a personalized thank you message for:\n\n{{formData}}\n{{enrichedData}}\n\nMake it warm, relevant to their industry, and include next steps.",
+                        outputVariable: "thankYouMessage"
+                    }
+                },
+                {
+                    id: "gmail-thankyou",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Thank You",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Lead Processed",
+                        outputName: "result",
+                        value: "{{scoreCategory}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-typeform" },
+                { id: "e2", source: "integration-typeform", target: "integration-apollo" },
+                { id: "e3", source: "integration-apollo", target: "llm-score" },
+                { id: "e4", source: "llm-score", target: "integration-hubspot-create" },
+                { id: "e5", source: "integration-hubspot-create", target: "router-score" },
+                { id: "e6", source: "router-score", target: "slack-hot", sourceHandle: "hot" },
+                { id: "e7", source: "router-score", target: "gmail-vip", sourceHandle: "hot" },
+                { id: "e8", source: "router-score", target: "hubspot-seq", sourceHandle: "warm" },
+                { id: "e9", source: "router-score", target: "hubspot-news", sourceHandle: "cold" },
+                {
+                    id: "e10",
+                    source: "router-score",
+                    target: "hubspot-drip",
+                    sourceHandle: "nurture"
+                },
+                { id: "e11", source: "slack-hot", target: "router-enterprise" },
+                { id: "e12", source: "gmail-vip", target: "router-enterprise" },
+                {
+                    id: "e13",
+                    source: "router-enterprise",
+                    target: "slack-ae",
+                    sourceHandle: "enterprise"
+                },
+                {
+                    id: "e14",
+                    source: "router-enterprise",
+                    target: "slack-sdr",
+                    sourceHandle: "smb"
+                },
+                { id: "e15", source: "slack-ae", target: "llm-personalize" },
+                { id: "e16", source: "slack-sdr", target: "llm-personalize" },
+                { id: "e17", source: "hubspot-seq", target: "llm-personalize" },
+                { id: "e18", source: "hubspot-news", target: "llm-personalize" },
+                { id: "e19", source: "hubspot-drip", target: "llm-personalize" },
+                { id: "e20", source: "llm-personalize", target: "gmail-thankyou" },
+                { id: "e21", source: "gmail-thankyou", target: "output-1" }
+            ]
+        }
+    },
+
+    // Forms: SurveyMonkey NPS Command Center
+    {
+        name: "SurveyMonkey NPS Command Center",
+        description:
+            "Process NPS survey responses with sentiment analysis. Route promoters to referral programs, engage passives with improvement ideas, and trigger recovery workflows for detractors.",
+        category: "support",
+        tags: ["surveymonkey", "nps", "feedback", "sentiment", "customer-success"],
+        required_integrations: [
+            "surveymonkey",
+            "slack",
+            "google-sheets",
+            "gmail",
+            "hubspot",
+            "linear"
+        ],
+        featured: false,
+        definition: {
+            name: "SurveyMonkey NPS Command Center",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Survey Response",
+                        triggerType: "webhook",
+                        provider: "surveymonkey",
+                        event: "response.completed",
+                        description: "Triggered when survey is completed"
+                    }
+                },
+                {
+                    id: "integration-survey",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Response",
+                        provider: "surveymonkey",
+                        operation: "getResponse",
+                        outputVariable: "surveyResponse"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Sentiment",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this NPS survey response:\n\n{{surveyResponse}}\n\nExtract: NPS score, sentiment, key themes, specific feedback, improvement suggestions.",
+                        outputVariable: "sentimentAnalysis"
+                    }
+                },
+                {
+                    id: "router-nps",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "NPS Category",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Categorize this NPS response:\n\n{{sentimentAnalysis.text}}\n\nCategories: promoter (9-10), passive (7-8), detractor (0-6)",
+                        routes: [
+                            {
+                                value: "promoter",
+                                label: "Promoter (9-10)",
+                                description: "Highly satisfied"
+                            },
+                            {
+                                value: "passive",
+                                label: "Passive (7-8)",
+                                description: "Satisfied but not enthusiastic"
+                            },
+                            {
+                                value: "detractor",
+                                label: "Detractor (0-6)",
+                                description: "Unsatisfied"
+                            }
+                        ],
+                        defaultRoute: "passive",
+                        outputVariable: "npsCategory"
+                    }
+                },
+                {
+                    id: "gmail-ref",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Referral Request",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "hubspot-tag",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Tag Promoter",
+                        provider: "hubspot",
+                        operation: "updateContact"
+                    }
+                },
+                {
+                    id: "llm-improve",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Ideas",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract actionable improvement ideas from this passive feedback:\n\n{{surveyResponse}}\n\nFormat as feature requests or improvement suggestions.",
+                        outputVariable: "improvementIdeas"
+                    }
+                },
+                {
+                    id: "slack-prod",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Product Ideas",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#product"
+                    }
+                },
+                {
+                    id: "linear-feature",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Feature",
+                        provider: "linear",
+                        operation: "createIssue"
+                    }
+                },
+                {
+                    id: "slack-cs",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "CS Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#cs-urgent"
+                    }
+                },
+                {
+                    id: "llm-recovery",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Recovery Strategy",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a recovery strategy for this detractor:\n\n{{surveyResponse}}\n{{sentimentAnalysis.text}}\n\nInclude: immediate actions, talking points, compensation options if appropriate.",
+                        outputVariable: "recoveryStrategy"
+                    }
+                },
+                {
+                    id: "gmail-recover",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Recovery Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "hubspot-task",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "CS Follow-up",
+                        provider: "hubspot",
+                        operation: "createTask"
+                    }
+                },
+                {
+                    id: "sheets-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Response",
+                        provider: "google-sheets",
+                        operation: "appendRow"
+                    }
+                },
+                {
+                    id: "transform-weekly",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Aggregate Weekly",
+                        transformType: "template",
+                        template:
+                            '{"npsScore": "{{npsCategory}}", "sentiment": "{{sentimentAnalysis}}"}',
+                        outputVariable: "weeklyData"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Weekly Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a weekly NPS insights report:\n\n{{weeklyData}}\n\nInclude: NPS trend, common themes, top concerns, recommended actions.",
+                        outputVariable: "weeklyReport"
+                    }
+                },
+                {
+                    id: "slack-leadership",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Leadership Report",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#leadership"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Response Processed",
+                        outputName: "result",
+                        value: "{{npsCategory}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-survey" },
+                { id: "e2", source: "integration-survey", target: "llm-analyze" },
+                { id: "e3", source: "llm-analyze", target: "router-nps" },
+                { id: "e4", source: "router-nps", target: "gmail-ref", sourceHandle: "promoter" },
+                { id: "e5", source: "router-nps", target: "hubspot-tag", sourceHandle: "promoter" },
+                { id: "e6", source: "router-nps", target: "llm-improve", sourceHandle: "passive" },
+                { id: "e7", source: "router-nps", target: "slack-prod", sourceHandle: "passive" },
+                { id: "e8", source: "router-nps", target: "slack-cs", sourceHandle: "detractor" },
+                {
+                    id: "e9",
+                    source: "router-nps",
+                    target: "llm-recovery",
+                    sourceHandle: "detractor"
+                },
+                { id: "e10", source: "llm-improve", target: "linear-feature" },
+                { id: "e11", source: "llm-recovery", target: "gmail-recover" },
+                { id: "e12", source: "llm-recovery", target: "hubspot-task" },
+                { id: "e13", source: "gmail-ref", target: "sheets-log" },
+                { id: "e14", source: "hubspot-tag", target: "sheets-log" },
+                { id: "e15", source: "slack-prod", target: "sheets-log" },
+                { id: "e16", source: "linear-feature", target: "sheets-log" },
+                { id: "e17", source: "slack-cs", target: "sheets-log" },
+                { id: "e18", source: "gmail-recover", target: "sheets-log" },
+                { id: "e19", source: "hubspot-task", target: "sheets-log" },
+                { id: "e20", source: "sheets-log", target: "transform-weekly" },
+                { id: "e21", source: "transform-weekly", target: "llm-report" },
+                { id: "e22", source: "llm-report", target: "slack-leadership" },
+                { id: "e23", source: "slack-leadership", target: "output-1" }
+            ]
+        }
+    },
+
+    // Forms: Google Forms Event Registration Hub
+    {
+        name: "Google Forms Event Registration Hub",
+        description:
+            "Automate event registration with capacity management. Send personalized confirmations, add attendees to calendar and Zoom, manage waitlists, and alert organizers when capacity is near.",
+        category: "operations",
+        tags: ["google-forms", "events", "registration", "calendar", "zoom", "automation"],
+        required_integrations: [
+            "google-forms",
+            "google-calendar",
+            "gmail",
+            "slack",
+            "google-sheets",
+            "zoom"
+        ],
+        featured: false,
+        definition: {
+            name: "Google Forms Event Registration Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Form Submission",
+                        triggerType: "webhook",
+                        provider: "google-forms",
+                        event: "form.submitted",
+                        description: "Triggered when registration form is submitted"
+                    }
+                },
+                {
+                    id: "integration-forms",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Registration",
+                        provider: "google-forms",
+                        operation: "getResponse",
+                        outputVariable: "registration"
+                    }
+                },
+                {
+                    id: "sheets-attendees",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Add to List",
+                        provider: "google-sheets",
+                        operation: "appendRow"
+                    }
+                },
+                {
+                    id: "llm-personalize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Personalize Confirmation",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a personalized event confirmation for:\n\n{{registration}}\n\nInclude: warm welcome, event details, what to bring, how to prepare.",
+                        outputVariable: "confirmationMessage"
+                    }
+                },
+                {
+                    id: "calendar-invite",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Invite",
+                        provider: "google-calendar",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "gmail-confirm",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Confirmation Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "zoom-add",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Add to Zoom",
+                        provider: "zoom",
+                        operation: "addRegistrant"
+                    }
+                },
+                {
+                    id: "transform-capacity",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Capacity",
+                        transformType: "template",
+                        template:
+                            '{"currentCount": {{sheets.rowCount}}, "maxCapacity": 100, "percentFull": {{sheets.rowCount / 100 * 100}}}',
+                        outputVariable: "capacityStatus"
+                    }
+                },
+                {
+                    id: "router-capacity",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Capacity Status",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Determine capacity status:\n\n{{capacityStatus}}\n\nCategories: available (<80%), near_full (80-99%), waitlist (100%)",
+                        routes: [
+                            {
+                                value: "available",
+                                label: "Available",
+                                description: "Spots available"
+                            },
+                            {
+                                value: "near_full",
+                                label: "Near Full",
+                                description: "80-99% capacity"
+                            },
+                            { value: "waitlist", label: "Waitlist", description: "At capacity" }
+                        ],
+                        defaultRoute: "available",
+                        outputVariable: "capacityCategory"
+                    }
+                },
+                {
+                    id: "slack-organizer",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Alert Organizer",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#events"
+                    }
+                },
+                {
+                    id: "sheets-status",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Status",
+                        provider: "google-sheets",
+                        operation: "updateCell"
+                    }
+                },
+                {
+                    id: "gmail-waitlist",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Waitlist Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "sheets-waitlist",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Add to Waitlist",
+                        provider: "google-sheets",
+                        operation: "appendRow"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Registration Complete",
+                        outputName: "result",
+                        value: "{{capacityCategory}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-forms" },
+                { id: "e2", source: "integration-forms", target: "sheets-attendees" },
+                { id: "e3", source: "sheets-attendees", target: "llm-personalize" },
+                { id: "e4", source: "llm-personalize", target: "calendar-invite" },
+                { id: "e5", source: "llm-personalize", target: "gmail-confirm" },
+                { id: "e6", source: "llm-personalize", target: "zoom-add" },
+                { id: "e7", source: "calendar-invite", target: "transform-capacity" },
+                { id: "e8", source: "gmail-confirm", target: "transform-capacity" },
+                { id: "e9", source: "zoom-add", target: "transform-capacity" },
+                { id: "e10", source: "transform-capacity", target: "router-capacity" },
+                {
+                    id: "e11",
+                    source: "router-capacity",
+                    target: "output-1",
+                    sourceHandle: "available"
+                },
+                {
+                    id: "e12",
+                    source: "router-capacity",
+                    target: "slack-organizer",
+                    sourceHandle: "near_full"
+                },
+                {
+                    id: "e13",
+                    source: "router-capacity",
+                    target: "gmail-waitlist",
+                    sourceHandle: "waitlist"
+                },
+                { id: "e14", source: "slack-organizer", target: "sheets-status" },
+                { id: "e15", source: "gmail-waitlist", target: "sheets-waitlist" },
+                { id: "e16", source: "sheets-status", target: "output-1" },
+                { id: "e17", source: "sheets-waitlist", target: "output-1" }
+            ]
+        }
+    },
+
+    // Forms: Multi-Channel Feedback Aggregator
+    {
+        name: "Multi-Channel Feedback Aggregator",
+        description:
+            "Aggregate feedback from Typeform, SurveyMonkey, and Google Forms into a unified database. AI categorizes and extracts themes, routes critical feedback to support, and generates daily insights.",
+        category: "support",
+        tags: ["feedback", "aggregation", "typeform", "surveymonkey", "google-forms", "insights"],
+        required_integrations: [
+            "typeform",
+            "surveymonkey",
+            "google-forms",
+            "notion",
+            "slack",
+            "linear"
+        ],
+        featured: false,
+        definition: {
+            name: "Multi-Channel Feedback Aggregator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Aggregation",
+                        triggerType: "schedule",
+                        schedule: "0 8 * * *",
+                        description: "Runs daily at 8 AM"
+                    }
+                },
+                {
+                    id: "integration-typeform",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Typeform",
+                        provider: "typeform",
+                        operation: "listResponses",
+                        outputVariable: "typeformResponses"
+                    }
+                },
+                {
+                    id: "integration-survey",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch SurveyMonkey",
+                        provider: "surveymonkey",
+                        operation: "listResponses",
+                        outputVariable: "surveyResponses"
+                    }
+                },
+                {
+                    id: "integration-forms",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Google Forms",
+                        provider: "google-forms",
+                        operation: "listResponses",
+                        outputVariable: "formsResponses"
+                    }
+                },
+                {
+                    id: "transform-normalize",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Unify Format",
+                        transformType: "template",
+                        template:
+                            '{"allFeedback": [{{typeformResponses}}, {{surveyResponses}}, {{formsResponses}}]}',
+                        outputVariable: "unifiedFeedback"
+                    }
+                },
+                {
+                    id: "llm-categorize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Categorize & Theme",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Categorize and extract themes from this feedback:\n\n{{unifiedFeedback}}\n\nFor each item: category (critical, feature, normal), sentiment, key theme, actionable insight.",
+                        outputVariable: "categorizedFeedback"
+                    }
+                },
+                {
+                    id: "notion-database",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Database",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Feedback"
+                    }
+                },
+                {
+                    id: "router-critical",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Has Critical?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Does this feedback contain critical issues, feature requests, or just normal feedback?\n\n{{categorizedFeedback.text}}",
+                        routes: [
+                            { value: "critical", label: "Critical", description: "Urgent issues" },
+                            { value: "feature", label: "Feature", description: "Feature requests" },
+                            { value: "normal", label: "Normal", description: "Regular feedback" }
+                        ],
+                        defaultRoute: "normal",
+                        outputVariable: "feedbackType"
+                    }
+                },
+                {
+                    id: "slack-urgent",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Urgent Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#support-urgent"
+                    }
+                },
+                {
+                    id: "llm-escalate",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Escalation Brief",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create an escalation brief for critical feedback:\n\n{{categorizedFeedback.text}}\n\nInclude: issue summary, customer impact, recommended resolution.",
+                        outputVariable: "escalationBrief"
+                    }
+                },
+                {
+                    id: "linear-feature",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Feature",
+                        provider: "linear",
+                        operation: "createIssue"
+                    }
+                },
+                {
+                    id: "slack-product",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Product Ideas",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#product-ideas"
+                    }
+                },
+                {
+                    id: "notion-archive",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Archive Normal",
+                        provider: "notion",
+                        operation: "updatePage"
+                    }
+                },
+                {
+                    id: "llm-insights",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Insights",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate daily feedback insights:\n\n{{categorizedFeedback.text}}\n\nInclude: volume stats, trending themes, sentiment distribution, top requests.",
+                        outputVariable: "dailyInsights"
+                    }
+                },
+                {
+                    id: "slack-insights",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Insights",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#product-insights"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Aggregation Complete",
+                        outputName: "result",
+                        value: "{{dailyInsights}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-typeform" },
+                { id: "e2", source: "trigger-1", target: "integration-survey" },
+                { id: "e3", source: "trigger-1", target: "integration-forms" },
+                { id: "e4", source: "integration-typeform", target: "transform-normalize" },
+                { id: "e5", source: "integration-survey", target: "transform-normalize" },
+                { id: "e6", source: "integration-forms", target: "transform-normalize" },
+                { id: "e7", source: "transform-normalize", target: "llm-categorize" },
+                { id: "e8", source: "llm-categorize", target: "notion-database" },
+                { id: "e9", source: "notion-database", target: "router-critical" },
+                {
+                    id: "e10",
+                    source: "router-critical",
+                    target: "slack-urgent",
+                    sourceHandle: "critical"
+                },
+                {
+                    id: "e11",
+                    source: "router-critical",
+                    target: "linear-feature",
+                    sourceHandle: "feature"
+                },
+                {
+                    id: "e12",
+                    source: "router-critical",
+                    target: "notion-archive",
+                    sourceHandle: "normal"
+                },
+                { id: "e13", source: "slack-urgent", target: "llm-escalate" },
+                { id: "e14", source: "linear-feature", target: "slack-product" },
+                { id: "e15", source: "llm-escalate", target: "llm-insights" },
+                { id: "e16", source: "slack-product", target: "llm-insights" },
+                { id: "e17", source: "notion-archive", target: "llm-insights" },
+                { id: "e18", source: "llm-insights", target: "slack-insights" },
+                { id: "e19", source: "slack-insights", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // ALTERNATIVE DEVOPS (4 templates)
+    // ========================================================================
+
+    // DevOps: GitLab CI/CD Command Center (Featured)
+    {
+        name: "GitLab CI/CD Command Center",
+        description:
+            "Monitor GitLab pipelines with intelligent failure diagnosis. AI analyzes logs, suggests fixes, routes by severity (critical to PagerDuty, others to Slack), and tracks deployment metrics in Datadog.",
+        category: "engineering",
+        tags: ["gitlab", "ci-cd", "devops", "monitoring", "automation", "pagerduty"],
+        required_integrations: ["gitlab", "slack", "pagerduty", "notion", "datadog"],
+        featured: true,
+        definition: {
+            name: "GitLab CI/CD Command Center",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Pipeline Event",
+                        triggerType: "webhook",
+                        provider: "gitlab",
+                        event: "pipeline",
+                        description: "Triggered on pipeline status change"
+                    }
+                },
+                {
+                    id: "integration-gitlab",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Pipeline",
+                        provider: "gitlab",
+                        operation: "getPipeline",
+                        outputVariable: "pipelineDetails"
+                    }
+                },
+                {
+                    id: "router-status",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Pipeline Status",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What is the pipeline status?\n\n{{pipelineDetails}}",
+                        routes: [
+                            { value: "failed", label: "Failed", description: "Pipeline failed" },
+                            {
+                                value: "success",
+                                label: "Success",
+                                description: "Pipeline succeeded"
+                            }
+                        ],
+                        defaultRoute: "success",
+                        outputVariable: "pipelineStatus"
+                    }
+                },
+                {
+                    id: "llm-diagnose",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Diagnose Failure",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this pipeline failure:\n\n{{pipelineDetails}}\n\nIdentify: root cause, affected jobs, error messages, and recommended fix.",
+                        outputVariable: "diagnosis"
+                    }
+                },
+                {
+                    id: "router-severity",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Failure Severity",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Rate the severity of this failure:\n\n{{diagnosis.text}}\n\nCategories: critical (production down), high (blocking release), low (non-blocking)",
+                        routes: [
+                            {
+                                value: "critical",
+                                label: "Critical",
+                                description: "Production impact"
+                            },
+                            { value: "high", label: "High", description: "Release blocking" },
+                            { value: "low", label: "Low", description: "Non-blocking" }
+                        ],
+                        defaultRoute: "low",
+                        outputVariable: "severity"
+                    }
+                },
+                {
+                    id: "pagerduty",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Page On-Call",
+                        provider: "pagerduty",
+                        operation: "createIncident"
+                    }
+                },
+                {
+                    id: "slack-incident",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Critical Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#incidents"
+                    }
+                },
+                {
+                    id: "slack-eng",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "High Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#engineering"
+                    }
+                },
+                {
+                    id: "slack-team",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Team Notice",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#team"
+                    }
+                },
+                {
+                    id: "notion-incident",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Incident",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Incidents"
+                    }
+                },
+                {
+                    id: "llm-suggest",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Suggest Fix",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on this diagnosis:\n\n{{diagnosis.text}}\n\nSuggest specific code or config changes to fix the issue.",
+                        outputVariable: "suggestedFix"
+                    }
+                },
+                {
+                    id: "gitlab-comment",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Fix",
+                        provider: "gitlab",
+                        operation: "createMergeRequestNote"
+                    }
+                },
+                {
+                    id: "slack-oncall",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify On-Call",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#oncall"
+                    }
+                },
+                {
+                    id: "datadog-event",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Record Incident",
+                        provider: "datadog",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "router-env",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Environment",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What environment was this deployment to?\n\n{{pipelineDetails}}",
+                        routes: [
+                            {
+                                value: "production",
+                                label: "Production",
+                                description: "Prod deploy"
+                            },
+                            { value: "staging", label: "Staging", description: "Staging/preview" }
+                        ],
+                        defaultRoute: "staging",
+                        outputVariable: "environment"
+                    }
+                },
+                {
+                    id: "slack-rel",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Release Announce",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#releases"
+                    }
+                },
+                {
+                    id: "notion-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Changelog",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Changelog"
+                    }
+                },
+                {
+                    id: "integration-datadog",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Deploy Metric",
+                        provider: "datadog",
+                        operation: "submitMetric"
+                    }
+                },
+                {
+                    id: "github-comment",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Preview URL",
+                        provider: "gitlab",
+                        operation: "createMergeRequestNote"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Pipeline Processed",
+                        outputName: "result",
+                        value: "{{pipelineStatus}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-gitlab" },
+                { id: "e2", source: "integration-gitlab", target: "router-status" },
+                {
+                    id: "e3",
+                    source: "router-status",
+                    target: "llm-diagnose",
+                    sourceHandle: "failed"
+                },
+                {
+                    id: "e4",
+                    source: "router-status",
+                    target: "router-env",
+                    sourceHandle: "success"
+                },
+                { id: "e5", source: "llm-diagnose", target: "router-severity" },
+                {
+                    id: "e6",
+                    source: "router-severity",
+                    target: "pagerduty",
+                    sourceHandle: "critical"
+                },
+                {
+                    id: "e7",
+                    source: "router-severity",
+                    target: "slack-incident",
+                    sourceHandle: "critical"
+                },
+                { id: "e8", source: "router-severity", target: "slack-eng", sourceHandle: "high" },
+                { id: "e9", source: "router-severity", target: "slack-team", sourceHandle: "low" },
+                { id: "e10", source: "pagerduty", target: "notion-incident" },
+                { id: "e11", source: "slack-incident", target: "notion-incident" },
+                { id: "e12", source: "notion-incident", target: "llm-suggest" },
+                { id: "e13", source: "slack-eng", target: "llm-suggest" },
+                { id: "e14", source: "slack-team", target: "llm-suggest" },
+                { id: "e15", source: "llm-suggest", target: "gitlab-comment" },
+                { id: "e16", source: "gitlab-comment", target: "slack-oncall" },
+                { id: "e17", source: "gitlab-comment", target: "datadog-event" },
+                {
+                    id: "e18",
+                    source: "router-env",
+                    target: "slack-rel",
+                    sourceHandle: "production"
+                },
+                {
+                    id: "e19",
+                    source: "router-env",
+                    target: "notion-log",
+                    sourceHandle: "production"
+                },
+                {
+                    id: "e20",
+                    source: "router-env",
+                    target: "github-comment",
+                    sourceHandle: "staging"
+                },
+                { id: "e21", source: "slack-rel", target: "integration-datadog" },
+                { id: "e22", source: "notion-log", target: "integration-datadog" },
+                { id: "e23", source: "slack-oncall", target: "output-1" },
+                { id: "e24", source: "datadog-event", target: "output-1" },
+                { id: "e25", source: "integration-datadog", target: "output-1" },
+                { id: "e26", source: "github-comment", target: "output-1" }
+            ]
+        }
+    },
+
+    // DevOps: CircleCI Build Intelligence Hub
+    {
+        name: "CircleCI Build Intelligence Hub",
+        description:
+            "Diagnose CircleCI build failures with AI-powered analysis. Route by failure type (tests, dependencies, infrastructure, timeouts), suggest fixes, and create Linear issues for recurring problems.",
+        category: "engineering",
+        tags: ["circleci", "ci-cd", "builds", "devops", "automation", "linear"],
+        required_integrations: ["circleci", "github", "slack", "linear", "notion"],
+        featured: false,
+        definition: {
+            name: "CircleCI Build Intelligence Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Build Failed",
+                        triggerType: "webhook",
+                        provider: "circleci",
+                        event: "job.failed",
+                        description: "Triggered when build fails"
+                    }
+                },
+                {
+                    id: "integration-circleci",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Build Logs",
+                        provider: "circleci",
+                        operation: "getJob",
+                        outputVariable: "buildDetails"
+                    }
+                },
+                {
+                    id: "llm-diagnose",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Diagnose Failure",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this build failure:\n\n{{buildDetails}}\n\nIdentify: failure type, root cause, affected tests/modules, and recommended fix.",
+                        outputVariable: "diagnosis"
+                    }
+                },
+                {
+                    id: "router-type",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Failure Type",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What type of failure is this?\n\n{{diagnosis.text}}\n\nCategories: test_failure, dependency, infra, timeout",
+                        routes: [
+                            {
+                                value: "test_failure",
+                                label: "Test Failure",
+                                description: "Tests failed"
+                            },
+                            {
+                                value: "dependency",
+                                label: "Dependency",
+                                description: "Package issues"
+                            },
+                            {
+                                value: "infra",
+                                label: "Infrastructure",
+                                description: "CI system issue"
+                            },
+                            { value: "timeout", label: "Timeout", description: "Build timeout" }
+                        ],
+                        defaultRoute: "test_failure",
+                        outputVariable: "failureType"
+                    }
+                },
+                {
+                    id: "github-comment",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Comment Tests",
+                        provider: "github",
+                        operation: "createComment"
+                    }
+                },
+                {
+                    id: "slack-author",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Author",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "linear-task",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Task",
+                        provider: "linear",
+                        operation: "createIssue"
+                    }
+                },
+                {
+                    id: "slack-platform",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Platform Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#platform"
+                    }
+                },
+                {
+                    id: "slack-devops",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "DevOps Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#devops"
+                    }
+                },
+                {
+                    id: "slack-platform-timeout",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Timeout Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#platform"
+                    }
+                },
+                {
+                    id: "llm-scale",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Suggest Scaling",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "This build timed out:\n\n{{buildDetails}}\n\nSuggest: resource scaling, parallelization, or optimization strategies.",
+                        outputVariable: "scalingSuggestion"
+                    }
+                },
+                {
+                    id: "llm-fix",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Fix",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on this diagnosis:\n\n{{diagnosis.text}}\n\nGenerate a specific code fix or configuration change.",
+                        outputVariable: "suggestedFix"
+                    }
+                },
+                {
+                    id: "github-suggest",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Fix",
+                        provider: "github",
+                        operation: "createComment"
+                    }
+                },
+                {
+                    id: "notion-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Failure",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Build Failures"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Build Processed",
+                        outputName: "result",
+                        value: "{{failureType}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-circleci" },
+                { id: "e2", source: "integration-circleci", target: "llm-diagnose" },
+                { id: "e3", source: "llm-diagnose", target: "router-type" },
+                {
+                    id: "e4",
+                    source: "router-type",
+                    target: "github-comment",
+                    sourceHandle: "test_failure"
+                },
+                {
+                    id: "e5",
+                    source: "router-type",
+                    target: "slack-author",
+                    sourceHandle: "test_failure"
+                },
+                {
+                    id: "e6",
+                    source: "router-type",
+                    target: "linear-task",
+                    sourceHandle: "dependency"
+                },
+                {
+                    id: "e7",
+                    source: "router-type",
+                    target: "slack-platform",
+                    sourceHandle: "dependency"
+                },
+                { id: "e8", source: "router-type", target: "slack-devops", sourceHandle: "infra" },
+                {
+                    id: "e9",
+                    source: "router-type",
+                    target: "slack-platform-timeout",
+                    sourceHandle: "timeout"
+                },
+                { id: "e10", source: "slack-platform-timeout", target: "llm-scale" },
+                { id: "e11", source: "github-comment", target: "llm-fix" },
+                { id: "e12", source: "slack-author", target: "llm-fix" },
+                { id: "e13", source: "linear-task", target: "llm-fix" },
+                { id: "e14", source: "slack-platform", target: "llm-fix" },
+                { id: "e15", source: "slack-devops", target: "llm-fix" },
+                { id: "e16", source: "llm-scale", target: "llm-fix" },
+                { id: "e17", source: "llm-fix", target: "github-suggest" },
+                { id: "e18", source: "github-suggest", target: "notion-log" },
+                { id: "e19", source: "notion-log", target: "output-1" }
+            ]
+        }
+    },
+
+    // DevOps: Vercel Deploy Intelligence
+    {
+        name: "Vercel Deploy Intelligence",
+        description:
+            "Track Vercel deployments with environment-aware routing. Post preview URLs to PRs, announce production releases, monitor health metrics, and auto-rollback on degraded performance.",
+        category: "engineering",
+        tags: ["vercel", "deployment", "devops", "monitoring", "preview", "rollback"],
+        required_integrations: ["vercel", "slack", "github", "notion", "datadog"],
+        featured: false,
+        definition: {
+            name: "Vercel Deploy Intelligence",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Deploy Complete",
+                        triggerType: "webhook",
+                        provider: "vercel",
+                        event: "deployment.succeeded",
+                        description: "Triggered when deployment completes"
+                    }
+                },
+                {
+                    id: "integration-vercel",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Deployment",
+                        provider: "vercel",
+                        operation: "getDeployment",
+                        outputVariable: "deployDetails"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Deploy",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this deployment:\n\n{{deployDetails}}\n\nExtract: environment, changes summary, build time, bundle size changes.",
+                        outputVariable: "deployAnalysis"
+                    }
+                },
+                {
+                    id: "router-env",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Environment",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What environment is this deployment?\n\n{{deployDetails}}",
+                        routes: [
+                            {
+                                value: "production",
+                                label: "Production",
+                                description: "Prod deploy"
+                            },
+                            { value: "preview", label: "Preview", description: "Preview/staging" },
+                            {
+                                value: "development",
+                                label: "Development",
+                                description: "Dev deploy"
+                            }
+                        ],
+                        defaultRoute: "preview",
+                        outputVariable: "environment"
+                    }
+                },
+                {
+                    id: "slack-release",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Release Announce",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#releases"
+                    }
+                },
+                {
+                    id: "notion-changelog",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Changelog",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Changelog"
+                    }
+                },
+                {
+                    id: "github-preview",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Preview URL",
+                        provider: "github",
+                        operation: "createComment"
+                    }
+                },
+                {
+                    id: "slack-dev",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Dev Notice",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#dev"
+                    }
+                },
+                {
+                    id: "datadog-deploy",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Record Deploy",
+                        provider: "datadog",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "vercel-analytics",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Baseline",
+                        provider: "vercel",
+                        operation: "getAnalytics",
+                        outputVariable: "baseline"
+                    }
+                },
+                {
+                    id: "delay-5min",
+                    type: "wait",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait for Traffic",
+                        delayType: "fixed",
+                        duration: 300000,
+                        description: "Wait 5 minutes for metrics"
+                    }
+                },
+                {
+                    id: "integration-datadog-check",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Error Rate",
+                        provider: "datadog",
+                        operation: "queryMetrics",
+                        outputVariable: "errorRate"
+                    }
+                },
+                {
+                    id: "router-health",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Health Check",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Is this deployment healthy based on error rates?\n\nBaseline: {{baseline}}\nCurrent: {{errorRate}}",
+                        routes: [
+                            {
+                                value: "healthy",
+                                label: "Healthy",
+                                description: "Normal error rate"
+                            },
+                            { value: "degraded", label: "Degraded", description: "Elevated errors" }
+                        ],
+                        defaultRoute: "healthy",
+                        outputVariable: "healthStatus"
+                    }
+                },
+                {
+                    id: "notion-success",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Mark Success",
+                        provider: "notion",
+                        operation: "updatePage"
+                    }
+                },
+                {
+                    id: "slack-oncall",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Alert On-Call",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#oncall"
+                    }
+                },
+                {
+                    id: "vercel-rollback",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Trigger Rollback",
+                        provider: "vercel",
+                        operation: "rollback"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Deploy Processed",
+                        outputName: "result",
+                        value: "{{healthStatus}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-vercel" },
+                { id: "e2", source: "integration-vercel", target: "llm-analyze" },
+                { id: "e3", source: "llm-analyze", target: "router-env" },
+                {
+                    id: "e4",
+                    source: "router-env",
+                    target: "slack-release",
+                    sourceHandle: "production"
+                },
+                {
+                    id: "e5",
+                    source: "router-env",
+                    target: "notion-changelog",
+                    sourceHandle: "production"
+                },
+                {
+                    id: "e6",
+                    source: "router-env",
+                    target: "github-preview",
+                    sourceHandle: "preview"
+                },
+                {
+                    id: "e7",
+                    source: "router-env",
+                    target: "slack-dev",
+                    sourceHandle: "development"
+                },
+                { id: "e8", source: "slack-release", target: "datadog-deploy" },
+                { id: "e9", source: "notion-changelog", target: "datadog-deploy" },
+                { id: "e10", source: "datadog-deploy", target: "vercel-analytics" },
+                { id: "e11", source: "vercel-analytics", target: "delay-5min" },
+                { id: "e12", source: "delay-5min", target: "integration-datadog-check" },
+                { id: "e13", source: "integration-datadog-check", target: "router-health" },
+                {
+                    id: "e14",
+                    source: "router-health",
+                    target: "notion-success",
+                    sourceHandle: "healthy"
+                },
+                {
+                    id: "e15",
+                    source: "router-health",
+                    target: "slack-oncall",
+                    sourceHandle: "degraded"
+                },
+                {
+                    id: "e16",
+                    source: "router-health",
+                    target: "vercel-rollback",
+                    sourceHandle: "degraded"
+                },
+                { id: "e17", source: "notion-success", target: "output-1" },
+                { id: "e18", source: "slack-oncall", target: "output-1" },
+                { id: "e19", source: "vercel-rollback", target: "output-1" },
+                { id: "e20", source: "github-preview", target: "output-1" },
+                { id: "e21", source: "slack-dev", target: "output-1" }
+            ]
+        }
+    },
+
+    // DevOps: Bitbucket PR Review Orchestrator
+    {
+        name: "Bitbucket PR Review Orchestrator",
+        description:
+            "Streamline Bitbucket PR reviews with AI-powered code analysis. Identify reviewers, send Slack notifications, track review progress with reminders, and escalate stale PRs to managers.",
+        category: "engineering",
+        tags: ["bitbucket", "code-review", "pull-requests", "devops", "automation"],
+        required_integrations: ["bitbucket", "slack", "jira", "gmail", "notion"],
+        featured: false,
+        definition: {
+            name: "Bitbucket PR Review Orchestrator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "PR Created",
+                        triggerType: "webhook",
+                        provider: "bitbucket",
+                        event: "pullrequest.created",
+                        description: "Triggered when PR is created"
+                    }
+                },
+                {
+                    id: "integration-bitbucket-pr",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get PR Details",
+                        provider: "bitbucket",
+                        operation: "getPullRequest",
+                        outputVariable: "prDetails"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Changes",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this pull request:\n\n{{prDetails}}\n\nDetermine: complexity (1-10), risk areas, test coverage needs, review priority.",
+                        outputVariable: "prAnalysis"
+                    }
+                },
+                {
+                    id: "llm-reviewers",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Identify Reviewers",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on the files changed in this PR:\n\n{{prDetails}}\n\nSuggest appropriate reviewers based on code ownership patterns.",
+                        outputVariable: "suggestedReviewers"
+                    }
+                },
+                {
+                    id: "bitbucket-reviewers",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Request Reviews",
+                        provider: "bitbucket",
+                        operation: "addReviewers"
+                    }
+                },
+                {
+                    id: "slack-reviewers",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Reviewers",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "jira-link",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Link to JIRA",
+                        provider: "jira",
+                        operation: "addComment"
+                    }
+                },
+                {
+                    id: "delay-24h",
+                    type: "wait",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait 24 Hours",
+                        delayType: "fixed",
+                        duration: 86400000,
+                        description: "Wait for reviews"
+                    }
+                },
+                {
+                    id: "integration-bitbucket-check",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Status",
+                        provider: "bitbucket",
+                        operation: "getPullRequest",
+                        outputVariable: "reviewStatus"
+                    }
+                },
+                {
+                    id: "router-reviewed",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Review Status",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What is the review status?\n\n{{reviewStatus}}\n\nCategories: none (no reviews), some (partial reviews), approved (all approved)",
+                        routes: [
+                            { value: "none", label: "No Reviews", description: "No reviews yet" },
+                            { value: "some", label: "Partial", description: "Some reviews in" },
+                            { value: "approved", label: "Approved", description: "All approved" }
+                        ],
+                        defaultRoute: "none",
+                        outputVariable: "reviewState"
+                    }
+                },
+                {
+                    id: "slack-reminder",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Urgent Reminder",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "gmail-escalate",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Manager",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "slack-update",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Progress Update",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "delay-12h",
+                    type: "wait",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait 12 More Hours",
+                        delayType: "fixed",
+                        duration: 43200000,
+                        description: "Additional wait time"
+                    }
+                },
+                {
+                    id: "jira-update",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Ready to Merge",
+                        provider: "jira",
+                        operation: "updateIssue"
+                    }
+                },
+                {
+                    id: "notion-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Approval",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "PR Reviews"
+                    }
+                },
+                {
+                    id: "llm-summary",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Review Summary",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a review summary for this PR:\n\n{{reviewStatus}}\n\nInclude: key feedback themes, approval status, remaining concerns.",
+                        outputVariable: "reviewSummary"
+                    }
+                },
+                {
+                    id: "bitbucket-comment",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Summary",
+                        provider: "bitbucket",
+                        operation: "createComment"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "PR Processed",
+                        outputName: "result",
+                        value: "{{reviewState}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-bitbucket-pr" },
+                { id: "e2", source: "integration-bitbucket-pr", target: "llm-analyze" },
+                { id: "e3", source: "llm-analyze", target: "llm-reviewers" },
+                { id: "e4", source: "llm-reviewers", target: "bitbucket-reviewers" },
+                { id: "e5", source: "llm-reviewers", target: "slack-reviewers" },
+                { id: "e6", source: "llm-reviewers", target: "jira-link" },
+                { id: "e7", source: "bitbucket-reviewers", target: "delay-24h" },
+                { id: "e8", source: "slack-reviewers", target: "delay-24h" },
+                { id: "e9", source: "jira-link", target: "delay-24h" },
+                { id: "e10", source: "delay-24h", target: "integration-bitbucket-check" },
+                { id: "e11", source: "integration-bitbucket-check", target: "router-reviewed" },
+                {
+                    id: "e12",
+                    source: "router-reviewed",
+                    target: "slack-reminder",
+                    sourceHandle: "none"
+                },
+                {
+                    id: "e13",
+                    source: "router-reviewed",
+                    target: "slack-update",
+                    sourceHandle: "some"
+                },
+                {
+                    id: "e14",
+                    source: "router-reviewed",
+                    target: "jira-update",
+                    sourceHandle: "approved"
+                },
+                { id: "e15", source: "slack-reminder", target: "gmail-escalate" },
+                { id: "e16", source: "gmail-escalate", target: "llm-summary" },
+                { id: "e17", source: "slack-update", target: "delay-12h" },
+                { id: "e18", source: "delay-12h", target: "llm-summary" },
+                { id: "e19", source: "jira-update", target: "notion-log" },
+                { id: "e20", source: "notion-log", target: "llm-summary" },
+                { id: "e21", source: "llm-summary", target: "bitbucket-comment" },
+                { id: "e22", source: "bitbucket-comment", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // MULTIMODAL AI (10 templates)
+    // ========================================================================
+
+    // Multimodal AI 1: Product Photo Analyzer
+    {
+        name: "Product Photo Analyzer",
+        description:
+            "Analyze product images for e-commerce optimization. Uses vision AI to extract features, quality issues, and generate SEO-optimized descriptions and tags.",
+        category: "multimodal-ai",
+        tags: ["vision", "ecommerce", "product", "seo", "image-analysis"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Product Photo Analyzer",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Product Image",
+                        inputName: "productImage",
+                        inputVariable: "productImage",
+                        inputType: "file",
+                        description: "Upload product image to analyze"
+                    }
+                },
+                {
+                    id: "vision-analyze",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Product Image",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this product image in detail. Identify:\n1. Product type and category\n2. Key visual features (color, material, size indicators)\n3. Quality issues (blur, lighting, background)\n4. Styling suggestions for improvement\n5. Competitor comparison points",
+                        outputVariable: "imageAnalysis"
+                    }
+                },
+                {
+                    id: "llm-description",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate SEO Description",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on this product image analysis:\n\n{{imageAnalysis.text}}\n\nGenerate:\n1. SEO-optimized product title (60 chars max)\n2. Product description (150-200 words)\n3. Key features bullet points (5-7 items)\n4. Search keywords (10-15 terms)\n5. Category tags",
+                        outputVariable: "productContent"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Product Data",
+                        outputName: "result",
+                        value: "{{productContent}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "vision-analyze" },
+                { id: "e2", source: "vision-analyze", target: "llm-description" },
+                { id: "e3", source: "llm-description", target: "output-1" }
+            ]
+        }
+    },
+
+    // Multimodal AI 2: Brand Asset Validator
+    {
+        name: "Brand Asset Validator",
+        description:
+            "Validate uploaded brand assets against brand guidelines. Checks colors, logo placement, typography, and provides detailed compliance feedback.",
+        category: "multimodal-ai",
+        tags: ["vision", "brand", "validation", "compliance", "design"],
+        required_integrations: ["slack"],
+        featured: false,
+        definition: {
+            name: "Brand Asset Validator",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Brand Assets",
+                        inputVariable: "brandAssets",
+                        allowedTypes: ["image/*"],
+                        description: "Upload images to validate against brand guidelines"
+                    }
+                },
+                {
+                    id: "input-guidelines",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Brand Guidelines",
+                        inputName: "brandGuidelines",
+                        inputVariable: "brandGuidelines",
+                        inputType: "text",
+                        description:
+                            "Describe your brand guidelines: colors (hex codes), logo rules, typography, tone"
+                    }
+                },
+                {
+                    id: "loop-assets",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Each Asset",
+                        loopType: "forEach",
+                        collection: "{{brandAssets}}",
+                        itemVariable: "currentAsset",
+                        indexVariable: "assetIndex"
+                    }
+                },
+                {
+                    id: "vision-check",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Brand Compliance",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this brand asset against these guidelines:\n\n{{brandGuidelines}}\n\nCheck:\n1. Color accuracy (identify hex codes used)\n2. Logo placement and sizing\n3. Typography consistency\n4. Overall brand alignment\n5. Quality issues\n\nProvide a compliance score (0-100) and specific feedback.",
+                        outputVariable: "complianceCheck"
+                    }
+                },
+                {
+                    id: "conditional-pass",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Passes Guidelines?",
+                        condition:
+                            "complianceCheck.text.includes('score: 8') || complianceCheck.text.includes('score: 9') || complianceCheck.text.includes('score: 10')",
+                        outputVariable: "passesGuidelines"
+                    }
+                },
+                {
+                    id: "shared-memory-pass",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Approved",
+                        operation: "set",
+                        key: "approved_{{assetIndex}}",
+                        value: "{{currentAsset}}"
+                    }
+                },
+                {
+                    id: "llm-feedback",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Improvement Feedback",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on this compliance check:\n\n{{complianceCheck.text}}\n\nGenerate specific, actionable feedback for the designer to fix the brand compliance issues. Be constructive and prioritize the most impactful changes.",
+                        outputVariable: "designFeedback"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Alert Design Team",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#design-reviews"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Validation Results",
+                        outputName: "result",
+                        value: "{{complianceCheck}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "loop-assets" },
+                { id: "e2", source: "input-guidelines", target: "loop-assets" },
+                { id: "e3", source: "loop-assets", target: "vision-check" },
+                { id: "e4", source: "vision-check", target: "conditional-pass" },
+                {
+                    id: "e5",
+                    source: "conditional-pass",
+                    target: "shared-memory-pass",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e6",
+                    source: "conditional-pass",
+                    target: "llm-feedback",
+                    sourceHandle: "false"
+                },
+                { id: "e7", source: "llm-feedback", target: "integration-slack" },
+                { id: "e8", source: "shared-memory-pass", target: "output-1" },
+                { id: "e9", source: "integration-slack", target: "output-1" }
+            ]
+        }
+    },
+
+    // Multimodal AI 3: Social Media Image Generator
+    {
+        name: "Social Media Image Generator",
+        description:
+            "Generate platform-optimized social media images from text briefs. Creates visuals for Instagram, Twitter, LinkedIn, and Facebook with proper sizing.",
+        category: "multimodal-ai",
+        tags: ["image-generation", "social-media", "marketing", "ai-art", "content"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Social Media Image Generator",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Campaign Brief",
+                        inputName: "campaignBrief",
+                        inputVariable: "campaignBrief",
+                        inputType: "text",
+                        description:
+                            "Describe the campaign: theme, message, style preferences, brand colors"
+                    }
+                },
+                {
+                    id: "llm-prompts",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Image Prompts",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on this campaign brief:\n\n{{campaignBrief}}\n\nCreate detailed image generation prompts for:\n1. Instagram Post (1080x1080) - visually striking, lifestyle-focused\n2. Instagram Story (1080x1920) - vertical, attention-grabbing\n3. Twitter/X Post (1200x675) - clean, shareable\n4. LinkedIn Post (1200x627) - professional, trustworthy\n\nFor each, provide a detailed prompt describing composition, style, colors, and mood.",
+                        outputVariable: "imagePrompts"
+                    }
+                },
+                {
+                    id: "llm-instagram-post",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Instagram Post Image",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract the Instagram Post prompt from:\n\n{{imagePrompts.text}}\n\nReturn just the image prompt for DALL-E.",
+                        outputVariable: "instagramPostPrompt"
+                    }
+                },
+                {
+                    id: "llm-twitter",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Twitter Image",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract the Twitter/X Post prompt from:\n\n{{imagePrompts.text}}\n\nReturn just the image prompt for DALL-E.",
+                        outputVariable: "twitterPrompt"
+                    }
+                },
+                {
+                    id: "transform-compile",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Image Package",
+                        transformType: "template",
+                        template:
+                            "Social Media Image Package:\n\nInstagram: {{instagramPostPrompt.text}}\nTwitter: {{twitterPrompt.text}}\n\nReady for image generation with your preferred tool.",
+                        outputVariable: "imagePackage"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Image Prompts",
+                        outputName: "result",
+                        value: "{{imagePackage}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "llm-prompts" },
+                { id: "e2", source: "llm-prompts", target: "llm-instagram-post" },
+                { id: "e3", source: "llm-prompts", target: "llm-twitter" },
+                { id: "e4", source: "llm-instagram-post", target: "transform-compile" },
+                { id: "e5", source: "llm-twitter", target: "transform-compile" },
+                { id: "e6", source: "transform-compile", target: "output-1" }
+            ]
+        }
+    },
+
+    // Multimodal AI 4: Visual Content Moderator
+    {
+        name: "Visual Content Moderator",
+        description:
+            "Automatically moderate user-uploaded images using AI vision. Classifies content as safe, warning, or blocked with multi-path routing for each case.",
+        category: "multimodal-ai",
+        tags: ["vision", "moderation", "safety", "content", "switch"],
+        required_integrations: ["slack"],
+        featured: false,
+        definition: {
+            name: "Visual Content Moderator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Image Upload Webhook",
+                        triggerType: "webhook",
+                        description: "Triggered when user uploads an image"
+                    }
+                },
+                {
+                    id: "vision-moderate",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Content Safety",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: 'Analyze this image for content moderation. Classify as:\n- SAFE: Appropriate for all audiences\n- WARNING: May need human review (suggestive but not explicit)\n- BLOCK: Violates content policies (explicit, violent, illegal)\n\nProvide classification and reasoning. Return JSON: {"classification": "SAFE|WARNING|BLOCK", "reason": "...", "confidence": 0-100}',
+                        outputVariable: "moderationResult"
+                    }
+                },
+                {
+                    id: "code-parse",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Parse Classification",
+                        language: "javascript",
+                        code: "const result = JSON.parse(inputs.moderationResult.text);\nreturn { classification: result.classification, reason: result.reason, confidence: result.confidence };",
+                        outputVariable: "parsed"
+                    }
+                },
+                {
+                    id: "switch-classify",
+                    type: "switch",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Route by Classification",
+                        expression: "{{parsed.classification}}",
+                        cases: [
+                            { value: "SAFE", label: "Safe Content" },
+                            { value: "WARNING", label: "Needs Review" },
+                            { value: "BLOCK", label: "Block Content" }
+                        ],
+                        defaultCase: "SAFE"
+                    }
+                },
+                {
+                    id: "llm-approve",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Approval",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Content approved. Reason: {{parsed.reason}}. Generate a brief log entry.",
+                        outputVariable: "approvalLog"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Human Review Required",
+                        reviewPrompt:
+                            "This content was flagged for review.\n\nReason: {{parsed.reason}}\nConfidence: {{parsed.confidence}}%\n\nPlease approve or reject.",
+                        outputVariable: "humanDecision"
+                    }
+                },
+                {
+                    id: "integration-slack-block",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Content Blocked",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#content-moderation"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Moderation Result",
+                        outputName: "result",
+                        value: "{{parsed}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "vision-moderate" },
+                { id: "e2", source: "vision-moderate", target: "code-parse" },
+                { id: "e3", source: "code-parse", target: "switch-classify" },
+                {
+                    id: "e4",
+                    source: "switch-classify",
+                    target: "llm-approve",
+                    sourceHandle: "SAFE"
+                },
+                {
+                    id: "e5",
+                    source: "switch-classify",
+                    target: "humanReview-1",
+                    sourceHandle: "WARNING"
+                },
+                {
+                    id: "e6",
+                    source: "switch-classify",
+                    target: "integration-slack-block",
+                    sourceHandle: "BLOCK"
+                },
+                { id: "e7", source: "llm-approve", target: "output-1" },
+                { id: "e8", source: "humanReview-1", target: "output-1" },
+                { id: "e9", source: "integration-slack-block", target: "output-1" }
+            ]
+        }
+    },
+
+    // Multimodal AI 5: Infographic Generator
+    {
+        name: "Infographic Generator",
+        description:
+            "Create data-driven infographics from raw data. Extracts insights, generates charts, designs visual elements, and compiles into a polished infographic.",
+        category: "multimodal-ai",
+        tags: ["chart", "visualization", "data", "design", "pdf"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Infographic Generator",
+            nodes: [
+                {
+                    id: "input-data",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Data Input",
+                        inputName: "rawData",
+                        inputVariable: "rawData",
+                        inputType: "text",
+                        description: "Paste your data (CSV, JSON, or plain text statistics)"
+                    }
+                },
+                {
+                    id: "input-topic",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Infographic Topic",
+                        inputName: "topic",
+                        inputVariable: "topic",
+                        inputType: "text",
+                        description: "What is this infographic about?"
+                    }
+                },
+                {
+                    id: "llm-insights",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Key Insights",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this data about {{topic}}:\n\n{{rawData}}\n\nExtract:\n1. 5-7 key statistics/insights\n2. Trends and patterns\n3. Surprising findings\n4. Recommended chart types for each insight (bar, pie, line, etc.)\n5. Suggested infographic structure",
+                        outputVariable: "insights"
+                    }
+                },
+                {
+                    id: "llm-chart-specs",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Chart Specifications",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on these insights:\n\n{{insights.text}}\n\nCreate detailed specifications for 3-4 charts including:\n- Chart type\n- Data labels and values\n- Colors (hex codes)\n- Title and subtitle\n\nReturn as JSON array.",
+                        outputVariable: "chartSpecs"
+                    }
+                },
+                {
+                    id: "llm-design",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Design Infographic Layout",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Design an infographic layout for:\nTopic: {{topic}}\nInsights: {{insights.text}}\nCharts: {{chartSpecs.text}}\n\nProvide:\n1. Title and subtitle text\n2. Section layout (top to bottom)\n3. Color palette (3-4 colors)\n4. Icon suggestions for each section\n5. Call-to-action text",
+                        outputVariable: "designSpec"
+                    }
+                },
+                {
+                    id: "templateOutput-1",
+                    type: "templateOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Infographic HTML",
+                        templateType: "html",
+                        template:
+                            "<html><head><style>body{font-family:Arial;max-width:800px;margin:0 auto;}</style></head><body><h1>{{topic}}</h1><div>{{designSpec.text}}</div><div>{{chartSpecs.text}}</div></body></html>",
+                        outputVariable: "infographicHtml"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Infographic Output",
+                        outputName: "result",
+                        value: "{{infographicHtml}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-data", target: "llm-insights" },
+                { id: "e2", source: "input-topic", target: "llm-insights" },
+                { id: "e3", source: "llm-insights", target: "llm-chart-specs" },
+                { id: "e4", source: "llm-chart-specs", target: "llm-design" },
+                { id: "e5", source: "llm-design", target: "templateOutput-1" },
+                { id: "e6", source: "templateOutput-1", target: "output-1" }
+            ]
+        }
+    },
+
+    // Multimodal AI 6: Video Script to Storyboard
+    {
+        name: "Video Script to Storyboard",
+        description:
+            "Convert video scripts into visual storyboards. Parses script into scenes, generates frame descriptions, and compiles into a storyboard document.",
+        category: "multimodal-ai",
+        tags: ["video", "storyboard", "script", "creative", "loop"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Video Script to Storyboard",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Video Script",
+                        inputName: "videoScript",
+                        inputVariable: "videoScript",
+                        inputType: "text",
+                        description: "Paste your video script with scene descriptions"
+                    }
+                },
+                {
+                    id: "llm-parse",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Parse Into Scenes",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Parse this video script into individual scenes:\n\n{{videoScript}}\n\nFor each scene, extract:\n1. Scene number\n2. Duration (seconds)\n3. Visual description\n4. Dialogue/voiceover\n5. Camera direction\n6. Mood/tone\n\nReturn as JSON array of scenes.",
+                        outputVariable: "scenes"
+                    }
+                },
+                {
+                    id: "loop-scenes",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Each Scene",
+                        loopType: "forEach",
+                        collection: "{{scenes.text}}",
+                        itemVariable: "currentScene",
+                        indexVariable: "sceneIndex"
+                    }
+                },
+                {
+                    id: "llm-frame",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Frame Description",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a detailed storyboard frame for this scene:\n\n{{currentScene}}\n\nDescribe:\n1. Frame composition (rule of thirds, focal point)\n2. Character positions and expressions\n3. Background elements\n4. Lighting and color mood\n5. Motion arrows if applicable\n6. Technical notes (lens, angle)",
+                        outputVariable: "frameDescription"
+                    }
+                },
+                {
+                    id: "shared-memory-frame",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Frame",
+                        operation: "set",
+                        key: "frame_{{sceneIndex}}",
+                        value: "{{frameDescription.text}}"
+                    }
+                },
+                {
+                    id: "transform-compile",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Storyboard",
+                        transformType: "template",
+                        template:
+                            "# Video Storyboard\n\n{{scenes.text}}\n\n## Frames\n\nGenerated storyboard frames are stored and ready for visual rendering.",
+                        outputVariable: "storyboard"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Storyboard Document",
+                        outputName: "result",
+                        value: "{{storyboard}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "llm-parse" },
+                { id: "e2", source: "llm-parse", target: "loop-scenes" },
+                { id: "e3", source: "loop-scenes", target: "llm-frame" },
+                { id: "e4", source: "llm-frame", target: "shared-memory-frame" },
+                { id: "e5", source: "shared-memory-frame", target: "transform-compile" },
+                { id: "e6", source: "transform-compile", target: "output-1" }
+            ]
+        }
+    },
+
+    // Multimodal AI 7: Screenshot Comparison Monitor
+    {
+        name: "Screenshot Comparison Monitor",
+        description:
+            "Monitor websites for visual changes. Captures screenshots on schedule, uses vision AI to detect and summarize changes, and alerts on significant differences.",
+        category: "multimodal-ai",
+        tags: ["vision", "monitoring", "screenshot", "schedule", "alerts"],
+        required_integrations: ["slack"],
+        featured: false,
+        definition: {
+            name: "Screenshot Comparison Monitor",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Check",
+                        triggerType: "schedule",
+                        schedule: "0 9 * * *",
+                        description: "Run daily at 9 AM"
+                    }
+                },
+                {
+                    id: "input-url",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Target URL",
+                        inputName: "targetUrl",
+                        inputVariable: "targetUrl",
+                        inputType: "text",
+                        defaultValue: "https://example.com"
+                    }
+                },
+                {
+                    id: "url-fetch",
+                    type: "url",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Capture Page",
+                        urlVariable: "targetUrl",
+                        scrapingMode: "screenshot",
+                        outputVariable: "currentScreenshot"
+                    }
+                },
+                {
+                    id: "shared-memory-get",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Previous Screenshot",
+                        operation: "get",
+                        key: "baseline_screenshot",
+                        outputVariable: "previousScreenshot"
+                    }
+                },
+                {
+                    id: "vision-compare",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compare Screenshots",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Compare these two website screenshots and identify changes:\n\nCurrent: {{currentScreenshot}}\nPrevious: {{previousScreenshot}}\n\nDescribe:\n1. Layout changes\n2. Content changes (text, images)\n3. Style changes (colors, fonts)\n4. New or removed elements\n5. Significance score (1-10)\n\nIf this is the first capture, just describe the current page.",
+                        outputVariable: "comparison"
+                    }
+                },
+                {
+                    id: "conditional-significant",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Significant Changes?",
+                        condition:
+                            "comparison.text.includes('significance: 7') || comparison.text.includes('significance: 8') || comparison.text.includes('significance: 9') || comparison.text.includes('significance: 10')",
+                        outputVariable: "isSignificant"
+                    }
+                },
+                {
+                    id: "llm-summary",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Summarize Changes",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Create a brief alert summary of these website changes:\n\n{{comparison.text}}\n\nFormat as a Slack message with key changes highlighted.",
+                        outputVariable: "alertSummary"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#website-monitoring"
+                    }
+                },
+                {
+                    id: "shared-memory-set",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Baseline",
+                        operation: "set",
+                        key: "baseline_screenshot",
+                        value: "{{currentScreenshot}}"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Monitor Result",
+                        outputName: "result",
+                        value: "{{comparison}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "input-url" },
+                { id: "e2", source: "input-url", target: "url-fetch" },
+                { id: "e3", source: "url-fetch", target: "shared-memory-get" },
+                { id: "e4", source: "shared-memory-get", target: "vision-compare" },
+                { id: "e5", source: "vision-compare", target: "conditional-significant" },
+                {
+                    id: "e6",
+                    source: "conditional-significant",
+                    target: "llm-summary",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e7",
+                    source: "conditional-significant",
+                    target: "shared-memory-set",
+                    sourceHandle: "false"
+                },
+                { id: "e8", source: "llm-summary", target: "integration-slack" },
+                { id: "e9", source: "integration-slack", target: "shared-memory-set" },
+                { id: "e10", source: "shared-memory-set", target: "output-1" }
+            ]
+        }
+    },
+
+    // Multimodal AI 8: Accessibility Image Auditor
+    {
+        name: "Accessibility Image Auditor",
+        description:
+            "Audit website images for accessibility compliance. Crawls pages, analyzes images for alt text quality, contrast issues, and generates a detailed accessibility report.",
+        category: "multimodal-ai",
+        tags: ["vision", "accessibility", "audit", "web", "compliance"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Accessibility Image Auditor",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Website URL",
+                        inputName: "websiteUrl",
+                        inputVariable: "websiteUrl",
+                        inputType: "text",
+                        description: "Enter the website URL to audit"
+                    }
+                },
+                {
+                    id: "url-fetch",
+                    type: "url",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Page Content",
+                        urlVariable: "websiteUrl",
+                        scrapingMode: "full",
+                        outputVariable: "pageContent"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Image Info",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "From this page content, extract all images:\n\n{{pageContent.text}}\n\nFor each image, identify:\n1. Image source/URL\n2. Current alt text (if any)\n3. Context (surrounding text, purpose)\n4. Image type (decorative, informative, functional)\n\nReturn as JSON array.",
+                        outputVariable: "imageList"
+                    }
+                },
+                {
+                    id: "loop-images",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Audit Each Image",
+                        loopType: "forEach",
+                        collection: "{{imageList.text}}",
+                        itemVariable: "currentImage",
+                        indexVariable: "imageIndex"
+                    }
+                },
+                {
+                    id: "llm-audit",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Audit Image Accessibility",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Audit this image for accessibility:\n\n{{currentImage}}\n\nCheck:\n1. Alt text quality (descriptive, accurate, appropriate length)\n2. Missing alt text issues\n3. Decorative images that should have empty alt\n4. Functional images (buttons, links) with proper labels\n5. Text in images (should be avoided)\n\nProvide:\n- Issues found\n- Severity (critical, major, minor)\n- Recommended fix\n- Suggested alt text if missing/poor",
+                        outputVariable: "auditResult"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Audit Result",
+                        operation: "set",
+                        key: "audit_{{imageIndex}}",
+                        value: "{{auditResult.text}}"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Accessibility Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a comprehensive accessibility report based on these image audits:\n\nImages audited: {{imageList.text}}\n\nCreate a report with:\n1. Executive summary\n2. Overall accessibility score\n3. Critical issues (must fix)\n4. Major issues (should fix)\n5. Minor issues (nice to fix)\n6. Recommendations prioritized by impact",
+                        outputVariable: "accessibilityReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Audit Report",
+                        outputName: "result",
+                        value: "{{accessibilityReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "url-fetch" },
+                { id: "e2", source: "url-fetch", target: "llm-extract" },
+                { id: "e3", source: "llm-extract", target: "loop-images" },
+                { id: "e4", source: "loop-images", target: "llm-audit" },
+                { id: "e5", source: "llm-audit", target: "shared-memory-store" },
+                { id: "e6", source: "shared-memory-store", target: "llm-report" },
+                { id: "e7", source: "llm-report", target: "output-1" }
+            ]
+        }
+    },
+
+    // Multimodal AI 9: Real Estate Listing Enhancer
+    {
+        name: "Real Estate Listing Enhancer",
+        description:
+            "Enhance property listings with AI. Analyzes property photos, generates compelling descriptions, suggests virtual staging, and creates optimized listing copy.",
+        category: "multimodal-ai",
+        tags: ["vision", "real-estate", "listings", "copywriting", "marketing"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Real Estate Listing Enhancer",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Property Photos",
+                        inputVariable: "propertyPhotos",
+                        allowedTypes: ["image/*"],
+                        description: "Upload property photos"
+                    }
+                },
+                {
+                    id: "input-details",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Property Details",
+                        inputName: "propertyDetails",
+                        inputVariable: "propertyDetails",
+                        inputType: "text",
+                        description: "Beds, baths, sqft, price, address, special features"
+                    }
+                },
+                {
+                    id: "vision-analyze",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Property Photos",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze these property photos and identify:\n\n1. Room types visible (living room, kitchen, bedroom, etc.)\n2. Key features (fireplace, hardwood floors, views, etc.)\n3. Style/design aesthetic (modern, traditional, farmhouse, etc.)\n4. Natural lighting quality\n5. Staging suggestions (furniture placement, decor)\n6. Photo quality issues (lighting, angles to improve)\n7. Unique selling points visible",
+                        outputVariable: "photoAnalysis"
+                    }
+                },
+                {
+                    id: "llm-description",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Listing Description",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a compelling real estate listing based on:\n\nProperty Details: {{propertyDetails}}\nPhoto Analysis: {{photoAnalysis.text}}\n\nWrite:\n1. Attention-grabbing headline (10 words max)\n2. Full listing description (200-300 words)\n3. Feature highlights (bullet points)\n4. Neighborhood selling points\n5. Call-to-action\n\nUse emotional, descriptive language that helps buyers envision living there.",
+                        outputVariable: "listingDescription"
+                    }
+                },
+                {
+                    id: "llm-staging",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Virtual Staging Suggestions",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on the photo analysis:\n\n{{photoAnalysis.text}}\n\nProvide virtual staging recommendations:\n1. Which rooms need staging?\n2. Furniture style recommendations\n3. Color palette suggestions\n4. Decor items to add\n5. Items to remove/declutter\n\nFor each room, describe the staging in enough detail for a virtual staging service.",
+                        outputVariable: "stagingSuggestions"
+                    }
+                },
+                {
+                    id: "transform-package",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Listing Package",
+                        transformType: "template",
+                        template:
+                            "# Enhanced Property Listing\n\n## Listing Copy\n{{listingDescription.text}}\n\n## Photo Analysis\n{{photoAnalysis.text}}\n\n## Virtual Staging Recommendations\n{{stagingSuggestions.text}}",
+                        outputVariable: "listingPackage"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Enhanced Listing",
+                        outputName: "result",
+                        value: "{{listingPackage}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "vision-analyze" },
+                { id: "e2", source: "input-details", target: "llm-description" },
+                { id: "e3", source: "vision-analyze", target: "llm-description" },
+                { id: "e4", source: "vision-analyze", target: "llm-staging" },
+                { id: "e5", source: "llm-description", target: "transform-package" },
+                { id: "e6", source: "llm-staging", target: "transform-package" },
+                { id: "e7", source: "transform-package", target: "output-1" }
+            ]
+        }
+    },
+
+    // Multimodal AI 10: Document OCR Pipeline
+    {
+        name: "Document OCR Pipeline",
+        description:
+            "Extract and structure text from scanned documents and images. Uses OCR to digitize documents, then AI to structure and validate the extracted data.",
+        category: "multimodal-ai",
+        tags: ["vision", "ocr", "documents", "extraction", "digitization"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Document OCR Pipeline",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Documents",
+                        inputVariable: "documents",
+                        allowedTypes: ["image/*", "application/pdf"],
+                        description: "Upload scanned documents or images"
+                    }
+                },
+                {
+                    id: "input-doctype",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Document Type",
+                        inputName: "documentType",
+                        inputVariable: "documentType",
+                        inputType: "text",
+                        description: "Type of document (invoice, receipt, form, contract, etc.)"
+                    }
+                },
+                {
+                    id: "vision-ocr",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Text (OCR)",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract ALL text from this {{documentType}} document. Preserve the layout structure as much as possible. Include:\n1. Headers and titles\n2. Form fields and values\n3. Tables (format as markdown)\n4. Handwritten text (mark as [handwritten])\n5. Stamps or signatures (describe)\n\nReturn the complete extracted text.",
+                        outputVariable: "rawText"
+                    }
+                },
+                {
+                    id: "llm-structure",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Structure Extracted Data",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Structure this extracted {{documentType}} text into a clean JSON format:\n\n{{rawText.text}}\n\nIdentify and extract:\n1. Key fields (dates, amounts, names, addresses)\n2. Line items or table data\n3. Reference numbers\n4. Any validation concerns (unclear text, missing data)\n\nReturn well-structured JSON.",
+                        outputVariable: "structuredData"
+                    }
+                },
+                {
+                    id: "llm-validate",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Validate Extracted Data",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Validate this extracted {{documentType}} data:\n\n{{structuredData.text}}\n\nCheck for:\n1. Mathematical accuracy (totals, calculations)\n2. Date format consistency\n3. Required fields present\n4. Logical consistency\n5. Confidence score for each field\n\nReturn validation results with any issues found.",
+                        outputVariable: "validation"
+                    }
+                },
+                {
+                    id: "conditional-valid",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Data Valid?",
+                        condition:
+                            "!validation.text.includes('ERROR') && !validation.text.includes('CRITICAL')",
+                        outputVariable: "isValid"
+                    }
+                },
+                {
+                    id: "output-success",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extracted Data",
+                        outputName: "result",
+                        value: "{{structuredData}}"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Review Required",
+                        reviewPrompt:
+                            "OCR extraction needs review.\n\nValidation Issues:\n{{validation.text}}\n\nExtracted Data:\n{{structuredData.text}}\n\nPlease verify and correct.",
+                        outputVariable: "reviewedData"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "vision-ocr" },
+                { id: "e2", source: "input-doctype", target: "vision-ocr" },
+                { id: "e3", source: "vision-ocr", target: "llm-structure" },
+                { id: "e4", source: "llm-structure", target: "llm-validate" },
+                { id: "e5", source: "llm-validate", target: "conditional-valid" },
+                {
+                    id: "e6",
+                    source: "conditional-valid",
+                    target: "output-success",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e7",
+                    source: "conditional-valid",
+                    target: "humanReview-1",
+                    sourceHandle: "false"
+                },
+                { id: "e8", source: "humanReview-1", target: "output-success" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // KNOWLEDGE & RESEARCH (10 templates)
+    // ========================================================================
+
+    // Knowledge & Research 1: Document Q&A Assistant
+    {
+        name: "Document Q&A Assistant",
+        description:
+            "Answer questions using your knowledge base. Performs semantic search across uploaded documents and generates accurate answers with citations.",
+        category: "knowledge-research",
+        tags: ["kb-query", "rag", "q&a", "documents", "semantic-search"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Document Q&A Assistant",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Your Question",
+                        inputName: "userQuestion",
+                        inputVariable: "userQuestion",
+                        inputType: "text",
+                        description: "Ask a question about your documents"
+                    }
+                },
+                {
+                    id: "input-kb",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Knowledge Base ID",
+                        inputName: "knowledgeBaseId",
+                        inputVariable: "knowledgeBaseId",
+                        inputType: "text",
+                        description: "ID of the knowledge base to search"
+                    }
+                },
+                {
+                    id: "kb-query-1",
+                    type: "knowledgeBaseQuery",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Search Knowledge Base",
+                        knowledgeBaseId: "{{knowledgeBaseId}}",
+                        query: "{{userQuestion}}",
+                        topK: 5,
+                        outputVariable: "relevantChunks"
+                    }
+                },
+                {
+                    id: "llm-answer",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Answer",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Answer this question using ONLY the provided context. If the answer is not in the context, say so.\n\nQuestion: {{userQuestion}}\n\nContext from documents:\n{{relevantChunks}}\n\nProvide:\n1. A clear, accurate answer\n2. Citations referencing specific documents\n3. Confidence level (high/medium/low)\n4. Related topics the user might want to explore",
+                        outputVariable: "answer"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Answer",
+                        outputName: "result",
+                        value: "{{answer}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "kb-query-1" },
+                { id: "e2", source: "input-kb", target: "kb-query-1" },
+                { id: "e3", source: "kb-query-1", target: "llm-answer" },
+                { id: "e4", source: "llm-answer", target: "output-1" }
+            ]
+        }
+    },
+
+    // Knowledge & Research 2: Research Report Generator
+    {
+        name: "Research Report Generator",
+        description:
+            "Generate comprehensive research reports on any topic. Searches the web, aggregates sources, synthesizes findings, and produces a formatted report.",
+        category: "knowledge-research",
+        tags: ["web-search", "research", "report", "synthesis", "academic"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Research Report Generator",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Research Topic",
+                        inputName: "researchTopic",
+                        inputVariable: "researchTopic",
+                        inputType: "text",
+                        description: "What topic do you want to research?"
+                    }
+                },
+                {
+                    id: "llm-queries",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Search Queries",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate 5 diverse search queries to research this topic comprehensively:\n\n{{researchTopic}}\n\nInclude queries for:\n1. Overview/definition\n2. Recent developments\n3. Expert opinions\n4. Statistics/data\n5. Controversies or debates\n\nReturn as JSON array of query strings.",
+                        outputVariable: "searchQueries"
+                    }
+                },
+                {
+                    id: "loop-queries",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Execute Searches",
+                        loopType: "forEach",
+                        collection: "{{searchQueries.text}}",
+                        itemVariable: "currentQuery",
+                        indexVariable: "queryIndex"
+                    }
+                },
+                {
+                    id: "http-search",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Web Search",
+                        method: "GET",
+                        url: "https://api.search.example.com/search",
+                        queryParams: { q: "{{currentQuery}}" },
+                        outputVariable: "searchResults"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Key Points",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Extract key findings from these search results for the query '{{currentQuery}}':\n\n{{searchResults}}\n\nProvide:\n1. Main points (bullet list)\n2. Source URLs\n3. Reliability assessment",
+                        outputVariable: "extractedPoints"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Findings",
+                        operation: "set",
+                        key: "findings_{{queryIndex}}",
+                        value: "{{extractedPoints.text}}"
+                    }
+                },
+                {
+                    id: "llm-synthesize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Synthesize Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a comprehensive research report on '{{researchTopic}}' using all gathered findings.\n\nStructure:\n1. Executive Summary\n2. Introduction\n3. Key Findings (organized by theme)\n4. Analysis & Insights\n5. Conclusion\n6. Sources & References\n\nWrite in an academic but accessible style. Include citations.",
+                        outputVariable: "researchReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Research Report",
+                        outputName: "result",
+                        value: "{{researchReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "llm-queries" },
+                { id: "e2", source: "llm-queries", target: "loop-queries" },
+                { id: "e3", source: "loop-queries", target: "http-search" },
+                { id: "e4", source: "http-search", target: "llm-extract" },
+                { id: "e5", source: "llm-extract", target: "shared-memory-store" },
+                { id: "e6", source: "shared-memory-store", target: "llm-synthesize" },
+                { id: "e7", source: "llm-synthesize", target: "output-1" }
+            ]
+        }
+    },
+
+    // Knowledge & Research 3: Competitor Intelligence Crawler
+    {
+        name: "Competitor Intelligence Crawler",
+        description:
+            "Monitor competitor websites for pricing, features, and content changes. Crawls target pages, extracts data, compares to baseline, and alerts on changes.",
+        category: "knowledge-research",
+        tags: ["web-browse", "competitor", "intelligence", "monitoring", "alerts"],
+        required_integrations: ["slack"],
+        featured: false,
+        definition: {
+            name: "Competitor Intelligence Crawler",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Weekly Check",
+                        triggerType: "schedule",
+                        schedule: "0 9 * * 1",
+                        description: "Run every Monday at 9 AM"
+                    }
+                },
+                {
+                    id: "input-urls",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Competitor URLs",
+                        inputName: "competitorUrls",
+                        inputVariable: "competitorUrls",
+                        inputType: "text",
+                        description: "Comma-separated list of competitor URLs to monitor"
+                    }
+                },
+                {
+                    id: "loop-urls",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Crawl Each Competitor",
+                        loopType: "forEach",
+                        collection: "{{competitorUrls}}",
+                        itemVariable: "currentUrl",
+                        indexVariable: "urlIndex"
+                    }
+                },
+                {
+                    id: "url-fetch",
+                    type: "url",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Page",
+                        urlVariable: "currentUrl",
+                        scrapingMode: "full",
+                        outputVariable: "pageContent"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Intelligence",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract competitive intelligence from this page:\n\n{{pageContent.text}}\n\nCapture:\n1. Pricing information (plans, tiers, amounts)\n2. Features listed\n3. New announcements or updates\n4. Customer testimonials or case studies\n5. Positioning and messaging themes\n\nReturn structured JSON.",
+                        outputVariable: "extractedIntel"
+                    }
+                },
+                {
+                    id: "shared-memory-get",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Previous Data",
+                        operation: "get",
+                        key: "competitor_{{urlIndex}}",
+                        outputVariable: "previousIntel"
+                    }
+                },
+                {
+                    id: "llm-compare",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compare Changes",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Compare current vs previous competitor data:\n\nCurrent: {{extractedIntel.text}}\nPrevious: {{previousIntel}}\n\nIdentify:\n1. Pricing changes\n2. New features added\n3. Features removed\n4. Messaging shifts\n5. Significance score (1-10)",
+                        outputVariable: "comparison"
+                    }
+                },
+                {
+                    id: "shared-memory-set",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Baseline",
+                        operation: "set",
+                        key: "competitor_{{urlIndex}}",
+                        value: "{{extractedIntel.text}}"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Intel Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a competitive intelligence summary from all comparisons.\n\nFormat as a Slack-friendly report with:\n1. Key changes this week\n2. Pricing movements\n3. Feature gaps/opportunities\n4. Recommended actions",
+                        outputVariable: "intelReport"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post to Slack",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#competitive-intel"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Intelligence Report",
+                        outputName: "result",
+                        value: "{{intelReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "input-urls" },
+                { id: "e2", source: "input-urls", target: "loop-urls" },
+                { id: "e3", source: "loop-urls", target: "url-fetch" },
+                { id: "e4", source: "url-fetch", target: "llm-extract" },
+                { id: "e5", source: "llm-extract", target: "shared-memory-get" },
+                { id: "e6", source: "shared-memory-get", target: "llm-compare" },
+                { id: "e7", source: "llm-compare", target: "shared-memory-set" },
+                { id: "e8", source: "shared-memory-set", target: "llm-report" },
+                { id: "e9", source: "llm-report", target: "integration-slack" },
+                { id: "e10", source: "integration-slack", target: "output-1" }
+            ]
+        }
+    },
+
+    // Knowledge & Research 4: Academic Paper Summarizer
+    {
+        name: "Academic Paper Summarizer",
+        description:
+            "Summarize academic papers with context from related work. Extracts PDF content, queries knowledge base for related papers, and generates comprehensive summaries.",
+        category: "knowledge-research",
+        tags: ["pdf", "academic", "summary", "kb-query", "research"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Academic Paper Summarizer",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Paper PDF",
+                        inputVariable: "paperPdf",
+                        allowedTypes: ["application/pdf"],
+                        description: "Upload academic paper to summarize"
+                    }
+                },
+                {
+                    id: "llm-extract-pdf",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract PDF Content",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract the full content from this academic paper PDF. Identify:\n1. Title and authors\n2. Abstract\n3. Key sections (Introduction, Methods, Results, Discussion, Conclusion)\n4. Key figures and tables (describe)\n5. References",
+                        outputVariable: "paperContent"
+                    }
+                },
+                {
+                    id: "llm-keywords",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Keywords",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Extract key terms and concepts from this paper for semantic search:\n\n{{paperContent.text}}\n\nReturn 10-15 keywords/phrases that capture the main topics.",
+                        outputVariable: "keywords"
+                    }
+                },
+                {
+                    id: "kb-query-1",
+                    type: "knowledgeBaseQuery",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Find Related Papers",
+                        query: "{{keywords.text}}",
+                        topK: 5,
+                        outputVariable: "relatedPapers"
+                    }
+                },
+                {
+                    id: "llm-summary",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Summary",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a comprehensive summary of this academic paper:\n\n{{paperContent.text}}\n\nRelated work in the knowledge base:\n{{relatedPapers}}\n\nProvide:\n1. One-paragraph summary\n2. Key contributions (3-5 points)\n3. Methodology overview\n4. Main findings\n5. Limitations noted\n6. How this relates to other papers in the field\n7. Potential follow-up research questions",
+                        outputVariable: "paperSummary"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Paper Summary",
+                        outputName: "result",
+                        value: "{{paperSummary}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "llm-extract-pdf" },
+                { id: "e2", source: "llm-extract-pdf", target: "llm-keywords" },
+                { id: "e3", source: "llm-keywords", target: "kb-query-1" },
+                { id: "e4", source: "kb-query-1", target: "llm-summary" },
+                { id: "e5", source: "llm-extract-pdf", target: "llm-summary" },
+                { id: "e6", source: "llm-summary", target: "output-1" }
+            ]
+        }
+    },
+
+    // Knowledge & Research 5: News Aggregator & Analyzer
+    {
+        name: "News Aggregator & Analyzer",
+        description:
+            "Aggregate and analyze industry news daily. Searches multiple sources, clusters articles by topic, identifies trends, and generates a digest.",
+        category: "knowledge-research",
+        tags: ["news", "aggregation", "analysis", "embeddings", "digest"],
+        required_integrations: ["slack"],
+        featured: false,
+        definition: {
+            name: "News Aggregator & Analyzer",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily 6 AM",
+                        triggerType: "schedule",
+                        schedule: "0 6 * * *"
+                    }
+                },
+                {
+                    id: "input-topics",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "News Topics",
+                        inputName: "newsTopics",
+                        inputVariable: "newsTopics",
+                        inputType: "text",
+                        defaultValue: "AI, machine learning, technology startups"
+                    }
+                },
+                {
+                    id: "llm-queries",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate News Queries",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Generate 5 news search queries for these topics: {{newsTopics}}\n\nFocus on recent news (last 24 hours). Return as JSON array.",
+                        outputVariable: "newsQueries"
+                    }
+                },
+                {
+                    id: "loop-queries",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Search Each Query",
+                        loopType: "forEach",
+                        collection: "{{newsQueries.text}}",
+                        itemVariable: "query",
+                        indexVariable: "queryIndex"
+                    }
+                },
+                {
+                    id: "http-news",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch News",
+                        method: "GET",
+                        url: "https://newsapi.example.com/search",
+                        queryParams: { q: "{{query}}", recent: "24h" },
+                        outputVariable: "newsResults"
+                    }
+                },
+                {
+                    id: "embeddings-1",
+                    type: "embeddings",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Embeddings",
+                        provider: "openai",
+                        model: "text-embedding-3-small",
+                        input: "{{newsResults}}",
+                        outputVariable: "articleEmbeddings"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Articles",
+                        operation: "set",
+                        key: "articles_{{queryIndex}}",
+                        value: "{{newsResults}}"
+                    }
+                },
+                {
+                    id: "code-cluster",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Cluster Articles",
+                        language: "javascript",
+                        code: "// Cluster articles by embedding similarity\nconst clusters = {}; // Simplified clustering\nreturn { clusters: Object.keys(clusters), articleCount: inputs.articles?.length || 0 };",
+                        outputVariable: "clusteredArticles"
+                    }
+                },
+                {
+                    id: "llm-digest",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate News Digest",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a news digest for {{newsTopics}}:\n\nArticles collected: {{clusteredArticles}}\n\nProvide:\n1. Top 5 stories with summaries\n2. Emerging trends\n3. Notable quotes\n4. What to watch this week\n\nFormat for Slack with emoji and clear sections.",
+                        outputVariable: "newsDigest"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Digest",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#news-digest"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Digest",
+                        outputName: "result",
+                        value: "{{newsDigest}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "input-topics" },
+                { id: "e2", source: "input-topics", target: "llm-queries" },
+                { id: "e3", source: "llm-queries", target: "loop-queries" },
+                { id: "e4", source: "loop-queries", target: "http-news" },
+                { id: "e5", source: "http-news", target: "embeddings-1" },
+                { id: "e6", source: "embeddings-1", target: "shared-memory-store" },
+                { id: "e7", source: "shared-memory-store", target: "code-cluster" },
+                { id: "e8", source: "code-cluster", target: "llm-digest" },
+                { id: "e9", source: "llm-digest", target: "integration-slack" },
+                { id: "e10", source: "integration-slack", target: "output-1" }
+            ]
+        }
+    },
+
+    // Knowledge & Research 6: FAQ Auto-Generator
+    {
+        name: "FAQ Auto-Generator",
+        description:
+            "Automatically generate FAQs from your knowledge base. Analyzes documents to identify common topics and generates question-answer pairs.",
+        category: "knowledge-research",
+        tags: ["kb-query", "faq", "content", "automation", "documentation"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "FAQ Auto-Generator",
+            nodes: [
+                {
+                    id: "input-kb",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Knowledge Base ID",
+                        inputName: "knowledgeBaseId",
+                        inputVariable: "knowledgeBaseId",
+                        inputType: "text"
+                    }
+                },
+                {
+                    id: "input-topic",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "FAQ Topic",
+                        inputName: "faqTopic",
+                        inputVariable: "faqTopic",
+                        inputType: "text",
+                        description: "What topic should the FAQ cover?"
+                    }
+                },
+                {
+                    id: "kb-query-1",
+                    type: "knowledgeBaseQuery",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Sample KB Documents",
+                        knowledgeBaseId: "{{knowledgeBaseId}}",
+                        query: "{{faqTopic}}",
+                        topK: 20,
+                        outputVariable: "sampleDocs"
+                    }
+                },
+                {
+                    id: "llm-topics",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Identify FAQ Topics",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze these knowledge base documents about {{faqTopic}}:\n\n{{sampleDocs}}\n\nIdentify 10-15 common questions users might ask. Consider:\n1. Basic concepts that need explaining\n2. Common confusion points\n3. How-to questions\n4. Troubleshooting questions\n5. Comparison questions\n\nReturn as JSON array of question strings.",
+                        outputVariable: "faqQuestions"
+                    }
+                },
+                {
+                    id: "loop-questions",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Each Answer",
+                        loopType: "forEach",
+                        collection: "{{faqQuestions.text}}",
+                        itemVariable: "question",
+                        indexVariable: "qIndex"
+                    }
+                },
+                {
+                    id: "kb-query-answer",
+                    type: "knowledgeBaseQuery",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Find Answer Context",
+                        knowledgeBaseId: "{{knowledgeBaseId}}",
+                        query: "{{question}}",
+                        topK: 3,
+                        outputVariable: "answerContext"
+                    }
+                },
+                {
+                    id: "llm-answer",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Answer",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Answer this FAQ question using the provided context:\n\nQuestion: {{question}}\n\nContext: {{answerContext}}\n\nProvide a clear, helpful answer (100-200 words). Include any relevant links or references.",
+                        outputVariable: "faqAnswer"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Q&A Pair",
+                        operation: "set",
+                        key: "faq_{{qIndex}}",
+                        value: '{"q": "{{question}}", "a": "{{faqAnswer.text}}"}'
+                    }
+                },
+                {
+                    id: "transform-compile",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile FAQ Document",
+                        transformType: "template",
+                        template:
+                            "# Frequently Asked Questions: {{faqTopic}}\n\nGenerated from your knowledge base.\n\n{{faqQuestions.text}}",
+                        outputVariable: "faqDocument"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "FAQ Document",
+                        outputName: "result",
+                        value: "{{faqDocument}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-kb", target: "kb-query-1" },
+                { id: "e2", source: "input-topic", target: "kb-query-1" },
+                { id: "e3", source: "kb-query-1", target: "llm-topics" },
+                { id: "e4", source: "llm-topics", target: "loop-questions" },
+                { id: "e5", source: "loop-questions", target: "kb-query-answer" },
+                { id: "e6", source: "kb-query-answer", target: "llm-answer" },
+                { id: "e7", source: "llm-answer", target: "shared-memory-store" },
+                { id: "e8", source: "shared-memory-store", target: "transform-compile" },
+                { id: "e9", source: "transform-compile", target: "output-1" }
+            ]
+        }
+    },
+
+    // Knowledge & Research 7: Citation Finder
+    {
+        name: "Citation Finder",
+        description:
+            "Find credible citations for claims or statements. Searches the web, evaluates source credibility, and returns verified citations with quotes.",
+        category: "knowledge-research",
+        tags: ["research", "citations", "verification", "fact-check", "academic"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Citation Finder",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Statement to Verify",
+                        inputName: "statement",
+                        inputVariable: "statement",
+                        inputType: "text",
+                        description: "Enter the claim or statement that needs citations"
+                    }
+                },
+                {
+                    id: "llm-queries",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Search Queries",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Generate 5 search queries to find credible sources for this statement:\n\n{{statement}}\n\nFocus on academic, government, and reputable news sources. Return as JSON array.",
+                        outputVariable: "searchQueries"
+                    }
+                },
+                {
+                    id: "loop-search",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Search Sources",
+                        loopType: "forEach",
+                        collection: "{{searchQueries.text}}",
+                        itemVariable: "query",
+                        indexVariable: "queryIndex",
+                        maxIterations: 10
+                    }
+                },
+                {
+                    id: "http-search",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Web Search",
+                        method: "GET",
+                        url: "https://api.search.example.com/search",
+                        queryParams: { q: "{{query}}" },
+                        outputVariable: "searchResults"
+                    }
+                },
+                {
+                    id: "url-fetch",
+                    type: "url",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Source",
+                        urlVariable: "searchResults.url",
+                        scrapingMode: "article",
+                        outputVariable: "sourceContent"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Citation",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract citation information from this source:\n\nSource: {{sourceContent.text}}\n\nFor the statement: {{statement}}\n\nProvide:\n1. Relevant quote that supports the statement\n2. Author and publication\n3. Date published\n4. Credibility score (1-10) with reasoning\n5. Citation in APA format\n\nIf this source doesn't support the statement, say so.",
+                        outputVariable: "citation"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Citation",
+                        operation: "set",
+                        key: "citation_{{queryIndex}}",
+                        value: "{{citation.text}}"
+                    }
+                },
+                {
+                    id: "llm-compile",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Citations",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Compile and rank the citations found for: {{statement}}\n\nRank by credibility. Provide:\n1. Top 3 most credible citations with full details\n2. Summary of supporting evidence\n3. Any contradicting sources found\n4. Overall confidence level for the statement",
+                        outputVariable: "citationReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Citations",
+                        outputName: "result",
+                        value: "{{citationReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "llm-queries" },
+                { id: "e2", source: "llm-queries", target: "loop-search" },
+                { id: "e3", source: "loop-search", target: "http-search" },
+                { id: "e4", source: "http-search", target: "url-fetch" },
+                { id: "e5", source: "url-fetch", target: "llm-extract" },
+                { id: "e6", source: "llm-extract", target: "shared-memory-store" },
+                { id: "e7", source: "shared-memory-store", target: "llm-compile" },
+                { id: "e8", source: "llm-compile", target: "output-1" }
+            ]
+        }
+    },
+
+    // Knowledge & Research 8: Knowledge Gap Analyzer
+    {
+        name: "Knowledge Gap Analyzer",
+        description:
+            "Identify gaps in your knowledge base coverage. Analyzes document embeddings to find sparse regions and suggests content to create.",
+        category: "knowledge-research",
+        tags: ["kb-query", "embeddings", "analysis", "content-strategy", "gaps"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Knowledge Gap Analyzer",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Monthly Analysis",
+                        triggerType: "schedule",
+                        schedule: "0 9 1 * *"
+                    }
+                },
+                {
+                    id: "input-kb",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Knowledge Base ID",
+                        inputName: "knowledgeBaseId",
+                        inputVariable: "knowledgeBaseId",
+                        inputType: "text"
+                    }
+                },
+                {
+                    id: "input-domain",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Domain/Topic Area",
+                        inputName: "domain",
+                        inputVariable: "domain",
+                        inputType: "text",
+                        description:
+                            "What domain should the KB cover? (e.g., Product Documentation)"
+                    }
+                },
+                {
+                    id: "llm-topics",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Define Expected Topics",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "For a knowledge base about '{{domain}}', list all topics that should ideally be covered.\n\nProvide 20-30 topics/subtopics organized by category. Return as JSON with category and topic fields.",
+                        outputVariable: "expectedTopics"
+                    }
+                },
+                {
+                    id: "loop-topics",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Each Topic",
+                        loopType: "forEach",
+                        collection: "{{expectedTopics.text}}",
+                        itemVariable: "topic",
+                        indexVariable: "topicIndex"
+                    }
+                },
+                {
+                    id: "kb-query-1",
+                    type: "knowledgeBaseQuery",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Search for Topic",
+                        knowledgeBaseId: "{{knowledgeBaseId}}",
+                        query: "{{topic}}",
+                        topK: 3,
+                        outputVariable: "topicResults"
+                    }
+                },
+                {
+                    id: "llm-assess",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Assess Coverage",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: 'Assess knowledge base coverage for topic: {{topic}}\n\nResults found: {{topicResults}}\n\nRate coverage:\n- GOOD: Comprehensive content exists\n- PARTIAL: Some content, but gaps\n- MISSING: No relevant content\n\nReturn: {"topic": "{{topic}}", "coverage": "GOOD|PARTIAL|MISSING", "gap_description": "..."}',
+                        outputVariable: "coverageAssessment"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Assessment",
+                        operation: "set",
+                        key: "coverage_{{topicIndex}}",
+                        value: "{{coverageAssessment.text}}"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Gap Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a knowledge gap analysis report for {{domain}}.\n\nAnalyze all coverage assessments and provide:\n1. Executive summary\n2. Coverage overview (% good, partial, missing)\n3. Critical gaps (missing topics that are essential)\n4. Partial coverage improvements\n5. Content creation priority list\n6. Suggested content outlines for top 5 gaps",
+                        outputVariable: "gapReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Gap Analysis Report",
+                        outputName: "result",
+                        value: "{{gapReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "input-kb" },
+                { id: "e2", source: "input-kb", target: "input-domain" },
+                { id: "e3", source: "input-domain", target: "llm-topics" },
+                { id: "e4", source: "llm-topics", target: "loop-topics" },
+                { id: "e5", source: "loop-topics", target: "kb-query-1" },
+                { id: "e6", source: "kb-query-1", target: "llm-assess" },
+                { id: "e7", source: "llm-assess", target: "shared-memory-store" },
+                { id: "e8", source: "shared-memory-store", target: "llm-report" },
+                { id: "e9", source: "llm-report", target: "output-1" }
+            ]
+        }
+    },
+
+    // Knowledge & Research 9: Patent Search Assistant
+    {
+        name: "Patent Search Assistant",
+        description:
+            "Search and analyze patents for prior art research. Generates search queries, fetches patent data, and provides landscape analysis.",
+        category: "knowledge-research",
+        tags: ["patents", "research", "legal", "prior-art", "ip"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Patent Search Assistant",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Invention Description",
+                        inputName: "inventionDescription",
+                        inputVariable: "inventionDescription",
+                        inputType: "text",
+                        description: "Describe your invention or technology"
+                    }
+                },
+                {
+                    id: "llm-queries",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Patent Queries",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate patent search queries for this invention:\n\n{{inventionDescription}}\n\nCreate:\n1. CPC classification codes to search\n2. Keyword combinations\n3. Key technical terms\n4. Alternative terminology\n\nReturn 10 search queries optimized for patent databases.",
+                        outputVariable: "patentQueries"
+                    }
+                },
+                {
+                    id: "loop-search",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Search Patents",
+                        loopType: "forEach",
+                        collection: "{{patentQueries.text}}",
+                        itemVariable: "query",
+                        indexVariable: "queryIndex"
+                    }
+                },
+                {
+                    id: "http-patent",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Query Patent API",
+                        method: "GET",
+                        url: "https://patents.example.com/api/search",
+                        queryParams: { q: "{{query}}" },
+                        outputVariable: "patentResults"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Patent",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this patent relative to the invention:\n\nInvention: {{inventionDescription}}\nPatent: {{patentResults}}\n\nProvide:\n1. Patent number and title\n2. Key claims summary\n3. Similarity to invention (1-10)\n4. Overlapping features\n5. Distinguishing features\n6. Risk assessment (high/medium/low)",
+                        outputVariable: "patentAnalysis"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Analysis",
+                        operation: "set",
+                        key: "patent_{{queryIndex}}",
+                        value: "{{patentAnalysis.text}}"
+                    }
+                },
+                {
+                    id: "llm-landscape",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Patent Landscape",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a patent landscape report for:\n\n{{inventionDescription}}\n\nBased on the analyzed patents, provide:\n1. Executive summary\n2. Key players in the space\n3. Technology trends\n4. White space opportunities\n5. Freedom to operate assessment\n6. Recommended next steps",
+                        outputVariable: "landscapeReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Patent Landscape",
+                        outputName: "result",
+                        value: "{{landscapeReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "llm-queries" },
+                { id: "e2", source: "llm-queries", target: "loop-search" },
+                { id: "e3", source: "loop-search", target: "http-patent" },
+                { id: "e4", source: "http-patent", target: "llm-analyze" },
+                { id: "e5", source: "llm-analyze", target: "shared-memory-store" },
+                { id: "e6", source: "shared-memory-store", target: "llm-landscape" },
+                { id: "e7", source: "llm-landscape", target: "output-1" }
+            ]
+        }
+    },
+
+    // Knowledge & Research 10: Meeting Knowledge Extractor
+    {
+        name: "Meeting Knowledge Extractor",
+        description:
+            "Extract and store knowledge from meeting recordings. Transcribes audio, extracts decisions and action items, and stores insights in knowledge base.",
+        category: "knowledge-research",
+        tags: ["audio", "meetings", "transcription", "kb-query", "extraction"],
+        required_integrations: ["slack", "notion"],
+        featured: true,
+        definition: {
+            name: "Meeting Knowledge Extractor",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Meeting Recording",
+                        inputVariable: "meetingAudio",
+                        allowedTypes: ["audio/*", "video/*"],
+                        description: "Upload meeting recording"
+                    }
+                },
+                {
+                    id: "input-context",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Meeting Context",
+                        inputName: "meetingContext",
+                        inputVariable: "meetingContext",
+                        inputType: "text",
+                        description: "Meeting type, attendees, agenda (optional)"
+                    }
+                },
+                {
+                    id: "audioInput-1",
+                    type: "audioInput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transcribe Meeting",
+                        provider: "openai",
+                        model: "whisper-1",
+                        inputVariable: "meetingAudio",
+                        outputVariable: "transcript"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Key Information",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract key information from this meeting transcript:\n\nContext: {{meetingContext}}\n\nTranscript:\n{{transcript.text}}\n\nExtract:\n1. Decisions made (with context and rationale)\n2. Action items (owner, due date, description)\n3. Key topics discussed\n4. Open questions/parking lot items\n5. Attendee contributions\n6. Follow-up meetings needed",
+                        outputVariable: "extractedInfo"
+                    }
+                },
+                {
+                    id: "kb-query-1",
+                    type: "knowledgeBaseQuery",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Find Related Decisions",
+                        query: "{{extractedInfo.text}}",
+                        topK: 5,
+                        outputVariable: "relatedDecisions"
+                    }
+                },
+                {
+                    id: "llm-contextualize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Contextualize with History",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Contextualize today's meeting decisions with historical context:\n\nNew decisions: {{extractedInfo.text}}\n\nRelated past decisions: {{relatedDecisions}}\n\nIdentify:\n1. How new decisions relate to past ones\n2. Any changes in direction\n3. Consistent themes\n4. Potential conflicts with past decisions",
+                        outputVariable: "contextualizedInfo"
+                    }
+                },
+                {
+                    id: "integration-notion",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Save to Notion",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Meeting Notes"
+                    }
+                },
+                {
+                    id: "llm-summary",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Slack Summary",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Create a brief Slack summary of the meeting:\n\n{{extractedInfo.text}}\n\nFormat with emoji, keep under 500 characters. Focus on decisions and action items.",
+                        outputVariable: "slackSummary"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Summary",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#team-updates"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Meeting Insights",
+                        outputName: "result",
+                        value: "{{contextualizedInfo}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "audioInput-1" },
+                { id: "e2", source: "input-context", target: "llm-extract" },
+                { id: "e3", source: "audioInput-1", target: "llm-extract" },
+                { id: "e4", source: "llm-extract", target: "kb-query-1" },
+                { id: "e5", source: "kb-query-1", target: "llm-contextualize" },
+                { id: "e6", source: "llm-contextualize", target: "integration-notion" },
+                { id: "e7", source: "llm-extract", target: "llm-summary" },
+                { id: "e8", source: "llm-summary", target: "integration-slack" },
+                { id: "e9", source: "integration-notion", target: "output-1" },
+                { id: "e10", source: "integration-slack", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // DOCUMENT PROCESSING (10 templates)
+    // ========================================================================
+
+    // Document Processing 1: Invoice Processor
+    {
+        name: "Invoice Processor",
+        description:
+            "Extract and validate invoice data automatically. Uses OCR and AI to parse invoices, validate amounts, and route for approval based on thresholds.",
+        category: "document-processing",
+        tags: ["ocr", "invoice", "finance", "extraction", "approval"],
+        required_integrations: ["slack"],
+        featured: true,
+        definition: {
+            name: "Invoice Processor",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Invoices",
+                        inputVariable: "invoices",
+                        allowedTypes: ["image/*", "application/pdf"],
+                        description: "Upload invoice images or PDFs"
+                    }
+                },
+                {
+                    id: "loop-invoices",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Each Invoice",
+                        loopType: "forEach",
+                        collection: "{{invoices}}",
+                        itemVariable: "currentInvoice",
+                        indexVariable: "invoiceIndex"
+                    }
+                },
+                {
+                    id: "vision-ocr",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Invoice Data",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract all data from this invoice:\n\n1. Vendor name and address\n2. Invoice number\n3. Invoice date\n4. Due date\n5. Line items (description, quantity, unit price, total)\n6. Subtotal, tax, total amount\n7. Payment terms\n8. Bank details if present\n\nReturn as structured JSON.",
+                        outputVariable: "invoiceData"
+                    }
+                },
+                {
+                    id: "llm-validate",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Validate Invoice",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: 'Validate this invoice data:\n\n{{invoiceData.text}}\n\nCheck:\n1. Math accuracy (line items = subtotal, subtotal + tax = total)\n2. Required fields present\n3. Date validity\n4. Suspicious patterns\n\nReturn: {"valid": true/false, "issues": [...], "totalAmount": number}',
+                        outputVariable: "validation"
+                    }
+                },
+                {
+                    id: "code-parse",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Parse Amount",
+                        language: "javascript",
+                        code: "const data = JSON.parse(inputs.validation.text);\nreturn { amount: data.totalAmount, valid: data.valid };",
+                        outputVariable: "parsedData"
+                    }
+                },
+                {
+                    id: "conditional-amount",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Amount > $10,000?",
+                        condition: "parsedData.amount > 10000",
+                        outputVariable: "needsApproval"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Manager Approval",
+                        reviewPrompt:
+                            "High-value invoice requires approval:\n\nAmount: ${{parsedData.amount}}\nVendor: {{invoiceData.text}}\n\nPlease approve or reject.",
+                        outputVariable: "approvalDecision"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Finance",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#finance-approvals"
+                    }
+                },
+                {
+                    id: "llm-log",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Auto-Approve Log",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Generate an auto-approval log entry for invoice:\n\n{{invoiceData.text}}\n\nAmount: ${{parsedData.amount}} (under threshold)",
+                        outputVariable: "approvalLog"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Processed Invoice",
+                        outputName: "result",
+                        value: "{{invoiceData}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "loop-invoices" },
+                { id: "e2", source: "loop-invoices", target: "vision-ocr" },
+                { id: "e3", source: "vision-ocr", target: "llm-validate" },
+                { id: "e4", source: "llm-validate", target: "code-parse" },
+                { id: "e5", source: "code-parse", target: "conditional-amount" },
+                {
+                    id: "e6",
+                    source: "conditional-amount",
+                    target: "humanReview-1",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e7",
+                    source: "conditional-amount",
+                    target: "llm-log",
+                    sourceHandle: "false"
+                },
+                { id: "e8", source: "humanReview-1", target: "integration-slack" },
+                { id: "e9", source: "integration-slack", target: "output-1" },
+                { id: "e10", source: "llm-log", target: "output-1" }
+            ]
+        }
+    },
+
+    // Document Processing 2: Contract Analyzer
+    {
+        name: "Contract Analyzer",
+        description:
+            "Analyze contracts for key terms, risks, and obligations. Extracts content, classifies contract type, and performs type-specific analysis.",
+        category: "document-processing",
+        tags: ["pdf", "contract", "legal", "analysis", "switch"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Contract Analyzer",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Contract",
+                        inputVariable: "contractFile",
+                        allowedTypes: ["application/pdf"],
+                        description: "Upload contract PDF"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Contract Text",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract all text from this contract PDF, preserving structure:\n\n1. Parties involved\n2. Effective date\n3. All sections and clauses\n4. Signatures\n\nMaintain section numbering and formatting.",
+                        outputVariable: "contractText"
+                    }
+                },
+                {
+                    id: "llm-classify",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Classify Contract Type",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Classify this contract type:\n\n{{contractText.text}}\n\nReturn one of: NDA, MSA, SOW, EMPLOYMENT, LEASE, SALES, OTHER\n\nReturn only the classification word.",
+                        outputVariable: "contractType"
+                    }
+                },
+                {
+                    id: "switch-type",
+                    type: "switch",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Route by Type",
+                        expression: "{{contractType.text}}",
+                        cases: [
+                            { value: "NDA", label: "NDA" },
+                            { value: "MSA", label: "MSA" },
+                            { value: "SOW", label: "SOW" },
+                            { value: "EMPLOYMENT", label: "Employment" }
+                        ],
+                        defaultCase: "OTHER"
+                    }
+                },
+                {
+                    id: "llm-nda",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze NDA",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this NDA:\n\n{{contractText.text}}\n\nExtract:\n1. Confidentiality scope\n2. Duration\n3. Permitted disclosures\n4. Return of materials clause\n5. Jurisdiction\n6. Risk assessment",
+                        outputVariable: "ndaAnalysis"
+                    }
+                },
+                {
+                    id: "llm-msa",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze MSA",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this Master Service Agreement:\n\n{{contractText.text}}\n\nExtract:\n1. Service descriptions\n2. Payment terms\n3. SLAs\n4. Liability limitations\n5. Termination clauses\n6. IP ownership\n7. Risk assessment",
+                        outputVariable: "msaAnalysis"
+                    }
+                },
+                {
+                    id: "llm-sow",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze SOW",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this Statement of Work:\n\n{{contractText.text}}\n\nExtract:\n1. Deliverables\n2. Timeline/milestones\n3. Acceptance criteria\n4. Pricing structure\n5. Change management process\n6. Risk assessment",
+                        outputVariable: "sowAnalysis"
+                    }
+                },
+                {
+                    id: "llm-general",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "General Analysis",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this contract:\n\n{{contractText.text}}\n\nProvide:\n1. Key terms summary\n2. Obligations by party\n3. Important dates\n4. Termination conditions\n5. Risk assessment\n6. Unusual clauses",
+                        outputVariable: "generalAnalysis"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Contract Analysis",
+                        outputName: "result",
+                        value: "{{contractType}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "llm-extract" },
+                { id: "e2", source: "llm-extract", target: "llm-classify" },
+                { id: "e3", source: "llm-classify", target: "switch-type" },
+                { id: "e4", source: "switch-type", target: "llm-nda", sourceHandle: "NDA" },
+                { id: "e5", source: "switch-type", target: "llm-msa", sourceHandle: "MSA" },
+                { id: "e6", source: "switch-type", target: "llm-sow", sourceHandle: "SOW" },
+                { id: "e7", source: "switch-type", target: "llm-general", sourceHandle: "default" },
+                { id: "e8", source: "llm-nda", target: "output-1" },
+                { id: "e9", source: "llm-msa", target: "output-1" },
+                { id: "e10", source: "llm-sow", target: "output-1" },
+                { id: "e11", source: "llm-general", target: "output-1" }
+            ]
+        }
+    },
+
+    // Document Processing 3: Resume Screener
+    {
+        name: "Resume Screener",
+        description:
+            "Screen resumes against job requirements. Batch processes resumes, scores candidates, and generates a ranked screening report.",
+        category: "document-processing",
+        tags: ["hr", "resume", "screening", "loop", "scoring"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Resume Screener",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Resumes",
+                        inputVariable: "resumes",
+                        allowedTypes: ["application/pdf", "image/*"],
+                        description: "Upload resume batch"
+                    }
+                },
+                {
+                    id: "input-jd",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Job Description",
+                        inputName: "jobDescription",
+                        inputVariable: "jobDescription",
+                        inputType: "text",
+                        description: "Paste the job description and requirements"
+                    }
+                },
+                {
+                    id: "llm-criteria",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Scoring Criteria",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "From this job description, extract scoring criteria:\n\n{{jobDescription}}\n\nCreate a rubric with:\n1. Required skills (must-have, weight: 40%)\n2. Preferred skills (nice-to-have, weight: 20%)\n3. Experience level (weight: 25%)\n4. Education requirements (weight: 15%)\n\nReturn as JSON with criteria and weights.",
+                        outputVariable: "scoringCriteria"
+                    }
+                },
+                {
+                    id: "loop-resumes",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Screen Each Resume",
+                        loopType: "forEach",
+                        collection: "{{resumes}}",
+                        itemVariable: "currentResume",
+                        indexVariable: "resumeIndex"
+                    }
+                },
+                {
+                    id: "vision-extract",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Resume Content",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract all information from this resume:\n\n1. Name and contact info\n2. Summary/objective\n3. Work experience (company, role, dates, achievements)\n4. Education\n5. Skills\n6. Certifications",
+                        outputVariable: "resumeContent"
+                    }
+                },
+                {
+                    id: "llm-score",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Score Candidate",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Score this candidate against the criteria:\n\nResume: {{resumeContent.text}}\n\nCriteria: {{scoringCriteria.text}}\n\nProvide:\n1. Overall score (0-100)\n2. Score breakdown by category\n3. Matching qualifications\n4. Missing qualifications\n5. Red flags\n6. Interview recommendation (yes/maybe/no)",
+                        outputVariable: "candidateScore"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Score",
+                        operation: "set",
+                        key: "candidate_{{resumeIndex}}",
+                        value: "{{candidateScore.text}}"
+                    }
+                },
+                {
+                    id: "llm-rank",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Rank Candidates",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Compile a screening report ranking all candidates.\n\nProvide:\n1. Top candidates (interview recommended)\n2. Maybe pile (conditional interview)\n3. Not recommended\n4. Summary statistics\n5. Hiring recommendations",
+                        outputVariable: "screeningReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Screening Report",
+                        outputName: "result",
+                        value: "{{screeningReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "loop-resumes" },
+                { id: "e2", source: "input-jd", target: "llm-criteria" },
+                { id: "e3", source: "llm-criteria", target: "loop-resumes" },
+                { id: "e4", source: "loop-resumes", target: "vision-extract" },
+                { id: "e5", source: "vision-extract", target: "llm-score" },
+                { id: "e6", source: "llm-score", target: "shared-memory-store" },
+                { id: "e7", source: "shared-memory-store", target: "llm-rank" },
+                { id: "e8", source: "llm-rank", target: "output-1" }
+            ]
+        }
+    },
+
+    // Document Processing 4: Form Digitizer
+    {
+        name: "Form Digitizer",
+        description:
+            "Convert paper forms into structured digital data. Uses OCR to extract form fields, parses into structured data, and validates with human review for low-confidence results.",
+        category: "document-processing",
+        tags: ["ocr", "forms", "digitization", "extraction", "validation"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Form Digitizer",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Scanned Forms",
+                        inputVariable: "scannedForms",
+                        allowedTypes: ["image/*", "application/pdf"],
+                        description: "Upload scanned paper forms"
+                    }
+                },
+                {
+                    id: "input-formtype",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Form Type",
+                        inputName: "formType",
+                        inputVariable: "formType",
+                        inputType: "text",
+                        description:
+                            "What type of form is this? (e.g., Application, Survey, Registration)"
+                    }
+                },
+                {
+                    id: "loop-forms",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Each Form",
+                        loopType: "forEach",
+                        collection: "{{scannedForms}}",
+                        itemVariable: "currentForm",
+                        indexVariable: "formIndex"
+                    }
+                },
+                {
+                    id: "vision-ocr",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "OCR Extract Text",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract all text from this {{formType}} form. Identify:\n\n1. All form field labels\n2. Filled-in values (handwritten or typed)\n3. Checkboxes/radio buttons (checked or unchecked)\n4. Signatures (describe location)\n5. Dates\n\nFor handwritten text, indicate confidence level.",
+                        outputVariable: "ocrText"
+                    }
+                },
+                {
+                    id: "llm-parse",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Parse Into Structure",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: 'Parse this OCR output into structured JSON:\n\n{{ocrText.text}}\n\nFor a {{formType}} form, create a JSON object with:\n1. All fields and their values\n2. Confidence score for each field (0-100)\n3. Any fields that couldn\'t be read\n\nReturn: {"fields": {...}, "confidence": {...}, "issues": [...]}',
+                        outputVariable: "structuredData"
+                    }
+                },
+                {
+                    id: "code-check",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Confidence",
+                        language: "javascript",
+                        code: "const data = JSON.parse(inputs.structuredData.text);\nconst avgConfidence = Object.values(data.confidence).reduce((a,b) => a+b, 0) / Object.values(data.confidence).length;\nreturn { averageConfidence: avgConfidence, needsReview: avgConfidence < 90 };",
+                        outputVariable: "confidenceCheck"
+                    }
+                },
+                {
+                    id: "conditional-review",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Needs Review?",
+                        condition: "confidenceCheck.needsReview === true",
+                        outputVariable: "reviewRequired"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Verify Extraction",
+                        reviewPrompt:
+                            "Low confidence OCR result. Please verify:\n\nExtracted data: {{structuredData.text}}\n\nConfidence: {{confidenceCheck.averageConfidence}}%\n\nCorrect any errors.",
+                        outputVariable: "verifiedData"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Form Data",
+                        operation: "set",
+                        key: "form_{{formIndex}}",
+                        value: "{{structuredData.text}}"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Digitized Forms",
+                        outputName: "result",
+                        value: "{{structuredData}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "loop-forms" },
+                { id: "e2", source: "input-formtype", target: "vision-ocr" },
+                { id: "e3", source: "loop-forms", target: "vision-ocr" },
+                { id: "e4", source: "vision-ocr", target: "llm-parse" },
+                { id: "e5", source: "llm-parse", target: "code-check" },
+                { id: "e6", source: "code-check", target: "conditional-review" },
+                {
+                    id: "e7",
+                    source: "conditional-review",
+                    target: "humanReview-1",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e8",
+                    source: "conditional-review",
+                    target: "shared-memory-store",
+                    sourceHandle: "false"
+                },
+                { id: "e9", source: "humanReview-1", target: "shared-memory-store" },
+                { id: "e10", source: "shared-memory-store", target: "output-1" }
+            ]
+        }
+    },
+
+    // Document Processing 5: Multi-Document Merger
+    {
+        name: "Multi-Document Merger",
+        description:
+            "Merge and synthesize multiple documents into a unified report. Extracts content from all documents, identifies themes, and generates a comprehensive merged document.",
+        category: "document-processing",
+        tags: ["pdf", "merge", "synthesis", "documents", "report"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Multi-Document Merger",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Documents",
+                        inputVariable: "documents",
+                        allowedTypes: ["application/pdf", "text/*"],
+                        description: "Upload multiple documents to merge"
+                    }
+                },
+                {
+                    id: "input-purpose",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Merge Purpose",
+                        inputName: "mergePurpose",
+                        inputVariable: "mergePurpose",
+                        inputType: "text",
+                        description: "What is the purpose of this merged document?"
+                    }
+                },
+                {
+                    id: "loop-docs",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Each Document",
+                        loopType: "forEach",
+                        collection: "{{documents}}",
+                        itemVariable: "currentDoc",
+                        indexVariable: "docIndex"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Content",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract the full content from this document. Preserve:\n1. Structure (headings, sections)\n2. Key points\n3. Data/statistics\n4. Quotes\n5. Source attribution",
+                        outputVariable: "docContent"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Content",
+                        operation: "set",
+                        key: "doc_{{docIndex}}",
+                        value: "{{docContent.text}}"
+                    }
+                },
+                {
+                    id: "llm-themes",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Identify Themes",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze all extracted documents and identify:\n\n1. Common themes across documents\n2. Unique points from each document\n3. Contradictions or conflicts\n4. Recommended structure for merged document\n\nPurpose: {{mergePurpose}}",
+                        outputVariable: "themeAnalysis"
+                    }
+                },
+                {
+                    id: "llm-synthesize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Synthesize Documents",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a unified document merging all sources for: {{mergePurpose}}\n\nTheme analysis: {{themeAnalysis.text}}\n\nCreate:\n1. Executive summary\n2. Table of contents\n3. Main content organized by theme\n4. Source attributions\n5. Appendix with source documents\n\nMaintain academic rigor with proper citations.",
+                        outputVariable: "mergedDocument"
+                    }
+                },
+                {
+                    id: "templateOutput-1",
+                    type: "templateOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Format as PDF-Ready",
+                        templateType: "markdown",
+                        template: "# {{mergePurpose}}\n\n{{mergedDocument.text}}",
+                        outputVariable: "formattedDoc"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Merged Document",
+                        outputName: "result",
+                        value: "{{formattedDoc}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "loop-docs" },
+                { id: "e2", source: "input-purpose", target: "llm-synthesize" },
+                { id: "e3", source: "loop-docs", target: "llm-extract" },
+                { id: "e4", source: "llm-extract", target: "shared-memory-store" },
+                { id: "e5", source: "shared-memory-store", target: "llm-themes" },
+                { id: "e6", source: "llm-themes", target: "llm-synthesize" },
+                { id: "e7", source: "llm-synthesize", target: "templateOutput-1" },
+                { id: "e8", source: "templateOutput-1", target: "output-1" }
+            ]
+        }
+    },
+
+    // Document Processing 6: Report Template Filler
+    {
+        name: "Report Template Filler",
+        description:
+            "Auto-fill report templates with data from multiple sources. Fetches data, generates narrative sections, and fills templates for consistent reporting.",
+        category: "document-processing",
+        tags: ["templates", "reports", "automation", "data", "generation"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Report Template Filler",
+            nodes: [
+                {
+                    id: "input-params",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Report Parameters",
+                        inputName: "reportParams",
+                        inputVariable: "reportParams",
+                        inputType: "text",
+                        description: "Report period, department, or other parameters"
+                    }
+                },
+                {
+                    id: "input-template",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Report Template",
+                        inputName: "reportTemplate",
+                        inputVariable: "reportTemplate",
+                        inputType: "text",
+                        description: "Paste the report template with {{placeholders}}"
+                    }
+                },
+                {
+                    id: "http-data1",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Sales Data",
+                        method: "GET",
+                        url: "https://api.example.com/sales",
+                        queryParams: { period: "{{reportParams}}" },
+                        outputVariable: "salesData"
+                    }
+                },
+                {
+                    id: "http-data2",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Metrics",
+                        method: "GET",
+                        url: "https://api.example.com/metrics",
+                        queryParams: { period: "{{reportParams}}" },
+                        outputVariable: "metricsData"
+                    }
+                },
+                {
+                    id: "transform-aggregate",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Aggregate Data",
+                        transformType: "merge",
+                        sources: ["{{salesData}}", "{{metricsData}}"],
+                        outputVariable: "aggregatedData"
+                    }
+                },
+                {
+                    id: "llm-narrative",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Narrative",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate narrative sections for this report based on the data:\n\nData: {{aggregatedData}}\nPeriod: {{reportParams}}\n\nWrite:\n1. Executive summary (1 paragraph)\n2. Key highlights (3-5 points)\n3. Performance analysis\n4. Recommendations\n\nUse a professional, data-driven tone.",
+                        outputVariable: "narrativeSections"
+                    }
+                },
+                {
+                    id: "templateOutput-1",
+                    type: "templateOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fill Template",
+                        templateType: "handlebars",
+                        template: "{{reportTemplate}}",
+                        variables: {
+                            data: "{{aggregatedData}}",
+                            narrative: "{{narrativeSections.text}}",
+                            period: "{{reportParams}}"
+                        },
+                        outputVariable: "filledReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Completed Report",
+                        outputName: "result",
+                        value: "{{filledReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-params", target: "http-data1" },
+                { id: "e2", source: "input-params", target: "http-data2" },
+                { id: "e3", source: "http-data1", target: "transform-aggregate" },
+                { id: "e4", source: "http-data2", target: "transform-aggregate" },
+                { id: "e5", source: "transform-aggregate", target: "llm-narrative" },
+                { id: "e6", source: "llm-narrative", target: "templateOutput-1" },
+                { id: "e7", source: "input-template", target: "templateOutput-1" },
+                { id: "e8", source: "templateOutput-1", target: "output-1" }
+            ]
+        }
+    },
+
+    // Document Processing 7: Receipt Expense Reporter
+    {
+        name: "Receipt Expense Reporter",
+        description:
+            "Process receipt images into expense reports. OCR extracts receipt data, categorizes expenses, and compiles into a formatted expense report.",
+        category: "document-processing",
+        tags: ["ocr", "receipts", "expenses", "finance", "reporting"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Receipt Expense Reporter",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Receipts",
+                        inputVariable: "receipts",
+                        allowedTypes: ["image/*"],
+                        description: "Upload receipt images"
+                    }
+                },
+                {
+                    id: "input-trip",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Trip/Project Name",
+                        inputName: "tripName",
+                        inputVariable: "tripName",
+                        inputType: "text",
+                        description: "Name of trip or project for this expense report"
+                    }
+                },
+                {
+                    id: "loop-receipts",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Each Receipt",
+                        loopType: "forEach",
+                        collection: "{{receipts}}",
+                        itemVariable: "currentReceipt",
+                        indexVariable: "receiptIndex"
+                    }
+                },
+                {
+                    id: "vision-ocr",
+                    type: "vision",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Receipt Data",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract data from this receipt:\n\n1. Merchant name\n2. Date\n3. Items purchased (if visible)\n4. Subtotal\n5. Tax\n6. Total amount\n7. Payment method\n8. Currency\n\nReturn as JSON.",
+                        outputVariable: "receiptData"
+                    }
+                },
+                {
+                    id: "llm-categorize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Categorize Expense",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: 'Categorize this expense:\n\n{{receiptData.text}}\n\nCategories: Travel, Meals, Lodging, Transportation, Supplies, Entertainment, Other\n\nReturn: {"category": "...", "isReimbursable": true/false, "notes": "..."}',
+                        outputVariable: "expenseCategory"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Expense",
+                        operation: "set",
+                        key: "expense_{{receiptIndex}}",
+                        value: '{"receipt": {{receiptData.text}}, "category": {{expenseCategory.text}}}'
+                    }
+                },
+                {
+                    id: "llm-compile",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Expense Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create an expense report for: {{tripName}}\n\nCompile all stored expenses into a formatted report with:\n1. Summary by category\n2. Total reimbursable amount\n3. Non-reimbursable items\n4. Itemized list with dates and merchants\n5. Any missing documentation notes",
+                        outputVariable: "expenseReport"
+                    }
+                },
+                {
+                    id: "templateOutput-1",
+                    type: "templateOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Format Report",
+                        templateType: "markdown",
+                        template: "# Expense Report: {{tripName}}\n\n{{expenseReport.text}}",
+                        outputVariable: "formattedReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Expense Report",
+                        outputName: "result",
+                        value: "{{formattedReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "loop-receipts" },
+                { id: "e2", source: "input-trip", target: "llm-compile" },
+                { id: "e3", source: "loop-receipts", target: "vision-ocr" },
+                { id: "e4", source: "vision-ocr", target: "llm-categorize" },
+                { id: "e5", source: "llm-categorize", target: "shared-memory-store" },
+                { id: "e6", source: "shared-memory-store", target: "llm-compile" },
+                { id: "e7", source: "llm-compile", target: "templateOutput-1" },
+                { id: "e8", source: "templateOutput-1", target: "output-1" }
+            ]
+        }
+    },
+
+    // Document Processing 8: Technical Doc Translator
+    {
+        name: "Technical Doc Translator",
+        description:
+            "Translate technical documentation while preserving formatting and technical terms. Extracts content, translates with context, and maintains document structure.",
+        category: "document-processing",
+        tags: ["translation", "technical", "documentation", "localization", "pdf"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Technical Doc Translator",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Document",
+                        inputVariable: "sourceDoc",
+                        allowedTypes: ["application/pdf", "text/*"],
+                        description: "Upload technical document to translate"
+                    }
+                },
+                {
+                    id: "input-lang",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Target Languages",
+                        inputName: "targetLanguages",
+                        inputVariable: "targetLanguages",
+                        inputType: "text",
+                        description:
+                            "Comma-separated list of target languages (e.g., Spanish, French, German)"
+                    }
+                },
+                {
+                    id: "input-glossary",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Technical Glossary",
+                        inputName: "glossary",
+                        inputVariable: "glossary",
+                        inputType: "text",
+                        description:
+                            "Optional: Terms that should not be translated or have specific translations"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Document Content",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract the full content from this technical document, preserving:\n1. All headings and structure\n2. Code blocks (mark as [CODE]...[/CODE])\n3. Tables (preserve structure)\n4. Technical terms\n5. Formatting markers",
+                        outputVariable: "docContent"
+                    }
+                },
+                {
+                    id: "llm-terms",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Identify Technical Terms",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Identify technical terms in this document that may need special handling during translation:\n\n{{docContent.text}}\n\nGlossary provided: {{glossary}}\n\nList terms with recommended handling (keep original, translate, use specific translation).",
+                        outputVariable: "termsList"
+                    }
+                },
+                {
+                    id: "loop-languages",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Translate to Each Language",
+                        loopType: "forEach",
+                        collection: "{{targetLanguages}}",
+                        itemVariable: "targetLang",
+                        indexVariable: "langIndex"
+                    }
+                },
+                {
+                    id: "llm-translate",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Translate Document",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Translate this technical document to {{targetLang}}:\n\n{{docContent.text}}\n\nTechnical terms handling:\n{{termsList.text}}\n\nRules:\n1. Preserve code blocks unchanged\n2. Maintain all formatting\n3. Keep technical terms as specified\n4. Ensure natural flow in target language\n5. Preserve section numbering",
+                        outputVariable: "translatedDoc"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Translation",
+                        operation: "set",
+                        key: "translation_{{targetLang}}",
+                        value: "{{translatedDoc.text}}"
+                    }
+                },
+                {
+                    id: "transform-compile",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile All Translations",
+                        transformType: "template",
+                        template:
+                            "# Translations Complete\n\nLanguages: {{targetLanguages}}\n\nTranslated documents have been stored.",
+                        outputVariable: "compiledTranslations"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Translated Documents",
+                        outputName: "result",
+                        value: "{{compiledTranslations}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "llm-extract" },
+                { id: "e2", source: "llm-extract", target: "llm-terms" },
+                { id: "e3", source: "input-glossary", target: "llm-terms" },
+                { id: "e4", source: "llm-terms", target: "loop-languages" },
+                { id: "e5", source: "input-lang", target: "loop-languages" },
+                { id: "e6", source: "loop-languages", target: "llm-translate" },
+                { id: "e7", source: "llm-translate", target: "shared-memory-store" },
+                { id: "e8", source: "shared-memory-store", target: "transform-compile" },
+                { id: "e9", source: "transform-compile", target: "output-1" }
+            ]
+        }
+    },
+
+    // Document Processing 9: Data Room Organizer
+    {
+        name: "Data Room Organizer",
+        description:
+            "Auto-categorize and organize due diligence documents. Analyzes content, classifies documents by type, and creates an organized index.",
+        category: "document-processing",
+        tags: ["due-diligence", "organization", "classification", "legal", "finance"],
+        required_integrations: ["google-drive"],
+        featured: false,
+        definition: {
+            name: "Data Room Organizer",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Documents",
+                        inputVariable: "documents",
+                        allowedTypes: ["application/pdf", "image/*", "text/*"],
+                        description: "Upload due diligence documents to organize"
+                    }
+                },
+                {
+                    id: "loop-docs",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Each Document",
+                        loopType: "forEach",
+                        collection: "{{documents}}",
+                        itemVariable: "currentDoc",
+                        indexVariable: "docIndex"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract & Summarize",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract key information from this document:\n\n1. Document title/type\n2. Date\n3. Parties involved\n4. Key terms or values\n5. One-paragraph summary",
+                        outputVariable: "docSummary"
+                    }
+                },
+                {
+                    id: "llm-classify",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Classify Document",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: 'Classify this document into a data room category:\n\n{{docSummary.text}}\n\nCategories:\n- Corporate: Formation docs, bylaws, board minutes\n- Financial: Statements, audits, projections\n- Legal: Contracts, litigation, IP\n- HR: Employee agreements, benefits, org charts\n- Technical: Patents, technical specs, security audits\n- Commercial: Customer contracts, partnerships\n- Regulatory: Licenses, compliance, permits\n\nReturn: {"category": "...", "subcategory": "...", "priority": "high/medium/low"}',
+                        outputVariable: "classification"
+                    }
+                },
+                {
+                    id: "integration-gdrive",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Move to Folder",
+                        provider: "google-drive",
+                        operation: "moveFile",
+                        folder: "{{classification.category}}/{{classification.subcategory}}"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Organization",
+                        operation: "set",
+                        key: "organized_{{docIndex}}",
+                        value: '{"summary": "{{docSummary.text}}", "classification": {{classification.text}}}'
+                    }
+                },
+                {
+                    id: "llm-index",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Data Room Index",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a data room index from all organized documents.\n\nFormat as a professional index with:\n1. Category sections\n2. Document listings with summaries\n3. Cross-references\n4. Missing document checklist\n5. Priority items highlighted",
+                        outputVariable: "dataRoomIndex"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Data Room Index",
+                        outputName: "result",
+                        value: "{{dataRoomIndex}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "loop-docs" },
+                { id: "e2", source: "loop-docs", target: "llm-extract" },
+                { id: "e3", source: "llm-extract", target: "llm-classify" },
+                { id: "e4", source: "llm-classify", target: "integration-gdrive" },
+                { id: "e5", source: "integration-gdrive", target: "shared-memory-store" },
+                { id: "e6", source: "shared-memory-store", target: "llm-index" },
+                { id: "e7", source: "llm-index", target: "output-1" }
+            ]
+        }
+    },
+
+    // Document Processing 10: Proposal Generator
+    {
+        name: "Proposal Generator",
+        description:
+            "Generate professional proposals from requirements. Analyzes client needs, pulls relevant case studies, and creates customized proposals.",
+        category: "document-processing",
+        tags: ["proposals", "sales", "generation", "templates", "customization"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Proposal Generator",
+            nodes: [
+                {
+                    id: "input-client",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Client Information",
+                        inputName: "clientInfo",
+                        inputVariable: "clientInfo",
+                        inputType: "text",
+                        description: "Client name, industry, size, and key contacts"
+                    }
+                },
+                {
+                    id: "input-requirements",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Project Requirements",
+                        inputName: "requirements",
+                        inputVariable: "requirements",
+                        inputType: "text",
+                        description: "Detailed project requirements and scope"
+                    }
+                },
+                {
+                    id: "input-pricing",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Pricing Parameters",
+                        inputName: "pricing",
+                        inputVariable: "pricing",
+                        inputType: "text",
+                        description: "Budget range, pricing model, payment terms"
+                    }
+                },
+                {
+                    id: "kb-query-1",
+                    type: "knowledgeBaseQuery",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Find Case Studies",
+                        query: "{{clientInfo}} {{requirements}}",
+                        topK: 3,
+                        outputVariable: "caseStudies"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Requirements",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze these project requirements:\n\nClient: {{clientInfo}}\nRequirements: {{requirements}}\n\nIdentify:\n1. Key deliverables\n2. Potential challenges\n3. Success metrics\n4. Timeline implications\n5. Resource needs",
+                        outputVariable: "requirementAnalysis"
+                    }
+                },
+                {
+                    id: "llm-solution",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Design Solution",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Design a solution for:\n\nAnalysis: {{requirementAnalysis.text}}\nRelevant case studies: {{caseStudies}}\n\nPropose:\n1. Approach and methodology\n2. Phase breakdown\n3. Deliverables per phase\n4. Timeline\n5. Team composition",
+                        outputVariable: "solutionDesign"
+                    }
+                },
+                {
+                    id: "llm-pricing",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Pricing",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate pricing for this proposal:\n\nSolution: {{solutionDesign.text}}\nPricing parameters: {{pricing}}\n\nCreate:\n1. Pricing breakdown by phase\n2. Optional add-ons\n3. Payment schedule\n4. Terms and conditions summary",
+                        outputVariable: "pricingSection"
+                    }
+                },
+                {
+                    id: "llm-proposal",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Write Proposal",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Write a professional proposal for {{clientInfo}}:\n\nRequirements: {{requirements}}\nSolution: {{solutionDesign.text}}\nPricing: {{pricingSection.text}}\nCase Studies: {{caseStudies}}\n\nStructure:\n1. Executive Summary\n2. Understanding of Needs\n3. Proposed Solution\n4. Methodology\n5. Timeline & Milestones\n6. Team\n7. Investment\n8. Case Studies\n9. Why Choose Us\n10. Next Steps",
+                        outputVariable: "proposal"
+                    }
+                },
+                {
+                    id: "templateOutput-1",
+                    type: "templateOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Format Proposal",
+                        templateType: "markdown",
+                        template: "# Proposal for {{clientInfo}}\n\n{{proposal.text}}",
+                        outputVariable: "formattedProposal"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Completed Proposal",
+                        outputName: "result",
+                        value: "{{formattedProposal}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-client", target: "kb-query-1" },
+                { id: "e2", source: "input-requirements", target: "kb-query-1" },
+                { id: "e3", source: "input-requirements", target: "llm-analyze" },
+                { id: "e4", source: "input-client", target: "llm-analyze" },
+                { id: "e5", source: "llm-analyze", target: "llm-solution" },
+                { id: "e6", source: "kb-query-1", target: "llm-solution" },
+                { id: "e7", source: "llm-solution", target: "llm-pricing" },
+                { id: "e8", source: "input-pricing", target: "llm-pricing" },
+                { id: "e9", source: "llm-pricing", target: "llm-proposal" },
+                { id: "e10", source: "llm-solution", target: "llm-proposal" },
+                { id: "e11", source: "kb-query-1", target: "llm-proposal" },
+                { id: "e12", source: "llm-proposal", target: "templateOutput-1" },
+                { id: "e13", source: "templateOutput-1", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // DATA & ANALYTICS (10 templates)
+    // ========================================================================
+
+    // Data & Analytics 1: Metrics Dashboard Builder
+    {
+        name: "Metrics Dashboard Builder",
+        description:
+            "Build visual dashboards from multiple data sources. Fetches metrics, generates charts, and compiles into an interactive dashboard.",
+        category: "data-analytics",
+        tags: ["dashboard", "charts", "metrics", "visualization", "reporting"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Metrics Dashboard Builder",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Hourly Update",
+                        triggerType: "schedule",
+                        schedule: "0 * * * *"
+                    }
+                },
+                {
+                    id: "http-sales",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Sales Metrics",
+                        method: "GET",
+                        url: "https://api.example.com/metrics/sales",
+                        outputVariable: "salesMetrics"
+                    }
+                },
+                {
+                    id: "http-traffic",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Traffic Metrics",
+                        method: "GET",
+                        url: "https://api.example.com/metrics/traffic",
+                        outputVariable: "trafficMetrics"
+                    }
+                },
+                {
+                    id: "http-conversion",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Conversion Metrics",
+                        method: "GET",
+                        url: "https://api.example.com/metrics/conversion",
+                        outputVariable: "conversionMetrics"
+                    }
+                },
+                {
+                    id: "transform-aggregate",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Aggregate Metrics",
+                        transformType: "merge",
+                        sources: [
+                            "{{salesMetrics}}",
+                            "{{trafficMetrics}}",
+                            "{{conversionMetrics}}"
+                        ],
+                        outputVariable: "allMetrics"
+                    }
+                },
+                {
+                    id: "llm-charts",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Chart Configs",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on these metrics:\n\n{{allMetrics}}\n\nGenerate chart configurations for:\n1. Revenue trend (line chart)\n2. Traffic sources (pie chart)\n3. Conversion funnel (funnel chart)\n4. Top products (bar chart)\n\nReturn as JSON array with chart type, data, and options.",
+                        outputVariable: "chartConfigs"
+                    }
+                },
+                {
+                    id: "loop-charts",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Each Chart",
+                        loopType: "forEach",
+                        collection: "{{chartConfigs.text}}",
+                        itemVariable: "chartConfig",
+                        indexVariable: "chartIndex"
+                    }
+                },
+                {
+                    id: "shared-memory-chart",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Chart",
+                        operation: "set",
+                        key: "chart_{{chartIndex}}",
+                        value: "{{chartConfig}}"
+                    }
+                },
+                {
+                    id: "templateOutput-1",
+                    type: "templateOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Dashboard HTML",
+                        templateType: "html",
+                        template:
+                            "<html><head><title>Metrics Dashboard</title></head><body><div id='dashboard'>{{chartConfigs.text}}</div></body></html>",
+                        outputVariable: "dashboardHtml"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Dashboard",
+                        outputName: "result",
+                        value: "{{dashboardHtml}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "http-sales" },
+                { id: "e2", source: "trigger-1", target: "http-traffic" },
+                { id: "e3", source: "trigger-1", target: "http-conversion" },
+                { id: "e4", source: "http-sales", target: "transform-aggregate" },
+                { id: "e5", source: "http-traffic", target: "transform-aggregate" },
+                { id: "e6", source: "http-conversion", target: "transform-aggregate" },
+                { id: "e7", source: "transform-aggregate", target: "llm-charts" },
+                { id: "e8", source: "llm-charts", target: "loop-charts" },
+                { id: "e9", source: "loop-charts", target: "shared-memory-chart" },
+                { id: "e10", source: "shared-memory-chart", target: "templateOutput-1" },
+                { id: "e11", source: "templateOutput-1", target: "output-1" }
+            ]
+        }
+    },
+
+    // Data & Analytics 2: Sales Pipeline Analyzer
+    {
+        name: "Sales Pipeline Analyzer",
+        description:
+            "Analyze sales pipeline with predictive insights. Fetches CRM data, calculates metrics, generates visualizations, and provides recommendations.",
+        category: "data-analytics",
+        tags: ["sales", "pipeline", "crm", "predictions", "charts"],
+        required_integrations: ["slack"],
+        featured: false,
+        definition: {
+            name: "Sales Pipeline Analyzer",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Weekly Analysis",
+                        triggerType: "schedule",
+                        schedule: "0 9 * * 1"
+                    }
+                },
+                {
+                    id: "http-crm",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Pipeline Data",
+                        method: "GET",
+                        url: "https://api.crm.example.com/pipeline",
+                        outputVariable: "pipelineData"
+                    }
+                },
+                {
+                    id: "code-metrics",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Calculate Metrics",
+                        language: "javascript",
+                        code: "const data = inputs.pipelineData;\nconst totalValue = data.deals?.reduce((sum, d) => sum + d.value, 0) || 0;\nconst avgDealSize = totalValue / (data.deals?.length || 1);\nconst conversionRate = data.won / (data.total || 1);\nreturn { totalValue, avgDealSize, conversionRate, velocity: data.avgDaysToClose };",
+                        outputVariable: "pipelineMetrics"
+                    }
+                },
+                {
+                    id: "llm-predict",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Predictions",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this sales pipeline data and generate predictions:\n\nPipeline: {{pipelineData}}\nMetrics: {{pipelineMetrics}}\n\nProvide:\n1. Expected close rate this month\n2. Revenue forecast\n3. Deals at risk\n4. Top opportunities\n5. Recommended actions",
+                        outputVariable: "predictions"
+                    }
+                },
+                {
+                    id: "llm-chart",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Chart Specs",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Create chart specifications for:\n\nMetrics: {{pipelineMetrics}}\n\nGenerate:\n1. Pipeline funnel chart\n2. Deal velocity trend\n3. Stage distribution\n\nReturn as JSON.",
+                        outputVariable: "chartSpecs"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a weekly sales pipeline report:\n\nMetrics: {{pipelineMetrics}}\nPredictions: {{predictions.text}}\n\nFormat for Slack with:\n1. Key metrics summary\n2. Week-over-week changes\n3. Top deals to watch\n4. Action items",
+                        outputVariable: "weeklyReport"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post to Sales Channel",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#sales-pipeline"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Pipeline Report",
+                        outputName: "result",
+                        value: "{{weeklyReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "http-crm" },
+                { id: "e2", source: "http-crm", target: "code-metrics" },
+                { id: "e3", source: "code-metrics", target: "llm-predict" },
+                { id: "e4", source: "code-metrics", target: "llm-chart" },
+                { id: "e5", source: "llm-predict", target: "llm-report" },
+                { id: "e6", source: "llm-chart", target: "llm-report" },
+                { id: "e7", source: "llm-report", target: "integration-slack" },
+                { id: "e8", source: "integration-slack", target: "output-1" }
+            ]
+        }
+    },
+
+    // Data & Analytics 3: A/B Test Results Analyzer
+    {
+        name: "A/B Test Results Analyzer",
+        description:
+            "Analyze A/B test results with statistical rigor. Calculates significance, generates visualizations, and interprets results with recommendations.",
+        category: "data-analytics",
+        tags: ["ab-testing", "statistics", "experiments", "analysis", "optimization"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "A/B Test Results Analyzer",
+            nodes: [
+                {
+                    id: "input-experiment",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Experiment ID",
+                        inputName: "experimentId",
+                        inputVariable: "experimentId",
+                        inputType: "text",
+                        description: "Enter the A/B test experiment ID"
+                    }
+                },
+                {
+                    id: "http-data",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Experiment Data",
+                        method: "GET",
+                        url: "https://api.analytics.example.com/experiments/{{experimentId}}",
+                        outputVariable: "experimentData"
+                    }
+                },
+                {
+                    id: "code-stats",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Calculate Statistics",
+                        language: "javascript",
+                        code: "const data = inputs.experimentData;\n// Calculate conversion rates, confidence intervals, p-value\nconst controlRate = data.control.conversions / data.control.visitors;\nconst variantRate = data.variant.conversions / data.variant.visitors;\nconst lift = (variantRate - controlRate) / controlRate * 100;\nconst significant = data.pValue < 0.05;\nreturn { controlRate, variantRate, lift, pValue: data.pValue, significant, sampleSize: data.control.visitors + data.variant.visitors };",
+                        outputVariable: "stats"
+                    }
+                },
+                {
+                    id: "conditional-significant",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Statistically Significant?",
+                        condition: "stats.significant === true",
+                        outputVariable: "isSignificant"
+                    }
+                },
+                {
+                    id: "llm-interpret-sig",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Interpret Significant Result",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Interpret this statistically significant A/B test result:\n\nStats: {{stats}}\nExperiment: {{experimentData}}\n\nProvide:\n1. Clear winner declaration\n2. Business impact estimate\n3. Confidence level explanation\n4. Recommended action (roll out, iterate, etc.)\n5. Caveats to consider",
+                        outputVariable: "interpretation"
+                    }
+                },
+                {
+                    id: "llm-interpret-insig",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Interpret Insufficient Data",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Interpret this non-significant A/B test result:\n\nStats: {{stats}}\nExperiment: {{experimentData}}\n\nProvide:\n1. Current status (no winner yet)\n2. Sample size needed for significance\n3. Estimated time to reach significance\n4. Recommendation (continue, stop, modify)",
+                        outputVariable: "interpretation"
+                    }
+                },
+                {
+                    id: "llm-chart",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Visualization",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Create chart specifications to visualize:\n\nStats: {{stats}}\n\nGenerate:\n1. Conversion rate comparison (bar chart)\n2. Confidence interval visualization\n3. Sample accumulation over time",
+                        outputVariable: "chartSpecs"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analysis Results",
+                        outputName: "result",
+                        value: "{{interpretation}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-experiment", target: "http-data" },
+                { id: "e2", source: "http-data", target: "code-stats" },
+                { id: "e3", source: "code-stats", target: "conditional-significant" },
+                {
+                    id: "e4",
+                    source: "conditional-significant",
+                    target: "llm-interpret-sig",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e5",
+                    source: "conditional-significant",
+                    target: "llm-interpret-insig",
+                    sourceHandle: "false"
+                },
+                { id: "e6", source: "code-stats", target: "llm-chart" },
+                { id: "e7", source: "llm-interpret-sig", target: "output-1" },
+                { id: "e8", source: "llm-interpret-insig", target: "output-1" },
+                { id: "e9", source: "llm-chart", target: "output-1" }
+            ]
+        }
+    },
+
+    // Data & Analytics 4: Log Analyzer & Alerter
+    {
+        name: "Log Analyzer & Alerter",
+        description:
+            "Analyze application logs for errors and anomalies. Parses logs, detects patterns, and alerts on critical issues with suggested fixes.",
+        category: "data-analytics",
+        tags: ["logs", "monitoring", "alerts", "devops", "anomaly-detection"],
+        required_integrations: ["slack"],
+        featured: false,
+        definition: {
+            name: "Log Analyzer & Alerter",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Every 5 Minutes",
+                        triggerType: "schedule",
+                        schedule: "*/5 * * * *"
+                    }
+                },
+                {
+                    id: "http-logs",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Recent Logs",
+                        method: "GET",
+                        url: "https://logs.example.com/api/recent?minutes=5",
+                        outputVariable: "recentLogs"
+                    }
+                },
+                {
+                    id: "code-parse",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Parse & Categorize Logs",
+                        language: "javascript",
+                        code: "const logs = inputs.recentLogs.entries || [];\nconst errors = logs.filter(l => l.level === 'ERROR');\nconst warnings = logs.filter(l => l.level === 'WARN');\nconst errorRate = errors.length / logs.length * 100;\nreturn { totalLogs: logs.length, errors: errors.length, warnings: warnings.length, errorRate, topErrors: errors.slice(0, 10) };",
+                        outputVariable: "logStats"
+                    }
+                },
+                {
+                    id: "conditional-threshold",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Error Rate > 5%?",
+                        condition: "logStats.errorRate > 5",
+                        outputVariable: "thresholdExceeded"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Error Patterns",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze these application errors:\n\n{{logStats.topErrors}}\n\nIdentify:\n1. Root cause patterns\n2. Affected services/components\n3. Potential impact\n4. Suggested fixes\n5. Priority level (P1-P4)",
+                        outputVariable: "errorAnalysis"
+                    }
+                },
+                {
+                    id: "integration-slack-alert",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#engineering-alerts"
+                    }
+                },
+                {
+                    id: "shared-memory-log",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Metrics",
+                        operation: "set",
+                        key: "log_metrics_{{timestamp}}",
+                        value: "{{logStats}}"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Analysis",
+                        outputName: "result",
+                        value: "{{logStats}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "http-logs" },
+                { id: "e2", source: "http-logs", target: "code-parse" },
+                { id: "e3", source: "code-parse", target: "conditional-threshold" },
+                {
+                    id: "e4",
+                    source: "conditional-threshold",
+                    target: "llm-analyze",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e5",
+                    source: "conditional-threshold",
+                    target: "shared-memory-log",
+                    sourceHandle: "false"
+                },
+                { id: "e6", source: "llm-analyze", target: "integration-slack-alert" },
+                { id: "e7", source: "integration-slack-alert", target: "shared-memory-log" },
+                { id: "e8", source: "shared-memory-log", target: "output-1" }
+            ]
+        }
+    },
+
+    // Data & Analytics 5: Survey Results Processor
+    {
+        name: "Survey Results Processor",
+        description:
+            "Process survey responses into actionable insights. Calculates NPS, analyzes sentiment, identifies themes, and generates reports.",
+        category: "data-analytics",
+        tags: ["surveys", "nps", "sentiment", "analysis", "feedback"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Survey Results Processor",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Survey Complete Webhook",
+                        triggerType: "webhook",
+                        description: "Triggered when a survey closes"
+                    }
+                },
+                {
+                    id: "http-responses",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch All Responses",
+                        method: "GET",
+                        url: "https://api.survey.example.com/responses",
+                        outputVariable: "surveyResponses"
+                    }
+                },
+                {
+                    id: "transform-clean",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Clean & Normalize",
+                        transformType: "map",
+                        expression: "item.responses",
+                        outputVariable: "cleanedResponses"
+                    }
+                },
+                {
+                    id: "code-nps",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Calculate NPS",
+                        language: "javascript",
+                        code: "const responses = inputs.cleanedResponses || [];\nconst scores = responses.map(r => r.npsScore).filter(s => s !== undefined);\nconst promoters = scores.filter(s => s >= 9).length;\nconst detractors = scores.filter(s => s <= 6).length;\nconst nps = Math.round((promoters - detractors) / scores.length * 100);\nreturn { nps, promoters, detractors, passives: scores.length - promoters - detractors, totalResponses: responses.length };",
+                        outputVariable: "npsMetrics"
+                    }
+                },
+                {
+                    id: "llm-sentiment",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Open Responses",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze these survey open-ended responses:\n\n{{cleanedResponses}}\n\nIdentify:\n1. Overall sentiment distribution\n2. Top 5 positive themes\n3. Top 5 negative themes\n4. Common suggestions\n5. Unexpected insights\n\nProvide specific quotes as examples.",
+                        outputVariable: "sentimentAnalysis"
+                    }
+                },
+                {
+                    id: "llm-chart",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Charts",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Create chart configurations for:\n\nNPS: {{npsMetrics}}\n\nGenerate:\n1. NPS gauge chart\n2. Response distribution\n3. Sentiment breakdown\n4. Theme word cloud data",
+                        outputVariable: "chartConfigs"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Survey Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a comprehensive survey report:\n\nNPS: {{npsMetrics}}\nSentiment: {{sentimentAnalysis.text}}\n\nStructure:\n1. Executive summary\n2. Key metrics dashboard\n3. Detailed findings\n4. Recommendations\n5. Appendix with quotes",
+                        outputVariable: "surveyReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Survey Report",
+                        outputName: "result",
+                        value: "{{surveyReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "http-responses" },
+                { id: "e2", source: "http-responses", target: "transform-clean" },
+                { id: "e3", source: "transform-clean", target: "code-nps" },
+                { id: "e4", source: "transform-clean", target: "llm-sentiment" },
+                { id: "e5", source: "code-nps", target: "llm-chart" },
+                { id: "e6", source: "llm-sentiment", target: "llm-report" },
+                { id: "e7", source: "code-nps", target: "llm-report" },
+                { id: "e8", source: "llm-chart", target: "llm-report" },
+                { id: "e9", source: "llm-report", target: "output-1" }
+            ]
+        }
+    },
+
+    // Data & Analytics 6: Financial Reconciliation
+    {
+        name: "Financial Reconciliation",
+        description:
+            "Reconcile transactions across multiple systems. Matches records, flags discrepancies, and generates reconciliation reports.",
+        category: "data-analytics",
+        tags: ["finance", "reconciliation", "accounting", "matching", "audit"],
+        required_integrations: ["slack"],
+        featured: false,
+        definition: {
+            name: "Financial Reconciliation",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Reconciliation",
+                        triggerType: "schedule",
+                        schedule: "0 6 * * *"
+                    }
+                },
+                {
+                    id: "http-system-a",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch System A Transactions",
+                        method: "GET",
+                        url: "https://api.erp.example.com/transactions/yesterday",
+                        outputVariable: "systemAData"
+                    }
+                },
+                {
+                    id: "http-system-b",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch System B Transactions",
+                        method: "GET",
+                        url: "https://api.bank.example.com/transactions/yesterday",
+                        outputVariable: "systemBData"
+                    }
+                },
+                {
+                    id: "code-match",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Match Transactions",
+                        language: "javascript",
+                        code: "const a = inputs.systemAData.transactions || [];\nconst b = inputs.systemBData.transactions || [];\nconst matched = [];\nconst unmatchedA = [];\nconst unmatchedB = [...b];\n\na.forEach(txA => {\n  const matchIdx = unmatchedB.findIndex(txB => txB.amount === txA.amount && txB.date === txA.date);\n  if (matchIdx >= 0) {\n    matched.push({ a: txA, b: unmatchedB[matchIdx] });\n    unmatchedB.splice(matchIdx, 1);\n  } else {\n    unmatchedA.push(txA);\n  }\n});\n\nreturn { matched: matched.length, discrepancies: unmatchedA.length + unmatchedB.length, unmatchedA, unmatchedB };",
+                        outputVariable: "reconciliation"
+                    }
+                },
+                {
+                    id: "conditional-discrepancies",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Discrepancies Found?",
+                        condition: "reconciliation.discrepancies > 0",
+                        outputVariable: "hasDiscrepancies"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Discrepancies",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze these reconciliation discrepancies:\n\nUnmatched in System A: {{reconciliation.unmatchedA}}\nUnmatched in System B: {{reconciliation.unmatchedB}}\n\nIdentify:\n1. Potential causes for each\n2. Timing differences\n3. Possible duplicates\n4. Recommended actions",
+                        outputVariable: "discrepancyAnalysis"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Alert Finance Team",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#finance-alerts"
+                    }
+                },
+                {
+                    id: "llm-log",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Success",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Generate a brief reconciliation success log:\n\nMatched: {{reconciliation.matched}} transactions\nNo discrepancies found.",
+                        outputVariable: "successLog"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Reconciliation Result",
+                        outputName: "result",
+                        value: "{{reconciliation}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "http-system-a" },
+                { id: "e2", source: "trigger-1", target: "http-system-b" },
+                { id: "e3", source: "http-system-a", target: "code-match" },
+                { id: "e4", source: "http-system-b", target: "code-match" },
+                { id: "e5", source: "code-match", target: "conditional-discrepancies" },
+                {
+                    id: "e6",
+                    source: "conditional-discrepancies",
+                    target: "llm-analyze",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e7",
+                    source: "conditional-discrepancies",
+                    target: "llm-log",
+                    sourceHandle: "false"
+                },
+                { id: "e8", source: "llm-analyze", target: "integration-slack" },
+                { id: "e9", source: "integration-slack", target: "output-1" },
+                { id: "e10", source: "llm-log", target: "output-1" }
+            ]
+        }
+    },
+
+    // Data & Analytics 7: Inventory Optimizer
+    {
+        name: "Inventory Optimizer",
+        description:
+            "Optimize inventory levels with demand forecasting. Analyzes sales patterns, predicts demand, and generates reorder recommendations.",
+        category: "data-analytics",
+        tags: ["inventory", "forecasting", "supply-chain", "optimization", "ecommerce"],
+        required_integrations: ["slack"],
+        featured: false,
+        definition: {
+            name: "Inventory Optimizer",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Weekly Analysis",
+                        triggerType: "schedule",
+                        schedule: "0 8 * * 1"
+                    }
+                },
+                {
+                    id: "http-inventory",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Inventory Levels",
+                        method: "GET",
+                        url: "https://api.inventory.example.com/current",
+                        outputVariable: "inventoryData"
+                    }
+                },
+                {
+                    id: "http-sales",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Sales History",
+                        method: "GET",
+                        url: "https://api.sales.example.com/history?months=6",
+                        outputVariable: "salesHistory"
+                    }
+                },
+                {
+                    id: "code-analyze",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Calculate Metrics",
+                        language: "javascript",
+                        code: "const inventory = inputs.inventoryData.items || [];\nconst sales = inputs.salesHistory.items || [];\n\nreturn inventory.map(item => {\n  const itemSales = sales.filter(s => s.sku === item.sku);\n  const avgDaily = itemSales.reduce((sum, s) => sum + s.quantity, 0) / 180;\n  const daysOfStock = item.quantity / avgDaily;\n  return { ...item, avgDailySales: avgDaily, daysOfStock, reorderNeeded: daysOfStock < 14 };\n});",
+                        outputVariable: "inventoryMetrics"
+                    }
+                },
+                {
+                    id: "llm-forecast",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Demand Forecast",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze inventory metrics and generate demand forecast:\n\n{{inventoryMetrics}}\n\nConsider:\n1. Seasonal patterns\n2. Trend direction\n3. Lead times\n4. Safety stock levels\n\nProvide 4-week demand forecast per item.",
+                        outputVariable: "demandForecast"
+                    }
+                },
+                {
+                    id: "llm-recommendations",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Recommendations",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on metrics and forecast:\n\nMetrics: {{inventoryMetrics}}\nForecast: {{demandForecast.text}}\n\nGenerate:\n1. Urgent reorders (< 7 days stock)\n2. Standard reorders (< 14 days stock)\n3. Overstock items to discount\n4. Optimal reorder quantities\n5. Total reorder value estimate",
+                        outputVariable: "recommendations"
+                    }
+                },
+                {
+                    id: "conditional-urgent",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Urgent Items?",
+                        condition: "recommendations.text.includes('Urgent')",
+                        outputVariable: "hasUrgent"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Alert Procurement",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#procurement-urgent"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Inventory Report",
+                        outputName: "result",
+                        value: "{{recommendations}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "http-inventory" },
+                { id: "e2", source: "trigger-1", target: "http-sales" },
+                { id: "e3", source: "http-inventory", target: "code-analyze" },
+                { id: "e4", source: "http-sales", target: "code-analyze" },
+                { id: "e5", source: "code-analyze", target: "llm-forecast" },
+                { id: "e6", source: "llm-forecast", target: "llm-recommendations" },
+                { id: "e7", source: "llm-recommendations", target: "conditional-urgent" },
+                {
+                    id: "e8",
+                    source: "conditional-urgent",
+                    target: "integration-slack",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e9",
+                    source: "conditional-urgent",
+                    target: "output-1",
+                    sourceHandle: "false"
+                },
+                { id: "e10", source: "integration-slack", target: "output-1" }
+            ]
+        }
+    },
+
+    // Data & Analytics 8: Marketing Attribution Analyzer
+    {
+        name: "Marketing Attribution Analyzer",
+        description:
+            "Analyze marketing attribution across channels. Runs multiple attribution models, compares results, and recommends budget allocation.",
+        category: "data-analytics",
+        tags: ["marketing", "attribution", "analytics", "roi", "optimization"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Marketing Attribution Analyzer",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Weekly Attribution",
+                        triggerType: "schedule",
+                        schedule: "0 9 * * 1"
+                    }
+                },
+                {
+                    id: "http-conversions",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Conversion Data",
+                        method: "GET",
+                        url: "https://api.analytics.example.com/conversions?days=30",
+                        outputVariable: "conversionData"
+                    }
+                },
+                {
+                    id: "http-touchpoints",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Touchpoint Data",
+                        method: "GET",
+                        url: "https://api.analytics.example.com/touchpoints?days=30",
+                        outputVariable: "touchpointData"
+                    }
+                },
+                {
+                    id: "code-first-touch",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "First-Touch Attribution",
+                        language: "javascript",
+                        code: "const conversions = inputs.conversionData.conversions || [];\nconst attribution = {};\nconversions.forEach(c => {\n  const firstTouch = c.touchpoints[0]?.channel;\n  if (firstTouch) attribution[firstTouch] = (attribution[firstTouch] || 0) + c.value;\n});\nreturn { model: 'first-touch', attribution };",
+                        outputVariable: "firstTouchModel"
+                    }
+                },
+                {
+                    id: "code-last-touch",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Last-Touch Attribution",
+                        language: "javascript",
+                        code: "const conversions = inputs.conversionData.conversions || [];\nconst attribution = {};\nconversions.forEach(c => {\n  const lastTouch = c.touchpoints[c.touchpoints.length - 1]?.channel;\n  if (lastTouch) attribution[lastTouch] = (attribution[lastTouch] || 0) + c.value;\n});\nreturn { model: 'last-touch', attribution };",
+                        outputVariable: "lastTouchModel"
+                    }
+                },
+                {
+                    id: "code-linear",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Linear Attribution",
+                        language: "javascript",
+                        code: "const conversions = inputs.conversionData.conversions || [];\nconst attribution = {};\nconversions.forEach(c => {\n  const touchCount = c.touchpoints.length;\n  const valuePerTouch = c.value / touchCount;\n  c.touchpoints.forEach(t => {\n    attribution[t.channel] = (attribution[t.channel] || 0) + valuePerTouch;\n  });\n});\nreturn { model: 'linear', attribution };",
+                        outputVariable: "linearModel"
+                    }
+                },
+                {
+                    id: "llm-compare",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compare Models",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Compare these attribution models:\n\nFirst-Touch: {{firstTouchModel}}\nLast-Touch: {{lastTouchModel}}\nLinear: {{linearModel}}\n\nAnalyze:\n1. Which channels look best in each model\n2. Channels that are undervalued\n3. Model recommendations by business type\n4. Budget allocation suggestions\n5. Channel synergies observed",
+                        outputVariable: "modelComparison"
+                    }
+                },
+                {
+                    id: "llm-budget",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Budget Recommendation",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on this attribution analysis:\n\n{{modelComparison.text}}\n\nProvide:\n1. Recommended budget allocation %\n2. Channels to increase spend\n3. Channels to decrease spend\n4. Expected ROI impact\n5. Testing recommendations",
+                        outputVariable: "budgetRecommendation"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Attribution Report",
+                        outputName: "result",
+                        value: "{{budgetRecommendation}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "http-conversions" },
+                { id: "e2", source: "trigger-1", target: "http-touchpoints" },
+                { id: "e3", source: "http-conversions", target: "code-first-touch" },
+                { id: "e4", source: "http-conversions", target: "code-last-touch" },
+                { id: "e5", source: "http-conversions", target: "code-linear" },
+                { id: "e6", source: "code-first-touch", target: "llm-compare" },
+                { id: "e7", source: "code-last-touch", target: "llm-compare" },
+                { id: "e8", source: "code-linear", target: "llm-compare" },
+                { id: "e9", source: "llm-compare", target: "llm-budget" },
+                { id: "e10", source: "llm-budget", target: "output-1" }
+            ]
+        }
+    },
+
+    // Data & Analytics 9: Customer Cohort Analyzer
+    {
+        name: "Customer Cohort Analyzer",
+        description:
+            "Analyze customer behavior by acquisition cohort. Calculates retention, LTV, and engagement patterns across cohorts.",
+        category: "data-analytics",
+        tags: ["cohorts", "retention", "ltv", "analytics", "customers"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Customer Cohort Analyzer",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Monthly Analysis",
+                        triggerType: "schedule",
+                        schedule: "0 9 1 * *"
+                    }
+                },
+                {
+                    id: "http-customers",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Customer Data",
+                        method: "GET",
+                        url: "https://api.crm.example.com/customers",
+                        outputVariable: "customerData"
+                    }
+                },
+                {
+                    id: "code-segment",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Segment Into Cohorts",
+                        language: "javascript",
+                        code: "const customers = inputs.customerData.customers || [];\nconst cohorts = {};\ncustomers.forEach(c => {\n  const cohortMonth = c.createdAt.substring(0, 7);\n  if (!cohorts[cohortMonth]) cohorts[cohortMonth] = [];\n  cohorts[cohortMonth].push(c);\n});\nreturn { cohorts: Object.keys(cohorts), cohortSizes: Object.fromEntries(Object.entries(cohorts).map(([k, v]) => [k, v.length])) };",
+                        outputVariable: "cohortSegments"
+                    }
+                },
+                {
+                    id: "loop-cohorts",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Each Cohort",
+                        loopType: "forEach",
+                        collection: "{{cohortSegments.cohorts}}",
+                        itemVariable: "cohort",
+                        indexVariable: "cohortIndex"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Cohort Metrics",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this customer cohort: {{cohort}}\n\nCalculate and report:\n1. Retention rates by month (1-12)\n2. Average LTV\n3. Engagement score\n4. Churn points\n5. Comparison to overall average",
+                        outputVariable: "cohortAnalysis"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Cohort Analysis",
+                        operation: "set",
+                        key: "cohort_{{cohort}}",
+                        value: "{{cohortAnalysis.text}}"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Cohort Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a comprehensive cohort analysis report.\n\nCohorts: {{cohortSegments}}\n\nProvide:\n1. Cohort comparison matrix\n2. Best and worst performing cohorts\n3. Retention trends over time\n4. LTV trends\n5. Recommendations for improving retention",
+                        outputVariable: "cohortReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Cohort Report",
+                        outputName: "result",
+                        value: "{{cohortReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "http-customers" },
+                { id: "e2", source: "http-customers", target: "code-segment" },
+                { id: "e3", source: "code-segment", target: "loop-cohorts" },
+                { id: "e4", source: "loop-cohorts", target: "llm-analyze" },
+                { id: "e5", source: "llm-analyze", target: "shared-memory-store" },
+                { id: "e6", source: "shared-memory-store", target: "llm-report" },
+                { id: "e7", source: "llm-report", target: "output-1" }
+            ]
+        }
+    },
+
+    // Data & Analytics 10: Batch Data Processor
+    {
+        name: "Batch Data Processor",
+        description:
+            "Process large data files in batches. Chunks data, applies transformations, aggregates results, and exports processed output.",
+        category: "data-analytics",
+        tags: ["batch", "etl", "processing", "transform", "data"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Batch Data Processor",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Data File",
+                        inputVariable: "dataFile",
+                        allowedTypes: ["text/csv", "application/json"],
+                        description: "Upload large CSV or JSON file"
+                    }
+                },
+                {
+                    id: "input-config",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Processing Config",
+                        inputName: "processingConfig",
+                        inputVariable: "processingConfig",
+                        inputType: "text",
+                        description:
+                            "Describe the transformations needed (filter, map, aggregate, etc.)"
+                    }
+                },
+                {
+                    id: "code-chunk",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Chunk Data",
+                        language: "javascript",
+                        code: "const data = inputs.dataFile.content || [];\nconst chunkSize = 1000;\nconst chunks = [];\nfor (let i = 0; i < data.length; i += chunkSize) {\n  chunks.push(data.slice(i, i + chunkSize));\n}\nreturn { chunks, totalRecords: data.length, chunkCount: chunks.length };",
+                        outputVariable: "chunkedData"
+                    }
+                },
+                {
+                    id: "loop-chunks",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Each Chunk",
+                        loopType: "forEach",
+                        collection: "{{chunkedData.chunks}}",
+                        itemVariable: "chunk",
+                        indexVariable: "chunkIndex"
+                    }
+                },
+                {
+                    id: "llm-transform",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Transform Code",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate JavaScript code to transform this data chunk according to the config:\n\nConfig: {{processingConfig}}\nSample data: {{chunk}}\n\nReturn only the transformation code that processes an array and returns the transformed array.",
+                        outputVariable: "transformCode"
+                    }
+                },
+                {
+                    id: "code-apply",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Apply Transformation",
+                        language: "javascript",
+                        code: "const chunk = inputs.chunk;\n// Apply basic transformations\nconst transformed = chunk.map(item => {\n  // Clean and normalize\n  return { ...item, processed: true };\n});\nreturn { processed: transformed.length, results: transformed };",
+                        outputVariable: "chunkResult"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Accumulate Results",
+                        operation: "append",
+                        key: "processed_data",
+                        value: "{{chunkResult.results}}"
+                    }
+                },
+                {
+                    id: "transform-merge",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Merge All Results",
+                        transformType: "flatten",
+                        outputVariable: "mergedResults"
+                    }
+                },
+                {
+                    id: "llm-summary",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Summary",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Summarize this batch processing job:\n\nOriginal records: {{chunkedData.totalRecords}}\nChunks processed: {{chunkedData.chunkCount}}\n\nProvide processing statistics and any data quality observations.",
+                        outputVariable: "processSummary"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Processed Data",
+                        outputName: "result",
+                        value: "{{mergedResults}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "code-chunk" },
+                { id: "e2", source: "input-config", target: "llm-transform" },
+                { id: "e3", source: "code-chunk", target: "loop-chunks" },
+                { id: "e4", source: "loop-chunks", target: "llm-transform" },
+                { id: "e5", source: "llm-transform", target: "code-apply" },
+                { id: "e6", source: "code-apply", target: "shared-memory-store" },
+                { id: "e7", source: "shared-memory-store", target: "transform-merge" },
+                { id: "e8", source: "transform-merge", target: "llm-summary" },
+                { id: "e9", source: "llm-summary", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // VOICE & AUDIO (8 templates)
+    // ========================================================================
+
+    // Voice & Audio 1: Meeting Transcription Pipeline
+    {
+        name: "Meeting Transcription Pipeline",
+        description:
+            "Transcribe and summarize meeting recordings. Converts speech to text, generates summaries, extracts action items, and distributes notes.",
+        category: "voice-audio",
+        tags: ["transcription", "meetings", "summary", "action-items", "speech-to-text"],
+        required_integrations: ["slack", "notion"],
+        featured: true,
+        definition: {
+            name: "Meeting Transcription Pipeline",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Meeting Recording",
+                        inputVariable: "meetingRecording",
+                        allowedTypes: ["audio/*", "video/*"],
+                        description: "Upload meeting recording"
+                    }
+                },
+                {
+                    id: "input-context",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Meeting Context",
+                        inputName: "meetingContext",
+                        inputVariable: "meetingContext",
+                        inputType: "text",
+                        description: "Meeting title, attendees, agenda (optional)"
+                    }
+                },
+                {
+                    id: "audioInput-1",
+                    type: "audioInput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transcribe Audio",
+                        provider: "openai",
+                        model: "whisper-1",
+                        inputVariable: "meetingRecording",
+                        outputVariable: "transcript"
+                    }
+                },
+                {
+                    id: "llm-summary",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Summary",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Summarize this meeting transcript:\n\nContext: {{meetingContext}}\n\nTranscript:\n{{transcript.text}}\n\nProvide:\n1. Meeting summary (2-3 paragraphs)\n2. Key discussion points\n3. Decisions made\n4. Action items with owners\n5. Next steps\n6. Open questions",
+                        outputVariable: "meetingSummary"
+                    }
+                },
+                {
+                    id: "llm-actions",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Action Items",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Extract action items from this transcript:\n\n{{transcript.text}}\n\nFor each action item, identify:\n1. Task description\n2. Owner (if mentioned)\n3. Due date (if mentioned)\n4. Priority (based on context)\n\nReturn as JSON array.",
+                        outputVariable: "actionItems"
+                    }
+                },
+                {
+                    id: "integration-notion",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Save to Notion",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Meeting Notes"
+                    }
+                },
+                {
+                    id: "llm-slack",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Format for Slack",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Format this meeting summary for Slack:\n\n{{meetingSummary.text}}\n\nUse emoji, keep concise, highlight action items.",
+                        outputVariable: "slackMessage"
+                    }
+                },
+                {
+                    id: "integration-slack",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post to Slack",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#meeting-notes"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Meeting Notes",
+                        outputName: "result",
+                        value: "{{meetingSummary}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "audioInput-1" },
+                { id: "e2", source: "input-context", target: "llm-summary" },
+                { id: "e3", source: "audioInput-1", target: "llm-summary" },
+                { id: "e4", source: "audioInput-1", target: "llm-actions" },
+                { id: "e5", source: "llm-summary", target: "integration-notion" },
+                { id: "e6", source: "llm-actions", target: "integration-notion" },
+                { id: "e7", source: "llm-summary", target: "llm-slack" },
+                { id: "e8", source: "llm-slack", target: "integration-slack" },
+                { id: "e9", source: "integration-slack", target: "output-1" }
+            ]
+        }
+    },
+
+    // Voice & Audio 2: Podcast Production Suite
+    {
+        name: "Podcast Production Suite",
+        description:
+            "Full podcast post-production workflow. Transcribes episodes, generates show notes, creates social clips, and prepares distribution assets.",
+        category: "voice-audio",
+        tags: ["podcast", "transcription", "show-notes", "social-media", "content"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Podcast Production Suite",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Podcast Episode",
+                        inputVariable: "podcastAudio",
+                        allowedTypes: ["audio/*"],
+                        description: "Upload raw podcast recording"
+                    }
+                },
+                {
+                    id: "input-meta",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Episode Metadata",
+                        inputName: "episodeMeta",
+                        inputVariable: "episodeMeta",
+                        inputType: "text",
+                        description: "Episode title, guest name, topic"
+                    }
+                },
+                {
+                    id: "audioInput-1",
+                    type: "audioInput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transcribe Episode",
+                        provider: "openai",
+                        model: "whisper-1",
+                        inputVariable: "podcastAudio",
+                        outputVariable: "transcript"
+                    }
+                },
+                {
+                    id: "llm-timestamps",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Timestamps",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create chapter timestamps from this podcast transcript:\n\n{{transcript.text}}\n\nIdentify major topic changes and create timestamps in format:\n00:00 - Introduction\n02:30 - Topic 1\netc.",
+                        outputVariable: "timestamps"
+                    }
+                },
+                {
+                    id: "llm-shownotes",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Show Notes",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create comprehensive show notes for this podcast:\n\nMetadata: {{episodeMeta}}\nTranscript: {{transcript.text}}\nTimestamps: {{timestamps.text}}\n\nInclude:\n1. Episode summary\n2. Key takeaways\n3. Resources mentioned\n4. Guest bio\n5. Links\n6. Timestamps",
+                        outputVariable: "showNotes"
+                    }
+                },
+                {
+                    id: "llm-clips",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Identify Social Clips",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Identify 3-5 compelling segments from this transcript that would make great social media clips:\n\n{{transcript.text}}\n\nFor each clip:\n1. Start/end timestamps (approximate)\n2. Quote or summary\n3. Why it's shareable\n4. Suggested caption\n5. Best platform (Twitter, LinkedIn, TikTok)",
+                        outputVariable: "socialClips"
+                    }
+                },
+                {
+                    id: "llm-seo",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate SEO Content",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Generate SEO-optimized content for this podcast:\n\nMetadata: {{episodeMeta}}\nSummary: {{showNotes.text}}\n\nCreate:\n1. Episode title (with keywords)\n2. Meta description\n3. Keywords/tags\n4. Blog post version",
+                        outputVariable: "seoContent"
+                    }
+                },
+                {
+                    id: "transform-package",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Production Package",
+                        transformType: "template",
+                        template:
+                            "# Podcast Production Package\n\n## Episode: {{episodeMeta}}\n\n## Show Notes\n{{showNotes.text}}\n\n## Social Clips\n{{socialClips.text}}\n\n## SEO Content\n{{seoContent.text}}",
+                        outputVariable: "productionPackage"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Production Package",
+                        outputName: "result",
+                        value: "{{productionPackage}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "audioInput-1" },
+                { id: "e2", source: "input-meta", target: "llm-shownotes" },
+                { id: "e3", source: "audioInput-1", target: "llm-timestamps" },
+                { id: "e4", source: "llm-timestamps", target: "llm-shownotes" },
+                { id: "e5", source: "audioInput-1", target: "llm-clips" },
+                { id: "e6", source: "llm-shownotes", target: "llm-seo" },
+                { id: "e7", source: "llm-shownotes", target: "transform-package" },
+                { id: "e8", source: "llm-clips", target: "transform-package" },
+                { id: "e9", source: "llm-seo", target: "transform-package" },
+                { id: "e10", source: "transform-package", target: "output-1" }
+            ]
+        }
+    },
+
+    // Voice & Audio 3: Voice Message Responder
+    {
+        name: "Voice Message Responder",
+        description:
+            "Auto-respond to voice messages with AI-generated voice replies. Transcribes incoming messages, generates responses, and converts to speech.",
+        category: "voice-audio",
+        tags: ["voice", "response", "tts", "automation", "communication"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Voice Message Responder",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Voice Message Received",
+                        triggerType: "webhook",
+                        description: "Triggered when a voice message is received"
+                    }
+                },
+                {
+                    id: "audioInput-1",
+                    type: "audioInput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transcribe Message",
+                        provider: "openai",
+                        model: "whisper-1",
+                        outputVariable: "incomingTranscript"
+                    }
+                },
+                {
+                    id: "llm-classify",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Classify Intent",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: 'Classify this voice message intent:\n\n{{incomingTranscript.text}}\n\nCategories: Question, Request, Complaint, FeedbackPositive, Greeting, Other\n\nReturn: {"intent": "...", "urgency": "low/medium/high", "sentiment": "positive/neutral/negative"}',
+                        outputVariable: "classification"
+                    }
+                },
+                {
+                    id: "llm-response",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Response",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a voice response to this message:\n\nOriginal: {{incomingTranscript.text}}\nIntent: {{classification.text}}\n\nWrite a conversational, helpful response that:\n1. Acknowledges their message\n2. Addresses their need\n3. Is appropriate for text-to-speech (no special characters)\n4. Is under 150 words",
+                        outputVariable: "responseText"
+                    }
+                },
+                {
+                    id: "audioOutput-1",
+                    type: "audioOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Voice Response",
+                        provider: "openai",
+                        model: "tts-1",
+                        voice: "alloy",
+                        input: "{{responseText.text}}",
+                        outputVariable: "voiceResponse"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Voice Response",
+                        outputName: "result",
+                        value: "{{voiceResponse}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "audioInput-1" },
+                { id: "e2", source: "audioInput-1", target: "llm-classify" },
+                { id: "e3", source: "llm-classify", target: "llm-response" },
+                { id: "e4", source: "llm-response", target: "audioOutput-1" },
+                { id: "e5", source: "audioOutput-1", target: "output-1" }
+            ]
+        }
+    },
+
+    // Voice & Audio 4: Call Center Analytics
+    {
+        name: "Call Center Analytics",
+        description:
+            "Analyze support call recordings for quality and insights. Batch processes calls, extracts metrics, and generates performance reports.",
+        category: "voice-audio",
+        tags: ["call-center", "analytics", "support", "quality", "batch"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Call Center Analytics",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Call Recordings",
+                        inputVariable: "callRecordings",
+                        allowedTypes: ["audio/*"],
+                        description: "Upload batch of call recordings"
+                    }
+                },
+                {
+                    id: "loop-calls",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Each Call",
+                        loopType: "forEach",
+                        collection: "{{callRecordings}}",
+                        itemVariable: "currentCall",
+                        indexVariable: "callIndex"
+                    }
+                },
+                {
+                    id: "audioInput-1",
+                    type: "audioInput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transcribe Call",
+                        provider: "openai",
+                        model: "whisper-1",
+                        inputVariable: "currentCall",
+                        outputVariable: "callTranscript"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Call",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this support call transcript:\n\n{{callTranscript.text}}\n\nProvide:\n1. Call sentiment (customer satisfaction 1-10)\n2. Issue category\n3. Resolution status (resolved/escalated/pending)\n4. Agent performance score\n5. Key moments (positive/negative)\n6. Improvement suggestions\n7. Call duration estimate\n8. Customer effort score",
+                        outputVariable: "callAnalysis"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Analysis",
+                        operation: "set",
+                        key: "call_{{callIndex}}",
+                        value: "{{callAnalysis.text}}"
+                    }
+                },
+                {
+                    id: "llm-aggregate",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Aggregate Metrics",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Aggregate call center analytics from all analyzed calls.\n\nProvide:\n1. Average satisfaction score\n2. Resolution rate\n3. Top issue categories\n4. Agent performance ranking\n5. Common improvement areas\n6. Trends and patterns\n7. Recommendations",
+                        outputVariable: "aggregateMetrics"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a call center analytics report:\n\n{{aggregateMetrics.text}}\n\nFormat as executive summary with charts data and actionable insights.",
+                        outputVariable: "analyticsReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analytics Report",
+                        outputName: "result",
+                        value: "{{analyticsReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "loop-calls" },
+                { id: "e2", source: "loop-calls", target: "audioInput-1" },
+                { id: "e3", source: "audioInput-1", target: "llm-analyze" },
+                { id: "e4", source: "llm-analyze", target: "shared-memory-store" },
+                { id: "e5", source: "shared-memory-store", target: "llm-aggregate" },
+                { id: "e6", source: "llm-aggregate", target: "llm-report" },
+                { id: "e7", source: "llm-report", target: "output-1" }
+            ]
+        }
+    },
+
+    // Voice & Audio 5: Voice-to-Task Creator
+    {
+        name: "Voice-to-Task Creator",
+        description:
+            "Create tasks from voice notes. Transcribes voice input, extracts tasks with details, and creates them in project management tools.",
+        category: "voice-audio",
+        tags: ["voice", "tasks", "productivity", "automation", "project-management"],
+        required_integrations: ["notion"],
+        featured: false,
+        definition: {
+            name: "Voice-to-Task Creator",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Voice Note",
+                        inputVariable: "voiceNote",
+                        allowedTypes: ["audio/*"],
+                        description: "Record or upload voice note with tasks"
+                    }
+                },
+                {
+                    id: "audioInput-1",
+                    type: "audioInput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transcribe Voice",
+                        provider: "openai",
+                        model: "whisper-1",
+                        inputVariable: "voiceNote",
+                        outputVariable: "transcript"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Tasks",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract tasks from this voice note:\n\n{{transcript.text}}\n\nFor each task, identify:\n1. Task title (clear, actionable)\n2. Description (if any context given)\n3. Due date (if mentioned, otherwise null)\n4. Priority (high/medium/low based on language)\n5. Assignee (if mentioned)\n6. Project/category (if mentioned)\n\nReturn as JSON array.",
+                        outputVariable: "extractedTasks"
+                    }
+                },
+                {
+                    id: "loop-tasks",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Each Task",
+                        loopType: "forEach",
+                        collection: "{{extractedTasks.text}}",
+                        itemVariable: "task",
+                        indexVariable: "taskIndex"
+                    }
+                },
+                {
+                    id: "integration-notion",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create in Notion",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Tasks"
+                    }
+                },
+                {
+                    id: "shared-memory-log",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Created Task",
+                        operation: "append",
+                        key: "created_tasks",
+                        value: "{{task}}"
+                    }
+                },
+                {
+                    id: "audioOutput-1",
+                    type: "audioOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Confirm Creation",
+                        provider: "openai",
+                        model: "tts-1",
+                        voice: "alloy",
+                        input: "Created {{extractedTasks.length}} tasks from your voice note.",
+                        outputVariable: "confirmation"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Created Tasks",
+                        outputName: "result",
+                        value: "{{extractedTasks}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "audioInput-1" },
+                { id: "e2", source: "audioInput-1", target: "llm-extract" },
+                { id: "e3", source: "llm-extract", target: "loop-tasks" },
+                { id: "e4", source: "loop-tasks", target: "integration-notion" },
+                { id: "e5", source: "integration-notion", target: "shared-memory-log" },
+                { id: "e6", source: "shared-memory-log", target: "audioOutput-1" },
+                { id: "e7", source: "audioOutput-1", target: "output-1" }
+            ]
+        }
+    },
+
+    // Voice & Audio 6: Interview Analyzer
+    {
+        name: "Interview Analyzer",
+        description:
+            "Analyze interview recordings for hiring decisions. Transcribes with speaker diarization, evaluates candidates, and generates structured feedback.",
+        category: "voice-audio",
+        tags: ["interview", "hiring", "analysis", "hr", "evaluation"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Interview Analyzer",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Interview Recording",
+                        inputVariable: "interviewRecording",
+                        allowedTypes: ["audio/*", "video/*"],
+                        description: "Upload interview recording"
+                    }
+                },
+                {
+                    id: "input-jd",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Job Requirements",
+                        inputName: "jobRequirements",
+                        inputVariable: "jobRequirements",
+                        inputType: "text",
+                        description: "Role requirements and evaluation criteria"
+                    }
+                },
+                {
+                    id: "audioInput-1",
+                    type: "audioInput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transcribe Interview",
+                        provider: "openai",
+                        model: "whisper-1",
+                        inputVariable: "interviewRecording",
+                        outputVariable: "transcript"
+                    }
+                },
+                {
+                    id: "llm-identify",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Identify Speakers",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this interview transcript and identify speakers:\n\n{{transcript.text}}\n\nLabel as:\n- Interviewer: questions, probing\n- Candidate: answers, responses\n\nReturn transcript with speaker labels.",
+                        outputVariable: "labeledTranscript"
+                    }
+                },
+                {
+                    id: "llm-evaluate",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Evaluate Candidate",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Evaluate this candidate based on the interview:\n\nJob Requirements: {{jobRequirements}}\n\nTranscript: {{labeledTranscript.text}}\n\nEvaluate:\n1. Technical competence (1-10)\n2. Communication skills (1-10)\n3. Problem-solving ability (1-10)\n4. Cultural fit indicators\n5. Red flags\n6. Strengths demonstrated\n7. Areas of concern\n8. Overall recommendation (strong yes/yes/maybe/no)",
+                        outputVariable: "evaluation"
+                    }
+                },
+                {
+                    id: "llm-questions",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Suggest Follow-ups",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Based on this interview evaluation:\n\n{{evaluation.text}}\n\nSuggest:\n1. Follow-up questions for next round\n2. Areas to probe deeper\n3. Reference check questions",
+                        outputVariable: "followUpQuestions"
+                    }
+                },
+                {
+                    id: "transform-report",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Report",
+                        transformType: "template",
+                        template:
+                            "# Interview Analysis Report\n\n## Evaluation\n{{evaluation.text}}\n\n## Follow-up Recommendations\n{{followUpQuestions.text}}",
+                        outputVariable: "interviewReport"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Interview Report",
+                        outputName: "result",
+                        value: "{{interviewReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "audioInput-1" },
+                { id: "e2", source: "input-jd", target: "llm-evaluate" },
+                { id: "e3", source: "audioInput-1", target: "llm-identify" },
+                { id: "e4", source: "llm-identify", target: "llm-evaluate" },
+                { id: "e5", source: "llm-evaluate", target: "llm-questions" },
+                { id: "e6", source: "llm-evaluate", target: "transform-report" },
+                { id: "e7", source: "llm-questions", target: "transform-report" },
+                { id: "e8", source: "transform-report", target: "output-1" }
+            ]
+        }
+    },
+
+    // Voice & Audio 7: Audiobook Narrator
+    {
+        name: "Audiobook Narrator",
+        description:
+            "Convert documents into audiobooks. Extracts text, optimizes for narration, generates chapter-by-chapter audio, and combines into final audiobook.",
+        category: "voice-audio",
+        tags: ["audiobook", "tts", "narration", "content", "accessibility"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Audiobook Narrator",
+            nodes: [
+                {
+                    id: "files-1",
+                    type: "files",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Upload Document",
+                        inputVariable: "document",
+                        allowedTypes: ["application/pdf", "text/*"],
+                        description: "Upload book or document to narrate"
+                    }
+                },
+                {
+                    id: "input-voice",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Voice Settings",
+                        inputName: "voiceSettings",
+                        inputVariable: "voiceSettings",
+                        inputType: "text",
+                        description: "Voice preference: alloy, echo, fable, onyx, nova, shimmer"
+                    }
+                },
+                {
+                    id: "llm-extract",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract & Structure",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract text from this document and structure for audiobook narration:\n\n1. Identify chapters/sections\n2. Remove non-narration elements (page numbers, headers)\n3. Add natural pauses (paragraph breaks)\n4. Mark emphasis points\n5. Handle abbreviations (spell out for speech)\n\nReturn as JSON with chapters array.",
+                        outputVariable: "structuredText"
+                    }
+                },
+                {
+                    id: "llm-optimize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Optimize for Narration",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Optimize this text for text-to-speech narration:\n\n{{structuredText.text}}\n\n1. Replace symbols with words\n2. Expand abbreviations\n3. Add SSML-style pauses\n4. Simplify complex punctuation\n5. Note pronunciation for unusual words",
+                        outputVariable: "narratableText"
+                    }
+                },
+                {
+                    id: "loop-chapters",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Narrate Each Chapter",
+                        loopType: "forEach",
+                        collection: "{{narratableText.text}}",
+                        itemVariable: "chapter",
+                        indexVariable: "chapterIndex"
+                    }
+                },
+                {
+                    id: "audioOutput-1",
+                    type: "audioOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Chapter Audio",
+                        provider: "openai",
+                        model: "tts-1-hd",
+                        voice: "{{voiceSettings}}",
+                        input: "{{chapter}}",
+                        outputVariable: "chapterAudio"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Chapter Audio",
+                        operation: "set",
+                        key: "chapter_{{chapterIndex}}",
+                        value: "{{chapterAudio}}"
+                    }
+                },
+                {
+                    id: "transform-compile",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Audiobook",
+                        transformType: "template",
+                        template: "Audiobook generated with {{chapterIndex}} chapters.",
+                        outputVariable: "audiobookInfo"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Audiobook",
+                        outputName: "result",
+                        value: "{{audiobookInfo}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "files-1", target: "llm-extract" },
+                { id: "e2", source: "llm-extract", target: "llm-optimize" },
+                { id: "e3", source: "llm-optimize", target: "loop-chapters" },
+                { id: "e4", source: "input-voice", target: "audioOutput-1" },
+                { id: "e5", source: "loop-chapters", target: "audioOutput-1" },
+                { id: "e6", source: "audioOutput-1", target: "shared-memory-store" },
+                { id: "e7", source: "shared-memory-store", target: "transform-compile" },
+                { id: "e8", source: "transform-compile", target: "output-1" }
+            ]
+        }
+    },
+
+    // Voice & Audio 8: Pronunciation Guide Generator
+    {
+        name: "Pronunciation Guide Generator",
+        description:
+            "Create audio pronunciation guides for terminology. Takes term lists, generates phonetic guides, and creates audio samples for each term.",
+        category: "voice-audio",
+        tags: ["pronunciation", "guide", "tts", "learning", "terminology"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Pronunciation Guide Generator",
+            nodes: [
+                {
+                    id: "input-terms",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Terms List",
+                        inputName: "termsList",
+                        inputVariable: "termsList",
+                        inputType: "text",
+                        description: "List of terms/names needing pronunciation (one per line)"
+                    }
+                },
+                {
+                    id: "input-context",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Context",
+                        inputName: "context",
+                        inputVariable: "context",
+                        inputType: "text",
+                        description: "Domain context (medical, legal, names, etc.)"
+                    }
+                },
+                {
+                    id: "llm-phonetics",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Phonetics",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create pronunciation guide for these terms:\n\nContext: {{context}}\nTerms:\n{{termsList}}\n\nFor each term provide:\n1. IPA pronunciation\n2. Simplified phonetic spelling\n3. Syllable breakdown\n4. Common mispronunciations to avoid\n5. Usage context/example sentence\n\nReturn as JSON array.",
+                        outputVariable: "phoneticGuide"
+                    }
+                },
+                {
+                    id: "loop-terms",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Each Audio",
+                        loopType: "forEach",
+                        collection: "{{phoneticGuide.text}}",
+                        itemVariable: "term",
+                        indexVariable: "termIndex"
+                    }
+                },
+                {
+                    id: "llm-script",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Audio Script",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Create a pronunciation audio script for: {{term}}\n\nFormat: '[Term]. [Pause] [Slow pronunciation]. [Pause] [Normal speed]. [Pause] [Example sentence].'\n\nReturn just the script text.",
+                        outputVariable: "audioScript"
+                    }
+                },
+                {
+                    id: "audioOutput-1",
+                    type: "audioOutput",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Audio",
+                        provider: "openai",
+                        model: "tts-1-hd",
+                        voice: "onyx",
+                        input: "{{audioScript.text}}",
+                        outputVariable: "termAudio"
+                    }
+                },
+                {
+                    id: "shared-memory-store",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Store Audio",
+                        operation: "set",
+                        key: "pronunciation_{{termIndex}}",
+                        value: "{{termAudio}}"
+                    }
+                },
+                {
+                    id: "transform-guide",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Guide",
+                        transformType: "template",
+                        template:
+                            "# Pronunciation Guide\n\nContext: {{context}}\n\n## Terms\n{{phoneticGuide.text}}\n\nAudio files generated for each term.",
+                        outputVariable: "pronunciationGuide"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Pronunciation Guide",
+                        outputName: "result",
+                        value: "{{pronunciationGuide}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-terms", target: "llm-phonetics" },
+                { id: "e2", source: "input-context", target: "llm-phonetics" },
+                { id: "e3", source: "llm-phonetics", target: "loop-terms" },
+                { id: "e4", source: "loop-terms", target: "llm-script" },
+                { id: "e5", source: "llm-script", target: "audioOutput-1" },
+                { id: "e6", source: "audioOutput-1", target: "shared-memory-store" },
+                { id: "e7", source: "shared-memory-store", target: "transform-guide" },
+                { id: "e8", source: "transform-guide", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // ADVANCED LOGIC (8 templates)
+    // ========================================================================
+
+    // Advanced Logic 1: Multi-Stage Approval Workflow
+    {
+        name: "Multi-Stage Approval Workflow",
+        description:
+            "Handle complex multi-level approvals with dynamic routing. Supports sequential approvers, escalation, and parallel approval tracks.",
+        category: "advanced-logic",
+        tags: ["approval", "workflow", "routing", "human-in-loop", "enterprise"],
+        required_integrations: ["slack"],
+        featured: true,
+        definition: {
+            name: "Multi-Stage Approval Workflow",
+            nodes: [
+                {
+                    id: "input-request",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Approval Request",
+                        inputName: "approvalRequest",
+                        inputVariable: "approvalRequest",
+                        inputType: "text",
+                        description: "What needs approval? Include amount/details."
+                    }
+                },
+                {
+                    id: "llm-determine",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Determine Approval Chain",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: 'Determine the approval chain for this request:\n\n{{approvalRequest}}\n\nBased on the request type and amount, define:\n1. Required approvers (in order)\n2. Approval thresholds\n3. Escalation rules\n4. Timeout actions\n\nReturn as JSON: {"approvers": [...], "thresholds": {...}, "escalation": {...}}',
+                        outputVariable: "approvalChain"
+                    }
+                },
+                {
+                    id: "shared-memory-init",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Initialize State",
+                        operation: "set",
+                        key: "approval_state",
+                        value: '{"currentLevel": 0, "approvals": [], "status": "pending"}'
+                    }
+                },
+                {
+                    id: "loop-approvers",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Approval Levels",
+                        loopType: "forEach",
+                        collection: "{{approvalChain.text}}",
+                        itemVariable: "approver",
+                        indexVariable: "level"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Request Approval",
+                        reviewPrompt:
+                            "Approval Request Level {{level}}:\n\n{{approvalRequest}}\n\nApprover: {{approver}}\n\nPrevious approvals: Check state\n\nOptions: Approve, Reject, Escalate",
+                        outputVariable: "approvalDecision"
+                    }
+                },
+                {
+                    id: "switch-decision",
+                    type: "switch",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Route by Decision",
+                        expression: "{{approvalDecision.decision}}",
+                        cases: [
+                            { value: "approve", label: "Approved" },
+                            { value: "reject", label: "Rejected" },
+                            { value: "escalate", label: "Escalate" }
+                        ],
+                        defaultCase: "approve"
+                    }
+                },
+                {
+                    id: "shared-memory-approve",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Record Approval",
+                        operation: "set",
+                        key: "approval_{{level}}",
+                        value: '{"approved": true, "by": "{{approver}}", "timestamp": "now"}'
+                    }
+                },
+                {
+                    id: "integration-slack-reject",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Rejection",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#approvals"
+                    }
+                },
+                {
+                    id: "llm-escalate",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Determine Escalation",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Escalation requested for approval. Current chain: {{approvalChain.text}}\n\nDetermine next level escalation approver.",
+                        outputVariable: "escalationPath"
+                    }
+                },
+                {
+                    id: "integration-slack-complete",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Completion",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#approvals"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Approval Result",
+                        outputName: "result",
+                        value: "{{approvalDecision}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-request", target: "llm-determine" },
+                { id: "e2", source: "llm-determine", target: "shared-memory-init" },
+                { id: "e3", source: "shared-memory-init", target: "loop-approvers" },
+                { id: "e4", source: "loop-approvers", target: "humanReview-1" },
+                { id: "e5", source: "humanReview-1", target: "switch-decision" },
+                {
+                    id: "e6",
+                    source: "switch-decision",
+                    target: "shared-memory-approve",
+                    sourceHandle: "approve"
+                },
+                {
+                    id: "e7",
+                    source: "switch-decision",
+                    target: "integration-slack-reject",
+                    sourceHandle: "reject"
+                },
+                {
+                    id: "e8",
+                    source: "switch-decision",
+                    target: "llm-escalate",
+                    sourceHandle: "escalate"
+                },
+                { id: "e9", source: "shared-memory-approve", target: "integration-slack-complete" },
+                { id: "e10", source: "integration-slack-complete", target: "output-1" },
+                { id: "e11", source: "integration-slack-reject", target: "output-1" },
+                { id: "e12", source: "llm-escalate", target: "humanReview-1" }
+            ]
+        }
+    },
+
+    // Advanced Logic 2: Retry with Exponential Backoff
+    {
+        name: "Retry with Exponential Backoff",
+        description:
+            "Robust API integration with automatic retries. Implements exponential backoff for failed requests with configurable retry limits.",
+        category: "advanced-logic",
+        tags: ["retry", "backoff", "api", "resilience", "error-handling"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Retry with Exponential Backoff",
+            nodes: [
+                {
+                    id: "input-request",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "API Request",
+                        inputName: "apiRequest",
+                        inputVariable: "apiRequest",
+                        inputType: "text",
+                        description: "API endpoint and parameters (JSON)"
+                    }
+                },
+                {
+                    id: "code-init",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Initialize Retry State",
+                        language: "javascript",
+                        code: "return { attempt: 0, maxAttempts: 5, baseDelay: 1000, lastError: null };",
+                        outputVariable: "retryState"
+                    }
+                },
+                {
+                    id: "loop-retry",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Retry Loop",
+                        loopType: "while",
+                        condition: "retryState.attempt < retryState.maxAttempts",
+                        itemVariable: "iteration"
+                    }
+                },
+                {
+                    id: "http-call",
+                    type: "http",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Make API Call",
+                        method: "POST",
+                        url: "{{apiRequest.url}}",
+                        body: "{{apiRequest.body}}",
+                        outputVariable: "apiResponse"
+                    }
+                },
+                {
+                    id: "conditional-success",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Call Successful?",
+                        condition: "apiResponse.status >= 200 && apiResponse.status < 300",
+                        outputVariable: "isSuccess"
+                    }
+                },
+                {
+                    id: "output-success",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Success Response",
+                        outputName: "result",
+                        value: "{{apiResponse}}"
+                    }
+                },
+                {
+                    id: "code-backoff",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Calculate Backoff",
+                        language: "javascript",
+                        code: "const state = inputs.retryState;\nconst delay = state.baseDelay * Math.pow(2, state.attempt);\nstate.attempt++;\nstate.lastError = inputs.apiResponse.error;\nreturn { ...state, nextDelay: delay };",
+                        outputVariable: "retryState"
+                    }
+                },
+                {
+                    id: "wait-backoff",
+                    type: "wait",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait Before Retry",
+                        duration: "{{retryState.nextDelay}}",
+                        description: "Exponential backoff wait"
+                    }
+                },
+                {
+                    id: "conditional-max",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Max Retries Reached?",
+                        condition: "retryState.attempt >= retryState.maxAttempts",
+                        outputVariable: "maxReached"
+                    }
+                },
+                {
+                    id: "output-failure",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "All Retries Failed",
+                        outputName: "error",
+                        value: "{{retryState}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-request", target: "code-init" },
+                { id: "e2", source: "code-init", target: "loop-retry" },
+                { id: "e3", source: "loop-retry", target: "http-call" },
+                { id: "e4", source: "http-call", target: "conditional-success" },
+                {
+                    id: "e5",
+                    source: "conditional-success",
+                    target: "output-success",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e6",
+                    source: "conditional-success",
+                    target: "code-backoff",
+                    sourceHandle: "false"
+                },
+                { id: "e7", source: "code-backoff", target: "wait-backoff" },
+                { id: "e8", source: "wait-backoff", target: "conditional-max" },
+                {
+                    id: "e9",
+                    source: "conditional-max",
+                    target: "loop-retry",
+                    sourceHandle: "false"
+                },
+                {
+                    id: "e10",
+                    source: "conditional-max",
+                    target: "output-failure",
+                    sourceHandle: "true"
+                }
+            ]
+        }
+    },
+
+    // Advanced Logic 3: Dynamic Workflow Router
+    {
+        name: "Dynamic Workflow Router",
+        description:
+            "AI-driven workflow path selection. Classifies incoming requests and routes to appropriate sub-workflows based on intent.",
+        category: "advanced-logic",
+        tags: ["router", "classification", "dynamic", "ai-routing", "intent"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "Dynamic Workflow Router",
+            nodes: [
+                {
+                    id: "input-request",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "User Request",
+                        inputName: "userRequest",
+                        inputVariable: "userRequest",
+                        inputType: "text",
+                        description: "Enter the user request to route"
+                    }
+                },
+                {
+                    id: "router-classify",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Classify & Route",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Classify this request and route to the appropriate handler:\n\n{{userRequest}}\n\nCategories:\n- support: Technical issues, bugs, how-to questions\n- sales: Pricing, demo requests, enterprise inquiries\n- billing: Payment issues, invoices, refunds\n- feedback: Feature requests, complaints, praise\n- other: Anything that doesn't fit",
+                        routes: [
+                            { value: "support", label: "Support" },
+                            { value: "sales", label: "Sales" },
+                            { value: "billing", label: "Billing" },
+                            { value: "feedback", label: "Feedback" }
+                        ],
+                        defaultRoute: "other",
+                        outputVariable: "routeDecision"
+                    }
+                },
+                {
+                    id: "llm-support",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Handle Support",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Handle this support request:\n\n{{userRequest}}\n\nProvide:\n1. Immediate troubleshooting steps\n2. Relevant documentation links\n3. Escalation criteria if needed",
+                        outputVariable: "supportResponse"
+                    }
+                },
+                {
+                    id: "llm-sales",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Handle Sales",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Handle this sales inquiry:\n\n{{userRequest}}\n\nProvide:\n1. Product information\n2. Pricing overview\n3. Next steps (demo, trial, contact)",
+                        outputVariable: "salesResponse"
+                    }
+                },
+                {
+                    id: "llm-billing",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Handle Billing",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Handle this billing inquiry:\n\n{{userRequest}}\n\nProvide:\n1. Billing policy information\n2. Steps to resolve\n3. Contact for complex issues",
+                        outputVariable: "billingResponse"
+                    }
+                },
+                {
+                    id: "llm-feedback",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Handle Feedback",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Acknowledge this feedback:\n\n{{userRequest}}\n\nProvide:\n1. Thank the user\n2. Summarize their feedback\n3. Set expectations for follow-up",
+                        outputVariable: "feedbackResponse"
+                    }
+                },
+                {
+                    id: "humanReview-other",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Manual Routing",
+                        reviewPrompt:
+                            "This request needs manual routing:\n\n{{userRequest}}\n\nPlease route to appropriate team.",
+                        outputVariable: "manualRoute"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Response",
+                        outputName: "result",
+                        value: "{{routeDecision}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-request", target: "router-classify" },
+                {
+                    id: "e2",
+                    source: "router-classify",
+                    target: "llm-support",
+                    sourceHandle: "support"
+                },
+                { id: "e3", source: "router-classify", target: "llm-sales", sourceHandle: "sales" },
+                {
+                    id: "e4",
+                    source: "router-classify",
+                    target: "llm-billing",
+                    sourceHandle: "billing"
+                },
+                {
+                    id: "e5",
+                    source: "router-classify",
+                    target: "llm-feedback",
+                    sourceHandle: "feedback"
+                },
+                {
+                    id: "e6",
+                    source: "router-classify",
+                    target: "humanReview-other",
+                    sourceHandle: "default"
+                },
+                { id: "e7", source: "llm-support", target: "output-1" },
+                { id: "e8", source: "llm-sales", target: "output-1" },
+                { id: "e9", source: "llm-billing", target: "output-1" },
+                { id: "e10", source: "llm-feedback", target: "output-1" },
+                { id: "e11", source: "humanReview-other", target: "output-1" }
+            ]
+        }
+    },
+
+    // Advanced Logic 4: Scheduled Task Orchestrator
+    {
+        name: "Scheduled Task Orchestrator",
+        description:
+            "Run different tasks based on time and schedule. Routes to hourly, daily, weekly, or monthly tasks based on current time.",
+        category: "advanced-logic",
+        tags: ["schedule", "orchestration", "cron", "automation", "tasks"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Scheduled Task Orchestrator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Hourly Check",
+                        triggerType: "schedule",
+                        schedule: "0 * * * *"
+                    }
+                },
+                {
+                    id: "code-time",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Determine Task Type",
+                        language: "javascript",
+                        code: "const now = new Date();\nconst hour = now.getHours();\nconst day = now.getDay();\nconst date = now.getDate();\n\nlet taskType = 'hourly';\nif (date === 1 && hour === 9) taskType = 'monthly';\nelse if (day === 1 && hour === 9) taskType = 'weekly';\nelse if (hour === 9) taskType = 'daily-morning';\nelse if (hour === 18) taskType = 'daily-evening';\n\nreturn { taskType, hour, day, date };",
+                        outputVariable: "timeContext"
+                    }
+                },
+                {
+                    id: "switch-task",
+                    type: "switch",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Route by Task Type",
+                        expression: "{{timeContext.taskType}}",
+                        cases: [
+                            { value: "hourly", label: "Hourly Tasks" },
+                            { value: "daily-morning", label: "Morning Tasks" },
+                            { value: "daily-evening", label: "Evening Tasks" },
+                            { value: "weekly", label: "Weekly Tasks" },
+                            { value: "monthly", label: "Monthly Tasks" }
+                        ],
+                        defaultCase: "hourly"
+                    }
+                },
+                {
+                    id: "llm-hourly",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Run Hourly Tasks",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Execute hourly tasks:\n1. Health checks\n2. Cache refresh\n3. Metrics collection\n\nReturn task results summary.",
+                        outputVariable: "hourlyResult"
+                    }
+                },
+                {
+                    id: "llm-morning",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Run Morning Tasks",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Execute morning daily tasks:\n1. Generate daily digest\n2. Check overnight alerts\n3. Prepare day's schedule\n\nReturn task results.",
+                        outputVariable: "morningResult"
+                    }
+                },
+                {
+                    id: "llm-evening",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Run Evening Tasks",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Execute evening daily tasks:\n1. Daily summary report\n2. Log aggregation\n3. Next day preparation\n\nReturn task results.",
+                        outputVariable: "eveningResult"
+                    }
+                },
+                {
+                    id: "llm-weekly",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Run Weekly Tasks",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Execute weekly tasks:\n1. Weekly analytics report\n2. Trend analysis\n3. Performance review\n4. Cleanup operations\n\nReturn task results.",
+                        outputVariable: "weeklyResult"
+                    }
+                },
+                {
+                    id: "llm-monthly",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Run Monthly Tasks",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Execute monthly tasks:\n1. Monthly report generation\n2. Invoice processing\n3. Usage analysis\n4. Compliance checks\n5. Archive old data\n\nReturn task results.",
+                        outputVariable: "monthlyResult"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Task Results",
+                        outputName: "result",
+                        value: "{{timeContext}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "code-time" },
+                { id: "e2", source: "code-time", target: "switch-task" },
+                { id: "e3", source: "switch-task", target: "llm-hourly", sourceHandle: "hourly" },
+                {
+                    id: "e4",
+                    source: "switch-task",
+                    target: "llm-morning",
+                    sourceHandle: "daily-morning"
+                },
+                {
+                    id: "e5",
+                    source: "switch-task",
+                    target: "llm-evening",
+                    sourceHandle: "daily-evening"
+                },
+                { id: "e6", source: "switch-task", target: "llm-weekly", sourceHandle: "weekly" },
+                { id: "e7", source: "switch-task", target: "llm-monthly", sourceHandle: "monthly" },
+                { id: "e8", source: "llm-hourly", target: "output-1" },
+                { id: "e9", source: "llm-morning", target: "output-1" },
+                { id: "e10", source: "llm-evening", target: "output-1" },
+                { id: "e11", source: "llm-weekly", target: "output-1" },
+                { id: "e12", source: "llm-monthly", target: "output-1" }
+            ]
+        }
+    },
+
+    // Advanced Logic 5: Saga Pattern (Compensating Transactions)
+    {
+        name: "Saga Pattern Workflow",
+        description:
+            "Multi-step transactions with automatic rollback on failure. Implements the saga pattern with compensating transactions for each step.",
+        category: "advanced-logic",
+        tags: ["saga", "transactions", "rollback", "compensation", "reliability"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Saga Pattern Workflow",
+            nodes: [
+                {
+                    id: "input-transaction",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transaction Request",
+                        inputName: "transactionRequest",
+                        inputVariable: "transactionRequest",
+                        inputType: "text",
+                        description: "Multi-step transaction details"
+                    }
+                },
+                {
+                    id: "code-init",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Initialize Saga",
+                        language: "javascript",
+                        code: "return {\n  sagaId: 'saga_' + Date.now(),\n  steps: [\n    { name: 'reserve_inventory', status: 'pending', compensation: 'release_inventory' },\n    { name: 'charge_payment', status: 'pending', compensation: 'refund_payment' },\n    { name: 'create_order', status: 'pending', compensation: 'cancel_order' },\n    { name: 'send_notification', status: 'pending', compensation: 'none' }\n  ],\n  completedSteps: [],\n  currentStep: 0\n};",
+                        outputVariable: "sagaState"
+                    }
+                },
+                {
+                    id: "loop-steps",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Execute Saga Steps",
+                        loopType: "forEach",
+                        collection: "{{sagaState.steps}}",
+                        itemVariable: "step",
+                        indexVariable: "stepIndex"
+                    }
+                },
+                {
+                    id: "llm-execute",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Execute Step",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: 'Execute saga step: {{step.name}}\n\nTransaction: {{transactionRequest}}\n\nSimulate execution and return: {"success": true/false, "result": "...", "error": null/"..."}',
+                        outputVariable: "stepResult"
+                    }
+                },
+                {
+                    id: "conditional-success",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Step Successful?",
+                        condition: "stepResult.text.includes('\"success\": true')",
+                        outputVariable: "stepSuccess"
+                    }
+                },
+                {
+                    id: "shared-memory-log",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Completed Step",
+                        operation: "append",
+                        key: "completed_steps",
+                        value: "{{step}}"
+                    }
+                },
+                {
+                    id: "loop-compensate",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Execute Compensations",
+                        loopType: "forEach",
+                        collection: "{{sagaState.completedSteps}}",
+                        itemVariable: "completedStep",
+                        indexVariable: "compIndex"
+                    }
+                },
+                {
+                    id: "llm-compensate",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Execute Compensation",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Execute compensation action: {{completedStep.compensation}}\n\nOriginal step: {{completedStep.name}}\n\nReturn compensation result.",
+                        outputVariable: "compensationResult"
+                    }
+                },
+                {
+                    id: "output-success",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transaction Complete",
+                        outputName: "result",
+                        value: "{{sagaState}}"
+                    }
+                },
+                {
+                    id: "output-failure",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transaction Rolled Back",
+                        outputName: "error",
+                        value: "{{sagaState}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-transaction", target: "code-init" },
+                { id: "e2", source: "code-init", target: "loop-steps" },
+                { id: "e3", source: "loop-steps", target: "llm-execute" },
+                { id: "e4", source: "llm-execute", target: "conditional-success" },
+                {
+                    id: "e5",
+                    source: "conditional-success",
+                    target: "shared-memory-log",
+                    sourceHandle: "true"
+                },
+                {
+                    id: "e6",
+                    source: "conditional-success",
+                    target: "loop-compensate",
+                    sourceHandle: "false"
+                },
+                { id: "e7", source: "shared-memory-log", target: "output-success" },
+                { id: "e8", source: "loop-compensate", target: "llm-compensate" },
+                { id: "e9", source: "llm-compensate", target: "output-failure" }
+            ]
+        }
+    },
+
+    // Advanced Logic 6: Rate-Limited Batch Processor
+    {
+        name: "Rate-Limited Batch Processor",
+        description:
+            "Process items while respecting API rate limits. Tracks request rates and waits when approaching limits.",
+        category: "advanced-logic",
+        tags: ["rate-limit", "batch", "api", "throttling", "processing"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Rate-Limited Batch Processor",
+            nodes: [
+                {
+                    id: "input-items",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Items to Process",
+                        inputName: "items",
+                        inputVariable: "items",
+                        inputType: "text",
+                        description: "JSON array of items to process"
+                    }
+                },
+                {
+                    id: "input-ratelimit",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Rate Limit Config",
+                        inputName: "rateLimit",
+                        inputVariable: "rateLimit",
+                        inputType: "text",
+                        defaultValue: '{"maxPerMinute": 60, "maxPerHour": 1000}'
+                    }
+                },
+                {
+                    id: "code-init",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Initialize Rate Tracker",
+                        language: "javascript",
+                        code: "const config = JSON.parse(inputs.rateLimit);\nreturn {\n  processed: 0,\n  minuteCount: 0,\n  hourCount: 0,\n  lastMinuteReset: Date.now(),\n  lastHourReset: Date.now(),\n  maxPerMinute: config.maxPerMinute,\n  maxPerHour: config.maxPerHour\n};",
+                        outputVariable: "rateTracker"
+                    }
+                },
+                {
+                    id: "loop-items",
+                    type: "loop",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Each Item",
+                        loopType: "forEach",
+                        collection: "{{items}}",
+                        itemVariable: "currentItem",
+                        indexVariable: "itemIndex"
+                    }
+                },
+                {
+                    id: "code-check-rate",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Rate Limit",
+                        language: "javascript",
+                        code: "const tracker = inputs.rateTracker;\nconst now = Date.now();\n\n// Reset counters if time windows passed\nif (now - tracker.lastMinuteReset > 60000) {\n  tracker.minuteCount = 0;\n  tracker.lastMinuteReset = now;\n}\nif (now - tracker.lastHourReset > 3600000) {\n  tracker.hourCount = 0;\n  tracker.lastHourReset = now;\n}\n\nconst nearMinuteLimit = tracker.minuteCount >= tracker.maxPerMinute * 0.9;\nconst nearHourLimit = tracker.hourCount >= tracker.maxPerHour * 0.9;\nconst waitTime = nearMinuteLimit ? 60000 - (now - tracker.lastMinuteReset) : 0;\n\nreturn { ...tracker, needsWait: nearMinuteLimit, waitTime };",
+                        outputVariable: "rateTracker"
+                    }
+                },
+                {
+                    id: "conditional-wait",
+                    type: "conditional",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Needs Wait?",
+                        condition: "rateTracker.needsWait === true",
+                        outputVariable: "shouldWait"
+                    }
+                },
+                {
+                    id: "wait-rate",
+                    type: "wait",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait for Rate Reset",
+                        duration: "{{rateTracker.waitTime}}",
+                        description: "Wait until rate limit window resets"
+                    }
+                },
+                {
+                    id: "llm-process",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Item",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Process this item:\n\n{{currentItem}}\n\nReturn processing result.",
+                        outputVariable: "itemResult"
+                    }
+                },
+                {
+                    id: "code-update",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Counters",
+                        language: "javascript",
+                        code: "const tracker = inputs.rateTracker;\ntracker.processed++;\ntracker.minuteCount++;\ntracker.hourCount++;\nreturn tracker;",
+                        outputVariable: "rateTracker"
+                    }
+                },
+                {
+                    id: "shared-memory-progress",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Progress",
+                        operation: "set",
+                        key: "progress",
+                        value: "{{rateTracker}}"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Processing Complete",
+                        outputName: "result",
+                        value: "{{rateTracker}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-items", target: "code-init" },
+                { id: "e2", source: "input-ratelimit", target: "code-init" },
+                { id: "e3", source: "code-init", target: "loop-items" },
+                { id: "e4", source: "loop-items", target: "code-check-rate" },
+                { id: "e5", source: "code-check-rate", target: "conditional-wait" },
+                { id: "e6", source: "conditional-wait", target: "wait-rate", sourceHandle: "true" },
+                {
+                    id: "e7",
+                    source: "conditional-wait",
+                    target: "llm-process",
+                    sourceHandle: "false"
+                },
+                { id: "e8", source: "wait-rate", target: "llm-process" },
+                { id: "e9", source: "llm-process", target: "code-update" },
+                { id: "e10", source: "code-update", target: "shared-memory-progress" },
+                { id: "e11", source: "shared-memory-progress", target: "output-1" }
+            ]
+        }
+    },
+
+    // Advanced Logic 7: State Machine Workflow
+    {
+        name: "State Machine Workflow",
+        description:
+            "Implement complex state machines with persistent state. Manages entity state transitions with validation and history tracking.",
+        category: "advanced-logic",
+        tags: ["state-machine", "fsm", "transitions", "persistence", "workflow"],
+        required_integrations: [],
+        featured: true,
+        definition: {
+            name: "State Machine Workflow",
+            nodes: [
+                {
+                    id: "input-event",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Event",
+                        inputName: "event",
+                        inputVariable: "event",
+                        inputType: "text",
+                        description: "Event type and entity ID (JSON)"
+                    }
+                },
+                {
+                    id: "shared-memory-get",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Current State",
+                        operation: "get",
+                        key: "state_{{event.entityId}}",
+                        outputVariable: "currentState"
+                    }
+                },
+                {
+                    id: "code-default",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Apply Default State",
+                        language: "javascript",
+                        code: "const current = inputs.currentState || { state: 'draft', history: [] };\nreturn current;",
+                        outputVariable: "stateData"
+                    }
+                },
+                {
+                    id: "switch-state",
+                    type: "switch",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Current State",
+                        expression: "{{stateData.state}}",
+                        cases: [
+                            { value: "draft", label: "Draft" },
+                            { value: "pending_review", label: "Pending Review" },
+                            { value: "approved", label: "Approved" },
+                            { value: "rejected", label: "Rejected" },
+                            { value: "published", label: "Published" }
+                        ],
+                        defaultCase: "draft"
+                    }
+                },
+                {
+                    id: "llm-draft",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Handle Draft State",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: 'Entity in DRAFT state received event: {{event}}\n\nValid transitions: submit -> pending_review\n\nReturn: {"newState": "...", "valid": true/false, "message": "..."}',
+                        outputVariable: "draftTransition"
+                    }
+                },
+                {
+                    id: "llm-pending",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Handle Pending Review",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: 'Entity in PENDING_REVIEW state received event: {{event}}\n\nValid transitions: approve -> approved, reject -> rejected, revise -> draft\n\nReturn: {"newState": "...", "valid": true/false, "message": "..."}',
+                        outputVariable: "pendingTransition"
+                    }
+                },
+                {
+                    id: "llm-approved",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Handle Approved State",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: 'Entity in APPROVED state received event: {{event}}\n\nValid transitions: publish -> published, revoke -> draft\n\nReturn: {"newState": "...", "valid": true/false, "message": "..."}',
+                        outputVariable: "approvedTransition"
+                    }
+                },
+                {
+                    id: "code-update-state",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update State",
+                        language: "javascript",
+                        code: "const transition = inputs.transition;\nconst stateData = inputs.stateData;\nif (transition.valid) {\n  stateData.state = transition.newState;\n  stateData.history.push({ from: stateData.state, to: transition.newState, at: new Date().toISOString(), event: inputs.event });\n}\nreturn { ...stateData, lastTransition: transition };",
+                        outputVariable: "newStateData"
+                    }
+                },
+                {
+                    id: "shared-memory-set",
+                    type: "shared-memory",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Persist State",
+                        operation: "set",
+                        key: "state_{{event.entityId}}",
+                        value: "{{newStateData}}"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "State Result",
+                        outputName: "result",
+                        value: "{{newStateData}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-event", target: "shared-memory-get" },
+                { id: "e2", source: "shared-memory-get", target: "code-default" },
+                { id: "e3", source: "code-default", target: "switch-state" },
+                { id: "e4", source: "switch-state", target: "llm-draft", sourceHandle: "draft" },
+                {
+                    id: "e5",
+                    source: "switch-state",
+                    target: "llm-pending",
+                    sourceHandle: "pending_review"
+                },
+                {
+                    id: "e6",
+                    source: "switch-state",
+                    target: "llm-approved",
+                    sourceHandle: "approved"
+                },
+                { id: "e7", source: "llm-draft", target: "code-update-state" },
+                { id: "e8", source: "llm-pending", target: "code-update-state" },
+                { id: "e9", source: "llm-approved", target: "code-update-state" },
+                { id: "e10", source: "code-update-state", target: "shared-memory-set" },
+                { id: "e11", source: "shared-memory-set", target: "output-1" }
+            ]
+        }
+    },
+
+    // Advanced Logic 8: Parallel Processing with Aggregation
+    {
+        name: "Parallel Processing with Aggregation",
+        description:
+            "Process items in parallel batches and aggregate results. Splits work into parallel tracks and combines results at the end.",
+        category: "advanced-logic",
+        tags: ["parallel", "batch", "aggregation", "performance", "processing"],
+        required_integrations: [],
+        featured: false,
+        definition: {
+            name: "Parallel Processing with Aggregation",
+            nodes: [
+                {
+                    id: "input-items",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Items to Process",
+                        inputName: "items",
+                        inputVariable: "items",
+                        inputType: "text",
+                        description: "Large list of items to process in parallel"
+                    }
+                },
+                {
+                    id: "code-split",
+                    type: "code",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Split Into Batches",
+                        language: "javascript",
+                        code: "const items = JSON.parse(inputs.items);\nconst batchSize = 10;\nconst batches = [];\nfor (let i = 0; i < items.length; i += batchSize) {\n  batches.push(items.slice(i, i + batchSize));\n}\nreturn { batches, totalItems: items.length, batchCount: batches.length };",
+                        outputVariable: "batchedItems"
+                    }
+                },
+                {
+                    id: "llm-batch1",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Batch 1",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Process this batch of items:\n\n{{batchedItems.batches[0]}}\n\nReturn processing results as JSON array.",
+                        outputVariable: "batch1Result"
+                    }
+                },
+                {
+                    id: "llm-batch2",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Batch 2",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Process this batch of items:\n\n{{batchedItems.batches[1]}}\n\nReturn processing results as JSON array.",
+                        outputVariable: "batch2Result"
+                    }
+                },
+                {
+                    id: "llm-batch3",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Process Batch 3",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Process this batch of items:\n\n{{batchedItems.batches[2]}}\n\nReturn processing results as JSON array.",
+                        outputVariable: "batch3Result"
+                    }
+                },
+                {
+                    id: "transform-aggregate",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Aggregate Results",
+                        transformType: "merge",
+                        sources: ["{{batch1Result}}", "{{batch2Result}}", "{{batch3Result}}"],
+                        outputVariable: "aggregatedResults"
+                    }
+                },
+                {
+                    id: "llm-summarize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Summarize Processing",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Summarize the parallel processing results:\n\nTotal items: {{batchedItems.totalItems}}\nBatches: {{batchedItems.batchCount}}\nResults: {{aggregatedResults}}\n\nProvide:\n1. Success count\n2. Failure count\n3. Processing patterns\n4. Recommendations",
+                        outputVariable: "processSummary"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Processing Results",
+                        outputName: "result",
+                        value: "{{processSummary}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-items", target: "code-split" },
+                { id: "e2", source: "code-split", target: "llm-batch1" },
+                { id: "e3", source: "code-split", target: "llm-batch2" },
+                { id: "e4", source: "code-split", target: "llm-batch3" },
+                { id: "e5", source: "llm-batch1", target: "transform-aggregate" },
+                { id: "e6", source: "llm-batch2", target: "transform-aggregate" },
+                { id: "e7", source: "llm-batch3", target: "transform-aggregate" },
+                { id: "e8", source: "transform-aggregate", target: "llm-summarize" },
+                { id: "e9", source: "llm-summarize", target: "output-1" }
+            ]
+        }
     }
 ];
 

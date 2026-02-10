@@ -3,28 +3,18 @@
  *
  * Slide-out chat panel for AI-powered workflow generation.
  * Supports extended thinking/reasoning display and workflow plan previews.
+ * Refactored to use unified chat components.
  */
 
-import {
-    Bot,
-    ChevronDown,
-    ChevronRight,
-    RefreshCw,
-    RotateCcw,
-    Send,
-    Sparkles,
-    User,
-    X
-} from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
+import { Bot, ChevronDown, ChevronRight, RefreshCw, Sparkles } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import remarkGfm from "remark-gfm";
 import {
     modelSupportsThinking,
     getDefaultThinkingBudget,
     getRandomExamplePrompts
 } from "@flowmaestro/shared";
+import { useChatInput } from "../hooks/useChatInput";
 import { initiateGenerationChat, createWorkflowFromPlan } from "../lib/api";
 import { logger } from "../lib/logger";
 import { streamGenerationChatResponse } from "../lib/sse";
@@ -33,16 +23,19 @@ import {
     useWorkflowGenerationChatStore,
     type GenerationMessage
 } from "../stores/workflowGenerationChatStore";
+import {
+    ResizablePanel,
+    ChatMessageList,
+    DefaultEmptyState,
+    ChatInput,
+    ClearChatButton,
+    ChatBubble
+} from "./chat/core";
 import { ThinkingBlock } from "./chat/ThinkingBlock";
 import { WorkflowPlanPreview } from "./chat/WorkflowPlanPreview";
-import { Button } from "./common/Button";
-import { ConfirmDialog } from "./common/ConfirmDialog";
-import { Input } from "./common/Input";
 import { LLMConnectionDropdown } from "./common/LLMConnectionDropdown";
+import { MarkdownRenderer } from "./common/MarkdownRenderer";
 import { TypingDots } from "./common/TypingDots";
-
-const MIN_WIDTH = 400;
-const MAX_WIDTH = 800;
 
 export function WorkflowGenerationChatPanel() {
     const {
@@ -77,61 +70,14 @@ export function WorkflowGenerationChatPanel() {
 
     const navigate = useNavigate();
 
-    // Local state
-    const [input, setInput] = useState("");
-    const [isResizing, setIsResizing] = useState(false);
-    const [showClearConfirm, setShowClearConfirm] = useState(false);
+    // Local state for example prompts
     const [examplePrompts, setExamplePrompts] = useState<string[]>(() =>
         getRandomExamplePrompts(4)
     );
     const [isExamplesExpanded, setIsExamplesExpanded] = useState(true);
 
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const resizeStartX = useRef(0);
-    const resizeStartWidth = useRef(panelWidth);
+    // Stream cleanup ref
     const cleanupStreamRef = useRef<(() => void) | null>(null);
-
-    // Auto-scroll to bottom when messages change
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, isThinking]);
-
-    // Handle resize
-    const handleResizeStart = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setIsResizing(true);
-        resizeStartX.current = e.clientX;
-        resizeStartWidth.current = panelWidth;
-    };
-
-    useEffect(() => {
-        const handleResize = (e: MouseEvent) => {
-            if (!isResizing) return;
-
-            const deltaX = resizeStartX.current - e.clientX;
-            const newWidth = Math.max(
-                MIN_WIDTH,
-                Math.min(MAX_WIDTH, resizeStartWidth.current + deltaX)
-            );
-            setPanelWidth(newWidth);
-        };
-
-        const handleResizeEnd = () => {
-            setIsResizing(false);
-        };
-
-        if (isResizing) {
-            document.addEventListener("mousemove", handleResize);
-            document.addEventListener("mouseup", handleResizeEnd);
-
-            return () => {
-                document.removeEventListener("mousemove", handleResize);
-                document.removeEventListener("mouseup", handleResizeEnd);
-            };
-        }
-
-        return undefined;
-    }, [isResizing, setPanelWidth]);
 
     // Cleanup stream on unmount
     useEffect(() => {
@@ -164,89 +110,106 @@ export function WorkflowGenerationChatPanel() {
         : false;
 
     // Handle send message
-    const handleSend = async () => {
-        if (!input.trim() || isStreaming) return;
-
-        const message = input.trim();
-        setInput("");
-
-        // Check if connection is selected
-        if (!selectedConnectionId || !selectedModel) {
-            logger.error("No LLM connection selected");
-            return;
-        }
-
-        // Add user message
-        addUserMessage(message);
-
-        // Add empty assistant message for streaming
-        const messageId = startAssistantMessage();
-
-        try {
-            // Initiate chat execution
-            const response = await initiateGenerationChat({
-                message,
-                conversationHistory: messages.map((m) => ({
-                    id: m.id,
-                    role: m.role,
-                    content: m.content,
-                    thinking: m.thinking,
-                    timestamp: m.timestamp
-                })),
-                connectionId: selectedConnectionId,
-                model: selectedModel,
-                enableThinking: currentModelSupportsThinking && enableThinking,
-                thinkingBudget: enableThinking ? thinkingBudget : undefined
-            });
-
-            if (!response.success || !response.data?.executionId) {
-                throw new Error("Failed to initiate generation chat");
+    const handleSendMessage = useCallback(
+        async (message: string) => {
+            // Check if connection is selected
+            if (!selectedConnectionId || !selectedModel) {
+                logger.error("No LLM connection selected");
+                return;
             }
 
-            const { executionId } = response.data;
+            // Add user message
+            addUserMessage(message);
 
-            // Open SSE stream
-            cleanupStreamRef.current = streamGenerationChatResponse(executionId, {
-                onThinkingStart: () => {
-                    // Already handled by appendToThinking
-                },
-                onThinkingToken: (token) => {
-                    appendToThinking(token);
-                },
-                onThinkingComplete: (content) => {
-                    completeThinking(content);
-                },
-                onToken: (token) => {
-                    appendToResponse(token);
-                },
-                onPlanDetected: (plan) => {
-                    setPlan(plan);
-                },
-                onComplete: (data) => {
-                    completeAssistantMessage(data.response, data.thinking, data.workflowPlan);
-                    cleanupStreamRef.current = null;
-                },
-                onError: (error) => {
-                    setMessageError(messageId, error);
-                    cleanupStreamRef.current = null;
+            // Add empty assistant message for streaming
+            const messageId = startAssistantMessage();
+
+            try {
+                // Initiate chat execution
+                const response = await initiateGenerationChat({
+                    message,
+                    conversationHistory: messages.map((m) => ({
+                        id: m.id,
+                        role: m.role,
+                        content: m.content,
+                        thinking: m.thinking,
+                        timestamp: m.timestamp
+                    })),
+                    connectionId: selectedConnectionId,
+                    model: selectedModel,
+                    enableThinking: currentModelSupportsThinking && enableThinking,
+                    thinkingBudget: enableThinking ? thinkingBudget : undefined
+                });
+
+                if (!response.success || !response.data?.executionId) {
+                    throw new Error("Failed to initiate generation chat");
                 }
-            });
-        } catch (error) {
-            logger.error("Generation chat error", error);
-            setMessageError(
-                messageId,
-                error instanceof Error ? error.message : "Failed to get AI response"
-            );
-        }
-    };
 
-    // Handle key press
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-    };
+                const { executionId } = response.data;
+
+                // Open SSE stream
+                cleanupStreamRef.current = streamGenerationChatResponse(executionId, {
+                    onThinkingStart: () => {
+                        // Already handled by appendToThinking
+                    },
+                    onThinkingToken: (token) => {
+                        appendToThinking(token);
+                    },
+                    onThinkingComplete: (content) => {
+                        completeThinking(content);
+                    },
+                    onToken: (token) => {
+                        appendToResponse(token);
+                    },
+                    onPlanDetected: (plan) => {
+                        setPlan(plan);
+                    },
+                    onComplete: (data) => {
+                        completeAssistantMessage(data.response, data.thinking, data.workflowPlan);
+                        cleanupStreamRef.current = null;
+                    },
+                    onError: (error) => {
+                        setMessageError(messageId, error);
+                        cleanupStreamRef.current = null;
+                    }
+                });
+            } catch (error) {
+                logger.error("Generation chat error", error);
+                setMessageError(
+                    messageId,
+                    error instanceof Error ? error.message : "Failed to get AI response"
+                );
+            }
+        },
+        [
+            selectedConnectionId,
+            selectedModel,
+            addUserMessage,
+            startAssistantMessage,
+            messages,
+            currentModelSupportsThinking,
+            enableThinking,
+            thinkingBudget,
+            appendToThinking,
+            completeThinking,
+            appendToResponse,
+            setPlan,
+            completeAssistantMessage,
+            setMessageError
+        ]
+    );
+
+    // Use the chat input hook
+    const {
+        value: inputValue,
+        setValue: setInputValue,
+        onChange: handleInputChange,
+        onKeyPress: handleKeyPress,
+        handleSend
+    } = useChatInput({
+        onSend: handleSendMessage,
+        disabled: isStreaming
+    });
 
     // Handle create workflow from plan
     const handleCreateWorkflow = async () => {
@@ -274,17 +237,11 @@ export function WorkflowGenerationChatPanel() {
 
     // Handle refine plan
     const handleRefinePlan = (feedback: string) => {
-        setInput(feedback);
+        setInputValue(feedback);
         // Auto-send the feedback
         setTimeout(() => {
-            handleSend();
-        }, 100);
-    };
-
-    // Handle clear chat
-    const handleClearChat = () => {
-        clearChat();
-        setShowClearConfirm(false);
+            handleSendMessage(feedback);
+        }, 50);
     };
 
     // Handle refresh example prompts
@@ -294,36 +251,21 @@ export function WorkflowGenerationChatPanel() {
 
     // Handle click on example prompt
     const handleExamplePromptClick = (prompt: string) => {
-        setInput(prompt);
+        setInputValue(prompt);
     };
 
     if (!isPanelOpen) return null;
 
     return (
-        <div
-            className="relative h-full bg-card border-l border-border shadow-2xl flex flex-col flex-shrink-0"
-            style={{ width: panelWidth }}
-        >
-            {/* Resize Handle */}
-            <div
-                className={cn(
-                    "absolute top-0 left-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/20 transition-colors",
-                    isResizing && "bg-primary/30"
-                )}
-                onMouseDown={handleResizeStart}
-            >
-                <div className="absolute top-0 left-0 bottom-0 w-3 -translate-x-1/2" />
-            </div>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-                <div className="flex items-center gap-2">
+        <ResizablePanel
+            header={
+                <>
                     <Sparkles className="w-4 h-4 text-primary" />
                     <h3 className="text-sm font-semibold">Generate Workflow</h3>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    {/* Connection Selector */}
+                </>
+            }
+            headerActions={
+                <>
                     <LLMConnectionDropdown
                         connectionId={selectedConnectionId || ""}
                         model={selectedModel || ""}
@@ -336,167 +278,142 @@ export function WorkflowGenerationChatPanel() {
                             onEnabledChange: setEnableThinking
                         }}
                     />
-
-                    {/* Clear Chat */}
-                    <button
-                        onClick={() => setShowClearConfirm(true)}
+                    <ClearChatButton
+                        onClear={clearChat}
                         disabled={messages.length === 0 || isStreaming}
-                        className={cn(
-                            "p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors",
-                            "disabled:opacity-30 disabled:cursor-not-allowed"
-                        )}
-                        title="Clear chat history"
-                    >
-                        <RotateCcw className="w-4 h-4" />
-                    </button>
-
-                    {/* Close */}
-                    <button
-                        onClick={closePanel}
-                        className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                        title="Close"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
-
+                    />
+                </>
+            }
+            onClose={closePanel}
+            width={panelWidth}
+            onWidthChange={setPanelWidth}
+            minWidth={400}
+            maxWidth={800}
+            fixed={false}
+            className="flex-shrink-0"
+        >
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center">
-                        {/* Welcome Message */}
-                        <div className="text-center text-muted-foreground max-w-sm mx-auto">
-                            <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                            <p className="text-sm mb-2">Describe the workflow you want to create</p>
-                            <p className="text-xs">
-                                I'll help you design the perfect automation workflow through
-                                conversation. Tell me what you want to automate!
-                            </p>
-                        </div>
-                    </div>
-                ) : (
-                    <>
-                        {messages.map((message) => (
-                            <MessageBubble
-                                key={message.id}
-                                message={message}
-                                isStreaming={
-                                    isStreaming && message.id === messages[messages.length - 1]?.id
-                                }
-                                isThinking={
-                                    isThinking && message.id === messages[messages.length - 1]?.id
-                                }
-                                onToggleThinking={() => toggleThinkingExpanded(message.id)}
-                                onCreateWorkflow={handleCreateWorkflow}
-                                onRefinePlan={handleRefinePlan}
-                                isCreatingWorkflow={isCreatingWorkflow}
-                            />
-                        ))}
-                        <div ref={messagesEndRef} />
-                    </>
-                )}
-            </div>
+            <ChatMessageList
+                hasMessages={messages.length > 0}
+                scrollDependencies={[messages, isThinking]}
+                emptyState={
+                    <DefaultEmptyState
+                        icon={<Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />}
+                        title="Describe the workflow you want to create"
+                        description="I'll help you design the perfect automation workflow through conversation. Tell me what you want to automate!"
+                    />
+                }
+            >
+                {messages.map((message) => (
+                    <GenerationMessageBubble
+                        key={message.id}
+                        message={message}
+                        isStreaming={
+                            isStreaming && message.id === messages[messages.length - 1]?.id
+                        }
+                        isThinking={isThinking && message.id === messages[messages.length - 1]?.id}
+                        onToggleThinking={() => toggleThinkingExpanded(message.id)}
+                        onCreateWorkflow={handleCreateWorkflow}
+                        onRefinePlan={handleRefinePlan}
+                        isCreatingWorkflow={isCreatingWorkflow}
+                    />
+                ))}
+            </ChatMessageList>
 
             {/* Example Prompts (shown at bottom when no messages) */}
             {messages.length === 0 && (
-                <div className="border-t border-border px-4 py-3 flex-shrink-0">
-                    <div className="flex items-center justify-between mb-2">
-                        <button
-                            onClick={() => setIsExamplesExpanded(!isExamplesExpanded)}
-                            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            {isExamplesExpanded ? (
-                                <ChevronDown className="w-3.5 h-3.5" />
-                            ) : (
-                                <ChevronRight className="w-3.5 h-3.5" />
-                            )}
-                            Example prompts
-                        </button>
-                        {isExamplesExpanded && (
-                            <button
-                                onClick={handleRefreshExamples}
-                                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                                title="Shuffle examples"
-                            >
-                                <RefreshCw className="w-3.5 h-3.5" />
-                            </button>
-                        )}
-                    </div>
-                    {isExamplesExpanded && (
-                        <div className="space-y-1.5">
-                            {examplePrompts.map((prompt, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => handleExamplePromptClick(prompt)}
-                                    className={cn(
-                                        "w-full text-left px-3 py-2 rounded-lg text-xs",
-                                        "bg-muted/50 border border-border/50",
-                                        "hover:bg-muted hover:border-border transition-colors",
-                                        "text-muted-foreground hover:text-foreground"
-                                    )}
-                                >
-                                    {prompt}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                <ExamplePrompts
+                    prompts={examplePrompts}
+                    isExpanded={isExamplesExpanded}
+                    onToggleExpanded={() => setIsExamplesExpanded(!isExamplesExpanded)}
+                    onRefresh={handleRefreshExamples}
+                    onPromptClick={handleExamplePromptClick}
+                />
             )}
 
             {/* Input */}
-            <div className="border-t border-border p-4 flex-shrink-0">
-                <div className="flex gap-2">
-                    <Input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="Describe your workflow idea..."
-                        disabled={isStreaming}
-                        className={cn(
-                            "flex-1 px-4 py-3 rounded-lg",
-                            "bg-muted border border-border",
-                            "text-foreground placeholder:text-muted-foreground",
-                            "focus:outline-none focus:ring-2 focus:ring-primary",
-                            "disabled:opacity-50"
-                        )}
-                    />
-                    <Button
-                        onClick={handleSend}
-                        disabled={!input.trim() || isStreaming}
-                        className={cn(
-                            "px-4 py-3 rounded-lg",
-                            "bg-primary text-primary-foreground",
-                            "hover:bg-primary/90 transition-colors",
-                            "disabled:opacity-50 disabled:cursor-not-allowed"
-                        )}
-                    >
-                        <Send className="w-5 h-5" />
-                    </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                    Press Enter to send
-                </p>
-            </div>
-
-            {/* Clear Chat Confirmation */}
-            <ConfirmDialog
-                isOpen={showClearConfirm}
-                onClose={() => setShowClearConfirm(false)}
-                onConfirm={handleClearChat}
-                title="Clear Chat History"
-                message="Are you sure you want to clear all chat messages? This action cannot be undone."
-                confirmText="Clear"
-                cancelText="Cancel"
-                variant="default"
+            <ChatInput
+                value={inputValue}
+                onChange={handleInputChange}
+                onSend={handleSend}
+                onKeyPress={handleKeyPress}
+                placeholder="Describe your workflow idea..."
+                disabled={isStreaming}
+                isLoading={isStreaming}
+                helperText="Press Enter to send"
             />
+        </ResizablePanel>
+    );
+}
+
+/**
+ * Example prompts section component
+ */
+interface ExamplePromptsProps {
+    prompts: string[];
+    isExpanded: boolean;
+    onToggleExpanded: () => void;
+    onRefresh: () => void;
+    onPromptClick: (prompt: string) => void;
+}
+
+function ExamplePrompts({
+    prompts,
+    isExpanded,
+    onToggleExpanded,
+    onRefresh,
+    onPromptClick
+}: ExamplePromptsProps) {
+    return (
+        <div className="border-t border-border px-4 py-3 flex-shrink-0">
+            <div className="flex items-center justify-between mb-2">
+                <button
+                    onClick={onToggleExpanded}
+                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                    {isExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                        <ChevronRight className="w-3.5 h-3.5" />
+                    )}
+                    Example prompts
+                </button>
+                {isExpanded && (
+                    <button
+                        onClick={onRefresh}
+                        className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                        title="Shuffle examples"
+                    >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                )}
+            </div>
+            {isExpanded && (
+                <div className="space-y-1.5">
+                    {prompts.map((prompt, index) => (
+                        <button
+                            key={index}
+                            onClick={() => onPromptClick(prompt)}
+                            className={cn(
+                                "w-full text-left px-3 py-2 rounded-lg text-xs",
+                                "bg-muted/50 border border-border/50",
+                                "hover:bg-muted hover:border-border transition-colors",
+                                "text-muted-foreground hover:text-foreground"
+                            )}
+                        >
+                            {prompt}
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
 
-// Message Bubble Component
-interface MessageBubbleProps {
+/**
+ * Generation message bubble with thinking and workflow plan support
+ */
+interface GenerationMessageBubbleProps {
     message: GenerationMessage;
     isStreaming: boolean;
     isThinking: boolean;
@@ -511,11 +428,10 @@ interface MessageBubbleProps {
  * This prevents showing raw JSON when we have a visual preview
  */
 function stripWorkflowPlanJson(content: string): string {
-    // Remove ```json blocks containing workflowPlan
     return content.replace(/```json\s*\{[\s\S]*?"workflowPlan"[\s\S]*?\}\s*```/g, "").trim();
 }
 
-function MessageBubble({
+function GenerationMessageBubble({
     message,
     isStreaming,
     isThinking,
@@ -523,27 +439,21 @@ function MessageBubble({
     onCreateWorkflow,
     onRefinePlan,
     isCreatingWorkflow
-}: MessageBubbleProps) {
+}: GenerationMessageBubbleProps) {
     // Get display content - strip JSON if we have a workflow plan
     const displayContent = message.workflowPlan
         ? stripWorkflowPlanJson(message.content)
         : message.content;
 
-    // User message
+    // User message - use ChatBubble
     if (message.role === "user") {
-        return (
-            <div className="flex gap-3 justify-end">
-                <div className="max-w-[80%] rounded-lg px-4 py-3 bg-primary text-primary-foreground">
-                    <div className="text-sm">{message.content}</div>
-                </div>
-                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-secondary-foreground" />
-                </div>
-            </div>
-        );
+        return <ChatBubble role="user" content={message.content} useMarkdown={false} />;
     }
 
-    // Assistant message
+    // Show compact typing indicator when streaming but no content yet
+    const showTypingIndicator = isStreaming && !message.content && !isThinking;
+
+    // Assistant message with thinking and workflow plan
     return (
         <div className="flex gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -560,67 +470,17 @@ function MessageBubble({
                     />
                 )}
 
-                {/* Response Content */}
-                <div className="rounded-lg px-4 py-3 bg-muted text-foreground">
-                    {isStreaming && !message.content && !isThinking ? (
+                {/* Typing Indicator - compact bubble when no content yet */}
+                {showTypingIndicator ? (
+                    <div className="rounded-lg px-4 py-3 bg-muted text-foreground w-fit">
                         <TypingDots />
-                    ) : (
-                        <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                    h1: ({ children }) => (
-                                        <h1 className="text-lg font-bold mt-4 mb-2 pb-2 border-b border-border">
-                                            {children}
-                                        </h1>
-                                    ),
-                                    h2: ({ children }) => (
-                                        <h2 className="text-base font-bold mt-3 mb-2 pb-1 border-b border-border">
-                                            {children}
-                                        </h2>
-                                    ),
-                                    h3: ({ children }) => (
-                                        <h3 className="text-sm font-bold mt-2 mb-1">{children}</h3>
-                                    ),
-                                    ul: ({ children }) => (
-                                        <ul className="list-disc list-inside my-2 space-y-1">
-                                            {children}
-                                        </ul>
-                                    ),
-                                    ol: ({ children }) => (
-                                        <ol className="list-decimal list-inside my-2 space-y-1">
-                                            {children}
-                                        </ol>
-                                    ),
-                                    li: ({ children }) => <li className="ml-2">{children}</li>,
-                                    p: ({ children }) => <p className="my-1.5">{children}</p>,
-                                    strong: ({ children }) => (
-                                        <strong className="font-semibold">{children}</strong>
-                                    ),
-                                    code: ({ children, className }) => {
-                                        const isInline = !className;
-                                        return isInline ? (
-                                            <code className="px-1.5 py-0.5 rounded bg-muted-foreground/10 text-foreground font-mono text-xs">
-                                                {children}
-                                            </code>
-                                        ) : (
-                                            <code className="block px-3 py-2 rounded bg-muted-foreground/10 text-foreground font-mono text-xs overflow-x-auto">
-                                                {children}
-                                            </code>
-                                        );
-                                    },
-                                    blockquote: ({ children }) => (
-                                        <blockquote className="border-l-2 border-primary pl-3 italic my-2">
-                                            {children}
-                                        </blockquote>
-                                    )
-                                }}
-                            >
-                                {displayContent}
-                            </ReactMarkdown>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                ) : (
+                    /* Response Content - full width once content starts */
+                    <div className="rounded-lg px-4 py-3 bg-muted text-foreground">
+                        <MarkdownRenderer content={displayContent} />
+                    </div>
+                )}
 
                 {/* Workflow Plan Preview */}
                 {message.workflowPlan && (

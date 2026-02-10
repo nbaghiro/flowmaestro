@@ -7,8 +7,16 @@ export const TEMPLATE_CATEGORIES = [
     "engineering",
     "support",
     "ecommerce",
+    "hr",
+    "finance",
     "saas",
-    "healthcare"
+    "healthcare",
+    "multimodal-ai",
+    "knowledge-research",
+    "document-processing",
+    "data-analytics",
+    "voice-audio",
+    "advanced-logic"
 ] as const;
 
 export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number];
@@ -71,7 +79,8 @@ export interface CopyTemplateResponse {
     };
 }
 
-// Category metadata for display - modern vibrant colors
+// Category metadata for display - using CSS classes defined in App.css
+// The color classes (template-badge-*) handle both light and dark mode automatically
 export const TEMPLATE_CATEGORY_META: Record<
     TemplateCategory,
     { label: string; icon: string; color: string; bgColor: string }
@@ -79,49 +88,97 @@ export const TEMPLATE_CATEGORY_META: Record<
     marketing: {
         label: "Marketing",
         icon: "Megaphone",
-        color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+        color: "template-badge-marketing",
         bgColor: "bg-violet-500"
     },
     sales: {
         label: "Sales",
         icon: "TrendingUp",
-        color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+        color: "template-badge-sales",
         bgColor: "bg-emerald-500"
     },
     operations: {
         label: "Operations",
         icon: "Settings",
-        color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+        color: "template-badge-operations",
         bgColor: "bg-amber-500"
     },
     engineering: {
         label: "Engineering",
         icon: "Code",
-        color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+        color: "template-badge-engineering",
         bgColor: "bg-blue-500"
     },
     support: {
         label: "Support",
         icon: "Headphones",
-        color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+        color: "template-badge-support",
         bgColor: "bg-rose-500"
     },
     ecommerce: {
         label: "E-commerce",
         icon: "ShoppingCart",
-        color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+        color: "template-badge-ecommerce",
         bgColor: "bg-orange-500"
+    },
+    hr: {
+        label: "HR & People",
+        icon: "Users",
+        color: "template-badge-hr",
+        bgColor: "bg-indigo-500"
+    },
+    finance: {
+        label: "Finance & Legal",
+        icon: "DollarSign",
+        color: "template-badge-finance",
+        bgColor: "bg-teal-500"
     },
     saas: {
         label: "SaaS",
         icon: "Cloud",
-        color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300",
+        color: "template-badge-saas",
         bgColor: "bg-cyan-500"
     },
     healthcare: {
         label: "Healthcare",
         icon: "Heart",
-        color: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300",
+        color: "template-badge-healthcare",
         bgColor: "bg-pink-500"
+    },
+    "multimodal-ai": {
+        label: "Multimodal AI",
+        icon: "Sparkles",
+        color: "template-badge-multimodal-ai",
+        bgColor: "bg-purple-500"
+    },
+    "knowledge-research": {
+        label: "Knowledge & Research",
+        icon: "BookOpen",
+        color: "template-badge-knowledge-research",
+        bgColor: "bg-sky-500"
+    },
+    "document-processing": {
+        label: "Document Processing",
+        icon: "FileText",
+        color: "template-badge-document-processing",
+        bgColor: "bg-slate-500"
+    },
+    "data-analytics": {
+        label: "Data & Analytics",
+        icon: "BarChart3",
+        color: "template-badge-data-analytics",
+        bgColor: "bg-lime-500"
+    },
+    "voice-audio": {
+        label: "Voice & Audio",
+        icon: "Mic",
+        color: "template-badge-voice-audio",
+        bgColor: "bg-fuchsia-500"
+    },
+    "advanced-logic": {
+        label: "Advanced Logic",
+        icon: "GitBranch",
+        color: "template-badge-advanced-logic",
+        bgColor: "bg-stone-500"
     }
 };

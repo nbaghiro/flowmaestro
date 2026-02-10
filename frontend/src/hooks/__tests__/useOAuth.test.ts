@@ -12,7 +12,7 @@ import {
     createMockApiError,
     createMockAuthToken,
     mockFetchOnce
-} from "../../lib/__tests__/test-helpers";
+} from "../../test-helpers";
 import { useOAuth } from "../useOAuth";
 
 // Mock the workspace store

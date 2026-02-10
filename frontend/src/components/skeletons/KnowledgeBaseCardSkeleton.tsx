@@ -2,9 +2,9 @@ import { Skeleton } from "../common/Skeleton";
 
 export function KnowledgeBaseCardSkeleton() {
     return (
-        <div className="bg-card border border-border rounded-lg overflow-hidden flex flex-col h-full">
-            {/* Mosaic Preview area */}
-            <Skeleton className="w-full h-24 rounded-none" />
+        <div className="bg-card border border-border rounded-lg overflow-hidden flex h-full">
+            {/* Left color accent bar */}
+            <Skeleton className="w-1 h-full rounded-none flex-shrink-0" />
 
             {/* Content */}
             <div className="p-4 flex flex-col flex-1">

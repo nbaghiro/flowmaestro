@@ -77,19 +77,6 @@ export class ThreadRepository {
     }
 
     /**
-     * @deprecated Use findByIdAndWorkspaceId instead. Kept for backward compatibility.
-     */
-    async findByIdAndUserId(id: string, userId: string): Promise<ThreadModel | null> {
-        const query = `
-            SELECT * FROM flowmaestro.threads
-            WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
-        `;
-
-        const result = await db.query(query, [id, userId]);
-        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ThreadRow) : null;
-    }
-
-    /**
      * List threads with filtering and pagination by workspace
      */
     async list(filter: ThreadListFilter): Promise<{ threads: ThreadModel[]; total: number }> {
@@ -180,54 +167,6 @@ export class ThreadRepository {
     }
 
     /**
-     * @deprecated Use findByAgentAndWorkspace instead. Kept for backward compatibility.
-     */
-    async findByAgentAndUser(
-        agentId: string,
-        userId: string,
-        options: { limit?: number; offset?: number; status?: ThreadStatus } = {}
-    ): Promise<{ threads: ThreadModel[]; total: number }> {
-        const limit = options.limit || 50;
-        const offset = options.offset || 0;
-
-        const whereClauses: string[] = ["deleted_at IS NULL", "user_id = $1", "agent_id = $2"];
-        const params: unknown[] = [userId, agentId];
-        let paramIndex = 3;
-
-        if (options.status) {
-            whereClauses.push(`status = $${paramIndex++}`);
-            params.push(options.status);
-        }
-
-        const whereClause = whereClauses.join(" AND ");
-
-        const countQuery = `
-            SELECT COUNT(*) as count
-            FROM flowmaestro.threads
-            WHERE ${whereClause}
-        `;
-
-        const dataQuery = `
-            SELECT * FROM flowmaestro.threads
-            WHERE ${whereClause}
-            ORDER BY created_at DESC
-            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-        `;
-
-        const dataParams = [...params, limit, offset];
-
-        const [countResult, dataResult] = await Promise.all([
-            db.query<{ count: string }>(countQuery, params),
-            db.query(dataQuery, dataParams)
-        ]);
-
-        return {
-            threads: dataResult.rows.map((row) => this.mapRow(row as ThreadRow)),
-            total: parseInt(countResult.rows[0].count)
-        };
-    }
-
-    /**
      * Get most recent active thread for agent and workspace
      */
     async findMostRecentActiveByWorkspace(
@@ -245,24 +184,6 @@ export class ThreadRepository {
         `;
 
         const result = await db.query(query, [agentId, workspaceId]);
-        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ThreadRow) : null;
-    }
-
-    /**
-     * @deprecated Use findMostRecentActiveByWorkspace instead. Kept for backward compatibility.
-     */
-    async findMostRecentActive(agentId: string, userId: string): Promise<ThreadModel | null> {
-        const query = `
-            SELECT * FROM flowmaestro.threads
-            WHERE agent_id = $1
-              AND user_id = $2
-              AND status = 'active'
-              AND deleted_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT 1
-        `;
-
-        const result = await db.query(query, [agentId, userId]);
         return result.rows.length > 0 ? this.mapRow(result.rows[0] as ThreadRow) : null;
     }
 

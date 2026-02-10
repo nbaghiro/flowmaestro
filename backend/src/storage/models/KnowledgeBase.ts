@@ -12,6 +12,7 @@ export interface KnowledgeBaseModel {
     workspace_id: string;
     name: string;
     description: string | null;
+    category: string | null;
     config: KnowledgeBaseConfig;
     created_at: Date;
     updated_at: Date;
@@ -22,6 +23,7 @@ export interface CreateKnowledgeBaseInput {
     workspace_id: string;
     name: string;
     description?: string;
+    category?: string;
     config?: Partial<KnowledgeBaseConfig>; // Allow partial config, will use defaults
 }
 

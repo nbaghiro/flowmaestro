@@ -112,7 +112,14 @@ export const Navigation: React.FC = () => {
                             </Link>
                             <NavLink label="Company" hasDropdown />
                             <NavLink label="Resources" hasDropdown />
-                            <NavLink label="Docs" />
+                            <a
+                                href={import.meta.env.VITE_DOCS_URL}
+                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Docs
+                            </a>
                             <Link
                                 to="/pricing"
                                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -125,13 +132,13 @@ export const Navigation: React.FC = () => {
                         <div className="flex items-center gap-2">
                             <ThemeToggle />
                             <a
-                                href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                                href={import.meta.env.VITE_APP_URL}
                                 className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-2"
                             >
                                 Log In
                             </a>
                             <a
-                                href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                                href={import.meta.env.VITE_APP_URL}
                                 className="hidden sm:block px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
                             >
                                 Get Started
@@ -235,9 +242,15 @@ export const Navigation: React.FC = () => {
                                     Resources
                                     <ChevronDown className="w-5 h-5" />
                                 </button>
-                                <button className="block py-4 text-lg font-medium text-foreground border-b border-border text-left w-full">
+                                <a
+                                    href={import.meta.env.VITE_DOCS_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="block py-4 text-lg font-medium text-foreground border-b border-border"
+                                >
                                     Docs
-                                </button>
+                                </a>
                                 <Link
                                     to="/pricing"
                                     onClick={() => setIsMobileMenuOpen(false)}
@@ -269,13 +282,13 @@ export const Navigation: React.FC = () => {
                             {/* Mobile Auth Buttons */}
                             <div className="mt-6 space-y-3">
                                 <a
-                                    href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                                    href={import.meta.env.VITE_APP_URL}
                                     className="block w-full py-3 text-center text-foreground border border-border rounded-lg hover:bg-secondary transition-colors"
                                 >
                                     Log In
                                 </a>
                                 <a
-                                    href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                                    href={import.meta.env.VITE_APP_URL}
                                     className="block w-full py-3 text-center bg-foreground text-background font-medium rounded-lg hover:opacity-90 transition-opacity"
                                 >
                                     Get Started

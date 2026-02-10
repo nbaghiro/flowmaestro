@@ -4,103 +4,197 @@ import { infrastructureConfig, resourceName, resourceLabels } from "../utils/con
 import { network, subnet } from "./networking";
 import { knowledgeDocsBucket, uploadsBucket, artifactsBucket } from "./storage";
 
-// Create GKE Autopilot cluster
-export const cluster = new gcp.container.Cluster(resourceName("cluster"), {
-    name: resourceName("cluster"),
-    location: infrastructureConfig.region,
+// Create GKE cluster (Autopilot or Standard mode based on config)
+export const cluster = new gcp.container.Cluster(
+    resourceName("cluster"),
+    {
+        name: resourceName("cluster"),
+        location: infrastructureConfig.region,
 
-    // Enable Autopilot mode
-    enableAutopilot: infrastructureConfig.gkeAutopilot,
+        // Enable Autopilot mode (if false, uses Standard mode with node pools)
+        enableAutopilot: infrastructureConfig.gkeAutopilot,
 
-    // Network configuration
-    network: network.name,
-    subnetwork: subnet.name,
+        // For Standard mode: remove default node pool (we create our own)
+        // These settings are ignored in Autopilot mode
+        ...(infrastructureConfig.gkeAutopilot
+            ? {}
+            : {
+                  removeDefaultNodePool: true,
+                  initialNodeCount: 1 // Required but removed immediately
+              }),
 
-    // IP allocation policy for VPC-native cluster
-    ipAllocationPolicy: {
-        clusterSecondaryRangeName: "pods",
-        servicesSecondaryRangeName: "services"
-    },
+        // Network configuration
+        network: network.name,
+        subnetwork: subnet.name,
 
-    // Private cluster configuration
-    // When gkePrivateNodes=false, nodes get public IPs and Cloud NAT is not needed (~$140/mo savings)
-    privateClusterConfig: infrastructureConfig.gkePrivateNodes
-        ? {
-              enablePrivateNodes: true,
-              enablePrivateEndpoint: false, // Allow public access to control plane
-              masterIpv4CidrBlock: "172.16.0.0/28"
-          }
-        : {
-              enablePrivateNodes: false,
-              enablePrivateEndpoint: false
-          },
+        // IP allocation policy for VPC-native cluster
+        ipAllocationPolicy: {
+            clusterSecondaryRangeName: "pods",
+            servicesSecondaryRangeName: "services"
+        },
 
-    // Master authorized networks (optional - can restrict control plane access)
-    masterAuthorizedNetworksConfig: {
-        cidrBlocks: [
-            {
-                displayName: "All",
-                cidrBlock: "0.0.0.0/0"
+        // Private cluster configuration
+        // When gkePrivateNodes=false, nodes get public IPs and Cloud NAT is not needed (~$140/mo savings)
+        privateClusterConfig: infrastructureConfig.gkePrivateNodes
+            ? {
+                  enablePrivateNodes: true,
+                  enablePrivateEndpoint: false, // Allow public access to control plane
+                  masterIpv4CidrBlock: "172.16.0.0/28"
+              }
+            : {
+                  enablePrivateNodes: false,
+                  enablePrivateEndpoint: false
+              },
+
+        // Master authorized networks (optional - can restrict control plane access)
+        masterAuthorizedNetworksConfig: {
+            cidrBlocks: [
+                {
+                    displayName: "All",
+                    cidrBlock: "0.0.0.0/0"
+                }
+            ]
+        },
+
+        // Workload Identity for GKE
+        workloadIdentityConfig: {
+            workloadPool: `${infrastructureConfig.project}.svc.id.goog`
+        },
+
+        // Release channel for automatic upgrades
+        releaseChannel: {
+            channel: "REGULAR"
+        },
+
+        // Maintenance window
+        maintenancePolicy: {
+            dailyMaintenanceWindow: {
+                startTime: "03:00"
             }
-        ]
-    },
-
-    // Workload Identity for GKE
-    workloadIdentityConfig: {
-        workloadPool: `${infrastructureConfig.project}.svc.id.goog`
-    },
-
-    // Release channel for automatic upgrades
-    releaseChannel: {
-        channel: "REGULAR"
-    },
-
-    // Maintenance window
-    maintenancePolicy: {
-        dailyMaintenanceWindow: {
-            startTime: "03:00"
-        }
-    },
-
-    // Addons
-    addonsConfig: {
-        httpLoadBalancing: {
-            disabled: false
         },
-        horizontalPodAutoscaling: {
-            disabled: false
+
+        // Addons
+        addonsConfig: {
+            httpLoadBalancing: {
+                disabled: false
+            },
+            horizontalPodAutoscaling: {
+                disabled: false
+            },
+            gcePersistentDiskCsiDriverConfig: {
+                enabled: true
+            }
         },
-        gcePersistentDiskCsiDriverConfig: {
-            enabled: true
-        }
+
+        // Logging and monitoring
+        loggingService: "logging.googleapis.com/kubernetes",
+        monitoringService: "monitoring.googleapis.com/kubernetes",
+
+        // Resource labels
+        resourceLabels: resourceLabels(),
+
+        // Enable binary authorization (optional security feature)
+        binaryAuthorization: {
+            evaluationMode: "DISABLED" // Set to "PROJECT_SINGLETON_POLICY_ENFORCE" for stricter security
+        },
+
+        // Security posture
+        securityPostureConfig: {
+            mode: "BASIC"
+        },
+
+        // Allow cluster deletion (needed for switching modes)
+        deletionProtection: false
     },
-
-    // Logging and monitoring
-    loggingService: "logging.googleapis.com/kubernetes",
-    monitoringService: "monitoring.googleapis.com/kubernetes",
-
-    // Resource labels
-    resourceLabels: resourceLabels(),
-
-    // Enable binary authorization (optional security feature)
-    binaryAuthorization: {
-        evaluationMode: "DISABLED" // Set to "PROJECT_SINGLETON_POLICY_ENFORCE" for stricter security
-    },
-
-    // Note: Network policy is not configurable in Autopilot mode - it's automatically managed
-
-    // Security posture
-    securityPostureConfig: {
-        mode: "BASIC"
+    {
+        // Protect against accidental deletion in production
+        protect: infrastructureConfig.environment === "production"
     }
-});
+);
 
-// Create a service account for Kubernetes workloads
+// =============================================================================
+// Service Account for Kubernetes Workloads
+// =============================================================================
+// This service account is used by both:
+// - Node pools (in Standard mode) for node-level permissions
+// - Pods (via Workload Identity) for workload-level permissions
+
 export const k8sServiceAccount = new gcp.serviceaccount.Account(resourceName("k8s-sa"), {
     accountId: resourceName("k8s-sa"),
     displayName: "FlowMaestro Kubernetes Service Account",
     description: "Service account for FlowMaestro workloads in GKE"
 });
+
+// =============================================================================
+// Node Pool (Standard Mode Only)
+// =============================================================================
+// Create a managed node pool when running in Standard mode.
+// In Autopilot mode, nodes are fully managed by Google.
+
+export const nodePool = !infrastructureConfig.gkeAutopilot
+    ? new gcp.container.NodePool(
+          resourceName("node-pool"),
+          {
+              name: resourceName("node-pool"),
+              cluster: cluster.name,
+              location: infrastructureConfig.region,
+
+              // Node count (can be overridden by autoscaling)
+              nodeCount: infrastructureConfig.gkeNodeCount,
+
+              // Autoscaling configuration
+              autoscaling: {
+                  minNodeCount: 1,
+                  maxNodeCount: 3 // Scale up to 3 nodes if needed
+              },
+
+              // Node configuration
+              nodeConfig: {
+                  machineType: infrastructureConfig.gkeNodeMachineType,
+                  diskSizeGb: infrastructureConfig.gkeNodeDiskSizeGb,
+                  diskType: "pd-standard", // Standard persistent disk (cheaper than SSD)
+
+                  // Use the GKE service account for Workload Identity
+                  serviceAccount: k8sServiceAccount.email,
+                  oauthScopes: ["https://www.googleapis.com/auth/cloud-platform"],
+
+                  // Enable Workload Identity on nodes
+                  workloadMetadataConfig: {
+                      mode: "GKE_METADATA"
+                  },
+
+                  // Shielded instance config for security
+                  shieldedInstanceConfig: {
+                      enableSecureBoot: true,
+                      enableIntegrityMonitoring: true
+                  },
+
+                  // Labels
+                  labels: resourceLabels(),
+
+                  // Taints (none by default - all workloads can schedule here)
+                  taints: []
+              },
+
+              // Management configuration
+              management: {
+                  autoRepair: true,
+                  autoUpgrade: true
+              },
+
+              // Upgrade settings
+              upgradeSettings: {
+                  maxSurge: 1,
+                  maxUnavailable: 0 // Zero-downtime upgrades
+              }
+          },
+          { dependsOn: [cluster, k8sServiceAccount] }
+      )
+    : undefined;
+
+// =============================================================================
+// IAM Roles for Service Account
+// =============================================================================
 
 // Grant necessary IAM roles to the service account
 // Cloud SQL Client
@@ -224,5 +318,8 @@ export const clusterOutputs = {
     clusterEndpoint: cluster.endpoint,
     clusterCaCertificate: cluster.masterAuth.apply((auth) => auth.clusterCaCertificate),
     kubeconfig: kubeconfig,
-    serviceAccountEmail: k8sServiceAccount.email
+    serviceAccountEmail: k8sServiceAccount.email,
+    // Node pool info (Standard mode only)
+    nodePoolName: nodePool?.name,
+    isAutopilot: infrastructureConfig.gkeAutopilot
 };

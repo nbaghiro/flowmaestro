@@ -153,14 +153,24 @@ export function ChatInterfacePreviewPage() {
                     </button>
 
                     {/* Open in new tab */}
-                    <Link
-                        to={`/c/${chatInterface.slug}`}
-                        target="_blank"
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border hover:bg-muted transition-colors"
-                    >
-                        <ExternalLink className="w-4 h-4" />
-                        Open
-                    </Link>
+                    {chatInterface.status === "published" ? (
+                        <Link
+                            to={`/c/${chatInterface.slug}`}
+                            target="_blank"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border hover:bg-muted transition-colors"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                            Open
+                        </Link>
+                    ) : (
+                        <span
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border text-muted-foreground cursor-not-allowed opacity-50"
+                            title="Publish the chat interface to open it"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                            Open
+                        </span>
+                    )}
                 </div>
             </header>
 

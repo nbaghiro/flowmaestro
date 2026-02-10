@@ -160,19 +160,19 @@ describe("AgentExecutionRepository", () => {
         });
     });
 
-    describe("findByIdAndUserId", () => {
-        it("should find execution by id and user id", async () => {
+    describe("findByIdAndWorkspaceId", () => {
+        it("should find execution by id and workspace id via agent join", async () => {
             const executionId = generateId();
-            const userId = generateId();
-            const mockRow = generateAgentExecutionRow({ id: executionId, user_id: userId });
+            const workspaceId = generateId();
+            const mockRow = generateAgentExecutionRow({ id: executionId });
 
             mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
 
-            const result = await repository.findByIdAndUserId(executionId, userId);
+            const result = await repository.findByIdAndWorkspaceId(executionId, workspaceId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("WHERE id = $1 AND user_id = $2"),
-                [executionId, userId]
+                expect.stringContaining("WHERE e.id = $1 AND a.workspace_id = $2"),
+                [executionId, workspaceId]
             );
             expect(result?.id).toBe(executionId);
         });

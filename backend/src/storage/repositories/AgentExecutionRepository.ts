@@ -78,13 +78,17 @@ export class AgentExecutionRepository {
             : null;
     }
 
-    async findByIdAndUserId(id: string, userId: string): Promise<AgentExecutionModel | null> {
+    async findByIdAndWorkspaceId(
+        id: string,
+        workspaceId: string
+    ): Promise<AgentExecutionModel | null> {
         const query = `
-            SELECT * FROM flowmaestro.agent_executions
-            WHERE id = $1 AND user_id = $2
+            SELECT e.* FROM flowmaestro.agent_executions e
+            INNER JOIN flowmaestro.agents a ON e.agent_id = a.id
+            WHERE e.id = $1 AND a.workspace_id = $2
         `;
 
-        const result = await db.query<AgentExecutionRow>(query, [id, userId]);
+        const result = await db.query<AgentExecutionRow>(query, [id, workspaceId]);
         return result.rows.length > 0
             ? this.mapExecutionRow(result.rows[0] as AgentExecutionRow)
             : null;

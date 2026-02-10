@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import type { Folder, FolderWithCounts, FolderResourceType } from "@flowmaestro/shared";
 import { getFolders, updateFolder, removeItemsFromFolder } from "../lib/api";
-import { checkItemsInFolder } from "../lib/folderUtils";
+import { checkItemsInFolder, extractFolderIdFromPath } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
@@ -88,9 +88,7 @@ export function useFolderManagement({
     const [searchParams, setSearchParams] = useSearchParams();
     const queryClient = useQueryClient();
     // Get current folder ID from either URL path (/folders/:folderId) or search params (?folder=id)
-    const currentFolderIdFromPath = location.pathname.startsWith("/folders/")
-        ? location.pathname.split("/folders/")[1]?.split("/")[0] || null
-        : null;
+    const currentFolderIdFromPath = extractFolderIdFromPath(location.pathname);
     const currentFolderIdFromParams = searchParams.get("folder");
     const currentFolderId = currentFolderIdFromPath || currentFolderIdFromParams;
 

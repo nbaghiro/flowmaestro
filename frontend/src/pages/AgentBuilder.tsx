@@ -4,9 +4,11 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
     getDefaultModelForProvider,
     getTemperatureMaxForProvider,
-    LLM_PROVIDERS
+    LLM_PROVIDERS,
+    ELEVENLABS_VOICES,
+    DEFAULT_VOICE_CONFIG
 } from "@flowmaestro/shared";
-import type { WorkflowSummary } from "@flowmaestro/shared";
+import type { AgentVoiceConfig, WorkflowSummary } from "@flowmaestro/shared";
 import {
     AgentBuilderLayout,
     NavigationPanel,
@@ -15,7 +17,6 @@ import {
     ModelSection,
     InstructionsSection,
     ToolsSection,
-    LayoutPresetButtons,
     AddBuiltinToolDialog,
     AddKnowledgeBaseDialog,
     AddMCPIntegrationDialog,
@@ -40,7 +41,14 @@ import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
 import type { AgentTab } from "../components/agent";
-import type { UpdateAgentRequest, AddToolRequest, Tool, KnowledgeBase, Agent } from "../lib/api";
+import type {
+    UpdateAgentRequest,
+    AddToolRequest,
+    Tool,
+    KnowledgeBase,
+    Agent,
+    JsonObject
+} from "../lib/api";
 
 export function AgentBuilder() {
     const { agentId, threadId } = useParams<{ agentId: string; threadId?: string }>();
@@ -102,6 +110,9 @@ export function AgentBuilder() {
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
     const [isFormInterfaceDialogOpen, setIsFormInterfaceDialogOpen] = useState(false);
     const [isChatInterfaceDialogOpen, setIsChatInterfaceDialogOpen] = useState(false);
+
+    // Voice settings state
+    const [voiceConfig, setVoiceConfig] = useState<AgentVoiceConfig>(DEFAULT_VOICE_CONFIG);
 
     const temperatureMax = useMemo(() => getTemperatureMaxForProvider(provider), [provider]);
 
@@ -168,6 +179,15 @@ export function AgentBuilder() {
                     setMaxTokens(agent.max_tokens);
                     // Parse tools from available_tools array
                     setTools(agent.available_tools || []);
+
+                    // Load voice config from metadata
+                    const agentVoiceConfig = (agent as { metadata?: { voice?: AgentVoiceConfig } })
+                        .metadata?.voice;
+                    if (agentVoiceConfig) {
+                        setVoiceConfig({ ...DEFAULT_VOICE_CONFIG, ...agentVoiceConfig });
+                    } else {
+                        setVoiceConfig(DEFAULT_VOICE_CONFIG);
+                    }
 
                     // Store original values for change detection
                     setOriginalValues({
@@ -376,6 +396,9 @@ export function AgentBuilder() {
         setError(null);
 
         try {
+            // Merge voice config into existing metadata
+            const existingMetadata =
+                (currentAgent as { metadata?: Record<string, unknown> })?.metadata || {};
             const agentData: UpdateAgentRequest = {
                 name: name.trim(),
                 description: description.trim() || undefined,
@@ -384,7 +407,11 @@ export function AgentBuilder() {
                 connection_id: connectionId || null,
                 system_prompt: systemPrompt,
                 temperature,
-                max_tokens: maxTokens
+                max_tokens: maxTokens,
+                metadata: {
+                    ...existingMetadata,
+                    voice: voiceConfig as unknown as JsonObject
+                }
             };
 
             // Agent should always exist at this point (created before reaching AgentBuilder)
@@ -486,6 +513,9 @@ export function AgentBuilder() {
         setIsSaving(true);
 
         try {
+            // Merge voice config into existing metadata
+            const existingMetadata =
+                (currentAgent as { metadata?: Record<string, unknown> })?.metadata || {};
             const agentData: UpdateAgentRequest = {
                 name: name.trim(),
                 description: description.trim() || undefined,
@@ -494,7 +524,11 @@ export function AgentBuilder() {
                 connection_id: connectionId || null,
                 system_prompt: systemPrompt,
                 temperature,
-                max_tokens: maxTokens
+                max_tokens: maxTokens,
+                metadata: {
+                    ...existingMetadata,
+                    voice: voiceConfig as unknown as JsonObject
+                }
             };
 
             // Agent should always exist at this point (created before reaching AgentBuilder)
@@ -552,6 +586,7 @@ export function AgentBuilder() {
         systemPrompt,
         temperature,
         maxTokens,
+        voiceConfig,
         agentId,
         currentAgent,
         updateAgent,
@@ -953,11 +988,6 @@ export function AgentBuilder() {
                         </div>
                     </div>
 
-                    {/* Center section - Layout preset buttons */}
-                    <div className="absolute left-1/2 -translate-x-1/2">
-                        <LayoutPresetButtons onPresetApply={() => setActiveTab("build")} />
-                    </div>
-
                     {/* Right section */}
                     <div className="flex items-center gap-2 ml-auto">
                         <ThemeToggle />
@@ -1308,6 +1338,85 @@ export function AgentBuilder() {
                                                             )}
                                                         />
                                                     </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Voice Settings */}
+                                            <div>
+                                                <h3 className="text-base font-semibold text-foreground mb-4">
+                                                    Voice Settings
+                                                </h3>
+                                                <div className="space-y-4">
+                                                    {/* Voice Enabled Toggle */}
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <span className="text-sm font-medium text-foreground">
+                                                                Enable Voice Chat
+                                                            </span>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Allow users to interact with voice
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setVoiceConfig((prev) => ({
+                                                                    ...prev,
+                                                                    enabled: !prev.enabled
+                                                                }))
+                                                            }
+                                                            className={cn(
+                                                                "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                                                                voiceConfig.enabled
+                                                                    ? "bg-primary"
+                                                                    : "bg-muted"
+                                                            )}
+                                                        >
+                                                            <span
+                                                                className={cn(
+                                                                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                                                                    voiceConfig.enabled
+                                                                        ? "translate-x-5"
+                                                                        : "translate-x-0"
+                                                                )}
+                                                            />
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Voice Selection */}
+                                                    {voiceConfig.enabled && (
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-foreground mb-2">
+                                                                Agent Voice
+                                                            </label>
+                                                            <Select
+                                                                value={voiceConfig.voiceId}
+                                                                onChange={(voiceId) => {
+                                                                    const voice =
+                                                                        ELEVENLABS_VOICES.find(
+                                                                            (v) =>
+                                                                                v.voiceId ===
+                                                                                voiceId
+                                                                        );
+                                                                    setVoiceConfig((prev) => ({
+                                                                        ...prev,
+                                                                        voiceId,
+                                                                        voiceName: voice?.name
+                                                                    }));
+                                                                }}
+                                                                options={ELEVENLABS_VOICES.map(
+                                                                    (voice) => ({
+                                                                        value: voice.voiceId,
+                                                                        label: `${voice.name} - ${voice.description}`
+                                                                    })
+                                                                )}
+                                                            />
+                                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                                Selected:{" "}
+                                                                {voiceConfig.voiceName || "Rachel"}
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

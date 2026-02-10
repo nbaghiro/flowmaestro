@@ -77,7 +77,7 @@ const esoRelease = new k8s.helm.v3.Release(
             },
             // Install CRDs
             installCRDs: true,
-            // Resource requests/limits
+            // Resource requests/limits for main controller
             resources: {
                 requests: {
                     cpu: "100m",
@@ -85,12 +85,35 @@ const esoRelease = new k8s.helm.v3.Release(
                 },
                 limits: {
                     cpu: "500m",
-                    memory: "512Mi"
+                    memory: "256Mi"
                 }
             },
-            // Enable webhook for validation
+            // Webhook configuration with reduced resources
             webhook: {
-                port: 9443
+                port: 9443,
+                resources: {
+                    requests: {
+                        cpu: "50m",
+                        memory: "64Mi"
+                    },
+                    limits: {
+                        cpu: "200m",
+                        memory: "128Mi"
+                    }
+                }
+            },
+            // Cert controller with reduced resources
+            certController: {
+                resources: {
+                    requests: {
+                        cpu: "50m",
+                        memory: "64Mi"
+                    },
+                    limits: {
+                        cpu: "200m",
+                        memory: "128Mi"
+                    }
+                }
             },
             // Logging
             logLevel: "info",

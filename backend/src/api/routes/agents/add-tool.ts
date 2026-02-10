@@ -31,7 +31,7 @@ export async function addToolHandler(
     reply: FastifyReply
 ): Promise<void> {
     const { id: agentId } = request.params;
-    const userId = (request.user as { id: string }).id;
+    const workspaceId = request.workspace!.id;
 
     // Validate request body
     const toolData = addToolSchema.parse(request.body);
@@ -39,7 +39,7 @@ export async function addToolHandler(
     const agentRepo = new AgentRepository();
 
     // Get the agent
-    const agent = await agentRepo.findByIdAndUserId(agentId, userId);
+    const agent = await agentRepo.findByIdAndWorkspaceId(agentId, workspaceId);
 
     if (!agent) {
         reply.code(404).send({

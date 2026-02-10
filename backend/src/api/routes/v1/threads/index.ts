@@ -25,13 +25,13 @@ export async function threadsV1Routes(fastify: FastifyInstance): Promise<void> {
             preHandler: [requireScopes("threads:read")]
         },
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const threadId = request.params.id;
 
             const threadRepo = new ThreadRepository();
-            const thread = await threadRepo.findById(threadId);
+            const thread = await threadRepo.findByIdAndWorkspaceId(threadId, workspaceId);
 
-            if (!thread || thread.user_id !== userId) {
+            if (!thread) {
                 return sendNotFound(reply, "Thread", threadId);
             }
 
@@ -54,13 +54,13 @@ export async function threadsV1Routes(fastify: FastifyInstance): Promise<void> {
             preHandler: [requireScopes("threads:read")]
         },
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const threadId = request.params.id;
 
             const threadRepo = new ThreadRepository();
-            const thread = await threadRepo.findById(threadId);
+            const thread = await threadRepo.findByIdAndWorkspaceId(threadId, workspaceId);
 
-            if (!thread || thread.user_id !== userId) {
+            if (!thread) {
                 return sendNotFound(reply, "Thread", threadId);
             }
 
@@ -88,12 +88,13 @@ export async function threadsV1Routes(fastify: FastifyInstance): Promise<void> {
         },
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
             const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const threadId = request.params.id;
 
             const threadRepo = new ThreadRepository();
-            const thread = await threadRepo.findById(threadId);
+            const thread = await threadRepo.findByIdAndWorkspaceId(threadId, workspaceId);
 
-            if (!thread || thread.user_id !== userId) {
+            if (!thread) {
                 return sendNotFound(reply, "Thread", threadId);
             }
 
@@ -126,6 +127,7 @@ export async function threadsV1Routes(fastify: FastifyInstance): Promise<void> {
             reply: FastifyReply
         ) => {
             const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const threadId = request.params.id;
             const { content, stream = false, timeout = DEFAULT_TIMEOUT_MS } = request.body || {};
 
@@ -137,9 +139,9 @@ export async function threadsV1Routes(fastify: FastifyInstance): Promise<void> {
             const agentRepo = new AgentRepository();
             const executionRepo = new AgentExecutionRepository();
 
-            // Get thread and verify ownership
-            const thread = await threadRepo.findById(threadId);
-            if (!thread || thread.user_id !== userId) {
+            // Get thread and verify workspace access
+            const thread = await threadRepo.findByIdAndWorkspaceId(threadId, workspaceId);
+            if (!thread) {
                 return sendNotFound(reply, "Thread", threadId);
             }
 

@@ -740,6 +740,92 @@ describe("HTTPNodeHandler", () => {
         });
     });
 
+    // Note: Nock's delay() doesn't simulate real network timeouts with AbortController.
+    // These tests verify the configuration is accepted rather than actual timeout behavior.
+    // Real timeout behavior is tested in integration tests.
+    describe("timeout behavior", () => {
+        it("accepts valid timeout configuration", async () => {
+            nock("https://api.example.com").get("/with-timeout").reply(
+                200,
+                { data: "response" },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/with-timeout",
+                    method: "GET",
+                    timeout: 60 // Valid timeout in seconds (max 300)
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(200);
+        });
+
+        it("rejects timeout exceeding maximum", async () => {
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/invalid-timeout",
+                    method: "GET",
+                    timeout: 500 // Exceeds max of 300 seconds
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/timeout|configuration/i);
+        });
+
+        it("uses default timeout when not specified", async () => {
+            nock("https://api.example.com").get("/default-timeout").reply(
+                200,
+                { ok: true },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/default-timeout",
+                    method: "GET"
+                    // No timeout specified - should use default
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(200);
+        });
+
+        it("accepts minimum timeout value", async () => {
+            nock("https://api.example.com").get("/min-timeout").reply(
+                200,
+                { ok: true },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/min-timeout",
+                    method: "GET",
+                    timeout: 1 // Minimum valid timeout
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(200);
+        });
+    });
+
     describe("error handling", () => {
         it("handles 4xx client errors", async () => {
             nock("https://api.example.com").get("/not-found").reply(

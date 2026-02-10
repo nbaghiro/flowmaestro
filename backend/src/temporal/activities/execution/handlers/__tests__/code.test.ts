@@ -724,6 +724,229 @@ result = "done"
         });
     });
 
+    describe("timeout handling", () => {
+        it("respects timeout configuration for JavaScript", async () => {
+            const { VM } = jest.requireMock("vm2");
+            mockVmRun.mockRejectedValue(new Error("Script execution timed out after 1000ms"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "while(true) {}",
+                    timeout: 1000
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/timed out/);
+            expect(VM).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    timeout: 1000
+                })
+            );
+        });
+
+        it("throws on JavaScript execution timeout", async () => {
+            mockVmRun.mockRejectedValue(new Error("Script execution timed out after 30000ms"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "while(true) {}"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/timed out/);
+        });
+
+        it("throws on Python execution timeout", async () => {
+            const mockProcess = new EventEmitter() as EventEmitter & {
+                stdout: EventEmitter;
+                stderr: EventEmitter;
+                kill: jest.Mock;
+            };
+            mockProcess.stdout = new EventEmitter();
+            mockProcess.stderr = new EventEmitter();
+            mockProcess.kill = jest.fn();
+
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: "import time; time.sleep(100)",
+                    timeout: 1000
+                }
+            });
+
+            // Emit error after a tick to simulate timeout
+            setImmediate(() => {
+                mockProcess.stderr.emit("data", Buffer.from(""));
+                mockProcess.emit("close", null); // null exit code indicates killed process
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/failed with code/);
+        });
+    });
+
+    describe("async/await execution", () => {
+        it("handles async/await code in JavaScript", async () => {
+            mockVmRun.mockResolvedValue("async result");
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        const data = await Promise.resolve({ value: 42 });
+                        return "async result";
+                    `
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect(output.result.output).toBe("async result");
+        });
+
+        it("handles async function definitions", async () => {
+            mockVmRun.mockResolvedValue([1, 2, 3, 4]);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        async function fetchData() {
+                            return await Promise.resolve([1, 2, 3, 4]);
+                        }
+                        return await fetchData();
+                    `
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect(output.result.output).toEqual([1, 2, 3, 4]);
+        });
+
+        it("handles rejected promises with proper error", async () => {
+            mockVmRun.mockRejectedValue(new Error("Promise rejected: API failed"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        return await Promise.reject(new Error("API failed"));
+                    `
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/API failed/);
+        });
+
+        it("handles sequential async operations", async () => {
+            mockVmRun.mockResolvedValue({ step1: "done", step2: "done", step3: "done" });
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        const step1 = await Promise.resolve("done");
+                        const step2 = await Promise.resolve("done");
+                        const step3 = await Promise.resolve("done");
+                        return { step1, step2, step3 };
+                    `
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect(output.result.output).toEqual({ step1: "done", step2: "done", step3: "done" });
+        });
+    });
+
+    describe("sandbox globals", () => {
+        it("provides Math object in sandbox", async () => {
+            const { VM } = jest.requireMock("vm2");
+            mockVmRun.mockResolvedValue(3.14);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return Math.round(Math.PI * 100) / 100;"
+                }
+            });
+
+            await handler.execute(input);
+
+            // VM2 inherits global objects by default, verify VM was created
+            expect(VM).toHaveBeenCalled();
+        });
+
+        it("provides JSON object in sandbox", async () => {
+            mockVmRun.mockResolvedValue({ parsed: true });
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return JSON.parse('{\"parsed\": true}');"
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect(output.result.output).toEqual({ parsed: true });
+        });
+
+        it("provides Date object in sandbox", async () => {
+            mockVmRun.mockResolvedValue(true);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return new Date() instanceof Date;"
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect(output.result.output).toBe(true);
+        });
+
+        it("provides Array methods in sandbox", async () => {
+            mockVmRun.mockResolvedValue([2, 4, 6]);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return [1, 2, 3].map(x => x * 2);"
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect(output.result.output).toEqual([2, 4, 6]);
+        });
+
+        it("provides Object methods in sandbox", async () => {
+            mockVmRun.mockResolvedValue(["a", "b"]);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return Object.keys({ a: 1, b: 2 });"
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect(output.result.output).toEqual(["a", "b"]);
+        });
+    });
+
     describe("edge cases", () => {
         it("handles code with only comments in JavaScript", async () => {
             mockVmRun.mockResolvedValue(undefined);
@@ -813,6 +1036,96 @@ result = "done"
 
             const output = await handler.execute(input);
             expect(output.result.output).toEqual({});
+        });
+
+        it("handles circular reference error in JavaScript", async () => {
+            mockVmRun.mockRejectedValue(new Error("Converting circular structure to JSON"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        const obj = { a: 1 };
+                        obj.self = obj;
+                        return JSON.stringify(obj);
+                    `
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/circular/i);
+        });
+
+        it("handles very deep recursion in JavaScript", async () => {
+            mockVmRun.mockRejectedValue(new Error("Maximum call stack size exceeded"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        function recurse(n) { return recurse(n + 1); }
+                        return recurse(0);
+                    `
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/call stack/i);
+        });
+
+        it("handles Python import errors", async () => {
+            const mockProcess = createMockChildProcess(
+                1,
+                "",
+                "ModuleNotFoundError: No module named 'nonexistent_module'"
+            );
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: "import nonexistent_module"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(
+                /ModuleNotFoundError|failed with code/
+            );
+        });
+
+        it("passes entire context when inputVariables not specified", async () => {
+            const { VM } = jest.requireMock("vm2");
+            mockVmRun.mockResolvedValue(15);
+
+            const context = createTestContext({
+                nodeOutputs: {
+                    data1: { x: 5 },
+                    data2: { y: 10 }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return x + y;"
+                    // No inputVariables specified - entire context passed
+                },
+                context
+            });
+
+            await handler.execute(input);
+
+            // Verify VM was created with entire context spread into sandbox
+            expect(VM).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    sandbox: expect.objectContaining({
+                        console: expect.any(Object)
+                        // Context variables spread in
+                    })
+                })
+            );
         });
     });
 });

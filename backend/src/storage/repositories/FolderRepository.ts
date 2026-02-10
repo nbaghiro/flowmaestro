@@ -650,7 +650,7 @@ export class FolderRepository {
 
     private async getKnowledgeBasesInFolder(folderId: string): Promise<KnowledgeBaseSummary[]> {
         const query = `
-            SELECT kb.id, kb.name, kb.description, kb.config, kb.created_at, kb.updated_at,
+            SELECT kb.id, kb.name, kb.description, kb.category, kb.config, kb.created_at, kb.updated_at,
                    COUNT(DISTINCT kd.id) as document_count,
                    COUNT(kc.id) as chunk_count,
                    COALESCE(SUM(kd.file_size), 0) as total_size_bytes
@@ -665,6 +665,7 @@ export class FolderRepository {
             id: string;
             name: string;
             description: string | null;
+            category: string | null;
             config: { embeddingModel?: string } | null;
             created_at: string;
             updated_at: string;
@@ -677,6 +678,7 @@ export class FolderRepository {
             id: row.id,
             name: row.name,
             description: row.description,
+            category: row.category,
             documentCount: parseInt(row.document_count),
             embeddingModel: row.config?.embeddingModel,
             chunkCount: parseInt(row.chunk_count),

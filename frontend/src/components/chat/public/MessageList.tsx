@@ -1,5 +1,6 @@
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import type { PublicChatMessage } from "@flowmaestro/shared";
+import { useChatScroll } from "../../../hooks/useChatScroll";
 import { AssistantMessage } from "./AssistantMessage";
 import { TypingIndicator } from "./TypingIndicator";
 import { UserMessage } from "./UserMessage";
@@ -13,12 +14,9 @@ interface MessageListProps {
 
 export function MessageList({ messages, isTyping, borderRadius, iconUrl }: MessageListProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
-    const bottomRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll to bottom when new messages arrive
-    useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, isTyping]);
+    // Auto-scroll to bottom when messages or typing state changes
+    const bottomRef = useChatScroll([messages, isTyping]);
 
     if (messages.length === 0 && !isTyping) {
         return null;

@@ -7,6 +7,7 @@
  */
 
 import { fixtureRegistry } from "./FixtureRegistry";
+import { isSimpleFilterConfig } from "./types";
 import type { FilterableDataConfig, SandboxScenario, TestFixture } from "./types";
 import type { OperationResult } from "../core/types";
 
@@ -42,14 +43,22 @@ export class SandboxDataService {
                 return this.getFilteredResponse(fixture, params);
             }
 
-            // Find a matching test case or use the first one
-            for (const testCase of fixture.validCases) {
-                if (this.matchesParams(testCase.input as Record<string, unknown>, params)) {
-                    return {
-                        success: true,
-                        data: testCase.expectedOutput
-                    };
-                }
+            // Find the best matching test case (most specific match wins)
+            // Sort by number of matching parameters (more specific matches first)
+            const matchedCases = fixture.validCases
+                .map((testCase) => ({
+                    testCase,
+                    input: testCase.input as Record<string, unknown>,
+                    specificity: Object.keys(testCase.input as Record<string, unknown>).length
+                }))
+                .filter(({ input }) => this.matchesParams(input, params))
+                .sort((a, b) => b.specificity - a.specificity);
+
+            if (matchedCases.length > 0) {
+                return {
+                    success: true,
+                    data: matchedCases[0].testCase.expectedOutput
+                };
             }
             // Default to first valid case
             return {
@@ -360,15 +369,51 @@ export class SandboxDataService {
         params: Record<string, unknown>,
         config: FilterableDataConfig
     ): Record<string, unknown>[] {
-        const filterableFields = config.filterConfig?.filterableFields || [];
+        const filterConfig = config.filterConfig;
 
+        // If no filter config, return all records
+        if (!filterConfig) {
+            return records;
+        }
+
+        // Handle simple filter config (type + filterableFields)
+        if (isSimpleFilterConfig(filterConfig)) {
+            const filterableFields = filterConfig.filterableFields || [];
+            return records.filter((record) => {
+                for (const field of filterableFields) {
+                    if (params[field] !== undefined) {
+                        const recordValue = (record as Record<string, unknown>)[field];
+                        if (recordValue !== params[field]) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            });
+        }
+
+        // Handle advanced filter config (per-field definitions)
         return records.filter((record) => {
-            // Check each filterable field
-            for (const field of filterableFields) {
-                if (params[field] !== undefined) {
-                    const recordValue = (record as Record<string, unknown>)[field];
-                    if (recordValue !== params[field]) {
-                        return false;
+            for (const [paramName, fieldConfig] of Object.entries(filterConfig)) {
+                if (params[paramName] !== undefined) {
+                    const paramValue = params[paramName];
+
+                    // If field is a function, call it
+                    if (typeof fieldConfig.field === "function") {
+                        const result = fieldConfig.field(record, paramValue);
+                        if (result === false) {
+                            return false;
+                        }
+                        // For computed fields that return a value, compare with param
+                        if (typeof result !== "boolean" && result !== paramValue) {
+                            return false;
+                        }
+                    } else {
+                        // Field is a string, use as property name
+                        const recordValue = (record as Record<string, unknown>)[fieldConfig.field];
+                        if (recordValue !== paramValue) {
+                            return false;
+                        }
                     }
                 }
             }
@@ -394,7 +439,11 @@ export class SandboxDataService {
 
         // Parse offset to get start index
         let startIndex = 0;
-        const offsetValue = params[offsetParam] as string | undefined;
+        const rawOffsetValue = params[offsetParam];
+        const offsetValue =
+            rawOffsetValue !== undefined && rawOffsetValue !== null
+                ? String(rawOffsetValue)
+                : undefined;
         if (offsetValue) {
             // For Airtable-style offsets (itrXXX/recXXX), extract the record ID
             const recordIdMatch = offsetValue.match(/\/rec([A-Za-z0-9]+)$/);

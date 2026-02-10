@@ -47,7 +47,7 @@ export function HomePageSkeleton() {
             {/* Recent Agents Skeleton */}
             <HorizontalRowSkeleton />
 
-            {/* Featured Personas Skeleton */}
+            {/* Personas Skeleton */}
             <HorizontalRowSkeleton />
 
             {/* Templates Skeleton */}

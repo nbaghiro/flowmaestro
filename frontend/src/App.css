@@ -625,6 +625,47 @@ input:-webkit-autofill::first-line {
 }
 
 /* =============================================================================
+   TEMPLATE CATEGORY BADGE COLORS
+   These are used dynamically from TEMPLATE_CATEGORY_META in @flowmaestro/shared
+   ============================================================================= */
+
+/* Light mode category badges */
+.template-badge-marketing { @apply bg-violet-100 text-violet-700; }
+.template-badge-sales { @apply bg-emerald-100 text-emerald-700; }
+.template-badge-operations { @apply bg-amber-100 text-amber-700; }
+.template-badge-engineering { @apply bg-blue-100 text-blue-700; }
+.template-badge-support { @apply bg-rose-100 text-rose-700; }
+.template-badge-ecommerce { @apply bg-orange-100 text-orange-700; }
+.template-badge-hr { @apply bg-indigo-100 text-indigo-700; }
+.template-badge-finance { @apply bg-teal-100 text-teal-700; }
+.template-badge-saas { @apply bg-cyan-100 text-cyan-700; }
+.template-badge-healthcare { @apply bg-pink-100 text-pink-700; }
+.template-badge-multimodal-ai { @apply bg-purple-100 text-purple-700; }
+.template-badge-knowledge-research { @apply bg-sky-100 text-sky-700; }
+.template-badge-document-processing { @apply bg-slate-100 text-slate-700; }
+.template-badge-data-analytics { @apply bg-lime-100 text-lime-700; }
+.template-badge-voice-audio { @apply bg-fuchsia-100 text-fuchsia-700; }
+.template-badge-advanced-logic { @apply bg-stone-100 text-stone-700; }
+
+/* Dark mode category badges */
+.dark .template-badge-marketing { @apply bg-violet-900/30 text-violet-300; }
+.dark .template-badge-sales { @apply bg-emerald-900/30 text-emerald-300; }
+.dark .template-badge-operations { @apply bg-amber-900/30 text-amber-300; }
+.dark .template-badge-engineering { @apply bg-blue-900/30 text-blue-300; }
+.dark .template-badge-support { @apply bg-rose-900/30 text-rose-300; }
+.dark .template-badge-ecommerce { @apply bg-orange-900/30 text-orange-300; }
+.dark .template-badge-hr { @apply bg-indigo-900/30 text-indigo-300; }
+.dark .template-badge-finance { @apply bg-teal-900/30 text-teal-300; }
+.dark .template-badge-saas { @apply bg-cyan-900/30 text-cyan-300; }
+.dark .template-badge-healthcare { @apply bg-pink-900/30 text-pink-300; }
+.dark .template-badge-multimodal-ai { @apply bg-purple-900/30 text-purple-300; }
+.dark .template-badge-knowledge-research { @apply bg-sky-900/30 text-sky-300; }
+.dark .template-badge-document-processing { @apply bg-slate-900/30 text-slate-300; }
+.dark .template-badge-data-analytics { @apply bg-lime-900/30 text-lime-300; }
+.dark .template-badge-voice-audio { @apply bg-fuchsia-900/30 text-fuchsia-300; }
+.dark .template-badge-advanced-logic { @apply bg-stone-900/30 text-stone-300; }
+
+/* =============================================================================
    SKELETON SHIMMER ANIMATION
    ============================================================================= */
 

@@ -1,9 +1,10 @@
-import { Shield, Key, AlertTriangle, FlaskConical } from "lucide-react";
+import { Shield, Key, AlertTriangle, FlaskConical, Beaker } from "lucide-react";
 import React, { useState } from "react";
 import { Alert } from "../../common/Alert";
 import { Button } from "../../common/Button";
 import { ConfirmDialog } from "../../common/ConfirmDialog";
 import { Dialog } from "../../common/Dialog";
+import { SandboxDataExplorerDialog } from "./SandboxDataExplorerDialog";
 import type { Connection } from "../../../lib/api";
 
 interface ConnectionDetailsDialogProps {
@@ -34,6 +35,7 @@ export function ConnectionDetailsDialog({
 }: ConnectionDetailsDialogProps) {
     const [isDisconnecting, setIsDisconnecting] = useState(false);
     const [showConfirmDisconnect, setShowConfirmDisconnect] = useState(false);
+    const [showSandboxExplorer, setShowSandboxExplorer] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const isOAuth = connection.connection_method === "oauth2";
@@ -179,9 +181,20 @@ export function ConnectionDetailsDialog({
 
                     {/* Test Connection Indicator */}
                     {isTestConnection && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <FlaskConical className="w-3.5 h-3.5" />
-                            <span>Test connection using mock data</span>
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <FlaskConical className="w-3.5 h-3.5" />
+                                <span>Test connection using mock data</span>
+                            </div>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setShowSandboxExplorer(true)}
+                                className="w-full"
+                            >
+                                <Beaker className="w-4 h-4" />
+                                Explore Mock Data
+                            </Button>
                         </div>
                     )}
 
@@ -237,6 +250,17 @@ export function ConnectionDetailsDialog({
                 cancelText="Cancel"
                 variant="danger"
             />
+
+            {/* Sandbox Data Explorer Dialog */}
+            {isTestConnection && (
+                <SandboxDataExplorerDialog
+                    isOpen={showSandboxExplorer}
+                    onClose={() => setShowSandboxExplorer(false)}
+                    provider={connection.provider}
+                    providerDisplayName={providerDisplayName}
+                    providerIcon={providerIcon}
+                />
+            )}
         </>
     );
 }

@@ -12,7 +12,7 @@ import {
     createMockWorkflowEdge,
     createMockAuthToken,
     mockFetchOnce
-} from "../../lib/__tests__/test-helpers";
+} from "../../test-helpers";
 import { useWorkflowStore, INITIAL_NODE_WIDTH, INITIAL_NODE_HEIGHT } from "../workflowStore";
 import type { Node, Edge } from "reactflow";
 

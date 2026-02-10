@@ -1,8 +1,93 @@
 /**
- * Monday Provider Test Fixtures
+ * Monday.com Provider Test Fixtures
+ *
+ * Based on Monday.com API documentation:
+ * - Boards: https://developer.monday.com/api-reference/reference/boards
+ * - Items: https://developer.monday.com/api-reference/reference/items
+ * - Groups: https://developer.monday.com/api-reference/reference/groups
  */
 
 import type { TestFixture } from "../../../sandbox";
+
+/**
+ * Sample boards for filterable data
+ */
+const sampleBoards = [
+    {
+        id: "1234567890",
+        name: "Product Roadmap",
+        description: "Q1 2024 Product Planning",
+        state: "active",
+        board_kind: "public",
+        board_folder_id: "folder_001",
+        workspace_id: "12345",
+        permissions: "everyone",
+        _type: "main"
+    },
+    {
+        id: "1234567891",
+        name: "Engineering Tasks",
+        description: "Development sprint board",
+        state: "active",
+        board_kind: "private",
+        board_folder_id: null,
+        workspace_id: "12345",
+        permissions: "owners",
+        _type: "main"
+    },
+    {
+        id: "1234567892",
+        name: "Marketing Campaigns",
+        description: "Active marketing initiatives",
+        state: "active",
+        board_kind: "share",
+        board_folder_id: "folder_002",
+        workspace_id: "12346",
+        permissions: "everyone",
+        _type: "main"
+    },
+    {
+        id: "1234567893",
+        name: "Archived Projects",
+        description: "Completed projects archive",
+        state: "archived",
+        board_kind: "public",
+        board_folder_id: null,
+        workspace_id: "12345",
+        permissions: "everyone",
+        _type: "archive"
+    }
+];
+
+/**
+ * Sample items for filterable data
+ */
+const sampleItems = [
+    {
+        id: "9876543210",
+        name: "Implement user authentication",
+        state: "active",
+        board_id: "1234567890",
+        group_id: "new_group",
+        _status: "working_on_it"
+    },
+    {
+        id: "9876543211",
+        name: "Design landing page",
+        state: "active",
+        board_id: "1234567890",
+        group_id: "new_group",
+        _status: "done"
+    },
+    {
+        id: "9876543212",
+        name: "Write API documentation",
+        state: "active",
+        board_id: "1234567890",
+        group_id: "completed_group",
+        _status: "stuck"
+    }
+];
 
 export const mondayFixtures: TestFixture[] = [
     {
@@ -10,39 +95,50 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_archiveBoard",
-                description:
-                    "Archive a board in Monday.com. Archived boards can be restored later.",
+                name: "archive_active_board",
+                description: "Archive an active board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "1234567890",
+                    state: "archived"
+                }
+            },
+            {
+                name: "archive_shared_board",
+                description: "Archive a shared board",
+                input: {
+                    board_id: "1234567892"
+                },
+                expectedOutput: {
+                    id: "1234567892",
+                    state: "archived"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board with ID 9999999999 not found",
                     retryable: false
                 }
             },
             {
                 name: "rate_limited",
-                description: "Rate limit exceeded",
+                description: "Rate limit exceeded (complexity budget exhausted)",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890"
                 },
                 expectedError: {
                     type: "rate_limit",
-                    message: "Rate limit exceeded",
+                    message: "Complexity budget exhausted. Reset in 60 seconds.",
                     retryable: true
                 }
             }
@@ -53,27 +149,71 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_createBoard",
-                description:
-                    "Create a new board in Monday.com with specified visibility and optional template.",
+                name: "create_public_board",
+                description: "Create a new public board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_name: "New Project Board",
+                    board_kind: "public",
+                    description: "Board for tracking the new project"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "1234567894",
+                    name: "New Project Board",
+                    description: "Board for tracking the new project",
+                    state: "active",
+                    board_kind: "public",
+                    workspace_id: null
+                }
+            },
+            {
+                name: "create_private_board_in_workspace",
+                description: "Create a private board in a specific workspace",
+                input: {
+                    board_name: "Team Sprint Board",
+                    board_kind: "private",
+                    description: "Sprint planning for the team",
+                    workspace_id: "12345"
+                },
+                expectedOutput: {
+                    id: "1234567895",
+                    name: "Team Sprint Board",
+                    description: "Sprint planning for the team",
+                    state: "active",
+                    board_kind: "private",
+                    workspace_id: "12345"
+                }
+            },
+            {
+                name: "create_board_from_template",
+                description: "Create a board from a template",
+                input: {
+                    board_name: "Customer Onboarding",
+                    board_kind: "share",
+                    template_id: "template_001",
+                    folder_id: "folder_003"
+                },
+                expectedOutput: {
+                    id: "1234567896",
+                    name: "Customer Onboarding",
+                    description: null,
+                    state: "active",
+                    board_kind: "share",
+                    workspace_id: null
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "workspace_not_found",
+                description: "Workspace does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_name: "Test Board",
+                    board_kind: "public",
+                    workspace_id: "99999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Workspace not found",
                     retryable: false
                 }
             },
@@ -81,7 +221,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_name: "Test Board",
+                    board_kind: "public"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -96,26 +237,38 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_deleteBoard",
-                description: "Delete a board from Monday.com. This action cannot be undone.",
+                name: "delete_board",
+                description: "Permanently delete a board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567893"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "1234567893",
+                    state: "deleted"
+                }
+            },
+            {
+                name: "delete_private_board",
+                description: "Delete a private board",
+                input: {
+                    board_id: "1234567891"
+                },
+                expectedOutput: {
+                    id: "1234567891",
+                    state: "deleted"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board with ID 9999999999 not found",
                     retryable: false
                 }
             },
@@ -123,7 +276,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -138,27 +291,56 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_duplicateBoard",
-                description:
-                    "Duplicate a board in Monday.com with structure only, items, or items and updates.",
+                name: "duplicate_structure_only",
+                description: "Duplicate board with structure only",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    duplicate_type: "duplicate_board_with_structure",
+                    board_name: "Product Roadmap Copy"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "1234567897",
+                    name: "Product Roadmap Copy"
+                }
+            },
+            {
+                name: "duplicate_with_items",
+                description: "Duplicate board with items",
+                input: {
+                    board_id: "1234567890",
+                    duplicate_type: "duplicate_board_with_pulses",
+                    workspace_id: "12346"
+                },
+                expectedOutput: {
+                    id: "1234567898",
+                    name: "Product Roadmap (copy)"
+                }
+            },
+            {
+                name: "duplicate_with_items_and_updates",
+                description: "Duplicate board with items and updates",
+                input: {
+                    board_id: "1234567890",
+                    duplicate_type: "duplicate_board_with_pulses_and_updates",
+                    keep_subscribers: true
+                },
+                expectedOutput: {
+                    id: "1234567899",
+                    name: "Product Roadmap (copy)"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Source board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999",
+                    duplicate_type: "duplicate_board_with_structure"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board with ID 9999999999 not found",
                     retryable: false
                 }
             },
@@ -166,7 +348,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    duplicate_type: "duplicate_board_with_structure"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -181,27 +364,94 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_getBoard",
-                description:
-                    "Retrieve a specific board from Monday.com by its ID, including columns and groups.",
+                name: "get_board_full_details",
+                description: "Get board with all details",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "1234567890",
+                    name: "Product Roadmap",
+                    description: "Q1 2024 Product Planning",
+                    state: "active",
+                    board_kind: "public",
+                    board_folder_id: "folder_001",
+                    workspace_id: "12345",
+                    permissions: "everyone",
+                    columns: [
+                        {
+                            id: "status",
+                            title: "Status",
+                            type: "status",
+                            settings_str: '{"labels":{"0":"Working on it","1":"Done","2":"Stuck"}}'
+                        },
+                        {
+                            id: "person",
+                            title: "Owner",
+                            type: "people",
+                            settings_str: "{}"
+                        },
+                        {
+                            id: "date4",
+                            title: "Due Date",
+                            type: "date",
+                            settings_str: "{}"
+                        }
+                    ],
+                    groups: [
+                        {
+                            id: "new_group",
+                            title: "To Do",
+                            color: "#579bfc",
+                            position: "0"
+                        },
+                        {
+                            id: "completed_group",
+                            title: "Completed",
+                            color: "#00c875",
+                            position: "1"
+                        }
+                    ],
+                    owners: [
+                        {
+                            id: "12345678",
+                            name: "John Smith",
+                            email: "john@example.com"
+                        }
+                    ]
+                }
+            },
+            {
+                name: "get_private_board",
+                description: "Get a private board",
+                input: {
+                    board_id: "1234567891"
+                },
+                expectedOutput: {
+                    id: "1234567891",
+                    name: "Engineering Tasks",
+                    description: "Development sprint board",
+                    state: "active",
+                    board_kind: "private",
+                    board_folder_id: null,
+                    workspace_id: "12345",
+                    permissions: "owners",
+                    columns: [],
+                    groups: [],
+                    owners: []
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board with ID 9999999999 not found",
                     retryable: false
                 }
             },
@@ -209,7 +459,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -222,29 +472,53 @@ export const mondayFixtures: TestFixture[] = [
     {
         operationId: "listBoards",
         provider: "monday",
+        filterableData: {
+            records: sampleBoards,
+            recordsField: "boards",
+            defaultPageSize: 25,
+            maxPageSize: 100,
+            pageSizeParam: "limit",
+            filterConfig: {
+                type: "generic",
+                filterableFields: ["state", "board_kind", "_type"]
+            }
+        },
         validCases: [
             {
-                name: "basic_listBoards",
-                description:
-                    "List boards in Monday.com with optional filtering by workspace, type, and state.",
+                name: "list_all_boards",
+                description: "List all boards",
                 input: {
-                    // TODO: Add input parameters based on operation schema
-                },
-                expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    limit: 25
+                }
+            },
+            {
+                name: "list_active_boards",
+                description: "List only active boards",
+                input: {
+                    state: "active",
+                    limit: 50
+                }
+            },
+            {
+                name: "list_boards_by_workspace",
+                description: "List boards in a specific workspace",
+                input: {
+                    workspace_ids: ["12345"],
+                    limit: 25
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "invalid_workspace",
+                description: "Invalid workspace ID",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    workspace_ids: ["invalid"],
+                    limit: 25
                 },
                 expectedError: {
-                    type: "not_found",
-                    message: "Resource not found",
+                    type: "validation",
+                    message: "Invalid workspace ID format",
                     retryable: false
                 }
             },
@@ -252,7 +526,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    limit: 25
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -267,26 +541,42 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_updateBoard",
-                description: "Update a board",
+                name: "update_board_name",
+                description: "Update board name",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    board_attribute: "name",
+                    new_value: "Updated Product Roadmap"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    success: true
+                }
+            },
+            {
+                name: "update_board_description",
+                description: "Update board description",
+                input: {
+                    board_id: "1234567890",
+                    board_attribute: "description",
+                    new_value: "Updated Q1 2024 Product Planning"
+                },
+                expectedOutput: {
+                    success: true
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999",
+                    board_attribute: "name",
+                    new_value: "Test"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board with ID 9999999999 not found",
                     retryable: false
                 }
             },
@@ -294,7 +584,9 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    board_attribute: "name",
+                    new_value: "Test"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -309,26 +601,47 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_changeColumnValue",
-                description: "Change a column value for an item using JSON format.",
+                name: "change_status_column",
+                description: "Change a status column value",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    item_id: "9876543210",
+                    column_id: "status",
+                    value: '{"label":"Done"}'
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543210",
+                    name: "Implement user authentication"
+                }
+            },
+            {
+                name: "change_date_column",
+                description: "Change a date column value",
+                input: {
+                    board_id: "1234567890",
+                    item_id: "9876543210",
+                    column_id: "date4",
+                    value: '{"date":"2024-03-15"}'
+                },
+                expectedOutput: {
+                    id: "9876543210",
+                    name: "Implement user authentication"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "1234567890",
+                    item_id: "9999999999",
+                    column_id: "status",
+                    value: '{"label":"Done"}'
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item not found",
                     retryable: false
                 }
             },
@@ -336,7 +649,10 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    item_id: "9876543210",
+                    column_id: "status",
+                    value: '{"label":"Done"}'
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -351,26 +667,47 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_changeSimpleColumnValue",
-                description: "Change a column value for an item using a simple string value.",
+                name: "change_text_column",
+                description: "Change a text column with simple value",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    item_id: "9876543210",
+                    column_id: "text_col",
+                    value: "Updated text value"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543210",
+                    name: "Implement user authentication"
+                }
+            },
+            {
+                name: "change_number_column",
+                description: "Change a number column with simple value",
+                input: {
+                    board_id: "1234567890",
+                    item_id: "9876543210",
+                    column_id: "numbers",
+                    value: "42"
+                },
+                expectedOutput: {
+                    id: "9876543210",
+                    name: "Implement user authentication"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "1234567890",
+                    item_id: "9999999999",
+                    column_id: "text_col",
+                    value: "Test"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item not found",
                     retryable: false
                 }
             },
@@ -378,7 +715,10 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    item_id: "9876543210",
+                    column_id: "text_col",
+                    value: "Test"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -393,26 +733,62 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_createColumn",
-                description: "Create a new column on a Monday.com board.",
+                name: "create_status_column",
+                description: "Create a new status column",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    title: "Priority",
+                    column_type: "status",
+                    description: "Task priority level"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "priority_col",
+                    title: "Priority",
+                    type: "status"
+                }
+            },
+            {
+                name: "create_date_column",
+                description: "Create a new date column",
+                input: {
+                    board_id: "1234567890",
+                    title: "Start Date",
+                    column_type: "date"
+                },
+                expectedOutput: {
+                    id: "start_date",
+                    title: "Start Date",
+                    type: "date"
+                }
+            },
+            {
+                name: "create_people_column",
+                description: "Create a new people column",
+                input: {
+                    board_id: "1234567890",
+                    title: "Assignee",
+                    column_type: "people",
+                    description: "Person assigned to this task"
+                },
+                expectedOutput: {
+                    id: "assignee",
+                    title: "Assignee",
+                    type: "people"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999",
+                    title: "Test Column",
+                    column_type: "text"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board not found",
                     retryable: false
                 }
             },
@@ -420,7 +796,9 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    title: "Test Column",
+                    column_type: "text"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -435,27 +813,39 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_deleteColumn",
-                description:
-                    "Delete a column from a Monday.com board. This action cannot be undone.",
+                name: "delete_column",
+                description: "Delete a column from board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    column_id: "old_column"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "old_column"
+                }
+            },
+            {
+                name: "delete_custom_column",
+                description: "Delete a custom column",
+                input: {
+                    board_id: "1234567890",
+                    column_id: "custom_col_123"
+                },
+                expectedOutput: {
+                    id: "custom_col_123"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "column_not_found",
+                description: "Column does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "1234567890",
+                    column_id: "nonexistent"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Column not found",
                     retryable: false
                 }
             },
@@ -463,7 +853,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    column_id: "old_column"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -478,26 +869,68 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_listColumns",
-                description: "List all columns on a Monday.com board.",
+                name: "list_board_columns",
+                description: "List all columns on a board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    columns: [
+                        {
+                            id: "name",
+                            title: "Name",
+                            type: "name",
+                            settings_str: "{}"
+                        },
+                        {
+                            id: "status",
+                            title: "Status",
+                            type: "status",
+                            settings_str: '{"labels":{"0":"Working on it","1":"Done","2":"Stuck"}}'
+                        },
+                        {
+                            id: "person",
+                            title: "Owner",
+                            type: "people",
+                            settings_str: "{}"
+                        },
+                        {
+                            id: "date4",
+                            title: "Due Date",
+                            type: "date",
+                            settings_str: "{}"
+                        }
+                    ]
+                }
+            },
+            {
+                name: "list_columns_empty_board",
+                description: "List columns on a board with minimal setup",
+                input: {
+                    board_id: "1234567891"
+                },
+                expectedOutput: {
+                    columns: [
+                        {
+                            id: "name",
+                            title: "Name",
+                            type: "name",
+                            settings_str: "{}"
+                        }
+                    ]
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board not found",
                     retryable: false
                 }
             },
@@ -505,7 +938,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -520,27 +953,41 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_archiveGroup",
-                description:
-                    "Archive a group in Monday.com. Archived groups can be restored later.",
+                name: "archive_group",
+                description: "Archive a group on a board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    group_id: "completed_group"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "completed_group",
+                    archived: true
+                }
+            },
+            {
+                name: "archive_empty_group",
+                description: "Archive an empty group",
+                input: {
+                    board_id: "1234567890",
+                    group_id: "empty_group"
+                },
+                expectedOutput: {
+                    id: "empty_group",
+                    archived: true
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "group_not_found",
+                description: "Group does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "1234567890",
+                    group_id: "nonexistent"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Group not found",
                     retryable: false
                 }
             },
@@ -548,7 +995,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    group_id: "completed_group"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -563,26 +1011,43 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_createGroup",
-                description: "Create a new group on a Monday.com board.",
+                name: "create_group",
+                description: "Create a new group on a board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    group_name: "In Progress"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "in_progress_group",
+                    title: "In Progress"
+                }
+            },
+            {
+                name: "create_colored_group",
+                description: "Create a group with a specific color",
+                input: {
+                    board_id: "1234567890",
+                    group_name: "High Priority",
+                    group_color: "e2445c"
+                },
+                expectedOutput: {
+                    id: "high_priority_group",
+                    title: "High Priority",
+                    color: "#e2445c"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999",
+                    group_name: "Test Group"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board not found",
                     retryable: false
                 }
             },
@@ -590,7 +1055,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    group_name: "Test Group"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -605,27 +1071,41 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_deleteGroup",
-                description:
-                    "Delete a group from a Monday.com board. Items in the group will be deleted.",
+                name: "delete_group",
+                description: "Delete a group and its items",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    group_id: "old_group"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "old_group",
+                    deleted: true
+                }
+            },
+            {
+                name: "delete_archived_group",
+                description: "Delete an archived group",
+                input: {
+                    board_id: "1234567890",
+                    group_id: "archived_group"
+                },
+                expectedOutput: {
+                    id: "archived_group",
+                    deleted: true
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "group_not_found",
+                description: "Group does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "1234567890",
+                    group_id: "nonexistent"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Group not found",
                     retryable: false
                 }
             },
@@ -633,7 +1113,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    group_id: "old_group"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -648,26 +1129,43 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_duplicateGroup",
-                description: "Duplicate a group on a Monday.com board.",
+                name: "duplicate_group",
+                description: "Duplicate a group on a board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    group_id: "new_group"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "new_group_copy",
+                    title: "To Do (copy)"
+                }
+            },
+            {
+                name: "duplicate_group_with_title",
+                description: "Duplicate a group with custom title",
+                input: {
+                    board_id: "1234567890",
+                    group_id: "new_group",
+                    group_title: "Q2 Tasks",
+                    add_to_top: true
+                },
+                expectedOutput: {
+                    id: "q2_tasks",
+                    title: "Q2 Tasks"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "group_not_found",
+                description: "Group does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "1234567890",
+                    group_id: "nonexistent"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Group not found",
                     retryable: false
                 }
             },
@@ -675,7 +1173,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    group_id: "new_group"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -690,26 +1189,56 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_listGroups",
-                description: "List all groups on a Monday.com board.",
+                name: "list_board_groups",
+                description: "List all groups on a board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    groups: [
+                        {
+                            id: "new_group",
+                            title: "To Do",
+                            color: "#579bfc",
+                            position: "0"
+                        },
+                        {
+                            id: "completed_group",
+                            title: "Completed",
+                            color: "#00c875",
+                            position: "1"
+                        }
+                    ]
+                }
+            },
+            {
+                name: "list_groups_single",
+                description: "List groups on a board with one group",
+                input: {
+                    board_id: "1234567891"
+                },
+                expectedOutput: {
+                    groups: [
+                        {
+                            id: "default_group",
+                            title: "Group Title",
+                            color: "#579bfc",
+                            position: "0"
+                        }
+                    ]
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board not found",
                     retryable: false
                 }
             },
@@ -717,7 +1246,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -732,26 +1261,47 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_updateGroup",
-                description: "Update a group",
+                name: "update_group_title",
+                description: "Update group title",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    group_id: "new_group",
+                    group_attribute: "title",
+                    new_value: "Backlog"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "new_group",
+                    title: "Backlog"
+                }
+            },
+            {
+                name: "update_group_color",
+                description: "Update group color",
+                input: {
+                    board_id: "1234567890",
+                    group_id: "new_group",
+                    group_attribute: "color",
+                    new_value: "#ff642e"
+                },
+                expectedOutput: {
+                    id: "new_group",
+                    color: "#ff642e"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "group_not_found",
+                description: "Group does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "1234567890",
+                    group_id: "nonexistent",
+                    group_attribute: "title",
+                    new_value: "Test"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Group not found",
                     retryable: false
                 }
             },
@@ -759,7 +1309,10 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    group_id: "new_group",
+                    group_attribute: "title",
+                    new_value: "Test"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -774,26 +1327,38 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_archiveItem",
-                description: "Archive an item in Monday.com. Archived items can be restored later.",
+                name: "archive_item",
+                description: "Archive an item",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    item_id: "9876543211"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543211",
+                    state: "archived"
+                }
+            },
+            {
+                name: "archive_completed_item",
+                description: "Archive a completed item",
+                input: {
+                    item_id: "9876543212"
+                },
+                expectedOutput: {
+                    id: "9876543212",
+                    state: "archived"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    item_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item with ID 9999999999 not found",
                     retryable: false
                 }
             },
@@ -801,7 +1366,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    item_id: "9876543210"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -816,26 +1381,83 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_createItem",
-                description: "Create a new item on a Monday.com board with optional column values.",
+                name: "create_item_simple",
+                description: "Create a simple item",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    item_name: "New feature request"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543213",
+                    name: "New feature request",
+                    state: "active",
+                    board: {
+                        id: "1234567890",
+                        name: "Product Roadmap"
+                    },
+                    group: null
+                }
+            },
+            {
+                name: "create_item_with_group",
+                description: "Create an item in a specific group",
+                input: {
+                    board_id: "1234567890",
+                    item_name: "Bug fix: login issue",
+                    group_id: "new_group"
+                },
+                expectedOutput: {
+                    id: "9876543214",
+                    name: "Bug fix: login issue",
+                    state: "active",
+                    board: {
+                        id: "1234567890",
+                        name: "Product Roadmap"
+                    },
+                    group: {
+                        id: "new_group",
+                        title: "To Do"
+                    }
+                }
+            },
+            {
+                name: "create_item_with_column_values",
+                description: "Create an item with column values",
+                input: {
+                    board_id: "1234567890",
+                    item_name: "API integration",
+                    group_id: "new_group",
+                    column_values: {
+                        status: { label: "Working on it" },
+                        date4: { date: "2024-04-01" }
+                    }
+                },
+                expectedOutput: {
+                    id: "9876543215",
+                    name: "API integration",
+                    state: "active",
+                    board: {
+                        id: "1234567890",
+                        name: "Product Roadmap"
+                    },
+                    group: {
+                        id: "new_group",
+                        title: "To Do"
+                    }
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999",
+                    item_name: "Test item"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board not found",
                     retryable: false
                 }
             },
@@ -843,7 +1465,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    item_name: "Test item"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -858,26 +1481,36 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_deleteItem",
-                description: "Delete an item from Monday.com. This action cannot be undone.",
+                name: "delete_item",
+                description: "Permanently delete an item",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    item_id: "9876543212"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543212"
+                }
+            },
+            {
+                name: "delete_archived_item",
+                description: "Delete an archived item",
+                input: {
+                    item_id: "9876543211"
+                },
+                expectedOutput: {
+                    id: "9876543211"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    item_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item with ID 9999999999 not found",
                     retryable: false
                 }
             },
@@ -885,7 +1518,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    item_id: "9876543210"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -900,27 +1533,42 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_duplicateItem",
-                description:
-                    "Duplicate an item in Monday.com, optionally including updates/comments.",
+                name: "duplicate_item",
+                description: "Duplicate an item",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    item_id: "9876543210"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543216",
+                    name: "Implement user authentication (copy)"
+                }
+            },
+            {
+                name: "duplicate_item_with_updates",
+                description: "Duplicate an item including updates",
+                input: {
+                    board_id: "1234567890",
+                    item_id: "9876543210",
+                    with_updates: true
+                },
+                expectedOutput: {
+                    id: "9876543217",
+                    name: "Implement user authentication (copy)"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "1234567890",
+                    item_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item not found",
                     retryable: false
                 }
             },
@@ -928,7 +1576,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    item_id: "9876543210"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -943,27 +1592,81 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_getItem",
-                description:
-                    "Retrieve a specific item from Monday.com by its ID, including column values.",
+                name: "get_item_full",
+                description: "Get item with full details",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    item_id: "9876543210"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543210",
+                    name: "Implement user authentication",
+                    state: "active",
+                    board: {
+                        id: "1234567890",
+                        name: "Product Roadmap"
+                    },
+                    group: {
+                        id: "new_group",
+                        title: "To Do"
+                    },
+                    column_values: [
+                        {
+                            id: "status",
+                            type: "status",
+                            text: "Working on it",
+                            value: '{"index":0}'
+                        },
+                        {
+                            id: "person",
+                            type: "people",
+                            text: "John Smith",
+                            value: '{"personsAndTeams":[{"id":12345678,"kind":"person"}]}'
+                        }
+                    ],
+                    creator: {
+                        id: "12345678",
+                        name: "John Smith",
+                        email: "john@example.com"
+                    },
+                    created_at: "2024-01-15T10:00:00Z",
+                    updated_at: "2024-01-20T14:30:00Z"
+                }
+            },
+            {
+                name: "get_item_minimal",
+                description: "Get item with minimal column values",
+                input: {
+                    item_id: "9876543211"
+                },
+                expectedOutput: {
+                    id: "9876543211",
+                    name: "Design landing page",
+                    state: "active",
+                    board: {
+                        id: "1234567890",
+                        name: "Product Roadmap"
+                    },
+                    group: {
+                        id: "new_group",
+                        title: "To Do"
+                    },
+                    column_values: [],
+                    creator: null,
+                    created_at: "2024-01-10T09:00:00Z",
+                    updated_at: null
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    item_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item with ID 9999999999 not found",
                     retryable: false
                 }
             },
@@ -971,7 +1674,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    item_id: "9876543210"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -984,29 +1687,47 @@ export const mondayFixtures: TestFixture[] = [
     {
         operationId: "listItems",
         provider: "monday",
+        filterableData: {
+            records: sampleItems,
+            recordsField: "items",
+            defaultPageSize: 100,
+            maxPageSize: 500,
+            pageSizeParam: "limit",
+            filterConfig: {
+                type: "generic",
+                filterableFields: ["state", "_status", "group_id"]
+            }
+        },
         validCases: [
             {
-                name: "basic_listItems",
-                description:
-                    "List items from a Monday.com board with optional group filtering and pagination.",
+                name: "list_board_items",
+                description: "List all items on a board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
-                },
-                expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    board_id: "1234567890",
+                    limit: 100
+                }
+            },
+            {
+                name: "list_items_by_group",
+                description: "List items in a specific group",
+                input: {
+                    board_id: "1234567890",
+                    group_id: "new_group",
+                    limit: 50
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999",
+                    limit: 100
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board not found",
                     retryable: false
                 }
             },
@@ -1014,7 +1735,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    limit: 100
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1029,26 +1751,44 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_moveItemToBoard",
-                description: "Move an item to a different board in Monday.com.",
+                name: "move_item_to_board",
+                description: "Move item to a different board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    item_id: "9876543210",
+                    board_id: "1234567891",
+                    group_id: "default_group"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543210",
+                    board_id: "1234567891"
+                }
+            },
+            {
+                name: "move_item_to_board_with_group",
+                description: "Move item to a specific group on another board",
+                input: {
+                    item_id: "9876543211",
+                    board_id: "1234567892",
+                    group_id: "marketing_group"
+                },
+                expectedOutput: {
+                    id: "9876543211",
+                    board_id: "1234567892"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    item_id: "9999999999",
+                    board_id: "1234567891",
+                    group_id: "default_group"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item not found",
                     retryable: false
                 }
             },
@@ -1056,7 +1796,9 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    item_id: "9876543210",
+                    board_id: "1234567891",
+                    group_id: "default_group"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1071,26 +1813,39 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_moveItemToGroup",
-                description: "Move an item to a different group within the same board.",
+                name: "move_item_to_group",
+                description: "Move item to a different group",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    item_id: "9876543210",
+                    group_id: "completed_group"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543210"
+                }
+            },
+            {
+                name: "move_item_to_new_group",
+                description: "Move item to a newly created group",
+                input: {
+                    item_id: "9876543211",
+                    group_id: "in_progress_group"
+                },
+                expectedOutput: {
+                    id: "9876543211"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "group_not_found",
+                description: "Target group does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    item_id: "9876543210",
+                    group_id: "nonexistent"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Group not found",
                     retryable: false
                 }
             },
@@ -1098,7 +1853,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    item_id: "9876543210",
+                    group_id: "completed_group"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1113,26 +1869,51 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_updateItem",
-                description: "Update column values of an item in Monday.com.",
+                name: "update_item_columns",
+                description: "Update item column values",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890",
+                    item_id: "9876543210",
+                    column_values: {
+                        status: { label: "Done" },
+                        date4: { date: "2024-02-28" }
+                    }
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "9876543210",
+                    name: "Implement user authentication"
+                }
+            },
+            {
+                name: "update_single_column",
+                description: "Update a single column value",
+                input: {
+                    board_id: "1234567890",
+                    item_id: "9876543211",
+                    column_values: {
+                        status: { label: "Working on it" }
+                    }
+                },
+                expectedOutput: {
+                    id: "9876543211",
+                    name: "Design landing page"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "1234567890",
+                    item_id: "9999999999",
+                    column_values: {
+                        status: { label: "Done" }
+                    }
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item not found",
                     retryable: false
                 }
             },
@@ -1140,7 +1921,11 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890",
+                    item_id: "9876543210",
+                    column_values: {
+                        status: { label: "Done" }
+                    }
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1155,26 +1940,41 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_listTags",
-                description: "List all tags on a Monday.com board.",
+                name: "list_board_tags",
+                description: "List all tags on a board",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    board_id: "1234567890"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    tags: [
+                        { id: "101", name: "urgent", color: "#e2445c" },
+                        { id: "102", name: "bug", color: "#ff642e" },
+                        { id: "103", name: "feature", color: "#00c875" },
+                        { id: "104", name: "documentation", color: "#579bfc" }
+                    ]
+                }
+            },
+            {
+                name: "list_tags_empty",
+                description: "List tags on a board with no tags",
+                input: {
+                    board_id: "1234567891"
+                },
+                expectedOutput: {
+                    tags: []
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "board_not_found",
+                description: "Board does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    board_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Board not found",
                     retryable: false
                 }
             },
@@ -1182,7 +1982,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    board_id: "1234567890"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1197,26 +1997,45 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_listTeams",
-                description: "List all teams in the Monday.com account.",
+                name: "list_all_teams",
+                description: "List all teams in the account",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    limit: 50
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    teams: [
+                        { id: "201", name: "Engineering", picture_url: null },
+                        { id: "202", name: "Product", picture_url: null },
+                        { id: "203", name: "Marketing", picture_url: null },
+                        { id: "204", name: "Design", picture_url: null }
+                    ]
+                }
+            },
+            {
+                name: "list_teams_paginated",
+                description: "List teams with pagination",
+                input: {
+                    limit: 2,
+                    page: 1
+                },
+                expectedOutput: {
+                    teams: [
+                        { id: "201", name: "Engineering", picture_url: null },
+                        { id: "202", name: "Product", picture_url: null }
+                    ]
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "unauthorized",
+                description: "Not authorized to list teams",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    limit: 50
                 },
                 expectedError: {
-                    type: "not_found",
-                    message: "Resource not found",
+                    type: "permission",
+                    message: "Access denied",
                     retryable: false
                 }
             },
@@ -1224,7 +2043,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    limit: 50
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1239,26 +2058,43 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_createUpdate",
-                description: "Add an update (comment) to an item on Monday.com.",
+                name: "create_update",
+                description: "Add an update to an item",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    item_id: "9876543210",
+                    body: "Started working on this task. ETA: 2 days."
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "update_001",
+                    body: "Started working on this task. ETA: 2 days.",
+                    created_at: "2024-01-20T10:00:00Z"
+                }
+            },
+            {
+                name: "create_update_with_html",
+                description: "Add an update with HTML formatting",
+                input: {
+                    item_id: "9876543211",
+                    body: "<p>Completed the <strong>design</strong> phase.</p><ul><li>Logo finalized</li><li>Color scheme approved</li></ul>"
+                },
+                expectedOutput: {
+                    id: "update_002",
+                    body: "<p>Completed the <strong>design</strong> phase.</p><ul><li>Logo finalized</li><li>Color scheme approved</li></ul>",
+                    created_at: "2024-01-20T11:00:00Z"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    item_id: "9999999999",
+                    body: "Test update"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item not found",
                     retryable: false
                 }
             },
@@ -1266,7 +2102,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    item_id: "9876543210",
+                    body: "Test update"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1281,26 +2118,36 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_deleteUpdate",
-                description: "Delete an update (comment) from Monday.com.",
+                name: "delete_update",
+                description: "Delete an update from an item",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    update_id: "update_001"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "update_001"
+                }
+            },
+            {
+                name: "delete_old_update",
+                description: "Delete an old update",
+                input: {
+                    update_id: "update_old_123"
+                },
+                expectedOutput: {
+                    id: "update_old_123"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "update_not_found",
+                description: "Update does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    update_id: "nonexistent"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Update not found",
                     retryable: false
                 }
             },
@@ -1308,7 +2155,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    update_id: "update_001"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1323,26 +2170,52 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_listUpdates",
-                description: "List all updates (comments) on an item.",
+                name: "list_item_updates",
+                description: "List all updates on an item",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    item_id: "9876543210",
+                    limit: 25
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    updates: [
+                        {
+                            id: "update_001",
+                            body: "Started working on this task. ETA: 2 days.",
+                            creator: { id: "12345678", name: "John Smith" },
+                            created_at: "2024-01-20T10:00:00Z"
+                        },
+                        {
+                            id: "update_002",
+                            body: "Making good progress. 50% complete.",
+                            creator: { id: "12345678", name: "John Smith" },
+                            created_at: "2024-01-21T14:00:00Z"
+                        }
+                    ]
+                }
+            },
+            {
+                name: "list_updates_empty",
+                description: "List updates on an item with no updates",
+                input: {
+                    item_id: "9876543212",
+                    limit: 25
+                },
+                expectedOutput: {
+                    updates: []
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "item_not_found",
+                description: "Item does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    item_id: "9999999999",
+                    limit: 25
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Item not found",
                     retryable: false
                 }
             },
@@ -1350,7 +2223,8 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    item_id: "9876543210",
+                    limit: 25
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1365,35 +2239,44 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_getCurrentUser",
-                description: "Get the currently authenticated Monday.com user.",
-                input: {
-                    // TODO: Add input parameters based on operation schema
-                },
+                name: "get_current_user",
+                description: "Get the authenticated user's profile",
+                input: {},
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    user: {
+                        id: "12345678",
+                        name: "John Smith",
+                        email: "john@example.com",
+                        photo_thumb: "https://files.monday.com/users/12345678/small.jpg",
+                        title: "Software Engineer",
+                        account: {
+                            id: "98765",
+                            name: "Acme Corp",
+                            slug: "acme-corp"
+                        },
+                        teams: [
+                            { id: "201", name: "Engineering" },
+                            { id: "202", name: "Product" }
+                        ]
+                    }
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
-                input: {
-                    // TODO: Add input that triggers not_found error
-                },
+                name: "unauthorized",
+                description: "Invalid or expired token",
+                input: {},
                 expectedError: {
-                    type: "not_found",
-                    message: "Resource not found",
+                    type: "permission",
+                    message: "Invalid API token",
                     retryable: false
                 }
             },
             {
                 name: "rate_limited",
                 description: "Rate limit exceeded",
-                input: {
-                    // TODO: Add typical input
-                },
+                input: {},
                 expectedError: {
                     type: "rate_limit",
                     message: "Rate limit exceeded",
@@ -1407,26 +2290,50 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_getUser",
-                description: "Get a specific Monday.com user by ID.",
+                name: "get_user_by_id",
+                description: "Get a specific user by ID",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    user_id: "12345678"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "12345678",
+                    name: "John Smith",
+                    email: "john@example.com",
+                    photo_thumb: "https://files.monday.com/users/12345678/small.jpg",
+                    title: "Software Engineer",
+                    enabled: true,
+                    is_admin: false,
+                    is_guest: false
+                }
+            },
+            {
+                name: "get_guest_user",
+                description: "Get a guest user",
+                input: {
+                    user_id: "12345680"
+                },
+                expectedOutput: {
+                    id: "12345680",
+                    name: "External Contractor",
+                    email: "contractor@external.com",
+                    photo_thumb: null,
+                    title: "Contractor",
+                    enabled: true,
+                    is_admin: false,
+                    is_guest: true
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "user_not_found",
+                description: "User does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    user_id: "9999999999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "User not found",
                     retryable: false
                 }
             },
@@ -1434,7 +2341,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    user_id: "12345678"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1449,26 +2356,44 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_listUsers",
-                description: "List all users in the Monday.com account.",
+                name: "list_all_users",
+                description: "List all users in the account",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    limit: 50
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    users: [
+                        { id: "12345678", name: "John Smith", email: "john@example.com" },
+                        { id: "12345679", name: "Jane Doe", email: "jane@example.com" },
+                        { id: "12345680", name: "Mike Wilson", email: "mike@example.com" }
+                    ]
+                }
+            },
+            {
+                name: "list_non_guest_users",
+                description: "List only non-guest users",
+                input: {
+                    kind: "non_guests",
+                    limit: 50
+                },
+                expectedOutput: {
+                    users: [
+                        { id: "12345678", name: "John Smith", email: "john@example.com" },
+                        { id: "12345679", name: "Jane Doe", email: "jane@example.com" }
+                    ]
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "unauthorized",
+                description: "Not authorized to list users",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    limit: 50
                 },
                 expectedError: {
-                    type: "not_found",
-                    message: "Resource not found",
+                    type: "permission",
+                    message: "Access denied",
                     retryable: false
                 }
             },
@@ -1476,7 +2401,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    limit: 50
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1491,26 +2416,42 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_getWorkspace",
-                description: "Get a specific Monday.com workspace by ID.",
+                name: "get_workspace",
+                description: "Get a specific workspace",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    workspace_id: "12345"
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    id: "12345",
+                    name: "Engineering Workspace",
+                    kind: "open",
+                    description: "Workspace for engineering team projects"
+                }
+            },
+            {
+                name: "get_closed_workspace",
+                description: "Get a closed workspace",
+                input: {
+                    workspace_id: "12346"
+                },
+                expectedOutput: {
+                    id: "12346",
+                    name: "Marketing Workspace",
+                    kind: "closed",
+                    description: "Private workspace for marketing"
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "workspace_not_found",
+                description: "Workspace does not exist",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    workspace_id: "99999"
                 },
                 expectedError: {
                     type: "not_found",
-                    message: "Resource not found",
+                    message: "Workspace not found",
                     retryable: false
                 }
             },
@@ -1518,7 +2459,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    workspace_id: "12345"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -1533,26 +2474,44 @@ export const mondayFixtures: TestFixture[] = [
         provider: "monday",
         validCases: [
             {
-                name: "basic_listWorkspaces",
-                description: "List all workspaces in the Monday.com account.",
+                name: "list_all_workspaces",
+                description: "List all workspaces",
                 input: {
-                    // TODO: Add input parameters based on operation schema
+                    limit: 50
                 },
                 expectedOutput: {
-                    // TODO: Add expected output based on operation schema
+                    workspaces: [
+                        { id: "12345", name: "Engineering Workspace", kind: "open" },
+                        { id: "12346", name: "Marketing Workspace", kind: "closed" },
+                        { id: "12347", name: "Main Workspace", kind: "open" }
+                    ]
+                }
+            },
+            {
+                name: "list_workspaces_paginated",
+                description: "List workspaces with pagination",
+                input: {
+                    limit: 2,
+                    page: 1
+                },
+                expectedOutput: {
+                    workspaces: [
+                        { id: "12345", name: "Engineering Workspace", kind: "open" },
+                        { id: "12346", name: "Marketing Workspace", kind: "closed" }
+                    ]
                 }
             }
         ],
         errorCases: [
             {
-                name: "not_found",
-                description: "Resource not found",
+                name: "unauthorized",
+                description: "Not authorized to list workspaces",
                 input: {
-                    // TODO: Add input that triggers not_found error
+                    limit: 50
                 },
                 expectedError: {
-                    type: "not_found",
-                    message: "Resource not found",
+                    type: "permission",
+                    message: "Access denied",
                     retryable: false
                 }
             },
@@ -1560,7 +2519,7 @@ export const mondayFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    // TODO: Add typical input
+                    limit: 50
                 },
                 expectedError: {
                     type: "rate_limit",

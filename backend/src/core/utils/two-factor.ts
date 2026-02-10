@@ -17,7 +17,7 @@ export function generateBackupCodes(): string[] {
     const codes: string[] = [];
 
     for (let i = 0; i < 8; i++) {
-        const buffer = crypto.randomBytes(9);
+        const buffer = crypto.randomBytes(16);
         const code = buffer
             .toString("base64")
             .replace(/[^A-Z0-9]/gi, "")

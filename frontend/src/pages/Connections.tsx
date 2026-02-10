@@ -312,6 +312,7 @@ export function Connections() {
                     supportsOAuth={supportsOAuth(selectedProvider.methods)}
                     supportsApiKey={selectedProvider.methods.includes("api_key")}
                     oauthSettings={selectedProvider.oauthSettings}
+                    apiKeySettings={selectedProvider.apiKeySettings}
                 />
             )}
 

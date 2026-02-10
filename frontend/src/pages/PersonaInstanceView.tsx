@@ -13,14 +13,18 @@ import {
     Circle,
     CheckCircle2,
     SkipForward,
-    ArrowRight
+    ArrowRight,
+    Wifi,
+    WifiOff
 } from "lucide-react";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { DeliverableCard } from "../components/personas/cards/DeliverableCard";
 import { ClarifyingPhaseUI } from "../components/personas/clarification";
 import { ContinueWorkDialog } from "../components/personas/modals/ContinueWorkDialog";
+import { usePersonaStream } from "../hooks/usePersonaStream";
+import { useToast } from "../hooks/useToast";
 import { usePersonaStore } from "../stores/personaStore";
 import type {
     PersonaCategory,
@@ -150,10 +154,32 @@ export const PersonaInstanceView: React.FC = () => {
 
     const [message, setMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
+    const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+    const [sendError, setSendError] = useState<string | null>(null);
+    const [pendingMessage, setPendingMessage] = useState<string | null>(null);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showContinueDialog, setShowContinueDialog] = useState(false);
     const [clarificationError, setClarificationError] = useState<string | null>(null);
+
+    const toast = useToast();
+
+    // Determine if instance is active (for streaming)
+    const instanceIsActive = currentInstance
+        ? ["initializing", "clarifying", "running", "waiting_approval"].includes(
+              currentInstance.status
+          )
+        : false;
+
+    // Real-time streaming for active instances
+    const {
+        isConnected,
+        progress: streamedProgress,
+        deliverables: streamedDeliverables,
+        status: streamStatus,
+        accumulatedCost: streamedCost,
+        error: streamError
+    } = usePersonaStream(instanceIsActive && id ? id : null);
 
     useEffect(() => {
         if (id) {
@@ -161,21 +187,67 @@ export const PersonaInstanceView: React.FC = () => {
         }
     }, [id, fetchInstance]);
 
+    // Auto-refresh when stream indicates completion or failure
     useEffect(() => {
-        // Scroll to bottom when messages change
+        if ((streamStatus === "completed" || streamStatus === "failed") && id) {
+            fetchInstance(id);
+        }
+    }, [streamStatus, id, fetchInstance]);
+
+    // Merge streamed progress with instance progress (stream takes priority when active)
+    const effectiveProgress = useMemo(() => {
+        if (instanceIsActive && streamedProgress) {
+            return streamedProgress;
+        }
+        return currentInstance?.progress ?? null;
+    }, [instanceIsActive, streamedProgress, currentInstance?.progress]);
+
+    // Effective cost (prefer streamed when active)
+    const effectiveCost = useMemo(() => {
+        if (instanceIsActive && streamedCost > 0) {
+            return streamedCost;
+        }
+        return currentInstance?.accumulated_cost_credits ?? 0;
+    }, [instanceIsActive, streamedCost, currentInstance?.accumulated_cost_credits]);
+
+    // Track streamed deliverables count to trigger refetch when new ones arrive
+    const lastDeliverableCount = useRef(0);
+    useEffect(() => {
+        if (streamedDeliverables.length > lastDeliverableCount.current && id) {
+            lastDeliverableCount.current = streamedDeliverables.length;
+            // Refetch to get full deliverable data
+            fetchInstance(id);
+        }
+    }, [streamedDeliverables.length, id, fetchInstance]);
+
+    useEffect(() => {
+        // Scroll to bottom when messages change or pending message appears
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [currentInstance?.messages]);
+    }, [currentInstance?.messages, pendingMessage]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!message.trim() || !id || isSending) return;
 
+        const messageToSend = message.trim();
         setIsSending(true);
+        setSendStatus("sending");
+        setSendError(null);
+        setPendingMessage(messageToSend);
+        setMessage("");
+
         try {
-            await sendMessage(id, message.trim());
-            setMessage("");
-        } catch (_error) {
-            // Error handled in store
+            await sendMessage(id, messageToSend);
+            setSendStatus("sent");
+            setPendingMessage(null);
+            // Clear "sent" status after 2 seconds
+            setTimeout(() => setSendStatus("idle"), 2000);
+        } catch (error) {
+            setSendStatus("error");
+            setSendError(error instanceof Error ? error.message : "Failed to send message");
+            // Restore message so user can retry
+            setMessage(messageToSend);
+            setPendingMessage(null);
         } finally {
             setIsSending(false);
         }
@@ -186,8 +258,9 @@ export const PersonaInstanceView: React.FC = () => {
         try {
             await cancelInstance(id);
             setShowCancelDialog(false);
+            toast.success("Task cancelled");
         } catch (_error) {
-            // Error handled in store
+            toast.error("Failed to cancel task");
         }
     };
 
@@ -195,8 +268,9 @@ export const PersonaInstanceView: React.FC = () => {
         if (!id) return;
         try {
             await completeInstance(id);
+            toast.success("Task marked as complete");
         } catch (_error) {
-            // Error handled in store
+            toast.error("Failed to complete task");
         }
     };
 
@@ -204,9 +278,10 @@ export const PersonaInstanceView: React.FC = () => {
         if (!id) return;
         try {
             await deleteInstance(id);
+            toast.success("Task deleted");
             navigate("/persona-instances");
         } catch (_error) {
-            // Error handled in store
+            toast.error("Failed to delete task");
         }
     };
 
@@ -298,6 +373,24 @@ export const PersonaInstanceView: React.FC = () => {
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
+                        {/* Connection status indicator */}
+                        {isActive && (
+                            <span
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                                    isConnected
+                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                        : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                }`}
+                                title={isConnected ? "Receiving live updates" : "Connecting..."}
+                            >
+                                {isConnected ? (
+                                    <Wifi className="w-3 h-3" />
+                                ) : (
+                                    <WifiOff className="w-3 h-3" />
+                                )}
+                                {isConnected ? "Live" : "Connecting"}
+                            </span>
+                        )}
                         <span
                             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${status.bgColor} ${status.color}`}
                         >
@@ -351,10 +444,7 @@ export const PersonaInstanceView: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-1.5">
                         <DollarSign className="w-4 h-4" />
-                        <span>
-                            Cost: {Math.round(currentInstance.accumulated_cost_credits || 0)}{" "}
-                            credits
-                        </span>
+                        <span>Cost: {Math.round(effectiveCost)} credits</span>
                     </div>
                     {currentInstance.max_duration_hours && (
                         <div className="text-muted-foreground/70">
@@ -455,6 +545,54 @@ export const PersonaInstanceView: React.FC = () => {
                             )
                         )}
 
+                        {/* Pending Message (optimistic) */}
+                        {pendingMessage && (
+                            <div className="flex gap-3">
+                                <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center flex-shrink-0 text-xs">
+                                    You
+                                </div>
+                                <div className="flex-1 bg-muted rounded-lg p-4 opacity-70">
+                                    <p className="text-sm text-foreground whitespace-pre-wrap">
+                                        {pendingMessage}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        <span>Sending...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Send Error */}
+                        {sendStatus === "error" && sendError && (
+                            <div className="flex items-center gap-2 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-lg text-sm">
+                                <XCircle className="w-4 h-4 flex-shrink-0" />
+                                <span>Failed to send message: {sendError}</span>
+                            </div>
+                        )}
+
+                        {/* Task Failed Error */}
+                        {(currentInstance.status === "failed" ||
+                            currentInstance.status === "timeout") &&
+                            streamError && (
+                                <div className="p-4 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                                    <div className="flex items-start gap-3">
+                                        <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <h4 className="font-medium text-red-800 dark:text-red-300">
+                                                Task{" "}
+                                                {currentInstance.status === "timeout"
+                                                    ? "Timed Out"
+                                                    : "Failed"}
+                                            </h4>
+                                            <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                                                {streamError}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                         {/* Status Message */}
                         {isActive && (
                             <div className="flex items-center justify-center py-4">
@@ -479,14 +617,30 @@ export const PersonaInstanceView: React.FC = () => {
                             className="border-t border-border p-4 bg-card"
                         >
                             <div className="flex gap-3">
-                                <input
-                                    type="text"
-                                    value={message}
-                                    onChange={(e) => setMessage(e.target.value)}
-                                    placeholder="Send a message to redirect or provide feedback..."
-                                    className="flex-1 px-4 py-2.5 bg-background border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    disabled={isSending}
-                                />
+                                <div className="flex-1 relative">
+                                    <input
+                                        type="text"
+                                        value={message}
+                                        onChange={(e) => {
+                                            setMessage(e.target.value);
+                                            // Clear error when user starts typing
+                                            if (sendStatus === "error") {
+                                                setSendStatus("idle");
+                                                setSendError(null);
+                                            }
+                                        }}
+                                        placeholder="Send a message to redirect or provide feedback..."
+                                        className="w-full px-4 py-2.5 bg-background border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                        disabled={isSending}
+                                    />
+                                    {/* Delivery status indicator */}
+                                    {sendStatus === "sent" && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                                            <CheckCircle className="w-3.5 h-3.5" />
+                                            <span>Delivered</span>
+                                        </div>
+                                    )}
+                                </div>
                                 <button
                                     type="submit"
                                     disabled={!message.trim() || isSending}
@@ -515,71 +669,68 @@ export const PersonaInstanceView: React.FC = () => {
                         </div>
                         <div className="p-4">
                             {/* Progress Bar */}
-                            {currentInstance.progress && (
+                            {effectiveProgress && (
                                 <div className="mb-4">
                                     <div className="flex items-center justify-between text-sm mb-1.5">
                                         <span className="text-muted-foreground">
-                                            Step {currentInstance.progress.current_step} of{" "}
-                                            {currentInstance.progress.total_steps}
+                                            Step {effectiveProgress.current_step} of{" "}
+                                            {effectiveProgress.total_steps}
                                         </span>
                                         <span className="font-medium text-foreground">
-                                            {currentInstance.progress.percentage}%
+                                            {effectiveProgress.percentage}%
                                         </span>
                                     </div>
                                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-primary rounded-full transition-all duration-500"
                                             style={{
-                                                width: `${currentInstance.progress.percentage}%`
+                                                width: `${effectiveProgress.percentage}%`
                                             }}
                                         />
                                     </div>
-                                    {currentInstance.progress.message && (
+                                    {effectiveProgress.message && (
                                         <p className="text-xs text-muted-foreground mt-2 italic">
-                                            {currentInstance.progress.message}
+                                            {effectiveProgress.message}
                                         </p>
                                     )}
                                 </div>
                             )}
 
                             {/* Step List */}
-                            {currentInstance.progress?.steps &&
-                            currentInstance.progress.steps.length > 0 ? (
+                            {effectiveProgress?.steps && effectiveProgress.steps.length > 0 ? (
                                 <div className="space-y-2">
-                                    {currentInstance.progress.steps.map(
-                                        (step: PersonaProgressStep) => {
-                                            const config =
-                                                stepStatusConfig[step.status] ||
-                                                stepStatusConfig.pending;
-                                            return (
-                                                <div
-                                                    key={step.index}
-                                                    className={`flex items-start gap-2 p-2 rounded-lg ${
-                                                        step.status === "in_progress"
-                                                            ? config.bgColor
-                                                            : ""
-                                                    }`}
-                                                >
-                                                    <span className={`mt-0.5 ${config.color}`}>
-                                                        {config.icon}
-                                                    </span>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p
-                                                            className={`text-sm ${
-                                                                step.status === "completed"
-                                                                    ? "text-muted-foreground line-through"
-                                                                    : step.status === "in_progress"
-                                                                      ? "text-foreground font-medium"
-                                                                      : "text-muted-foreground"
-                                                            }`}
-                                                        >
-                                                            {step.title}
-                                                        </p>
-                                                    </div>
+                                    {effectiveProgress.steps.map((step: PersonaProgressStep) => {
+                                        const config =
+                                            stepStatusConfig[step.status] ||
+                                            stepStatusConfig.pending;
+                                        return (
+                                            <div
+                                                key={step.index}
+                                                className={`flex items-start gap-2 p-2 rounded-lg ${
+                                                    step.status === "in_progress"
+                                                        ? config.bgColor
+                                                        : ""
+                                                }`}
+                                            >
+                                                <span className={`mt-0.5 ${config.color}`}>
+                                                    {config.icon}
+                                                </span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p
+                                                        className={`text-sm ${
+                                                            step.status === "completed"
+                                                                ? "text-muted-foreground line-through"
+                                                                : step.status === "in_progress"
+                                                                  ? "text-foreground font-medium"
+                                                                  : "text-muted-foreground"
+                                                        }`}
+                                                    >
+                                                        {step.title}
+                                                    </p>
                                                 </div>
-                                            );
-                                        }
-                                    )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             ) : isActive ? (
                                 <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">

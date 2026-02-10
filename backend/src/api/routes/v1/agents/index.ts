@@ -19,13 +19,13 @@ export async function agentsV1Routes(fastify: FastifyInstance): Promise<void> {
             preHandler: [requireScopes("agents:read")]
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const { page, per_page, offset } = parsePaginationQuery(
                 request.query as Record<string, unknown>
             );
 
             const agentRepo = new AgentRepository();
-            const { agents, total } = await agentRepo.findByUserId(userId, {
+            const { agents, total } = await agentRepo.findByWorkspaceId(workspaceId, {
                 limit: per_page,
                 offset
             });
@@ -55,13 +55,13 @@ export async function agentsV1Routes(fastify: FastifyInstance): Promise<void> {
             preHandler: [requireScopes("agents:read")]
         },
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const agentId = request.params.id;
 
             const agentRepo = new AgentRepository();
-            const agent = await agentRepo.findById(agentId);
+            const agent = await agentRepo.findByIdAndWorkspaceId(agentId, workspaceId);
 
-            if (!agent || agent.user_id !== userId) {
+            if (!agent) {
                 return sendNotFound(reply, "Agent", agentId);
             }
 

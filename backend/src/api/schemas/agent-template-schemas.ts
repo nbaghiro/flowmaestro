@@ -26,7 +26,7 @@ export const listAgentTemplatesQuerySchema = z.object({
     limit: z
         .string()
         .transform((val) => parseInt(val))
-        .pipe(z.number().min(1).max(50))
+        .pipe(z.number().min(1).max(200))
         .optional(),
     offset: z
         .string()

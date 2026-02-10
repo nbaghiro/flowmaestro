@@ -142,13 +142,29 @@ export {
     getPersonaClarificationState,
     updatePersonaClarificationState,
     addPersonaMessage,
+    summarizeThreadContext,
+    createPersonaDeliverable,
+    // Real-time event emission
+    emitPersonaStarted,
+    emitPersonaProgress,
+    emitPersonaDeliverable,
+    emitPersonaCompleted,
+    emitPersonaFailed,
     type GetPersonaConfigInput,
     type UpdatePersonaInstanceProgressInput,
     type UpdatePersonaInstanceStatusInput,
     type GetPersonaClarificationStateInput,
     type PersonaClarificationState,
     type UpdatePersonaClarificationStateInput,
-    type AddPersonaMessageInput
+    type AddPersonaMessageInput,
+    type SummarizeThreadContextInput,
+    type CreatePersonaDeliverableInput,
+    type CreatePersonaDeliverableResult,
+    type EmitPersonaStartedInput,
+    type EmitPersonaProgressInput,
+    type EmitPersonaDeliverableInput,
+    type EmitPersonaCompletedInput,
+    type EmitPersonaFailedInput
 } from "./personas";
 
 // Form submission attachment activities

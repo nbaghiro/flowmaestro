@@ -85,19 +85,6 @@ export class AgentRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0] as AgentRow) : null;
     }
 
-    /**
-     * @deprecated Use findByIdAndWorkspaceId instead. Kept for backward compatibility.
-     */
-    async findByIdAndUserId(id: string, userId: string): Promise<AgentModel | null> {
-        const query = `
-            SELECT * FROM flowmaestro.agents
-            WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
-        `;
-
-        const result = await db.query(query, [id, userId]);
-        return result.rows.length > 0 ? this.mapRow(result.rows[0] as AgentRow) : null;
-    }
-
     async findByWorkspaceId(
         workspaceId: string,
         options: { limit?: number; offset?: number; folderId?: string | null } = {}
@@ -130,58 +117,6 @@ export class AgentRepository {
             SELECT *
             FROM flowmaestro.agents
             WHERE workspace_id = $1 AND deleted_at IS NULL${folderFilter}
-            ORDER BY created_at DESC
-            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
-        `;
-
-        queryParams.push(limit, offset);
-
-        const [countResult, agentsResult] = await Promise.all([
-            db.query<{ count: string }>(countQuery, countParams),
-            db.query(query, queryParams)
-        ]);
-
-        return {
-            agents: agentsResult.rows.map((row) => this.mapRow(row as AgentRow)),
-            total: parseInt(countResult.rows[0].count)
-        };
-    }
-
-    /**
-     * @deprecated Use findByWorkspaceId instead. Kept for backward compatibility.
-     */
-    async findByUserId(
-        userId: string,
-        options: { limit?: number; offset?: number; folderId?: string | null } = {}
-    ): Promise<{ agents: AgentModel[]; total: number }> {
-        const limit = options.limit || 50;
-        const offset = options.offset || 0;
-
-        // Build folder filter using folder_ids array
-        let folderFilter = "";
-        const countParams: unknown[] = [userId];
-        const queryParams: unknown[] = [userId];
-
-        if (options.folderId === null) {
-            folderFilter = " AND (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])";
-        } else if (options.folderId !== undefined) {
-            folderFilter = " AND $2 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))";
-            countParams.push(options.folderId);
-            queryParams.push(options.folderId);
-        }
-
-        const countQuery = `
-            SELECT COUNT(*) as count
-            FROM flowmaestro.agents
-            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
-        `;
-
-        const limitParamIndex = queryParams.length + 1;
-        const offsetParamIndex = queryParams.length + 2;
-        const query = `
-            SELECT *
-            FROM flowmaestro.agents
-            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
             ORDER BY created_at DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;

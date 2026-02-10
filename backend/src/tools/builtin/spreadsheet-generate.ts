@@ -9,6 +9,7 @@ import { join } from "path";
 import { z } from "zod";
 import { createServiceLogger } from "../../core/logging";
 import type { BuiltInTool, ToolExecutionContext, ToolExecutionResult } from "../types";
+import type { Cell, Column } from "exceljs";
 
 const logger = createServiceLogger("SpreadsheetGenerateTool");
 
@@ -134,8 +135,7 @@ async function generateXlsx(
     // Dynamic import for optional dependency
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const ExcelJS = await import("exceljs");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const workbook = new (ExcelJS as any).Workbook();
+    const workbook = new ExcelJS.Workbook();
 
     const sheets = input.sheets || [{ name: "Sheet1", data: input.data || [] }];
     const styling = input.styling || {};
@@ -172,8 +172,7 @@ async function generateXlsx(
 
         // Style header row
         const headerRow = worksheet.getRow(1);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        headerRow.eachCell((cell: any) => {
+        headerRow.eachCell((cell: Cell) => {
             if (styling.headerStyle?.bold) {
                 cell.font = { bold: true };
             }
@@ -200,8 +199,7 @@ async function generateXlsx(
 
             // Alternate row coloring
             if (styling.alternateRows && rowIndex % 2 === 1) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                row.eachCell((cell: any) => {
+                row.eachCell((cell: Cell) => {
                     cell.fill = {
                         type: "pattern",
                         pattern: "solid",
@@ -239,11 +237,9 @@ async function generateXlsx(
 
         // Auto-fit columns based on content (if no width specified)
         if (!sheetConfig.columns) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            worksheet.columns.forEach((column: any) => {
+            worksheet.columns.forEach((column: Partial<Column>) => {
                 let maxLength = 0;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                column.eachCell?.({ includeEmpty: true }, (cell: any) => {
+                column.eachCell?.({ includeEmpty: true }, (cell: Cell) => {
                     const cellLength = cell.value ? String(cell.value).length : 0;
                     maxLength = Math.max(maxLength, cellLength);
                 });

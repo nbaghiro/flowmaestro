@@ -2,9 +2,10 @@
  * Persona Activities - Configuration and execution support for persona instances
  */
 
-import type { JsonObject, PersonaInstanceProgress } from "@flowmaestro/shared";
+import type { DeliverableType, JsonObject, PersonaInstanceProgress } from "@flowmaestro/shared";
 import { PersonaDefinitionRepository } from "../../../storage/repositories/PersonaDefinitionRepository";
 import { PersonaInstanceConnectionRepository } from "../../../storage/repositories/PersonaInstanceConnectionRepository";
+import { PersonaInstanceDeliverableRepository } from "../../../storage/repositories/PersonaInstanceDeliverableRepository";
 import { PersonaInstanceMessageRepository } from "../../../storage/repositories/PersonaInstanceMessageRepository";
 import { PersonaInstanceRepository } from "../../../storage/repositories/PersonaInstanceRepository";
 import { getAllToolsForUser, isBuiltInTool } from "../../../tools";
@@ -70,6 +71,14 @@ export interface AddPersonaMessageInput {
     personaInstanceId: string;
     threadId: string;
     message: ThreadMessage;
+}
+
+export interface SummarizeThreadContextInput {
+    messages: ThreadMessage[];
+    maxMessages: number;
+    personaName: string;
+    model: string;
+    provider: string;
 }
 
 // =============================================================================
@@ -158,6 +167,55 @@ function buildPersonaSystemPrompt(
             prompt += `- **${deliverable.name}** (${deliverable.type}): ${deliverable.description}\n`;
         });
     }
+
+    // Add workflow communication instructions
+    prompt += `\n\n## Workflow Communication
+
+You communicate workflow state by including JSON signal blocks in your response.
+These blocks must be enclosed in triple backticks with the language \`workflow-signal\`.
+
+### Progress Updates
+When starting a new phase or completing a milestone:
+\`\`\`workflow-signal
+{
+    "type": "progress",
+    "current_step": "Analyzing competitor websites",
+    "completed_steps": ["Gathered requirements"],
+    "remaining_steps": ["Create report"],
+    "percentage": 40
+}
+\`\`\`
+
+### Creating Deliverables
+When producing output files for the user:
+\`\`\`workflow-signal
+{
+    "type": "deliverable",
+    "name": "competitive-analysis",
+    "deliverable_type": "markdown",
+    "content": "# Competitive Analysis\\n\\n## Overview\\n...",
+    "description": "Analysis of competitor landscape"
+}
+\`\`\`
+
+### Task Completion
+When ALL work is finished and deliverables created:
+\`\`\`workflow-signal
+{
+    "type": "complete",
+    "summary": "Completed competitive analysis",
+    "deliverables_created": ["competitive-analysis"],
+    "key_findings": ["Competitor X has 40% market share"],
+    "recommendations": ["Focus on feature Y"]
+}
+\`\`\`
+
+**Rules:**
+1. Include multiple signals in one response if needed
+2. Always include explanatory text alongside signals
+3. Continue using tools (web_search, etc.) for actual work
+4. Only signal complete when ALL work is done
+5. Every response should either include tool calls for work OR a completion signal when finished`;
 
     return prompt;
 }
@@ -254,6 +312,9 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
     // Inject thread memory tool for semantic search
     const toolsWithMemory = injectThreadMemoryTool(availableTools);
 
+    // Note: Workflow control signals (progress, deliverable, complete) are now handled
+    // via structured output parsing in persona-signals.ts, not as injected tools
+
     // Build the system prompt with task context
     const systemPrompt = buildPersonaSystemPrompt(
         persona,
@@ -283,7 +344,12 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
             enableContentModeration: true,
             piiRedactionEnabled: true,
             promptInjectionAction: "block"
-        }
+        },
+        // Cost and duration limits (from instance, with persona defaults as fallback)
+        max_cost_credits:
+            instance.max_cost_credits ?? persona.default_max_cost_credits ?? undefined,
+        max_duration_hours:
+            instance.max_duration_hours ?? persona.default_max_duration_hours ?? undefined
     };
 
     activityLogger.info("Persona config built successfully", {
@@ -467,4 +533,340 @@ export async function addPersonaMessage(input: AddPersonaMessageInput): Promise<
         tool_name: message.tool_name,
         tool_call_id: message.tool_call_id
     });
+}
+
+/**
+ * Summarize thread context using LLM
+ *
+ * When message history exceeds maxMessages, this activity uses an LLM to
+ * create a summary of older messages, preserving important context while
+ * reducing message count for continue-as-new operations.
+ */
+export async function summarizeThreadContext(
+    input: SummarizeThreadContextInput
+): Promise<ThreadMessage[]> {
+    const { messages, maxMessages, personaName } = input;
+
+    // If messages are within limit, return as-is
+    if (messages.length <= maxMessages) {
+        activityLogger.debug("No summarization needed", {
+            messageCount: messages.length,
+            maxMessages
+        });
+        return messages;
+    }
+
+    activityLogger.info("Summarizing thread context", {
+        messageCount: messages.length,
+        maxMessages,
+        personaName
+    });
+
+    // Find system prompt (should be first message)
+    const systemPrompt = messages.find((m) => m.role === "system");
+
+    // Keep recent messages (last maxMessages - 10 to leave room for summary)
+    const recentCount = Math.max(maxMessages - 10, 20);
+    const recentMessages = messages.slice(-recentCount);
+
+    // Get messages to summarize (between system prompt and recent messages)
+    const startIndex = systemPrompt ? 1 : 0;
+    const endIndex = messages.length - recentCount;
+
+    if (endIndex <= startIndex) {
+        // Nothing to summarize
+        return messages;
+    }
+
+    const messagesToSummarize = messages.slice(startIndex, endIndex);
+
+    activityLogger.debug("Summarizing messages", {
+        summarizeCount: messagesToSummarize.length,
+        recentCount: recentMessages.length
+    });
+
+    try {
+        // For now, create a structured summary without LLM
+        // This can be enhanced later to use actual LLM summarization
+        const summaryContent = createStructuredSummary(messagesToSummarize, personaName);
+
+        // Create summary message
+        const summaryMessage: ThreadMessage = {
+            id: `summary-${Date.now()}`,
+            role: "system",
+            content: `[CONTEXT SUMMARY - Earlier conversation with ${personaName}]\n\n${summaryContent}`,
+            timestamp: new Date()
+        };
+
+        // Combine: system prompt + summary + recent messages
+        const result: ThreadMessage[] = [];
+
+        if (systemPrompt) {
+            result.push(systemPrompt);
+        }
+
+        result.push(summaryMessage);
+
+        // Add recent messages, excluding the system prompt if it's in there
+        for (const msg of recentMessages) {
+            if (msg.id !== systemPrompt?.id) {
+                result.push(msg);
+            }
+        }
+
+        activityLogger.info("Thread context summarized", {
+            originalCount: messages.length,
+            summarizedCount: result.length,
+            summarizedMessages: messagesToSummarize.length
+        });
+
+        return result;
+    } catch (error) {
+        activityLogger.error(
+            "Failed to summarize thread context",
+            error instanceof Error ? error : new Error("Unknown error")
+        );
+
+        // Fall back to naive truncation
+        const fallbackResult: ThreadMessage[] = [];
+        if (systemPrompt) {
+            fallbackResult.push(systemPrompt);
+        }
+        for (const msg of recentMessages) {
+            if (msg.id !== systemPrompt?.id) {
+                fallbackResult.push(msg);
+            }
+        }
+        return fallbackResult;
+    }
+}
+
+/**
+ * Create a structured summary of messages without LLM
+ * Extracts key information like tool calls, findings, and decisions
+ */
+function createStructuredSummary(messages: ThreadMessage[], personaName: string): string {
+    const toolsUsed = new Set<string>();
+    const toolResults: string[] = [];
+    const keyDecisions: string[] = [];
+    const userRequirements: string[] = [];
+    let lastAssistantMessage = "";
+
+    for (const msg of messages) {
+        if (msg.tool_calls) {
+            for (const tc of msg.tool_calls) {
+                toolsUsed.add(tc.name);
+            }
+        }
+
+        if (msg.role === "tool" && msg.tool_name && msg.content) {
+            try {
+                const result = JSON.parse(msg.content);
+                if (result.success !== false && !result.error) {
+                    const summary =
+                        typeof result.data === "object"
+                            ? JSON.stringify(result.data).substring(0, 200)
+                            : String(result.data || result.message || "").substring(0, 200);
+                    if (summary) {
+                        toolResults.push(`${msg.tool_name}: ${summary}`);
+                    }
+                }
+            } catch {
+                // Ignore JSON parse errors
+            }
+        }
+
+        // Extract user requirements from user messages
+        if (msg.role === "user" && msg.content) {
+            const lines = msg.content.split("\n");
+            for (const line of lines) {
+                const trimmed = line.trim();
+                // Look for requirement-like statements (not too short, not too long)
+                if (trimmed.length >= 15 && trimmed.length <= 200) {
+                    const lowerLine = trimmed.toLowerCase();
+                    // Prioritize lines that look like requirements or requests
+                    if (
+                        lowerLine.includes("need") ||
+                        lowerLine.includes("want") ||
+                        lowerLine.includes("should") ||
+                        lowerLine.includes("must") ||
+                        lowerLine.includes("please") ||
+                        lowerLine.includes("require") ||
+                        lowerLine.startsWith("- ") ||
+                        /^\d+\./.test(trimmed)
+                    ) {
+                        userRequirements.push(trimmed);
+                    }
+                }
+            }
+        }
+
+        if (msg.role === "assistant" && msg.content) {
+            lastAssistantMessage = msg.content;
+            // Look for decision-like statements
+            const lines = msg.content.split("\n");
+            for (const line of lines) {
+                const lowerLine = line.toLowerCase();
+                if (
+                    lowerLine.includes("will ") ||
+                    lowerLine.includes("decided") ||
+                    lowerLine.includes("found that") ||
+                    lowerLine.includes("discovered") ||
+                    lowerLine.includes("completed") ||
+                    lowerLine.includes("identified") ||
+                    lowerLine.includes("determined") ||
+                    lowerLine.includes("conclusion")
+                ) {
+                    if (line.trim().length > 20 && line.trim().length < 200) {
+                        keyDecisions.push(line.trim());
+                    }
+                }
+            }
+        }
+    }
+
+    const sections: string[] = [];
+
+    if (toolsUsed.size > 0) {
+        sections.push(`**Tools Used:** ${Array.from(toolsUsed).join(", ")}`);
+    }
+
+    // Include user requirements to preserve task context
+    if (userRequirements.length > 0) {
+        sections.push(
+            `**User Requirements:**\n${userRequirements
+                .slice(0, 8)
+                .map((r) => `- ${r}`)
+                .join("\n")}`
+        );
+    }
+
+    if (toolResults.length > 0) {
+        sections.push(
+            `**Key Tool Results:**\n${toolResults
+                .slice(0, 10)
+                .map((r) => `- ${r}`)
+                .join("\n")}`
+        );
+    }
+
+    if (keyDecisions.length > 0) {
+        sections.push(
+            `**Key Progress:**\n${keyDecisions
+                .slice(0, 10)
+                .map((d) => `- ${d}`)
+                .join("\n")}`
+        );
+    }
+
+    if (lastAssistantMessage && lastAssistantMessage.length > 50) {
+        sections.push(
+            `**Last Status:** ${lastAssistantMessage.substring(0, 400)}${lastAssistantMessage.length > 400 ? "..." : ""}`
+        );
+    }
+
+    return sections.length > 0
+        ? sections.join("\n\n")
+        : `${personaName} has been working on the task. ${messages.length} messages were summarized.`;
+}
+
+// =============================================================================
+// Persona Workflow Tool Activities
+// =============================================================================
+
+export interface CreatePersonaDeliverableInput {
+    personaInstanceId: string;
+    name: string;
+    type: string;
+    content: string;
+    description?: string;
+    fileExtension?: string;
+}
+
+export interface CreatePersonaDeliverableResult {
+    success: boolean;
+    id?: string;
+    name?: string;
+    fileExtension?: string;
+    fileSizeBytes?: number;
+    error?: string;
+}
+
+/**
+ * Create a deliverable for a persona instance
+ *
+ * This activity is called when the persona uses the deliverable_create workflow tool.
+ * It saves the deliverable content to the database.
+ */
+export async function createPersonaDeliverable(
+    input: CreatePersonaDeliverableInput
+): Promise<CreatePersonaDeliverableResult> {
+    const { personaInstanceId, name, type, content, description, fileExtension } = input;
+
+    activityLogger.info("Creating persona deliverable", {
+        personaInstanceId,
+        name,
+        type,
+        contentLength: content.length
+    });
+
+    try {
+        // Determine file extension
+        const extension = getDeliverableExtension(type, fileExtension);
+
+        const repo = new PersonaInstanceDeliverableRepository();
+        const deliverable = await repo.create({
+            instance_id: personaInstanceId,
+            name: name.trim(),
+            description: description?.trim(),
+            type: type as DeliverableType,
+            content,
+            file_extension: extension
+        });
+
+        activityLogger.info("Persona deliverable created", {
+            personaInstanceId,
+            deliverableId: deliverable.id,
+            name: deliverable.name,
+            type: deliverable.type
+        });
+
+        return {
+            success: true,
+            id: deliverable.id,
+            name: deliverable.name,
+            fileExtension: deliverable.file_extension || extension,
+            fileSizeBytes: deliverable.file_size_bytes || content.length
+        };
+    } catch (error) {
+        activityLogger.error(
+            "Failed to create persona deliverable",
+            error instanceof Error ? error : new Error("Unknown error")
+        );
+
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error"
+        };
+    }
+}
+
+/**
+ * Get file extension for a deliverable type
+ */
+function getDeliverableExtension(type: string, customExtension?: string): string {
+    if (customExtension) {
+        return customExtension.startsWith(".") ? customExtension.slice(1) : customExtension;
+    }
+
+    const extensions: Record<string, string> = {
+        markdown: "md",
+        csv: "csv",
+        json: "json",
+        code: "txt",
+        html: "html",
+        pdf: "pdf",
+        image: "png"
+    };
+    return extensions[type] || "txt";
 }

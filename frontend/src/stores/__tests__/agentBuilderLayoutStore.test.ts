@@ -2,7 +2,7 @@
  * Agent Builder Layout Store Tests
  *
  * Tests for agent builder layout state management including
- * panel management, sections, presets, and selectors.
+ * panel management, sections, and selectors.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -30,7 +30,7 @@ import type { PanelState } from "../agentBuilderLayoutStore";
 // Default panel configs for reset
 const DEFAULT_PANELS = {
     navigation: {
-        state: "expanded" as PanelState,
+        state: "collapsed" as PanelState,
         width: 256,
         minWidth: 64,
         order: 0
@@ -42,7 +42,7 @@ const DEFAULT_PANELS = {
         order: 1
     },
     chat: {
-        state: "expanded" as PanelState,
+        state: "collapsed" as PanelState,
         width: 0,
         minWidth: 400,
         order: 2
@@ -59,8 +59,7 @@ const DEFAULT_SECTIONS = {
 function resetStore() {
     useAgentBuilderLayoutStore.setState({
         panels: { ...DEFAULT_PANELS },
-        sections: { ...DEFAULT_SECTIONS },
-        activePreset: "default"
+        sections: { ...DEFAULT_SECTIONS }
     });
 }
 
@@ -81,9 +80,9 @@ describe("agentBuilderLayoutStore", () => {
             resetStore();
             const state = useAgentBuilderLayoutStore.getState();
 
-            expect(state.panels.navigation.state).toBe("expanded");
+            expect(state.panels.navigation.state).toBe("collapsed");
             expect(state.panels.config.state).toBe("expanded");
-            expect(state.panels.chat.state).toBe("expanded");
+            expect(state.panels.chat.state).toBe("collapsed");
         });
 
         it("has correct initial panel widths", () => {
@@ -103,19 +102,14 @@ describe("agentBuilderLayoutStore", () => {
             expect(state.sections.instructionsSection).toBe(true);
             expect(state.sections.toolsSection).toBe(true);
         });
-
-        it("has default preset active", () => {
-            resetStore();
-            expect(useAgentBuilderLayoutStore.getState().activePreset).toBe("default");
-        });
     });
 
     // ===== Panel State Management =====
     describe("setPanelState", () => {
         it("sets panel state to collapsed", () => {
-            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "collapsed");
+            useAgentBuilderLayoutStore.getState().setPanelState("config", "collapsed");
 
-            expect(useAgentBuilderLayoutStore.getState().panels.navigation.state).toBe("collapsed");
+            expect(useAgentBuilderLayoutStore.getState().panels.config.state).toBe("collapsed");
         });
 
         it("sets panel state to minimized", () => {
@@ -124,18 +118,19 @@ describe("agentBuilderLayoutStore", () => {
             expect(useAgentBuilderLayoutStore.getState().panels.config.state).toBe("minimized");
         });
 
-        it("invalidates active preset on change", () => {
-            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "collapsed");
+        it("sets panel state to expanded", () => {
+            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "expanded");
 
-            expect(useAgentBuilderLayoutStore.getState().activePreset).toBeNull();
+            expect(useAgentBuilderLayoutStore.getState().panels.navigation.state).toBe("expanded");
         });
     });
 
     describe("togglePanel", () => {
         it("collapses expanded panel", () => {
-            useAgentBuilderLayoutStore.getState().togglePanel("navigation");
+            useAgentBuilderLayoutStore.getState().setPanelState("config", "expanded");
+            useAgentBuilderLayoutStore.getState().togglePanel("config");
 
-            expect(useAgentBuilderLayoutStore.getState().panels.navigation.state).toBe("collapsed");
+            expect(useAgentBuilderLayoutStore.getState().panels.config.state).toBe("collapsed");
         });
 
         it("expands collapsed panel", () => {
@@ -152,22 +147,6 @@ describe("agentBuilderLayoutStore", () => {
             useAgentBuilderLayoutStore.getState().togglePanel("config");
 
             expect(useAgentBuilderLayoutStore.getState().panels.config.state).toBe("expanded");
-        });
-    });
-
-    describe("swapPanels", () => {
-        it("swaps panel orders", () => {
-            useAgentBuilderLayoutStore.getState().swapPanels("navigation", "config");
-
-            const state = useAgentBuilderLayoutStore.getState();
-            expect(state.panels.navigation.order).toBe(1);
-            expect(state.panels.config.order).toBe(0);
-        });
-
-        it("invalidates active preset on swap", () => {
-            useAgentBuilderLayoutStore.getState().swapPanels("navigation", "config");
-
-            expect(useAgentBuilderLayoutStore.getState().activePreset).toBeNull();
         });
     });
 
@@ -208,53 +187,19 @@ describe("agentBuilderLayoutStore", () => {
         });
     });
 
-    // ===== Presets =====
-    describe("applyPreset", () => {
-        it("applies default preset", () => {
-            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "collapsed");
-
-            useAgentBuilderLayoutStore.getState().applyPreset("default");
-
-            const state = useAgentBuilderLayoutStore.getState();
-            expect(state.panels.navigation.state).toBe("expanded");
-            expect(state.panels.config.state).toBe("expanded");
-            expect(state.panels.chat.state).toBe("collapsed");
-            expect(state.activePreset).toBe("default");
-        });
-
-        it("applies chat-focused preset", () => {
-            useAgentBuilderLayoutStore.getState().applyPreset("chat-focused");
-
-            const state = useAgentBuilderLayoutStore.getState();
-            expect(state.panels.navigation.state).toBe("collapsed");
-            expect(state.panels.config.state).toBe("minimized");
-            expect(state.panels.chat.state).toBe("expanded");
-            expect(state.activePreset).toBe("chat-focused");
-        });
-
-        it("applies config-focused preset", () => {
-            useAgentBuilderLayoutStore.getState().applyPreset("config-focused");
-
-            const state = useAgentBuilderLayoutStore.getState();
-            expect(state.panels.navigation.state).toBe("collapsed");
-            expect(state.panels.config.state).toBe("expanded");
-            expect(state.panels.chat.state).toBe("minimized");
-            expect(state.activePreset).toBe("config-focused");
-        });
-    });
-
+    // ===== Reset =====
     describe("resetLayout", () => {
         it("resets all panels to default", () => {
-            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "collapsed");
+            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "expanded");
             useAgentBuilderLayoutStore.getState().setSectionExpanded("modelSection", false);
 
             useAgentBuilderLayoutStore.getState().resetLayout();
 
             const state = useAgentBuilderLayoutStore.getState();
-            expect(state.panels.navigation.state).toBe("expanded");
+            expect(state.panels.navigation.state).toBe("collapsed");
+            expect(state.panels.config.state).toBe("expanded");
             expect(state.panels.config.width).toBe(500);
             expect(state.sections.modelSection).toBe(true);
-            expect(state.activePreset).toBe("default");
         });
     });
 
@@ -265,33 +210,32 @@ describe("agentBuilderLayoutStore", () => {
 
             expect(orderedPanels).toEqual(["navigation", "config", "chat"]);
         });
-
-        it("returns updated order after swap", () => {
-            // Before: navigation=0, config=1, chat=2
-            // After swap(navigation, chat): navigation=2, config=1, chat=0
-            useAgentBuilderLayoutStore.getState().swapPanels("navigation", "chat");
-
-            const orderedPanels = useAgentBuilderLayoutStore.getState().getPanelsByOrder();
-
-            expect(orderedPanels[0]).toBe("chat"); // order 0
-            expect(orderedPanels[1]).toBe("config"); // order 1
-            expect(orderedPanels[2]).toBe("navigation"); // order 2
-        });
     });
 
     describe("isAnyPanelCollapsed", () => {
-        it("returns false when all panels expanded", () => {
-            expect(useAgentBuilderLayoutStore.getState().isAnyPanelCollapsed()).toBe(false);
+        it("returns true when navigation panel is collapsed by default", () => {
+            expect(useAgentBuilderLayoutStore.getState().isAnyPanelCollapsed()).toBe(true);
         });
 
         it("returns true when any panel collapsed", () => {
-            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "collapsed");
+            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "expanded");
+            useAgentBuilderLayoutStore.getState().setPanelState("config", "collapsed");
 
             expect(useAgentBuilderLayoutStore.getState().isAnyPanelCollapsed()).toBe(true);
         });
 
+        it("returns false when all panels expanded", () => {
+            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "expanded");
+            useAgentBuilderLayoutStore.getState().setPanelState("config", "expanded");
+            useAgentBuilderLayoutStore.getState().setPanelState("chat", "expanded");
+
+            expect(useAgentBuilderLayoutStore.getState().isAnyPanelCollapsed()).toBe(false);
+        });
+
         it("returns false when panel is minimized (not collapsed)", () => {
+            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "expanded");
             useAgentBuilderLayoutStore.getState().setPanelState("config", "minimized");
+            useAgentBuilderLayoutStore.getState().setPanelState("chat", "expanded");
 
             expect(useAgentBuilderLayoutStore.getState().isAnyPanelCollapsed()).toBe(false);
         });
@@ -300,23 +244,20 @@ describe("agentBuilderLayoutStore", () => {
     // ===== Full Workflow =====
     describe("full layout workflow", () => {
         it("handles complete layout customization", () => {
-            // Start with default
-            expect(useAgentBuilderLayoutStore.getState().activePreset).toBe("default");
+            // Start with default (navigation collapsed)
+            expect(useAgentBuilderLayoutStore.getState().panels.navigation.state).toBe("collapsed");
 
-            // Customize layout
-            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "collapsed");
+            // Expand navigation
+            useAgentBuilderLayoutStore.getState().setPanelState("navigation", "expanded");
+            expect(useAgentBuilderLayoutStore.getState().panels.navigation.state).toBe("expanded");
+
+            // Toggle section
             useAgentBuilderLayoutStore.getState().toggleSection("toolsSection");
-
-            // Preset should be invalidated
-            expect(useAgentBuilderLayoutStore.getState().activePreset).toBeNull();
-
-            // Apply preset to restore
-            useAgentBuilderLayoutStore.getState().applyPreset("chat-focused");
-            expect(useAgentBuilderLayoutStore.getState().activePreset).toBe("chat-focused");
+            expect(useAgentBuilderLayoutStore.getState().sections.toolsSection).toBe(false);
 
             // Reset to defaults
             useAgentBuilderLayoutStore.getState().resetLayout();
-            expect(useAgentBuilderLayoutStore.getState().activePreset).toBe("default");
+            expect(useAgentBuilderLayoutStore.getState().panels.navigation.state).toBe("collapsed");
             expect(useAgentBuilderLayoutStore.getState().sections.toolsSection).toBe(true);
         });
     });

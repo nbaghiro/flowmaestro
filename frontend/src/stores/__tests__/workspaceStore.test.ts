@@ -12,7 +12,7 @@ import {
     createMockApiResponse,
     createMockWorkspace,
     mockFetchOnce
-} from "../../lib/__tests__/test-helpers";
+} from "../../test-helpers";
 import { useWorkspaceStore, getCurrentWorkspaceId } from "../workspaceStore";
 
 // Reset store before each test

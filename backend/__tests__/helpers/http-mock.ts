@@ -357,6 +357,219 @@ export function mockAnthropicRateLimit(): nock.Scope {
     });
 }
 
+/**
+ * Mock Anthropic message with extended thinking
+ */
+export function mockAnthropicMessageWithThinking(config: {
+    content: string;
+    thinking: string;
+    model?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    thinkingTokens?: number;
+}): nock.Scope {
+    const {
+        content,
+        thinking,
+        model = "claude-sonnet-4-20250514",
+        inputTokens = 10,
+        outputTokens = 20,
+        thinkingTokens: _thinkingTokens = 50
+    } = config;
+
+    return mockHttpEndpoint({
+        baseUrl: ANTHROPIC_BASE_URL,
+        path: "/v1/messages",
+        method: "post",
+        response: {
+            id: `msg_${Date.now()}`,
+            type: "message",
+            role: "assistant",
+            content: [
+                {
+                    type: "thinking",
+                    thinking
+                },
+                {
+                    type: "text",
+                    text: content
+                }
+            ],
+            model,
+            stop_reason: "end_turn",
+            usage: {
+                input_tokens: inputTokens,
+                output_tokens: outputTokens,
+                cache_read_input_tokens: 0,
+                cache_creation_input_tokens: 0
+            }
+        }
+    });
+}
+
+// ============================================================================
+// GOOGLE AI API MOCKS
+// ============================================================================
+
+const GOOGLE_AI_BASE_URL = "https://generativelanguage.googleapis.com";
+
+export interface GoogleGenerateContentConfig {
+    content: string;
+    model?: string;
+    finishReason?: string;
+    promptTokens?: number;
+    completionTokens?: number;
+}
+
+/**
+ * Mock Google Generative AI (Gemini) endpoint
+ */
+export function mockGoogleGenerateContent(config: GoogleGenerateContentConfig): nock.Scope {
+    const {
+        content,
+        model = "gemini-pro",
+        finishReason = "STOP",
+        promptTokens = 10,
+        completionTokens = 20
+    } = config;
+
+    return mockHttpEndpoint({
+        baseUrl: GOOGLE_AI_BASE_URL,
+        path: new RegExp(`/v1beta/models/${model}:generateContent`),
+        method: "post",
+        response: {
+            candidates: [
+                {
+                    content: {
+                        parts: [{ text: content }],
+                        role: "model"
+                    },
+                    finishReason,
+                    safetyRatings: []
+                }
+            ],
+            usageMetadata: {
+                promptTokenCount: promptTokens,
+                candidatesTokenCount: completionTokens,
+                totalTokenCount: promptTokens + completionTokens
+            }
+        }
+    });
+}
+
+/**
+ * Mock Google AI rate limit error
+ */
+export function mockGoogleRateLimit(): nock.Scope {
+    return mockHttpEndpoint({
+        baseUrl: GOOGLE_AI_BASE_URL,
+        path: /\/v1beta\/models\/.*/,
+        method: "post",
+        status: 429,
+        response: {
+            error: {
+                code: 429,
+                message: "Resource exhausted",
+                status: "RESOURCE_EXHAUSTED"
+            }
+        }
+    });
+}
+
+// ============================================================================
+// COHERE API MOCKS
+// ============================================================================
+
+const COHERE_BASE_URL = "https://api.cohere.ai";
+
+export interface CohereGenerateConfig {
+    text: string;
+    model?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+}
+
+/**
+ * Mock Cohere generate endpoint
+ */
+export function mockCohereGenerate(config: CohereGenerateConfig): nock.Scope {
+    const { text, model: _model = "command", inputTokens = 10, outputTokens = 20 } = config;
+
+    return mockHttpEndpoint({
+        baseUrl: COHERE_BASE_URL,
+        path: "/v1/generate",
+        method: "post",
+        response: {
+            id: `gen-${Date.now()}`,
+            generations: [
+                {
+                    id: `gen-item-${Date.now()}`,
+                    text,
+                    finish_reason: "COMPLETE"
+                }
+            ],
+            meta: {
+                api_version: { version: "1" },
+                billed_units: {
+                    input_tokens: inputTokens,
+                    output_tokens: outputTokens
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Mock Cohere chat endpoint (newer API)
+ */
+export function mockCohereChat(config: {
+    text: string;
+    model?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+}): nock.Scope {
+    const { text, model: _model = "command-r-plus", inputTokens = 10, outputTokens = 20 } = config;
+
+    return mockHttpEndpoint({
+        baseUrl: COHERE_BASE_URL,
+        path: "/v1/chat",
+        method: "post",
+        response: {
+            response_id: `chat-${Date.now()}`,
+            text,
+            generation_id: `gen-${Date.now()}`,
+            chat_history: [],
+            finish_reason: "COMPLETE",
+            meta: {
+                api_version: { version: "1" },
+                billed_units: {
+                    input_tokens: inputTokens,
+                    output_tokens: outputTokens
+                },
+                tokens: {
+                    input_tokens: inputTokens,
+                    output_tokens: outputTokens
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Mock Cohere rate limit error
+ */
+export function mockCohereRateLimit(): nock.Scope {
+    return mockHttpEndpoint({
+        baseUrl: COHERE_BASE_URL,
+        path: /\/v1\/.*/,
+        method: "post",
+        status: 429,
+        response: {
+            message: "You have exceeded the rate limit"
+        }
+    });
+}
+
 // ============================================================================
 // GENERIC API MOCKS
 // ============================================================================

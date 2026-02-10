@@ -17,9 +17,7 @@ import { v4 as uuidv4 } from "uuid";
 
 // Mock agent repository
 const mockAgentRepo = {
-    findByUserId: jest.fn(),
     findByWorkspaceId: jest.fn(),
-    findByIdAndUserId: jest.fn(),
     findByIdAndWorkspaceId: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
@@ -602,7 +600,7 @@ describe("Agent Routes", () => {
 
         it("should not delete other user's agent (multi-tenant)", async () => {
             const testUser = createTestUser();
-            // findByIdAndUserId returns null because user_id doesn't match
+            // findByIdAndWorkspaceId returns null because workspace_id doesn't match
             mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
@@ -622,7 +620,7 @@ describe("Agent Routes", () => {
     describe("Multi-tenant Isolation", () => {
         it("user A cannot access user B's agent", async () => {
             const userA = createTestUser({ id: uuidv4(), email: "usera@example.com" });
-            // findByIdAndUserId enforces user ownership
+            // findByIdAndWorkspaceId enforces workspace access
             mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, userA, {

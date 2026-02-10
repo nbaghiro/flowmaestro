@@ -759,6 +759,205 @@ describe("VisionNodeHandler", () => {
         });
     });
 
+    describe("raw base64 input", () => {
+        it("handles raw base64 string (no data: prefix) for OpenAI", async () => {
+            let capturedBody: { messages?: Array<{ content: unknown[] }> } | undefined;
+
+            nock("https://api.openai.com")
+                .post("/v1/chat/completions", (body) => {
+                    capturedBody = body as { messages?: Array<{ content: unknown[] }> };
+                    return true;
+                })
+                .reply(200, {
+                    id: "chatcmpl-test",
+                    model: "gpt-4-vision-preview",
+                    choices: [
+                        {
+                            message: { content: "Raw base64 image analyzed" },
+                            finish_reason: "stop"
+                        }
+                    ],
+                    usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 }
+                });
+
+            const input = createHandlerInput({
+                nodeType: "vision",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "gpt-4-vision-preview",
+                    operation: "analyze",
+                    // Raw base64 without data: prefix
+                    imageInput: MOCK_IMAGE_BASE64,
+                    prompt: "Analyze this image"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.analysis).toBe("Raw base64 image analyzed");
+            // Verify the image was properly formatted in the request
+            const imageContent = capturedBody?.messages?.[0]?.content?.find(
+                (c: unknown) => (c as { type?: string }).type === "image_url"
+            );
+            expect(imageContent).toBeDefined();
+        });
+
+        it("handles raw base64 string for Anthropic", async () => {
+            nock("https://api.anthropic.com")
+                .post("/v1/messages")
+                .reply(200, {
+                    id: "msg-test",
+                    type: "message",
+                    role: "assistant",
+                    content: [{ type: "text", text: "Anthropic raw base64 analysis" }],
+                    model: "claude-3-opus-20240229",
+                    stop_reason: "end_turn",
+                    usage: { input_tokens: 150, output_tokens: 30 }
+                });
+
+            const input = createHandlerInput({
+                nodeType: "vision",
+                nodeConfig: {
+                    provider: "anthropic",
+                    model: "claude-3-opus-20240229",
+                    operation: "analyze",
+                    // Raw base64 without data: prefix
+                    imageInput: MOCK_IMAGE_BASE64
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.analysis).toBe("Anthropic raw base64 analysis");
+        });
+
+        it("handles raw base64 with different media types", async () => {
+            // Mock with a JPEG-like base64
+            const jpegBase64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMD";
+
+            nock("https://api.anthropic.com")
+                .post("/v1/messages")
+                .reply(200, {
+                    id: "msg-test",
+                    type: "message",
+                    role: "assistant",
+                    content: [{ type: "text", text: "JPEG analyzed" }],
+                    model: "claude-3-opus-20240229",
+                    stop_reason: "end_turn",
+                    usage: { input_tokens: 150, output_tokens: 30 }
+                });
+
+            const input = createHandlerInput({
+                nodeType: "vision",
+                nodeConfig: {
+                    provider: "anthropic",
+                    model: "claude-3-opus-20240229",
+                    operation: "analyze",
+                    imageInput: jpegBase64
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.analysis).toBe("JPEG analyzed");
+        });
+    });
+
+    describe("multi-image generation", () => {
+        it("generates multiple images when n > 1", async () => {
+            let capturedBody: { n?: number } | undefined;
+
+            nock("https://api.openai.com")
+                .post("/v1/images/generations", (body) => {
+                    capturedBody = body as { n?: number };
+                    return true;
+                })
+                .reply(200, {
+                    created: Date.now(),
+                    data: [
+                        { url: "https://generated.example.com/image1.png" },
+                        { url: "https://generated.example.com/image2.png" },
+                        { url: "https://generated.example.com/image3.png" }
+                    ]
+                });
+
+            const input = createHandlerInput({
+                nodeType: "vision",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "dall-e-3",
+                    operation: "generate",
+                    generationPrompt: "A beautiful landscape",
+                    n: 3
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(capturedBody?.n).toBe(3);
+            expect(output.result.images).toHaveLength(3);
+        });
+
+        it("defaults to 1 image when n is not specified", async () => {
+            let capturedBody: { n?: number } | undefined;
+
+            nock("https://api.openai.com")
+                .post("/v1/images/generations", (body) => {
+                    capturedBody = body as { n?: number };
+                    return true;
+                })
+                .reply(200, {
+                    created: Date.now(),
+                    data: [{ url: "https://generated.example.com/image.png" }]
+                });
+
+            const input = createHandlerInput({
+                nodeType: "vision",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "dall-e-3",
+                    operation: "generate",
+                    generationPrompt: "A cat"
+                    // n not specified
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            // Should default to 1 or not send n parameter
+            expect(capturedBody?.n === 1 || capturedBody?.n === undefined).toBe(true);
+            expect(output.result.images).toHaveLength(1);
+        });
+
+        it("returns all image URLs when generating multiple with base64 format", async () => {
+            nock("https://api.openai.com")
+                .post("/v1/images/generations")
+                .reply(200, {
+                    created: Date.now(),
+                    data: [{ b64_json: MOCK_IMAGE_BASE64 }, { b64_json: MOCK_IMAGE_BASE64 }]
+                });
+
+            const input = createHandlerInput({
+                nodeType: "vision",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "dall-e-3",
+                    operation: "generate",
+                    generationPrompt: "Twin cats",
+                    n: 2,
+                    outputFormat: "base64"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.images).toHaveLength(2);
+            const images = output.result.images as Array<{ base64?: string }>;
+            expect(images[0].base64).toBeDefined();
+            expect(images[1].base64).toBeDefined();
+        });
+    });
+
     describe("metrics", () => {
         it("records execution duration", async () => {
             nock("https://api.openai.com")

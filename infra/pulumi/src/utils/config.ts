@@ -22,6 +22,10 @@ export interface InfrastructureConfig {
     gkeAutopilot: boolean;
     gkeVersion: string;
     gkePrivateNodes: boolean; // If false, saves ~$140/mo by not needing Cloud NAT
+    // Standard mode node pool configuration (ignored if gkeAutopilot is true)
+    gkeNodeMachineType: string; // e.g., "e2-standard-4" (4 vCPU, 16GB)
+    gkeNodeCount: number; // Number of nodes in the pool
+    gkeNodeDiskSizeGb: number; // Boot disk size in GB
 
     // Database Configuration
     dbVersion: string;
@@ -82,6 +86,9 @@ const defaults = {
     gkeAutopilot: true,
     gkeVersion: "latest",
     gkePrivateNodes: false, // Public nodes (no Cloud NAT needed, saves ~$140/mo)
+    gkeNodeMachineType: "e2-standard-4", // 4 vCPU, 16GB (~$97/mo) - good for small workloads
+    gkeNodeCount: 1, // Single node for dev/small prod
+    gkeNodeDiskSizeGb: 50, // 50GB boot disk
     dbVersion: "POSTGRES_15",
     dbTier: "db-g1-small", // ~$25/month (use db-custom-2-7680 for prod)
     dbDiskSize: 10, // 10GB (use 100+ for prod)
@@ -131,6 +138,9 @@ export const infrastructureConfig: InfrastructureConfig = {
     gkeAutopilot: config.getBoolean("gkeAutopilot") ?? defaults.gkeAutopilot,
     gkeVersion: config.get("gkeVersion") || defaults.gkeVersion,
     gkePrivateNodes: config.getBoolean("gkePrivateNodes") ?? defaults.gkePrivateNodes,
+    gkeNodeMachineType: config.get("gkeNodeMachineType") || defaults.gkeNodeMachineType,
+    gkeNodeCount: config.getNumber("gkeNodeCount") ?? defaults.gkeNodeCount,
+    gkeNodeDiskSizeGb: config.getNumber("gkeNodeDiskSizeGb") ?? defaults.gkeNodeDiskSizeGb,
 
     // Database Configuration
     dbVersion: config.get("dbVersion") || defaults.dbVersion,

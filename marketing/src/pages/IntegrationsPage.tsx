@@ -194,9 +194,9 @@ export const IntegrationsPage: React.FC = () => {
                 </section>
 
                 {/* Workflow Examples Carousel */}
-                <section className="relative py-16 px-4 sm:px-6 lg:px-8 bg-secondary">
+                <section className="relative py-16 px-4 sm:px-6 lg:px-12 xl:px-16 bg-secondary">
                     <div className="absolute inset-0 grid-pattern opacity-50" />
-                    <div className="relative z-10 max-w-7xl mx-auto">
+                    <div className="relative z-10 max-w-[1400px] mx-auto">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -239,21 +239,21 @@ export const IntegrationsPage: React.FC = () => {
                             </div>
 
                             {/* Carousel Container */}
-                            <div className="relative max-w-5xl mx-auto">
+                            <div className="relative">
                                 {/* Navigation Arrows */}
                                 <button
                                     onClick={prevSlide}
-                                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 lg:-translate-x-12 z-20 p-2 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-4 lg:-translate-x-14 z-20 p-2 sm:p-3 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
                                     aria-label="Previous workflow"
                                 >
-                                    <ChevronLeft className="w-5 h-5 text-foreground" />
+                                    <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
                                 </button>
                                 <button
                                     onClick={nextSlide}
-                                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 lg:translate-x-12 z-20 p-2 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 sm:translate-x-4 lg:translate-x-14 z-20 p-2 sm:p-3 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
                                     aria-label="Next workflow"
                                 >
-                                    <ChevronRight className="w-5 h-5 text-foreground" />
+                                    <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
                                 </button>
 
                                 {/* Screenshot */}

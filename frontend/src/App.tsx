@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "./components/common/Toaster";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -212,6 +213,7 @@ function App() {
                 {/* Catch all - redirect to root */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <Toaster />
         </ThemeProvider>
     );
 }

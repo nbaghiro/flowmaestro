@@ -92,6 +92,30 @@ const postgresqlEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register Supabase provider
+const supabaseEntry: ProviderRegistryEntry = {
+    name: "supabase",
+    displayName: "Supabase",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { SupabaseProvider } = await import("./providers/supabase/SupabaseProvider");
+        return new SupabaseProvider();
+    }
+};
+
+// Register MySQL provider
+const mysqlEntry: ProviderRegistryEntry = {
+    name: "mysql",
+    displayName: "MySQL",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { MysqlProvider } = await import("./providers/mysql/MysqlProvider");
+        return new MysqlProvider();
+    }
+};
+
 // Register MongoDB provider
 const mongodbEntry: ProviderRegistryEntry = {
     name: "mongodb",
@@ -382,6 +406,8 @@ providerRegistry.register(airtableEntry);
 providerRegistry.register(hubspotEntry);
 providerRegistry.register(salesforceEntry);
 providerRegistry.register(postgresqlEntry);
+providerRegistry.register(supabaseEntry);
+providerRegistry.register(mysqlEntry);
 providerRegistry.register(mongodbEntry);
 providerRegistry.register(githubEntry);
 providerRegistry.register(linearEntry);
@@ -743,6 +769,20 @@ const posthogEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(posthogEntry);
 
+// Register Hotjar provider
+const hotjarEntry: ProviderRegistryEntry = {
+    name: "hotjar",
+    displayName: "Hotjar",
+    authMethod: "api_key",
+    category: "analytics",
+    loader: async () => {
+        const { HotjarProvider } = await import("./providers/hotjar/HotjarProvider");
+        return new HotjarProvider();
+    }
+};
+
+providerRegistry.register(hotjarEntry);
+
 // Register HelloSign provider
 const hellosignEntry: ProviderRegistryEntry = {
     name: "hellosign",
@@ -770,6 +810,20 @@ const docusignEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(docusignEntry);
+
+// Register PandaDoc provider
+const pandadocEntry: ProviderRegistryEntry = {
+    name: "pandadoc",
+    displayName: "PandaDoc",
+    authMethod: "oauth2",
+    category: "legal",
+    loader: async () => {
+        const { PandaDocProvider } = await import("./providers/pandadoc/PandaDocProvider");
+        return new PandaDocProvider();
+    }
+};
+
+providerRegistry.register(pandadocEntry);
 
 // Register Google Forms provider
 const googleFormsEntry: ProviderRegistryEntry = {
@@ -1138,6 +1192,806 @@ const squareEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(squareEntry);
+
+// Register PayPal provider
+const paypalEntry: ProviderRegistryEntry = {
+    name: "paypal",
+    displayName: "PayPal",
+    authMethod: "oauth2",
+    category: "payments",
+    loader: async () => {
+        const { PaypalProvider } = await import("./providers/paypal/PaypalProvider");
+        return new PaypalProvider();
+    }
+};
+
+providerRegistry.register(paypalEntry);
+
+// Register Canva provider
+const canvaEntry: ProviderRegistryEntry = {
+    name: "canva",
+    displayName: "Canva",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { CanvaProvider } = await import("./providers/canva/CanvaProvider");
+        return new CanvaProvider();
+    }
+};
+
+providerRegistry.register(canvaEntry);
+
+// Register Miro provider
+const miroEntry: ProviderRegistryEntry = {
+    name: "miro",
+    displayName: "Miro",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { MiroProvider } = await import("./providers/miro/MiroProvider");
+        return new MiroProvider();
+    }
+};
+
+providerRegistry.register(miroEntry);
+
+// Register Confluence provider
+const confluenceEntry: ProviderRegistryEntry = {
+    name: "confluence",
+    displayName: "Confluence",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { ConfluenceProvider } = await import("./providers/confluence/ConfluenceProvider");
+        return new ConfluenceProvider();
+    }
+};
+
+providerRegistry.register(confluenceEntry);
+
+// Register SharePoint provider
+const sharepointEntry: ProviderRegistryEntry = {
+    name: "sharepoint",
+    displayName: "SharePoint",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { SharePointProvider } = await import("./providers/sharepoint/SharePointProvider");
+        return new SharePointProvider();
+    }
+};
+
+providerRegistry.register(sharepointEntry);
+
+// Register Google Cloud Storage provider
+const googleCloudStorageEntry: ProviderRegistryEntry = {
+    name: "google-cloud-storage",
+    displayName: "Google Cloud Storage",
+    authMethod: "oauth2",
+    category: "file_storage",
+    loader: async () => {
+        const { GoogleCloudStorageProvider } = await import(
+            "./providers/google-cloud-storage/GoogleCloudStorageProvider"
+        );
+        return new GoogleCloudStorageProvider();
+    }
+};
+
+providerRegistry.register(googleCloudStorageEntry);
+
+// Register AWS provider (unified Lambda, CloudWatch, ECS)
+const awsEntry: ProviderRegistryEntry = {
+    name: "aws",
+    displayName: "AWS",
+    authMethod: "api_key",
+    category: "developer_tools",
+    loader: async () => {
+        const { AWSProvider } = await import("./providers/aws/AWSProvider");
+        return new AWSProvider();
+    }
+};
+
+providerRegistry.register(awsEntry);
+
+// Register Google Cloud provider (unified Cloud Build, Secret Manager, Compute Engine, Cloud Run)
+const googleCloudEntry: ProviderRegistryEntry = {
+    name: "google-cloud",
+    displayName: "Google Cloud",
+    authMethod: "oauth2",
+    category: "developer_tools",
+    loader: async () => {
+        const { GoogleCloudProvider } = await import(
+            "./providers/google-cloud/GoogleCloudProvider"
+        );
+        return new GoogleCloudProvider();
+    }
+};
+
+providerRegistry.register(googleCloudEntry);
+
+// Register Azure DevOps provider (unified Work Items, Repos, Pipelines, Releases, Test Plans)
+const azureDevOpsEntry: ProviderRegistryEntry = {
+    name: "azure-devops",
+    displayName: "Azure DevOps",
+    authMethod: "oauth2",
+    category: "developer_tools",
+    loader: async () => {
+        const { AzureDevOpsProvider } = await import(
+            "./providers/azure-devops/AzureDevOpsProvider"
+        );
+        return new AzureDevOpsProvider();
+    }
+};
+
+providerRegistry.register(azureDevOpsEntry);
+
+// Register AWS S3 provider
+const awsS3Entry: ProviderRegistryEntry = {
+    name: "aws-s3",
+    displayName: "AWS S3",
+    authMethod: "api_key",
+    category: "file_storage",
+    loader: async () => {
+        const { AWSS3Provider } = await import("./providers/aws-s3/AWSS3Provider");
+        return new AWSS3Provider();
+    }
+};
+
+providerRegistry.register(awsS3Entry);
+
+// Register Azure Blob Storage provider
+const azureStorageEntry: ProviderRegistryEntry = {
+    name: "azure-storage",
+    displayName: "Azure Blob Storage",
+    authMethod: "api_key",
+    category: "file_storage",
+    loader: async () => {
+        const { AzureStorageProvider } = await import(
+            "./providers/azure-storage/AzureStorageProvider"
+        );
+        return new AzureStorageProvider();
+    }
+};
+
+providerRegistry.register(azureStorageEntry);
+
+// Register WooCommerce provider
+const woocommerceEntry: ProviderRegistryEntry = {
+    name: "woocommerce",
+    displayName: "WooCommerce",
+    authMethod: "api_key",
+    category: "ecommerce",
+    loader: async () => {
+        const { WooCommerceProvider } = await import("./providers/woocommerce/WooCommerceProvider");
+        return new WooCommerceProvider();
+    }
+};
+
+providerRegistry.register(woocommerceEntry);
+
+// Register BigCommerce provider
+const bigcommerceEntry: ProviderRegistryEntry = {
+    name: "bigcommerce",
+    displayName: "BigCommerce",
+    authMethod: "api_key",
+    category: "ecommerce",
+    loader: async () => {
+        const { BigCommerceProvider } = await import("./providers/bigcommerce/BigCommerceProvider");
+        return new BigCommerceProvider();
+    }
+};
+
+providerRegistry.register(bigcommerceEntry);
+
+// Register Google Analytics provider
+const googleAnalyticsEntry: ProviderRegistryEntry = {
+    name: "google-analytics",
+    displayName: "Google Analytics",
+    authMethod: "oauth2",
+    category: "analytics",
+    loader: async () => {
+        const { GoogleAnalyticsProvider } = await import(
+            "./providers/google-analytics/GoogleAnalyticsProvider"
+        );
+        return new GoogleAnalyticsProvider();
+    }
+};
+
+providerRegistry.register(googleAnalyticsEntry);
+
+// Register Power BI provider
+const powerBIEntry: ProviderRegistryEntry = {
+    name: "power-bi",
+    displayName: "Power BI",
+    authMethod: "oauth2",
+    category: "analytics",
+    loader: async () => {
+        const { PowerBIProvider } = await import("./providers/power-bi/PowerBIProvider");
+        return new PowerBIProvider();
+    }
+};
+
+providerRegistry.register(powerBIEntry);
+
+// Register Cloudflare provider
+const cloudflareEntry: ProviderRegistryEntry = {
+    name: "cloudflare",
+    displayName: "Cloudflare",
+    authMethod: "api_key",
+    category: "developer_tools",
+    loader: async () => {
+        const { CloudflareProvider } = await import("./providers/cloudflare/CloudflareProvider");
+        return new CloudflareProvider();
+    }
+};
+
+providerRegistry.register(cloudflareEntry);
+
+// Register DigitalOcean provider
+const digitaloceanEntry: ProviderRegistryEntry = {
+    name: "digitalocean",
+    displayName: "DigitalOcean",
+    authMethod: "oauth2",
+    category: "developer_tools",
+    loader: async () => {
+        const { DigitalOceanProvider } = await import(
+            "./providers/digitalocean/DigitalOceanProvider"
+        );
+        return new DigitalOceanProvider();
+    }
+};
+
+providerRegistry.register(digitaloceanEntry);
+
+// Register Amazon Seller Central provider
+const amazonSellerCentralEntry: ProviderRegistryEntry = {
+    name: "amazon-seller-central",
+    displayName: "Amazon Seller Central",
+    authMethod: "oauth2",
+    category: "ecommerce",
+    loader: async () => {
+        const { AmazonSellerCentralProvider } = await import(
+            "./providers/amazon-seller-central/AmazonSellerCentralProvider"
+        );
+        return new AmazonSellerCentralProvider();
+    }
+};
+
+providerRegistry.register(amazonSellerCentralEntry);
+
+// Register Help Scout provider
+const helpscoutEntry: ProviderRegistryEntry = {
+    name: "helpscout",
+    displayName: "Help Scout",
+    authMethod: "oauth2",
+    category: "customer_support",
+    loader: async () => {
+        const { HelpScoutProvider } = await import("./providers/helpscout/HelpScoutProvider");
+        return new HelpScoutProvider();
+    }
+};
+
+providerRegistry.register(helpscoutEntry);
+
+// Register LiveChat provider
+const livechatEntry: ProviderRegistryEntry = {
+    name: "livechat",
+    displayName: "LiveChat",
+    authMethod: "oauth2",
+    category: "customer_support",
+    loader: async () => {
+        const { LiveChatProvider } = await import("./providers/livechat/LiveChatProvider");
+        return new LiveChatProvider();
+    }
+};
+
+providerRegistry.register(livechatEntry);
+
+// Register Drift provider
+const driftEntry: ProviderRegistryEntry = {
+    name: "drift",
+    displayName: "Drift",
+    authMethod: "oauth2",
+    category: "customer_support",
+    loader: async () => {
+        const { DriftProvider } = await import("./providers/drift/DriftProvider");
+        return new DriftProvider();
+    }
+};
+
+providerRegistry.register(driftEntry);
+
+// Register Google Meet provider
+const googleMeetEntry: ProviderRegistryEntry = {
+    name: "google-meet",
+    displayName: "Google Meet",
+    authMethod: "oauth2",
+    category: "communication",
+    loader: async () => {
+        const { GoogleMeetProvider } = await import("./providers/google-meet/GoogleMeetProvider");
+        return new GoogleMeetProvider();
+    }
+};
+
+providerRegistry.register(googleMeetEntry);
+
+// Register Zoom provider
+const zoomEntry: ProviderRegistryEntry = {
+    name: "zoom",
+    displayName: "Zoom",
+    authMethod: "oauth2",
+    category: "communication",
+    loader: async () => {
+        const { ZoomProvider } = await import("./providers/zoom/ZoomProvider");
+        return new ZoomProvider();
+    }
+};
+
+providerRegistry.register(zoomEntry);
+
+// Register SAP provider
+const sapEntry: ProviderRegistryEntry = {
+    name: "sap",
+    displayName: "SAP",
+    authMethod: "oauth2",
+    category: "erp",
+    loader: async () => {
+        const { SapProvider } = await import("./providers/sap/SapProvider");
+        return new SapProvider();
+    }
+};
+
+providerRegistry.register(sapEntry);
+
+// Register NetSuite provider
+const netsuiteEntry: ProviderRegistryEntry = {
+    name: "netsuite",
+    displayName: "NetSuite",
+    authMethod: "oauth2",
+    category: "erp",
+    loader: async () => {
+        const { NetsuiteProvider } = await import("./providers/netsuite/NetsuiteProvider");
+        return new NetsuiteProvider();
+    }
+};
+
+providerRegistry.register(netsuiteEntry);
+
+// Register Lattice provider
+const latticeEntry: ProviderRegistryEntry = {
+    name: "lattice",
+    displayName: "Lattice",
+    authMethod: "api_key",
+    category: "hr",
+    loader: async () => {
+        const { LatticeProvider } = await import("./providers/lattice/LatticeProvider");
+        return new LatticeProvider();
+    }
+};
+
+providerRegistry.register(latticeEntry);
+
+// Register ADP provider
+const adpEntry: ProviderRegistryEntry = {
+    name: "adp",
+    displayName: "ADP",
+    authMethod: "oauth2",
+    category: "hr",
+    loader: async () => {
+        const { ADPProvider } = await import("./providers/adp/ADPProvider");
+        return new ADPProvider();
+    }
+};
+
+providerRegistry.register(adpEntry);
+
+// Register Gusto provider
+const gustoEntry: ProviderRegistryEntry = {
+    name: "gusto",
+    displayName: "Gusto",
+    authMethod: "oauth2",
+    category: "hr",
+    loader: async () => {
+        const { GustoProvider } = await import("./providers/gusto/GustoProvider");
+        return new GustoProvider();
+    }
+};
+
+providerRegistry.register(gustoEntry);
+
+// Register BambooHR provider
+const bamboohrEntry: ProviderRegistryEntry = {
+    name: "bamboohr",
+    displayName: "BambooHR",
+    authMethod: "oauth2",
+    category: "hr",
+    loader: async () => {
+        const { BambooHRProvider } = await import("./providers/bamboohr/BambooHRProvider");
+        return new BambooHRProvider();
+    }
+};
+
+providerRegistry.register(bamboohrEntry);
+
+// Register Redis provider
+const redisEntry: ProviderRegistryEntry = {
+    name: "redis",
+    displayName: "Redis",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { RedisProvider } = await import("./providers/redis/RedisProvider");
+        return new RedisProvider();
+    }
+};
+
+providerRegistry.register(redisEntry);
+
+// Register Snowflake provider
+const snowflakeEntry: ProviderRegistryEntry = {
+    name: "snowflake",
+    displayName: "Snowflake",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { SnowflakeProvider } = await import("./providers/snowflake/SnowflakeProvider");
+        return new SnowflakeProvider();
+    }
+};
+
+providerRegistry.register(snowflakeEntry);
+
+// Register Xero provider
+const xeroEntry: ProviderRegistryEntry = {
+    name: "xero",
+    displayName: "Xero",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { XeroProvider } = await import("./providers/xero/XeroProvider");
+        return new XeroProvider();
+    }
+};
+
+providerRegistry.register(xeroEntry);
+
+// Register Sage provider
+const sageEntry: ProviderRegistryEntry = {
+    name: "sage",
+    displayName: "Sage",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { SageProvider } = await import("./providers/sage/SageProvider");
+        return new SageProvider();
+    }
+};
+
+providerRegistry.register(sageEntry);
+
+// Register Plaid provider
+const plaidEntry: ProviderRegistryEntry = {
+    name: "plaid",
+    displayName: "Plaid",
+    authMethod: "api_key",
+    category: "accounting",
+    loader: async () => {
+        const { PlaidProvider } = await import("./providers/plaid/PlaidProvider");
+        return new PlaidProvider();
+    }
+};
+
+providerRegistry.register(plaidEntry);
+
+// Register Contentful provider
+const contentfulEntry: ProviderRegistryEntry = {
+    name: "contentful",
+    displayName: "Contentful",
+    authMethod: "api_key",
+    category: "content_management",
+    loader: async () => {
+        const { ContentfulProvider } = await import("./providers/contentful/ContentfulProvider");
+        return new ContentfulProvider();
+    }
+};
+
+providerRegistry.register(contentfulEntry);
+
+// Register Ghost provider
+const ghostEntry: ProviderRegistryEntry = {
+    name: "ghost",
+    displayName: "Ghost",
+    authMethod: "api_key",
+    category: "content_management",
+    loader: async () => {
+        const { GhostProvider } = await import("./providers/ghost/GhostProvider");
+        return new GhostProvider();
+    }
+};
+
+providerRegistry.register(ghostEntry);
+
+// Register eBay provider
+const ebayEntry: ProviderRegistryEntry = {
+    name: "ebay",
+    displayName: "eBay",
+    authMethod: "oauth2",
+    category: "ecommerce",
+    loader: async () => {
+        const { EbayProvider } = await import("./providers/ebay/EbayProvider");
+        return new EbayProvider();
+    }
+};
+
+providerRegistry.register(ebayEntry);
+
+// Register Etsy provider
+const etsyEntry: ProviderRegistryEntry = {
+    name: "etsy",
+    displayName: "Etsy",
+    authMethod: "oauth2",
+    category: "ecommerce",
+    loader: async () => {
+        const { EtsyProvider } = await import("./providers/etsy/EtsyProvider");
+        return new EtsyProvider();
+    }
+};
+
+providerRegistry.register(etsyEntry);
+
+// Register Kustomer provider
+const kustomerEntry: ProviderRegistryEntry = {
+    name: "kustomer",
+    displayName: "Kustomer",
+    authMethod: "api_key",
+    category: "customer_support",
+    loader: async () => {
+        const { KustomerProvider } = await import("./providers/kustomer/KustomerProvider");
+        return new KustomerProvider();
+    }
+};
+
+providerRegistry.register(kustomerEntry);
+
+// Register Squarespace provider
+const squarespaceEntry: ProviderRegistryEntry = {
+    name: "squarespace",
+    displayName: "Squarespace",
+    authMethod: "oauth2",
+    category: "ecommerce",
+    loader: async () => {
+        const { SquarespaceProvider } = await import("./providers/squarespace/SquarespaceProvider");
+        return new SquarespaceProvider();
+    }
+};
+
+providerRegistry.register(squarespaceEntry);
+
+// Register Gorgias provider
+const gorgiasEntry: ProviderRegistryEntry = {
+    name: "gorgias",
+    displayName: "Gorgias",
+    authMethod: "oauth2",
+    category: "customer_support",
+    loader: async () => {
+        const { GorgiasProvider } = await import("./providers/gorgias/GorgiasProvider");
+        return new GorgiasProvider();
+    }
+};
+
+providerRegistry.register(gorgiasEntry);
+
+// Register Wix provider
+const wixEntry: ProviderRegistryEntry = {
+    name: "wix",
+    displayName: "Wix",
+    authMethod: "api_key",
+    category: "ecommerce",
+    loader: async () => {
+        const { WixProvider } = await import("./providers/wix/WixProvider");
+        return new WixProvider();
+    }
+};
+
+providerRegistry.register(wixEntry);
+
+// Register GitBook provider
+const gitbookEntry: ProviderRegistryEntry = {
+    name: "gitbook",
+    displayName: "GitBook",
+    authMethod: "api_key",
+    category: "documentation",
+    loader: async () => {
+        const { GitBookProvider } = await import("./providers/gitbook/GitBookProvider");
+        return new GitBookProvider();
+    }
+};
+
+providerRegistry.register(gitbookEntry);
+
+// Register Zoho CRM provider
+const zohoCrmEntry: ProviderRegistryEntry = {
+    name: "zoho-crm",
+    displayName: "Zoho CRM",
+    authMethod: "oauth2",
+    category: "crm",
+    loader: async () => {
+        const { ZohoCrmProvider } = await import("./providers/zoho-crm/ZohoCrmProvider");
+        return new ZohoCrmProvider();
+    }
+};
+
+providerRegistry.register(zohoCrmEntry);
+
+// Register Copper CRM provider
+const copperEntry: ProviderRegistryEntry = {
+    name: "copper",
+    displayName: "Copper",
+    authMethod: "api_key",
+    category: "crm",
+    loader: async () => {
+        const { CopperProvider } = await import("./providers/copper/CopperProvider");
+        return new CopperProvider();
+    }
+};
+
+providerRegistry.register(copperEntry);
+
+// Register Insightly CRM provider
+const insightlyEntry: ProviderRegistryEntry = {
+    name: "insightly",
+    displayName: "Insightly",
+    authMethod: "api_key",
+    category: "crm",
+    loader: async () => {
+        const { InsightlyProvider } = await import("./providers/insightly/InsightlyProvider");
+        return new InsightlyProvider();
+    }
+};
+
+providerRegistry.register(insightlyEntry);
+
+// Register Databricks provider
+const databricksEntry: ProviderRegistryEntry = {
+    name: "databricks",
+    displayName: "Databricks",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { DatabricksProvider } = await import("./providers/databricks/DatabricksProvider");
+        return new DatabricksProvider();
+    }
+};
+
+providerRegistry.register(databricksEntry);
+
+// Register Elasticsearch provider
+const elasticsearchEntry: ProviderRegistryEntry = {
+    name: "elasticsearch",
+    displayName: "Elasticsearch",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { ElasticsearchProvider } = await import(
+            "./providers/elasticsearch/ElasticsearchProvider"
+        );
+        return new ElasticsearchProvider();
+    }
+};
+
+providerRegistry.register(elasticsearchEntry);
+
+// Register Bill.com provider
+const billComEntry: ProviderRegistryEntry = {
+    name: "bill-com",
+    displayName: "Bill.com",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { BillComProvider } = await import("./providers/bill-com/BillComProvider");
+        return new BillComProvider();
+    }
+};
+
+providerRegistry.register(billComEntry);
+
+// Register Expensify provider
+const expensifyEntry: ProviderRegistryEntry = {
+    name: "expensify",
+    displayName: "Expensify",
+    authMethod: "api_key",
+    category: "accounting",
+    loader: async () => {
+        const { ExpensifyProvider } = await import("./providers/expensify/ExpensifyProvider");
+        return new ExpensifyProvider();
+    }
+};
+
+providerRegistry.register(expensifyEntry);
+
+// Register Ramp provider
+const rampEntry: ProviderRegistryEntry = {
+    name: "ramp",
+    displayName: "Ramp",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { RampProvider } = await import("./providers/ramp/RampProvider");
+        return new RampProvider();
+    }
+};
+
+providerRegistry.register(rampEntry);
+
+// Register Wise provider
+const wiseEntry: ProviderRegistryEntry = {
+    name: "wise",
+    displayName: "Wise",
+    authMethod: "api_key",
+    category: "accounting",
+    loader: async () => {
+        const { WiseProvider } = await import("./providers/wise/WiseProvider");
+        return new WiseProvider();
+    }
+};
+
+providerRegistry.register(wiseEntry);
+
+// Register Chargebee provider
+const chargebeeEntry: ProviderRegistryEntry = {
+    name: "chargebee",
+    displayName: "Chargebee",
+    authMethod: "api_key",
+    category: "accounting",
+    loader: async () => {
+        const { ChargebeeProvider } = await import("./providers/chargebee/ChargebeeProvider");
+        return new ChargebeeProvider();
+    }
+};
+
+providerRegistry.register(chargebeeEntry);
+
+// Register BigQuery provider
+const bigqueryEntry: ProviderRegistryEntry = {
+    name: "bigquery",
+    displayName: "BigQuery",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { BigQueryProvider } = await import("./providers/bigquery/BigQueryProvider");
+        return new BigQueryProvider();
+    }
+};
+
+providerRegistry.register(bigqueryEntry);
+
+// Register Redshift provider
+const redshiftEntry: ProviderRegistryEntry = {
+    name: "redshift",
+    displayName: "Amazon Redshift",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { RedshiftProvider } = await import("./providers/redshift/RedshiftProvider");
+        return new RedshiftProvider();
+    }
+};
+
+providerRegistry.register(redshiftEntry);
+
+// Register Twilio provider
+const twilioEntry: ProviderRegistryEntry = {
+    name: "twilio",
+    displayName: "Twilio",
+    authMethod: "api_key",
+    category: "marketing",
+    loader: async () => {
+        const { TwilioProvider } = await import("./providers/twilio/TwilioProvider");
+        return new TwilioProvider();
+    }
+};
+
+providerRegistry.register(twilioEntry);
 
 // Export for use in application
 export { providerRegistry };

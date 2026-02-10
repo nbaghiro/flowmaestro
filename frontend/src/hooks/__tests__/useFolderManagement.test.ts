@@ -1,272 +1,111 @@
 /**
  * useFolderManagement Hook Tests
  *
- * Tests for folder management logic - URL parsing, tree building,
- * selection behavior, and drag-drop conflict detection.
+ * Tests for the folder management hook used across item list pages.
  */
 
-import { describe, it, expect } from "vitest";
-import type { FolderTreeNode, FolderWithCounts } from "@flowmaestro/shared";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { FolderWithCounts } from "@flowmaestro/shared";
 
-// ===== URL Parsing Logic =====
-describe("folder ID extraction from URL", () => {
-    const extractFolderIdFromPath = (pathname: string): string | null => {
-        if (pathname.startsWith("/folders/")) {
-            return pathname.split("/folders/")[1]?.split("/")[0] || null;
-        }
-        return null;
+// Mock navigate and router hooks
+const mockNavigate = vi.fn();
+const mockSetSearchParams = vi.fn();
+let mockPathname = "/workflows";
+let mockSearchParams = new URLSearchParams();
+
+vi.mock("react-router-dom", async () => {
+    const actual = await vi.importActual("react-router-dom");
+    return {
+        ...actual,
+        useNavigate: () => mockNavigate,
+        useLocation: () => ({ pathname: mockPathname, state: null, search: "" }),
+        useSearchParams: () => [mockSearchParams, mockSetSearchParams]
     };
-
-    it("extracts folder ID from /folders/:id path", () => {
-        expect(extractFolderIdFromPath("/folders/abc-123")).toBe("abc-123");
-    });
-
-    it("extracts folder ID from /folders/:id/items path", () => {
-        expect(extractFolderIdFromPath("/folders/abc-123/items")).toBe("abc-123");
-    });
-
-    it("returns null for non-folder paths", () => {
-        expect(extractFolderIdFromPath("/workflows")).toBeNull();
-        expect(extractFolderIdFromPath("/agents")).toBeNull();
-        expect(extractFolderIdFromPath("/")).toBeNull();
-    });
-
-    it("handles edge case of /folders/ with no ID", () => {
-        expect(extractFolderIdFromPath("/folders/")).toBeNull();
-    });
 });
 
-// ===== Folder Tree Building =====
-describe("folder tree building", () => {
-    const buildFolderTree = (folders: FolderWithCounts[]): FolderTreeNode[] => {
-        const folderMap = new Map<string, FolderTreeNode>();
-        const rootFolders: FolderTreeNode[] = [];
+// Mock tanstack query
+const mockInvalidateQueries = vi.fn();
+vi.mock("@tanstack/react-query", () => ({
+    useQueryClient: () => ({
+        invalidateQueries: mockInvalidateQueries
+    })
+}));
 
-        // First pass: create map and initialize children
-        folders.forEach((folder) => {
-            folderMap.set(folder.id, { ...folder, children: [] });
-        });
+// Mock API
+const mockGetFolders = vi.fn();
+const mockUpdateFolder = vi.fn();
+const mockRemoveItemsFromFolder = vi.fn();
 
-        // Second pass: build tree structure
-        folders.forEach((folder) => {
-            const node = folderMap.get(folder.id)!;
-            if (folder.parentId && folderMap.has(folder.parentId)) {
-                folderMap.get(folder.parentId)!.children.push(node);
-            } else if (folder.depth === 0) {
-                rootFolders.push(node);
-            }
-        });
+vi.mock("../../lib/api", () => ({
+    getFolders: () => mockGetFolders(),
+    updateFolder: (...args: unknown[]) => mockUpdateFolder(...args),
+    removeItemsFromFolder: (...args: unknown[]) => mockRemoveItemsFromFolder(...args)
+}));
 
-        return rootFolders;
+// Mock folder utils
+const mockCheckItemsInFolder = vi.fn();
+vi.mock("../../lib/folderUtils", async () => {
+    const actual = await vi.importActual("../../lib/folderUtils");
+    return {
+        ...actual,
+        checkItemsInFolder: (...args: unknown[]) => mockCheckItemsInFolder(...args)
     };
-
-    const createFolder = (
-        id: string,
-        name: string,
-        depth: number,
-        parentId: string | null = null
-    ): FolderWithCounts => ({
-        id,
-        userId: "user-1",
-        name,
-        color: "#000",
-        position: 0,
-        depth,
-        path: parentId ? `/${parentId}/${id}` : `/${id}`,
-        parentId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        itemCounts: {
-            workflows: 0,
-            agents: 0,
-            chatInterfaces: 0,
-            formInterfaces: 0,
-            knowledgeBases: 0,
-            total: 0
-        }
-    });
-
-    it("builds flat list of root folders correctly", () => {
-        const folders = [
-            createFolder("1", "Marketing", 0),
-            createFolder("2", "Sales", 0),
-            createFolder("3", "Engineering", 0)
-        ];
-
-        const tree = buildFolderTree(folders);
-        expect(tree).toHaveLength(3);
-        expect(tree.every((f) => f.children.length === 0)).toBe(true);
-    });
-
-    it("nests children under parent folders", () => {
-        const folders = [
-            createFolder("1", "Marketing", 0),
-            createFolder("2", "Campaigns", 1, "1"),
-            createFolder("3", "Social", 1, "1")
-        ];
-
-        const tree = buildFolderTree(folders);
-        expect(tree).toHaveLength(1);
-        expect(tree[0].children).toHaveLength(2);
-        expect(tree[0].children.map((c) => c.name)).toContain("Campaigns");
-        expect(tree[0].children.map((c) => c.name)).toContain("Social");
-    });
-
-    it("handles deeply nested folders", () => {
-        const folders = [
-            createFolder("1", "Root", 0),
-            createFolder("2", "Level1", 1, "1"),
-            createFolder("3", "Level2", 2, "2")
-        ];
-
-        const tree = buildFolderTree(folders);
-        expect(tree[0].children[0].children[0].name).toBe("Level2");
-    });
-
-    it("handles orphaned folders (parent not found)", () => {
-        const folders = [
-            createFolder("1", "Root", 0),
-            createFolder("2", "Orphan", 1, "non-existent")
-        ];
-
-        const tree = buildFolderTree(folders);
-        expect(tree).toHaveLength(1);
-        expect(tree[0].name).toBe("Root");
-    });
 });
 
-// ===== Selection Logic =====
-describe("folder selection logic", () => {
-    const toggleSelection = (currentSelection: Set<string>, folderId: string): Set<string> => {
-        const newSet = new Set(currentSelection);
-        if (newSet.has(folderId)) {
-            newSet.delete(folderId);
-        } else {
-            newSet.add(folderId);
-        }
-        return newSet;
+// Mock folder store
+const mockCreateFolder = vi.fn();
+const mockMoveItemsToFolder = vi.fn();
+const mockDeleteFolder = vi.fn();
+let mockStoreFolders: FolderWithCounts[] = [];
+
+vi.mock("../../stores/folderStore", async () => {
+    const actual = await vi.importActual("../../stores/folderStore");
+    return {
+        ...actual,
+        useFolderStore: () => ({
+            createFolder: mockCreateFolder,
+            moveItemsToFolder: mockMoveItemsToFolder,
+            deleteFolder: mockDeleteFolder,
+            folders: mockStoreFolders
+        })
     };
-
-    it("adds folder to empty selection", () => {
-        const result = toggleSelection(new Set(), "folder-1");
-        expect(result.has("folder-1")).toBe(true);
-        expect(result.size).toBe(1);
-    });
-
-    it("removes folder from selection when already selected", () => {
-        const result = toggleSelection(new Set(["folder-1"]), "folder-1");
-        expect(result.has("folder-1")).toBe(false);
-        expect(result.size).toBe(0);
-    });
-
-    it("supports multi-selection", () => {
-        let selection = new Set<string>();
-        selection = toggleSelection(selection, "folder-1");
-        selection = toggleSelection(selection, "folder-2");
-        selection = toggleSelection(selection, "folder-3");
-
-        expect(selection.size).toBe(3);
-        expect(selection.has("folder-1")).toBe(true);
-        expect(selection.has("folder-2")).toBe(true);
-        expect(selection.has("folder-3")).toBe(true);
-    });
-
-    it("removes only clicked folder from multi-selection", () => {
-        const selection = toggleSelection(
-            new Set(["folder-1", "folder-2", "folder-3"]),
-            "folder-2"
-        );
-        expect(selection.size).toBe(2);
-        expect(selection.has("folder-2")).toBe(false);
-        expect(selection.has("folder-1")).toBe(true);
-        expect(selection.has("folder-3")).toBe(true);
-    });
 });
 
-// ===== Drag-Drop Auto-Move Logic =====
-describe("drag-drop auto-move decision", () => {
-    interface DropContext {
-        currentFolderId: string | null;
-        sourceFolderId: string | null;
-        targetFolderId: string;
-        isInMainFolder: boolean;
+// Mock UI preferences store
+let mockShowFoldersSection = true;
+const mockSetShowFoldersSection = vi.fn();
+
+vi.mock("../../stores/uiPreferencesStore", () => ({
+    useUIPreferencesStore: () => ({
+        showFoldersSection: mockShowFoldersSection,
+        setShowFoldersSection: mockSetShowFoldersSection
+    })
+}));
+
+// Mock logger
+vi.mock("../../lib/logger", () => ({
+    logger: {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
     }
+}));
 
-    const shouldAutoMove = (ctx: DropContext): boolean => {
-        const hasCurrentFolder = Boolean(ctx.currentFolderId);
-        const itemInCurrentFolder =
-            ctx.sourceFolderId != null &&
-            ctx.currentFolderId != null &&
-            ctx.sourceFolderId === ctx.currentFolderId;
-        const movingToDifferentFolder = ctx.targetFolderId !== ctx.sourceFolderId;
-        const itemInMainFolder = ctx.isInMainFolder === true;
+// Import after mocks
+import { useFolderManagement } from "../useFolderManagement";
 
-        return (
-            hasCurrentFolder && itemInCurrentFolder && movingToDifferentFolder && itemInMainFolder
-        );
-    };
-
-    it("auto-moves when moving from main folder to subfolder within same view", () => {
-        const result = shouldAutoMove({
-            currentFolderId: "parent",
-            sourceFolderId: "parent",
-            targetFolderId: "subfolder",
-            isInMainFolder: true
-        });
-        expect(result).toBe(true);
-    });
-
-    it("does not auto-move when not inside a folder view", () => {
-        const result = shouldAutoMove({
-            currentFolderId: null,
-            sourceFolderId: "parent",
-            targetFolderId: "subfolder",
-            isInMainFolder: true
-        });
-        expect(result).toBe(false);
-    });
-
-    it("does not auto-move when item is in a different folder", () => {
-        const result = shouldAutoMove({
-            currentFolderId: "folder-a",
-            sourceFolderId: "folder-b",
-            targetFolderId: "subfolder",
-            isInMainFolder: true
-        });
-        expect(result).toBe(false);
-    });
-
-    it("does not auto-move when dropping on same folder", () => {
-        const result = shouldAutoMove({
-            currentFolderId: "parent",
-            sourceFolderId: "parent",
-            targetFolderId: "parent",
-            isInMainFolder: true
-        });
-        expect(result).toBe(false);
-    });
-
-    it("does not auto-move when item is in subfolder (not main)", () => {
-        const result = shouldAutoMove({
-            currentFolderId: "parent",
-            sourceFolderId: "parent",
-            targetFolderId: "other-subfolder",
-            isInMainFolder: false
-        });
-        expect(result).toBe(false);
-    });
-});
-
-// ===== Computed Values =====
-describe("computed folder values", () => {
-    const createFolder = (id: string, depth: number): FolderWithCounts => ({
-        id,
+// Test helpers
+function createMockFolder(overrides?: Partial<FolderWithCounts>): FolderWithCounts {
+    return {
+        id: "folder-1",
         userId: "user-1",
-        name: `Folder ${id}`,
-        color: "#000",
+        name: "Test Folder",
+        color: "#6366f1",
         position: 0,
-        depth,
-        path: `/${id}`,
+        depth: 0,
+        path: "/folder-1",
         parentId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -277,74 +116,564 @@ describe("computed folder values", () => {
             formInterfaces: 0,
             knowledgeBases: 0,
             total: 0
-        }
-    });
-
-    it("rootFolders filters to depth 0 only", () => {
-        const folders = [
-            createFolder("1", 0),
-            createFolder("2", 0),
-            createFolder("3", 1),
-            createFolder("4", 2)
-        ];
-
-        const rootFolders = folders.filter((f) => f.depth === 0);
-        expect(rootFolders).toHaveLength(2);
-    });
-
-    it("canShowFoldersSection is true when not in folder and has folders", () => {
-        const currentFolderId: string | null = null;
-        const rootFolders = [createFolder("1", 0)];
-
-        const canShow = !currentFolderId && rootFolders.length > 0;
-        expect(canShow).toBe(true);
-    });
-
-    it("canShowFoldersSection is false when inside a folder", () => {
-        const currentFolderId: string | null = "folder-1";
-        const rootFolders = [createFolder("1", 0)];
-
-        const canShow = !currentFolderId && rootFolders.length > 0;
-        expect(canShow).toBe(false);
-    });
-
-    it("canShowFoldersSection is false when no folders exist", () => {
-        const currentFolderId: string | null = null;
-        const rootFolders: FolderWithCounts[] = [];
-
-        const canShow = !currentFolderId && rootFolders.length > 0;
-        expect(canShow).toBe(false);
-    });
-});
-
-// ===== Expand/Collapse Logic =====
-describe("folder expand/collapse", () => {
-    const toggleExpand = (expandedIds: Set<string>, folderId: string): Set<string> => {
-        const next = new Set(expandedIds);
-        if (next.has(folderId)) {
-            next.delete(folderId);
-        } else {
-            next.add(folderId);
-        }
-        return next;
+        },
+        ...overrides
     };
+}
 
-    it("expands collapsed folder", () => {
-        const result = toggleExpand(new Set(), "folder-1");
-        expect(result.has("folder-1")).toBe(true);
+function createMouseEvent(options: Partial<React.MouseEvent> = {}): React.MouseEvent {
+    return {
+        preventDefault: vi.fn(),
+        shiftKey: false,
+        ...options
+    } as unknown as React.MouseEvent;
+}
+
+const defaultHookOptions = {
+    itemType: "workflow" as const,
+    onReloadItems: vi.fn().mockResolvedValue(undefined)
+};
+
+describe("useFolderManagement", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockPathname = "/workflows";
+        mockSearchParams = new URLSearchParams();
+        mockStoreFolders = [];
+        mockShowFoldersSection = true;
+        mockGetFolders.mockResolvedValue({ success: true, data: [] });
+        mockCheckItemsInFolder.mockResolvedValue({
+            found: false,
+            folderName: "",
+            folderId: "",
+            isInMainFolder: false
+        });
     });
 
-    it("collapses expanded folder", () => {
-        const result = toggleExpand(new Set(["folder-1"]), "folder-1");
-        expect(result.has("folder-1")).toBe(false);
+    // ===== Initial State =====
+    describe("initial state", () => {
+        it("starts with loading state", () => {
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            expect(result.current.isLoadingFolders).toBe(true);
+        });
+
+        it("loads folders on mount", async () => {
+            const folders = [createMockFolder()];
+            mockGetFolders.mockResolvedValue({ success: true, data: folders });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            expect(result.current.folders).toEqual(folders);
+            expect(mockGetFolders).toHaveBeenCalled();
+        });
+
+        it("initializes with empty selection", () => {
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            expect(result.current.selectedFolderIds.size).toBe(0);
+        });
+
+        it("initializes dialog states as closed", () => {
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            expect(result.current.isCreateFolderDialogOpen).toBe(false);
+            expect(result.current.isMoveDialogOpen).toBe(false);
+            expect(result.current.folderToEdit).toBeNull();
+            expect(result.current.folderToDelete).toBeNull();
+        });
     });
 
-    it("can have multiple folders expanded", () => {
-        let expanded = new Set<string>();
-        expanded = toggleExpand(expanded, "folder-1");
-        expanded = toggleExpand(expanded, "folder-2");
+    // ===== URL-based Folder ID Resolution =====
+    describe("currentFolderId resolution", () => {
+        it("extracts folder ID from URL path /folders/:id", async () => {
+            mockPathname = "/folders/abc-123";
 
-        expect(expanded.has("folder-1")).toBe(true);
-        expect(expanded.has("folder-2")).toBe(true);
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            expect(result.current.currentFolderId).toBe("abc-123");
+        });
+
+        it("extracts folder ID from URL path /folders/:id/items", async () => {
+            mockPathname = "/folders/abc-123/items";
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            expect(result.current.currentFolderId).toBe("abc-123");
+        });
+
+        it("returns null for non-folder paths", async () => {
+            mockPathname = "/workflows";
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            expect(result.current.currentFolderId).toBeNull();
+        });
+
+        it("uses search params when path has no folder ID", async () => {
+            mockPathname = "/workflows";
+            mockSearchParams = new URLSearchParams("folder=param-folder-id");
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            expect(result.current.currentFolderId).toBe("param-folder-id");
+        });
+
+        it("prefers path over search params", async () => {
+            mockPathname = "/folders/path-folder-id";
+            mockSearchParams = new URLSearchParams("folder=param-folder-id");
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            expect(result.current.currentFolderId).toBe("path-folder-id");
+        });
+    });
+
+    // ===== Computed Values =====
+    describe("computed values", () => {
+        it("computes rootFolders as depth 0 folders when not in a folder", async () => {
+            const folders = [
+                createMockFolder({ id: "root-1", depth: 0 }),
+                createMockFolder({ id: "root-2", depth: 0 }),
+                createMockFolder({ id: "child-1", depth: 1, parentId: "root-1" })
+            ];
+            mockGetFolders.mockResolvedValue({ success: true, data: folders });
+            mockPathname = "/workflows";
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            expect(result.current.rootFolders).toHaveLength(2);
+            expect(result.current.rootFolders.map((f) => f.id)).toEqual(["root-1", "root-2"]);
+        });
+
+        it("returns empty rootFolders when inside a folder", async () => {
+            const folders = [
+                createMockFolder({ id: "root-1", depth: 0 }),
+                createMockFolder({ id: "child-1", depth: 1, parentId: "root-1" })
+            ];
+            mockGetFolders.mockResolvedValue({ success: true, data: folders });
+            mockPathname = "/folders/root-1";
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            expect(result.current.rootFolders).toHaveLength(0);
+        });
+
+        it("canShowFoldersSection is true when not in folder and has folders", async () => {
+            const folders = [createMockFolder({ id: "root-1", depth: 0 })];
+            mockGetFolders.mockResolvedValue({ success: true, data: folders });
+            mockPathname = "/workflows";
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            expect(result.current.canShowFoldersSection).toBe(true);
+        });
+
+        it("canShowFoldersSection is false when inside a folder", async () => {
+            const folders = [createMockFolder({ id: "root-1", depth: 0 })];
+            mockGetFolders.mockResolvedValue({ success: true, data: folders });
+            mockPathname = "/folders/root-1";
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            expect(result.current.canShowFoldersSection).toBe(false);
+        });
+
+        it("canShowFoldersSection is false when no folders exist", async () => {
+            mockGetFolders.mockResolvedValue({ success: true, data: [] });
+            mockPathname = "/workflows";
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            expect(result.current.canShowFoldersSection).toBe(false);
+        });
+
+        it("sets currentFolder when inside a folder", async () => {
+            const folder = createMockFolder({ id: "folder-123", name: "My Folder" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder] });
+            mockPathname = "/folders/folder-123";
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.currentFolder).not.toBeNull();
+            });
+
+            expect(result.current.currentFolder?.id).toBe("folder-123");
+            expect(result.current.currentFolder?.name).toBe("My Folder");
+        });
+    });
+
+    // ===== Folder Click Behavior =====
+    describe("handleFolderClick", () => {
+        it("navigates to folder on normal click with no selection", async () => {
+            const folder = createMockFolder({ id: "folder-1", name: "Test" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder] });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            act(() => {
+                result.current.handleFolderClick(createMouseEvent(), folder);
+            });
+
+            expect(mockNavigate).toHaveBeenCalledWith("/folders/folder-1", {
+                state: { sourceItemType: "workflow" }
+            });
+        });
+
+        it("toggles selection on shift+click", async () => {
+            const folder = createMockFolder({ id: "folder-1" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder] });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            // Shift+click to select
+            act(() => {
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder);
+            });
+
+            expect(result.current.selectedFolderIds.has("folder-1")).toBe(true);
+
+            // Shift+click again to deselect
+            act(() => {
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder);
+            });
+
+            expect(result.current.selectedFolderIds.has("folder-1")).toBe(false);
+        });
+
+        it("clears selection on normal click when folders are selected", async () => {
+            const folder1 = createMockFolder({ id: "folder-1" });
+            const folder2 = createMockFolder({ id: "folder-2" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder1, folder2] });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            // Select folder1 with shift+click
+            act(() => {
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder1);
+            });
+
+            expect(result.current.selectedFolderIds.size).toBe(1);
+
+            // Normal click on folder2 should clear selection (not navigate)
+            act(() => {
+                result.current.handleFolderClick(createMouseEvent(), folder2);
+            });
+
+            expect(result.current.selectedFolderIds.size).toBe(0);
+            expect(mockNavigate).not.toHaveBeenCalled();
+        });
+
+        it("supports multi-selection with shift+click", async () => {
+            const folder1 = createMockFolder({ id: "folder-1" });
+            const folder2 = createMockFolder({ id: "folder-2" });
+            const folder3 = createMockFolder({ id: "folder-3" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder1, folder2, folder3] });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            act(() => {
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder1);
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder2);
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder3);
+            });
+
+            expect(result.current.selectedFolderIds.size).toBe(3);
+            expect(result.current.selectedFolderIds.has("folder-1")).toBe(true);
+            expect(result.current.selectedFolderIds.has("folder-2")).toBe(true);
+            expect(result.current.selectedFolderIds.has("folder-3")).toBe(true);
+        });
+    });
+
+    // ===== Expand/Collapse =====
+    describe("handleToggleFolderExpand", () => {
+        it("expands a collapsed folder", async () => {
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            expect(result.current.expandedFolderIds.has("folder-1")).toBe(false);
+
+            act(() => {
+                result.current.handleToggleFolderExpand("folder-1");
+            });
+
+            expect(result.current.expandedFolderIds.has("folder-1")).toBe(true);
+        });
+
+        it("collapses an expanded folder", async () => {
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            act(() => {
+                result.current.handleToggleFolderExpand("folder-1");
+            });
+
+            expect(result.current.expandedFolderIds.has("folder-1")).toBe(true);
+
+            act(() => {
+                result.current.handleToggleFolderExpand("folder-1");
+            });
+
+            expect(result.current.expandedFolderIds.has("folder-1")).toBe(false);
+        });
+
+        it("supports multiple expanded folders", async () => {
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            act(() => {
+                result.current.handleToggleFolderExpand("folder-1");
+                result.current.handleToggleFolderExpand("folder-2");
+            });
+
+            expect(result.current.expandedFolderIds.has("folder-1")).toBe(true);
+            expect(result.current.expandedFolderIds.has("folder-2")).toBe(true);
+        });
+    });
+
+    // ===== Folder CRUD Operations =====
+    describe("folder operations", () => {
+        it("creates folder and reloads", async () => {
+            mockCreateFolder.mockResolvedValue({ id: "new-folder" });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            await act(async () => {
+                await result.current.handleCreateFolder("New Folder", "#ff0000");
+            });
+
+            expect(mockCreateFolder).toHaveBeenCalledWith({ name: "New Folder", color: "#ff0000" });
+            expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["folderContents"] });
+        });
+
+        it("edits folder when folderToEdit is set", async () => {
+            const folder = createMockFolder({ id: "edit-me", name: "Old Name" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder] });
+            mockUpdateFolder.mockResolvedValue({ success: true });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            act(() => {
+                result.current.setFolderToEdit(folder);
+            });
+
+            await act(async () => {
+                await result.current.handleEditFolder("New Name", "#00ff00");
+            });
+
+            expect(mockUpdateFolder).toHaveBeenCalledWith("edit-me", {
+                name: "New Name",
+                color: "#00ff00"
+            });
+            expect(result.current.folderToEdit).toBeNull();
+        });
+
+        it("deletes folder and navigates to root if viewing deleted folder", async () => {
+            const folder = createMockFolder({ id: "delete-me" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder] });
+            mockDeleteFolder.mockResolvedValue({ success: true });
+            mockPathname = "/folders/delete-me";
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            act(() => {
+                result.current.setFolderToDelete(folder);
+            });
+
+            await act(async () => {
+                await result.current.handleDeleteFolder();
+            });
+
+            expect(mockDeleteFolder).toHaveBeenCalledWith("delete-me");
+            expect(mockSetSearchParams).toHaveBeenCalledWith({});
+            expect(result.current.folderToDelete).toBeNull();
+        });
+    });
+
+    // ===== Batch Delete =====
+    describe("handleBatchDeleteFolders", () => {
+        it("deletes all selected folders", async () => {
+            const folder1 = createMockFolder({ id: "folder-1" });
+            const folder2 = createMockFolder({ id: "folder-2" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder1, folder2] });
+            mockDeleteFolder.mockResolvedValue({ success: true });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            // Select both folders
+            act(() => {
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder1);
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder2);
+            });
+
+            expect(result.current.selectedFolderIds.size).toBe(2);
+
+            await act(async () => {
+                await result.current.handleBatchDeleteFolders();
+            });
+
+            expect(mockDeleteFolder).toHaveBeenCalledTimes(2);
+            expect(result.current.selectedFolderIds.size).toBe(0);
+        });
+
+        it("does nothing when no folders are selected", async () => {
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await act(async () => {
+                await result.current.handleBatchDeleteFolders();
+            });
+
+            expect(mockDeleteFolder).not.toHaveBeenCalled();
+        });
+
+        it("sets isBatchDeleting during operation", async () => {
+            const folder = createMockFolder({ id: "folder-1" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder] });
+
+            let resolveFn: () => void;
+            mockDeleteFolder.mockReturnValue(
+                new Promise((resolve) => {
+                    resolveFn = () => resolve({ success: true });
+                })
+            );
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            act(() => {
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder);
+            });
+
+            let batchDeletePromise: Promise<void>;
+            act(() => {
+                batchDeletePromise = result.current.handleBatchDeleteFolders();
+            });
+
+            expect(result.current.isBatchDeleting).toBe(true);
+
+            await act(async () => {
+                resolveFn!();
+                await batchDeletePromise;
+            });
+
+            expect(result.current.isBatchDeleting).toBe(false);
+        });
+    });
+
+    // ===== Context Menu =====
+    describe("handleFolderContextMenu", () => {
+        it("selects folder if not already selected", async () => {
+            const folder = createMockFolder({ id: "folder-1" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder] });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            act(() => {
+                result.current.handleFolderContextMenu(createMouseEvent(), folder);
+            });
+
+            expect(result.current.selectedFolderIds.has("folder-1")).toBe(true);
+            expect(result.current.selectedFolderIds.size).toBe(1);
+        });
+
+        it("keeps existing selection if folder already selected", async () => {
+            const folder1 = createMockFolder({ id: "folder-1" });
+            const folder2 = createMockFolder({ id: "folder-2" });
+            mockGetFolders.mockResolvedValue({ success: true, data: [folder1, folder2] });
+
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            await waitFor(() => {
+                expect(result.current.isLoadingFolders).toBe(false);
+            });
+
+            // Select both folders
+            act(() => {
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder1);
+                result.current.handleFolderClick(createMouseEvent({ shiftKey: true }), folder2);
+            });
+
+            // Right-click on already selected folder
+            act(() => {
+                result.current.handleFolderContextMenu(createMouseEvent(), folder1);
+            });
+
+            // Should keep both selected
+            expect(result.current.selectedFolderIds.size).toBe(2);
+        });
+    });
+
+    // ===== Navigation =====
+    describe("handleNavigateToRoot", () => {
+        it("clears search params", async () => {
+            const { result } = renderHook(() => useFolderManagement(defaultHookOptions));
+
+            act(() => {
+                result.current.handleNavigateToRoot();
+            });
+
+            expect(mockSetSearchParams).toHaveBeenCalledWith({});
+        });
     });
 });

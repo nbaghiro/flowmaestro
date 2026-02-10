@@ -84,7 +84,7 @@ export function AgentCard({
             <AgentPromptPreview
                 systemPrompt={agent.systemPrompt}
                 temperature={agent.temperature}
-                height="h-32"
+                height="h-24"
             />
 
             {/* Drag Handle - visible on hover */}

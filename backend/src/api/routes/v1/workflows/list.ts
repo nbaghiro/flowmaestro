@@ -25,13 +25,13 @@ export async function listWorkflowsHandler(fastify: FastifyInstance): Promise<vo
             request: FastifyRequest<{ Querystring: ListWorkflowsQuery }>,
             reply: FastifyReply
         ) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const { page, per_page, offset } = parsePaginationQuery(
                 request.query as Record<string, unknown>
             );
 
             const workflowRepository = new WorkflowRepository();
-            const { workflows, total } = await workflowRepository.findByUserId(userId, {
+            const { workflows, total } = await workflowRepository.findByWorkspaceId(workspaceId, {
                 limit: per_page,
                 offset
             });

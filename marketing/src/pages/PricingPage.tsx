@@ -254,7 +254,7 @@ export const PricingPage: React.FC = () => {
                 <Navigation />
 
                 {/* Hero Section */}
-                <section className="relative pt-32 pb-8 px-4 sm:px-6 lg:px-8">
+                <section className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 lg:px-8">
                     <div className="relative z-10 max-w-5xl mx-auto text-center">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
@@ -306,13 +306,17 @@ export const PricingPage: React.FC = () => {
                 {/* Credit Slider */}
                 <section className="relative px-4 sm:px-6 lg:px-8 pb-12">
                     <div className="max-w-5xl mx-auto">
-                        <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-8">
-                            <div className="flex items-baseline gap-2 mb-6">
-                                <span className="text-muted-foreground">I need</span>
-                                <span className="text-4xl font-bold text-foreground font-mono">
+                        <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-4 sm:p-8">
+                            <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 mb-6">
+                                <span className="text-sm sm:text-base text-muted-foreground">
+                                    I need
+                                </span>
+                                <span className="text-2xl sm:text-4xl font-bold text-foreground font-mono">
                                     {selectedCredits.toLocaleString()}
                                 </span>
-                                <span className="text-muted-foreground">credits per month</span>
+                                <span className="text-sm sm:text-base text-muted-foreground">
+                                    credits per month
+                                </span>
                             </div>
 
                             {/* Slider */}
@@ -334,6 +338,10 @@ export const PricingPage: React.FC = () => {
                                         const isActive =
                                             Math.abs(selectedCredits - tier.value) <
                                             tier.value * 0.1;
+                                        // Show only key tiers on mobile (5k, 50k, 250k, 1M)
+                                        const showOnMobile = [
+                                            5000, 50000, 250000, 1000000
+                                        ].includes(tier.value);
                                         return (
                                             <button
                                                 key={tier.value}
@@ -344,7 +352,7 @@ export const PricingPage: React.FC = () => {
                                                     isActive
                                                         ? "text-foreground font-semibold"
                                                         : "text-muted-foreground hover:text-foreground"
-                                                }`}
+                                                } ${showOnMobile ? "" : "hidden sm:block"}`}
                                                 style={{ left: `${position}%` }}
                                             >
                                                 {tier.label}

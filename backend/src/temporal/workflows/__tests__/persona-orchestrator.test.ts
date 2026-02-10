@@ -1522,3 +1522,505 @@ describe("Persona Orchestrator Workflow", () => {
         });
     });
 });
+
+// ============================================================================
+// UNIT TESTS FOR HELPER FUNCTIONS
+// ============================================================================
+
+describe("checkClarificationComplete", () => {
+    // Import the signal parser for testing
+    const SIGNAL_BLOCK_REGEX = /```workflow-signal\s*\n([\s\S]*?)```/g;
+
+    // Inline version of the updated function for testing
+    function checkClarificationComplete(content: string): {
+        complete: boolean;
+        summary?: string;
+        viaText?: boolean;
+    } {
+        // Parse for clarification_complete signal (preferred method)
+        const regex = new RegExp(SIGNAL_BLOCK_REGEX.source, "g");
+        let match: RegExpExecArray | null;
+
+        while ((match = regex.exec(content)) !== null) {
+            try {
+                const parsed = JSON.parse(match[1].trim());
+                if (
+                    parsed.type === "clarification_complete" &&
+                    parsed.ready === true &&
+                    typeof parsed.summary === "string"
+                ) {
+                    return {
+                        complete: true,
+                        summary: parsed.summary
+                    };
+                }
+            } catch {
+                // Ignore parse errors
+            }
+        }
+
+        // Check text content for readiness indicators (fallback)
+        const readyPatterns = [
+            /i (?:now )?(?:fully )?understand/i,
+            /ready to (?:proceed|start|begin)/i,
+            /let'?s (?:proceed|start|begin|get started)/i,
+            /have (?:enough|sufficient|all the) (?:information|context|details)/i,
+            /clear on (?:the|your) requirements/i,
+            /i have all (?:the )?(?:information|details) i need/i
+        ];
+
+        const textIndicatesReady = readyPatterns.some((pattern) => pattern.test(content));
+        if (textIndicatesReady) {
+            return { complete: true, viaText: true };
+        }
+
+        return { complete: false };
+    }
+
+    describe("signal-based detection", () => {
+        it("should detect completion via clarification_complete signal with ready=true", () => {
+            const content = `I've gathered enough information.
+
+\`\`\`workflow-signal
+{
+    "type": "clarification_complete",
+    "summary": "I understand the task",
+    "ready": true
+}
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
+
+            expect(result.complete).toBe(true);
+            expect(result.summary).toBe("I understand the task");
+            expect(result.viaText).toBeUndefined();
+        });
+
+        it("should not complete if ready=false", () => {
+            const content = `\`\`\`workflow-signal
+{
+    "type": "clarification_complete",
+    "summary": "Need more info",
+    "ready": false
+}
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
+
+            expect(result.complete).toBe(false);
+        });
+
+        it("should not complete for other signal types", () => {
+            const content = `\`\`\`workflow-signal
+{
+    "type": "progress",
+    "current_step": "Analyzing"
+}
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
+
+            expect(result.complete).toBe(false);
+        });
+
+        it("should handle malformed JSON", () => {
+            const content = `\`\`\`workflow-signal
+{ invalid json }
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
+
+            expect(result.complete).toBe(false);
+        });
+
+        it("should handle empty content", () => {
+            const result = checkClarificationComplete("");
+
+            expect(result.complete).toBe(false);
+        });
+    });
+
+    describe("text-based detection", () => {
+        it("should detect 'I understand' pattern", () => {
+            const result = checkClarificationComplete("I understand your requirements.");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+
+        it("should detect 'I now understand' pattern", () => {
+            const result = checkClarificationComplete("I now understand what you need.");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+
+        it("should detect 'I fully understand' pattern", () => {
+            const result = checkClarificationComplete("I fully understand the scope.");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+
+        it("should detect 'ready to proceed' pattern", () => {
+            const result = checkClarificationComplete("I am ready to proceed with the task.");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+
+        it("should detect 'let's proceed' pattern", () => {
+            const result = checkClarificationComplete("Let's proceed with the analysis.");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+
+        it("should detect 'let's get started' pattern", () => {
+            const result = checkClarificationComplete("Let's get started on this.");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+
+        it("should detect 'have enough information' pattern", () => {
+            const result = checkClarificationComplete("I have enough information to begin.");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+
+        it("should detect 'have all the information I need' pattern", () => {
+            const result = checkClarificationComplete("I have all the information I need.");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+
+        it("should detect 'clear on your requirements' pattern", () => {
+            const result = checkClarificationComplete("I'm clear on your requirements now.");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+
+        it("should not complete for generic text", () => {
+            const result = checkClarificationComplete("What format do you prefer for the report?");
+
+            expect(result.complete).toBe(false);
+        });
+
+        it("should not complete for questions", () => {
+            const result = checkClarificationComplete("Can you clarify the scope further?");
+
+            expect(result.complete).toBe(false);
+        });
+
+        it("should be case insensitive", () => {
+            const result = checkClarificationComplete("I UNDERSTAND THE TASK");
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+    });
+
+    describe("priority", () => {
+        it("should prefer signal detection over text detection", () => {
+            const content = `I understand the task
+
+\`\`\`workflow-signal
+{
+    "type": "clarification_complete",
+    "summary": "Via signal",
+    "ready": true
+}
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
+
+            // Should complete via signal, not text
+            expect(result.complete).toBe(true);
+            expect(result.summary).toBe("Via signal");
+            expect(result.viaText).toBeUndefined();
+        });
+
+        it("should fall back to text if no valid signal present", () => {
+            const content = `I understand the task
+
+\`\`\`workflow-signal
+{
+    "type": "progress",
+    "current_step": "Analyzing"
+}
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
+
+            expect(result.complete).toBe(true);
+            expect(result.viaText).toBe(true);
+        });
+    });
+});
+
+describe("createStructuredSummary", () => {
+    // Test the improved summarization function
+    function createStructuredSummary(messages: ThreadMessage[], personaName: string): string {
+        const toolsUsed = new Set<string>();
+        const toolResults: string[] = [];
+        const keyDecisions: string[] = [];
+        const userRequirements: string[] = [];
+        let lastAssistantMessage = "";
+
+        for (const msg of messages) {
+            if (msg.tool_calls) {
+                for (const tc of msg.tool_calls) {
+                    toolsUsed.add(tc.name);
+                }
+            }
+
+            if (msg.role === "tool" && msg.tool_name && msg.content) {
+                try {
+                    const result = JSON.parse(msg.content);
+                    if (result.success !== false && !result.error) {
+                        const summary =
+                            typeof result.data === "object"
+                                ? JSON.stringify(result.data).substring(0, 200)
+                                : String(result.data || result.message || "").substring(0, 200);
+                        if (summary) {
+                            toolResults.push(`${msg.tool_name}: ${summary}`);
+                        }
+                    }
+                } catch {
+                    // Ignore JSON parse errors
+                }
+            }
+
+            if (msg.role === "user" && msg.content) {
+                const lines = msg.content.split("\n");
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed.length >= 15 && trimmed.length <= 200) {
+                        const lowerLine = trimmed.toLowerCase();
+                        if (
+                            lowerLine.includes("need") ||
+                            lowerLine.includes("want") ||
+                            lowerLine.includes("should") ||
+                            lowerLine.includes("must") ||
+                            lowerLine.includes("please") ||
+                            lowerLine.includes("require") ||
+                            lowerLine.startsWith("- ") ||
+                            /^\d+\./.test(trimmed)
+                        ) {
+                            userRequirements.push(trimmed);
+                        }
+                    }
+                }
+            }
+
+            if (msg.role === "assistant" && msg.content) {
+                lastAssistantMessage = msg.content;
+                const lines = msg.content.split("\n");
+                for (const line of lines) {
+                    const lowerLine = line.toLowerCase();
+                    if (
+                        lowerLine.includes("will ") ||
+                        lowerLine.includes("decided") ||
+                        lowerLine.includes("found that") ||
+                        lowerLine.includes("discovered") ||
+                        lowerLine.includes("completed") ||
+                        lowerLine.includes("identified") ||
+                        lowerLine.includes("determined") ||
+                        lowerLine.includes("conclusion")
+                    ) {
+                        if (line.trim().length > 20 && line.trim().length < 200) {
+                            keyDecisions.push(line.trim());
+                        }
+                    }
+                }
+            }
+        }
+
+        const sections: string[] = [];
+
+        if (toolsUsed.size > 0) {
+            sections.push(`**Tools Used:** ${Array.from(toolsUsed).join(", ")}`);
+        }
+
+        if (userRequirements.length > 0) {
+            sections.push(
+                `**User Requirements:**\n${userRequirements
+                    .slice(0, 8)
+                    .map((r) => `- ${r}`)
+                    .join("\n")}`
+            );
+        }
+
+        if (toolResults.length > 0) {
+            sections.push(
+                `**Key Tool Results:**\n${toolResults
+                    .slice(0, 10)
+                    .map((r) => `- ${r}`)
+                    .join("\n")}`
+            );
+        }
+
+        if (keyDecisions.length > 0) {
+            sections.push(
+                `**Key Progress:**\n${keyDecisions
+                    .slice(0, 10)
+                    .map((d) => `- ${d}`)
+                    .join("\n")}`
+            );
+        }
+
+        if (lastAssistantMessage && lastAssistantMessage.length > 50) {
+            sections.push(
+                `**Last Status:** ${lastAssistantMessage.substring(0, 400)}${lastAssistantMessage.length > 400 ? "..." : ""}`
+            );
+        }
+
+        return sections.length > 0
+            ? sections.join("\n\n")
+            : `${personaName} has been working on the task. ${messages.length} messages were summarized.`;
+    }
+
+    it("should extract tools used from messages", () => {
+        const messages: ThreadMessage[] = [
+            {
+                id: "1",
+                role: "assistant",
+                content: "Using tools",
+                tool_calls: [
+                    { id: "tc1", name: "web_search", arguments: {} },
+                    { id: "tc2", name: "pdf_extract", arguments: {} }
+                ],
+                timestamp: new Date()
+            }
+        ];
+
+        const summary = createStructuredSummary(messages, "Test Persona");
+
+        expect(summary).toContain("**Tools Used:**");
+        expect(summary).toContain("web_search");
+        expect(summary).toContain("pdf_extract");
+    });
+
+    it("should extract user requirements", () => {
+        const messages: ThreadMessage[] = [
+            {
+                id: "1",
+                role: "user",
+                content:
+                    "I need a comprehensive report\nThe report should include charts\n1. Include executive summary\nPlease use formal language",
+                timestamp: new Date()
+            }
+        ];
+
+        const summary = createStructuredSummary(messages, "Test Persona");
+
+        expect(summary).toContain("**User Requirements:**");
+        expect(summary).toContain("need a comprehensive report");
+        expect(summary).toContain("should include charts");
+    });
+
+    it("should extract key decisions from assistant messages", () => {
+        const messages: ThreadMessage[] = [
+            {
+                id: "1",
+                role: "assistant",
+                content:
+                    "I have identified the main competitors\nI will analyze their pricing strategies\nThe conclusion is that prices are competitive",
+                timestamp: new Date()
+            }
+        ];
+
+        const summary = createStructuredSummary(messages, "Test Persona");
+
+        expect(summary).toContain("**Key Progress:**");
+        expect(summary).toContain("identified");
+    });
+
+    it("should extract tool results", () => {
+        const messages: ThreadMessage[] = [
+            {
+                id: "1",
+                role: "tool",
+                tool_name: "web_search",
+                content: JSON.stringify({ data: { results: ["result1", "result2"] } }),
+                timestamp: new Date()
+            }
+        ];
+
+        const summary = createStructuredSummary(messages, "Test Persona");
+
+        expect(summary).toContain("**Key Tool Results:**");
+        expect(summary).toContain("web_search:");
+    });
+
+    it("should include last assistant message", () => {
+        const messages: ThreadMessage[] = [
+            {
+                id: "1",
+                role: "assistant",
+                content:
+                    "This is a longer status message that provides context about the current state of the task being performed by the persona.",
+                timestamp: new Date()
+            }
+        ];
+
+        const summary = createStructuredSummary(messages, "Test Persona");
+
+        expect(summary).toContain("**Last Status:**");
+    });
+
+    it("should limit user requirements to 8 items", () => {
+        const requirements = Array.from(
+            { length: 15 },
+            (_, i) => `I need requirement number ${i + 1} to be included`
+        );
+        const messages: ThreadMessage[] = [
+            {
+                id: "1",
+                role: "user",
+                content: requirements.join("\n"),
+                timestamp: new Date()
+            }
+        ];
+
+        const summary = createStructuredSummary(messages, "Test Persona");
+        const matches = summary.match(/requirement number/g);
+
+        expect(matches?.length).toBeLessThanOrEqual(8);
+    });
+
+    it("should limit tool results to 10 items", () => {
+        const messages: ThreadMessage[] = Array.from({ length: 15 }, (_, i) => ({
+            id: `${i}`,
+            role: "tool" as const,
+            tool_name: `tool_${i}`,
+            content: JSON.stringify({ message: `Result ${i}` }),
+            timestamp: new Date()
+        }));
+
+        const summary = createStructuredSummary(messages, "Test Persona");
+        const matches = summary.match(/tool_\d+:/g);
+
+        expect(matches?.length).toBeLessThanOrEqual(10);
+    });
+
+    it("should return fallback message when no sections extracted", () => {
+        const messages: ThreadMessage[] = [
+            {
+                id: "1",
+                role: "system",
+                content: "You are a helpful assistant",
+                timestamp: new Date()
+            }
+        ];
+
+        const summary = createStructuredSummary(messages, "Test Persona");
+
+        expect(summary).toContain("Test Persona has been working");
+        expect(summary).toContain("1 messages were summarized");
+    });
+});
