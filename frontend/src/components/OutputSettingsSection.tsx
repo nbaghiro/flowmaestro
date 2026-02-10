@@ -3,9 +3,10 @@
  * Reusable component for configuring node output variable storage
  */
 
-import { AlertCircle, Info } from "lucide-react";
+import { AlertCircle, HelpCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Input } from "./common/Input";
+import { Tooltip } from "./common/Tooltip";
 
 interface OutputSettingsSectionProps {
     nodeName: string;
@@ -99,7 +100,22 @@ export function OutputSettingsSection({
                 <>
                     {/* Variable Name Input */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-medium">Variable Name</label>
+                        <label className="flex items-center gap-1.5 text-sm font-medium">
+                            Variable Name
+                            <Tooltip
+                                content={
+                                    <span>
+                                        Reference in other nodes:{" "}
+                                        <code className="font-mono bg-muted px-1 rounded">
+                                            {`{{${variableName || "variableName"}}}`}
+                                        </code>
+                                    </span>
+                                }
+                                position="right"
+                            >
+                                <HelpCircle className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                            </Tooltip>
+                        </label>
                         <Input
                             type="text"
                             value={variableName}
@@ -129,19 +145,6 @@ export function OutputSettingsSection({
                             💡 Use suggestion: <code className="font-mono">{suggestion}</code>
                         </button>
                     )}
-
-                    {/* Reference Help */}
-                    <div className="flex items-start gap-2 px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 rounded-lg">
-                        <Info className="w-4 h-4 text-blue-700 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                        <div className="text-xs text-blue-700 dark:text-blue-400">
-                            <strong>Reference this in other nodes:</strong>
-                            <div className="mt-1 font-mono bg-card px-2 py-1 rounded border border-blue-500/30 dark:border-blue-400/30">
-                                ${"{"}
-                                {variableName || "variableName"}
-                                {"}"}
-                            </div>
-                        </div>
-                    </div>
                 </>
             )}
         </div>

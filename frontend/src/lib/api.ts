@@ -1240,13 +1240,18 @@ export interface ListTriggerProvidersResponse {
 export async function getTriggerProviders(
     category?: string
 ): Promise<ListTriggerProvidersResponse> {
+    const token = getAuthToken();
+
     let url = `${API_BASE_URL}/triggers/providers`;
     if (category) {
         url += `?category=${encodeURIComponent(category)}`;
     }
 
     const response = await apiFetch(url, {
-        method: "GET"
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
     });
 
     if (!response.ok) {
@@ -1315,8 +1320,13 @@ export interface GetTriggerProviderResponse {
  * Get trigger provider details with events
  */
 export async function getTriggerProvider(providerId: string): Promise<GetTriggerProviderResponse> {
+    const token = getAuthToken();
+
     const response = await apiFetch(`${API_BASE_URL}/triggers/providers/${providerId}`, {
-        method: "GET"
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
     });
 
     if (!response.ok) {
@@ -1340,8 +1350,13 @@ export interface GetTriggerEventsResponse {
  * Get trigger events for a provider
  */
 export async function getTriggerEvents(providerId: string): Promise<GetTriggerEventsResponse> {
+    const token = getAuthToken();
+
     const response = await apiFetch(`${API_BASE_URL}/triggers/providers/${providerId}/events`, {
-        method: "GET"
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
     });
 
     if (!response.ok) {
