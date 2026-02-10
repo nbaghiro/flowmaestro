@@ -708,5 +708,219 @@ describe("LoopNodeHandler", () => {
             expect(output.result.iterations).toBe(5);
             expect(output.result.items).toEqual([1, null, 3, null, 5]);
         });
+
+        it("handles array with mixed types", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    source: {
+                        items: [1, "string", { key: "value" }, [1, 2], true, null]
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "forEach",
+                    arrayPath: "items"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.iterations).toBe(6);
+            expect(output.result.items).toEqual([
+                1,
+                "string",
+                { key: "value" },
+                [1, 2],
+                true,
+                null
+            ]);
+        });
+
+        it("handles array with sparse values", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    source: { items: [1, null, 3] }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "forEach",
+                    arrayPath: "items"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.iterations).toBe(3);
+        });
+
+        it("handles deeply nested object arrays", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    source: {
+                        items: [
+                            { level1: { level2: { level3: { value: 1 } } } },
+                            { level1: { level2: { level3: { value: 2 } } } }
+                        ]
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "forEach",
+                    arrayPath: "items"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.iterations).toBe(2);
+            expect(output.signals.loopMetadata?.currentItem).toEqual({
+                level1: { level2: { level3: { value: 1 } } }
+            });
+        });
+
+        it("handles single element array", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    source: { items: ["only one"] }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "forEach",
+                    arrayPath: "items"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.iterations).toBe(1);
+            expect(output.signals.loopMetadata?.currentItem).toBe("only one");
+            expect(output.signals.loopMetadata?.shouldContinue).toBe(true);
+        });
+
+        it("handles count loop with float (truncates)", async () => {
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "count",
+                    count: 5.7
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            // JavaScript Number(5.7) is 5.7, iterations should be 5 or 5.7 depending on implementation
+            expect(output.result.iterations).toBeGreaterThanOrEqual(5);
+        });
+
+        it("handles while loop with complex condition", async () => {
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "while",
+                    condition: "{{counter}} < 10 && {{status}} !== 'done' || {{forceRun}}",
+                    maxIterations: 100
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertValidOutput(output);
+            expect(output.signals.loopMetadata).toBeDefined();
+        });
+    });
+
+    describe("concurrent loop preparation", () => {
+        it("handles multiple concurrent loop preparations", async () => {
+            const contexts = [
+                createTestContext({ nodeOutputs: { source: { items: [1, 2, 3] } } }),
+                createTestContext({ nodeOutputs: { source: { items: [4, 5, 6] } } }),
+                createTestContext({ nodeOutputs: { source: { items: [7, 8, 9] } } })
+            ];
+
+            const inputs = contexts.map((context) =>
+                createHandlerInput({
+                    nodeType: "loop",
+                    nodeConfig: {
+                        loopType: "forEach",
+                        arrayPath: "items"
+                    },
+                    context
+                })
+            );
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs[0].result.iterations).toBe(3);
+            expect(outputs[1].result.iterations).toBe(3);
+            expect(outputs[2].result.iterations).toBe(3);
+            expect(outputs[0].result.items).toEqual([1, 2, 3]);
+            expect(outputs[1].result.items).toEqual([4, 5, 6]);
+            expect(outputs[2].result.items).toEqual([7, 8, 9]);
+        });
+    });
+
+    describe("iterator variable configuration", () => {
+        it("handles custom item variable name", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    source: { items: ["a", "b", "c"] }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "forEach",
+                    arrayPath: "items",
+                    itemVariable: "currentLetter"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.iterations).toBe(3);
+            // The itemVariable is stored for orchestrator use
+            assertValidOutput(output);
+        });
+
+        it("handles custom index variable name", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    source: { items: [10, 20, 30] }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "forEach",
+                    arrayPath: "items",
+                    indexVariable: "idx"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.iterations).toBe(3);
+            expect(output.signals.loopMetadata?.currentIndex).toBe(0);
+        });
     });
 });

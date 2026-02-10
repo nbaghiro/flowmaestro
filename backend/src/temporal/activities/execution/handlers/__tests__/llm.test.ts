@@ -1123,5 +1123,95 @@ describe("LLMNodeHandler", () => {
             const messages = capturedBody!.messages as Array<{ role: string; content: string }>;
             expect(messages[messages.length - 1].content).toBe(specialPrompt);
         });
+
+        it("handles Unicode in prompts", async () => {
+            mockOpenAIChatCompletion({ content: "こんにちは！" });
+
+            const input = createHandlerInput({
+                nodeType: "llm",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "gpt-4",
+                    prompt: "日本語で挨拶してください"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.text).toBe("こんにちは！");
+        });
+
+        it("handles null values in interpolated context", async () => {
+            mockOpenAIChatCompletion({ content: "Response" });
+
+            const context = createTestContext({
+                nodeOutputs: {
+                    data: { value: null }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "llm",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "gpt-4",
+                    prompt: `Value is: ${mustacheRef("data", "value")}`
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.text).toBe("Response");
+        });
+    });
+
+    describe("concurrent requests", () => {
+        beforeEach(() => {
+            process.env.OPENAI_API_KEY = "test-openai-key";
+        });
+
+        it("handles multiple concurrent LLM requests", async () => {
+            // Set up multiple mock responses
+            nock("https://api.openai.com")
+                .post("/v1/chat/completions")
+                .times(3)
+                .reply(200, {
+                    id: "chatcmpl-test",
+                    object: "chat.completion",
+                    created: Date.now(),
+                    model: "gpt-4",
+                    choices: [
+                        {
+                            index: 0,
+                            message: { role: "assistant", content: "Response" },
+                            finish_reason: "stop"
+                        }
+                    ],
+                    usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 }
+                });
+
+            const inputs = [
+                createHandlerInput({
+                    nodeType: "llm",
+                    nodeConfig: { provider: "openai", model: "gpt-4", prompt: "Query 1" }
+                }),
+                createHandlerInput({
+                    nodeType: "llm",
+                    nodeConfig: { provider: "openai", model: "gpt-4", prompt: "Query 2" }
+                }),
+                createHandlerInput({
+                    nodeType: "llm",
+                    nodeConfig: { provider: "openai", model: "gpt-4", prompt: "Query 3" }
+                })
+            ];
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(3);
+            outputs.forEach((output) => {
+                expect(output.result.text).toBe("Response");
+            });
+        });
     });
 });

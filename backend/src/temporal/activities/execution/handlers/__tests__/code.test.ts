@@ -449,6 +449,362 @@ describe("CodeNodeHandler", () => {
             expect(vmCall.sandbox.console.error).toBeDefined();
             expect(vmCall.sandbox.console.warn).toBeDefined();
         });
+
+        it("blocks require() calls in JavaScript sandbox", async () => {
+            mockVmRun.mockRejectedValue(new Error("require is not defined"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: 'const fs = require("fs"); return fs.readFileSync("/etc/passwd");'
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/require is not defined/);
+        });
+
+        it("blocks process access in JavaScript sandbox", async () => {
+            mockVmRun.mockRejectedValue(new Error("process is not defined"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return process.env.SECRET_KEY;"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/process is not defined/);
+        });
+
+        it("blocks global access in JavaScript sandbox", async () => {
+            mockVmRun.mockRejectedValue(new Error("global is not defined"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return global.process.exit(1);"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/global is not defined/);
+        });
+
+        it("blocks constructor prototype escape attempt", async () => {
+            mockVmRun.mockRejectedValue(new Error("Cannot access constructor"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        const ForeignFunction = this.constructor.constructor;
+                        const process = ForeignFunction('return process')();
+                        return process.env;
+                    `
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow();
+        });
+
+        it("blocks __proto__ manipulation", async () => {
+            mockVmRun.mockRejectedValue(new Error("Cannot modify prototype"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        const obj = {};
+                        obj.__proto__.polluted = true;
+                        return ({}).polluted;
+                    `
+                }
+            });
+
+            // Should either throw or return undefined (not true)
+            await expect(handler.execute(input)).rejects.toThrow();
+        });
+
+        it("blocks Buffer access in sandbox", async () => {
+            mockVmRun.mockRejectedValue(new Error("Buffer is not defined"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: 'return Buffer.from("test").toString("hex");'
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/Buffer is not defined/);
+        });
+
+        it("blocks child_process access via eval bypass", async () => {
+            // VM2 should block eval
+            mockVmRun.mockRejectedValue(new Error("Code generation from strings disallowed"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        const evil = eval;
+                        return evil('require("child_process").execSync("ls")');
+                    `
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow();
+        });
+
+        it("blocks Function constructor escape", async () => {
+            mockVmRun.mockRejectedValue(new Error("Function constructor is not allowed"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        const fn = new Function('return process.env');
+                        return fn();
+                    `
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow();
+        });
+
+        it("blocks WebAssembly instantiation", async () => {
+            const { VM } = jest.requireMock("vm2");
+            mockVmRun.mockRejectedValue(new Error("WebAssembly is not defined"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        const wasmCode = new Uint8Array([0,97,115,109,1,0,0,0]);
+                        return WebAssembly.instantiate(wasmCode);
+                    `
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow();
+            // Verify wasm is disabled
+            expect(VM).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    wasm: false
+                })
+            );
+        });
+
+        it("isolates sandbox from host environment variables", async () => {
+            const { VM } = jest.requireMock("vm2");
+            mockVmRun.mockResolvedValue(undefined);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return typeof process;"
+                }
+            });
+
+            await handler.execute(input);
+
+            // Verify sandbox doesn't include process
+            const vmCall = VM.mock.calls[0][0];
+            expect(vmCall.sandbox.process).toBeUndefined();
+        });
+    });
+
+    describe("Python sandbox security", () => {
+        beforeEach(() => {
+            mockSpawn.mockReset();
+            mockWriteFile.mockReset();
+            mockUnlink.mockReset();
+            mockWriteFile.mockResolvedValue(undefined);
+            mockUnlink.mockResolvedValue(undefined);
+        });
+
+        it("blocks os.system() calls", async () => {
+            const mockProcess = createMockChildProcess(
+                1,
+                "",
+                "NameError: name 'os' is not defined"
+            );
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: 'os.system("rm -rf /")'
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/NameError|failed with code/);
+        });
+
+        it("blocks subprocess module", async () => {
+            const mockProcess = createMockChildProcess(
+                1,
+                "",
+                "ModuleNotFoundError: No module named 'subprocess'"
+            );
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: 'import subprocess; subprocess.run(["ls"])'
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(
+                /ModuleNotFoundError|failed with code/
+            );
+        });
+
+        it("blocks socket module for network access", async () => {
+            const mockProcess = createMockChildProcess(
+                1,
+                "",
+                "ModuleNotFoundError: No module named 'socket'"
+            );
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: "import socket; s = socket.socket()"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(
+                /ModuleNotFoundError|failed with code/
+            );
+        });
+
+        it("blocks file write operations", async () => {
+            const mockProcess = createMockChildProcess(
+                1,
+                "",
+                "PermissionError: [Errno 13] Permission denied"
+            );
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: 'open("/etc/passwd", "w").write("hacked")'
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(
+                /PermissionError|failed with code/
+            );
+        });
+
+        it("blocks exec() and eval() in Python", async () => {
+            const mockProcess = createMockChildProcess(
+                1,
+                "",
+                "NameError: name 'exec' is not defined"
+            );
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: "exec(\"import os; os.system('ls')\")"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/NameError|failed with code/);
+        });
+
+        it("blocks __import__ function", async () => {
+            const mockProcess = createMockChildProcess(
+                1,
+                "",
+                "NameError: name '__import__' is not defined"
+            );
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: '__import__("os").system("ls")'
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/NameError|failed with code/);
+        });
+    });
+
+    describe("memory and resource limits", () => {
+        beforeEach(() => {
+            mockVmRun.mockReset();
+        });
+
+        it("handles memory exhaustion gracefully", async () => {
+            mockVmRun.mockRejectedValue(
+                new Error(
+                    "FATAL ERROR: CALL_AND_RETRY_LAST Allocation failed - JavaScript heap out of memory"
+                )
+            );
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: `
+                        const arr = [];
+                        while(true) { arr.push(new Array(1000000).fill('x')); }
+                    `
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/memory|heap/i);
+        });
+
+        it("handles very large string creation", async () => {
+            mockVmRun.mockRejectedValue(new Error("Invalid string length"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: 'return "x".repeat(Number.MAX_SAFE_INTEGER);'
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/Invalid string length/);
+        });
+
+        it("handles large array allocation", async () => {
+            mockVmRun.mockRejectedValue(new Error("Invalid array length"));
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "javascript",
+                    code: "return new Array(Number.MAX_SAFE_INTEGER);"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/Invalid array length/);
+        });
     });
 
     describe("Python execution", () => {

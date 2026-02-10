@@ -1109,7 +1109,7 @@ describe("Workflow Orchestrator", () => {
             });
             nodes.set("review1", {
                 id: "review1",
-                type: "pause",
+                type: "humanReview",
                 name: "Human Review",
                 config: { prompt: "Please review" },
                 depth: 1,
@@ -1140,8 +1140,8 @@ describe("Workflow Orchestrator", () => {
                 }
             };
 
-            // Mock pause node to return pause signal
-            mockActivityResults.executeNode.set("pause", {
+            // Mock human review node to return pause signal
+            mockActivityResults.executeNode.set("humanReview", {
                 result: { awaiting: true },
                 signals: {
                     pause: true,

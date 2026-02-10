@@ -649,5 +649,189 @@ describe("ConditionalNodeHandler", () => {
             // Should fallback to string comparison
             assertBranchSelection(output, "true"); // "banana" > "apple" lexicographically
         });
+
+        it("handles floating point comparison", async () => {
+            const input = createHandlerInput({
+                nodeType: "conditional",
+                nodeConfig: {
+                    leftValue: "3.14159",
+                    operator: ">" as ComparisonOperator,
+                    rightValue: "3.14"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertBranchSelection(output, "true");
+        });
+
+        it("handles negative number comparison", async () => {
+            const input = createHandlerInput({
+                nodeType: "conditional",
+                nodeConfig: {
+                    leftValue: "-5",
+                    operator: "<" as ComparisonOperator,
+                    rightValue: "0"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertBranchSelection(output, "true");
+        });
+
+        it("handles very large numbers", async () => {
+            const input = createHandlerInput({
+                nodeType: "conditional",
+                nodeConfig: {
+                    leftValue: "999999999999999",
+                    operator: ">" as ComparisonOperator,
+                    rightValue: "1"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertBranchSelection(output, "true");
+        });
+
+        it("handles scientific notation", async () => {
+            const input = createHandlerInput({
+                nodeType: "conditional",
+                nodeConfig: {
+                    leftValue: "1e6",
+                    operator: "==" as ComparisonOperator,
+                    rightValue: "1000000"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertBranchSelection(output, "true");
+        });
+
+        it("handles whitespace in string comparison", async () => {
+            const input = createHandlerInput({
+                nodeType: "conditional",
+                nodeConfig: CommonConfigs.conditional.equals("  hello  ", "hello")
+            });
+
+            const output = await handler.execute(input);
+
+            // Depending on implementation - may trim or not
+            // This tests the actual behavior
+            expect(output.result.conditionMet).toBeDefined();
+        });
+
+        it("handles Unicode strings", async () => {
+            const input = createHandlerInput({
+                nodeType: "conditional",
+                nodeConfig: CommonConfigs.conditional.contains("こんにちは世界", "世界")
+            });
+
+            const output = await handler.execute(input);
+
+            assertBranchSelection(output, "true");
+        });
+
+        it("handles emoji in strings", async () => {
+            const input = createHandlerInput({
+                nodeType: "conditional",
+                nodeConfig: CommonConfigs.conditional.contains("Hello 👋 World 🌍", "🌍")
+            });
+
+            const output = await handler.execute(input);
+
+            assertBranchSelection(output, "true");
+        });
+    });
+
+    describe("deep object property access", () => {
+        it("accesses nested object properties", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    api: {
+                        response: {
+                            data: {
+                                user: {
+                                    profile: {
+                                        age: 25
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "conditional",
+                nodeConfig: {
+                    leftValue: "{{api.response.data.user.profile.age}}",
+                    operator: ">=" as ComparisonOperator,
+                    rightValue: "18"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            assertBranchSelection(output, "true");
+        });
+
+        it("handles array index access", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    data: {
+                        items: [
+                            { name: "first", value: 10 },
+                            { name: "second", value: 20 },
+                            { name: "third", value: 30 }
+                        ]
+                    }
+                }
+            });
+
+            // Access items[1].value
+            const input = createHandlerInput({
+                nodeType: "conditional",
+                nodeConfig: {
+                    leftValue: "{{data.items.1.value}}",
+                    operator: "==" as ComparisonOperator,
+                    rightValue: "20"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            assertBranchSelection(output, "true");
+        });
+    });
+
+    describe("concurrent conditional execution", () => {
+        it("handles multiple concurrent evaluations", async () => {
+            const inputs = [
+                createHandlerInput({
+                    nodeType: "conditional",
+                    nodeConfig: CommonConfigs.conditional.equals("a", "a")
+                }),
+                createHandlerInput({
+                    nodeType: "conditional",
+                    nodeConfig: CommonConfigs.conditional.greaterThan("10", "5")
+                }),
+                createHandlerInput({
+                    nodeType: "conditional",
+                    nodeConfig: CommonConfigs.conditional.contains("hello world", "world")
+                })
+            ];
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(3);
+            outputs.forEach((output) => {
+                assertBranchSelection(output, "true");
+            });
+        });
     });
 });

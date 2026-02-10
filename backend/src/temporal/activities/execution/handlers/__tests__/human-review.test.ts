@@ -614,5 +614,155 @@ describe("HumanReviewNodeHandler", () => {
             expect(output.signals.pause).not.toBe(true);
             expect(output.result.optional).toBeNull();
         });
+
+        it("handles special characters in prompts", async () => {
+            const input = createHandlerInput({
+                nodeType: "humanReview",
+                nodeConfig: {
+                    variableName: "specialInput",
+                    inputType: "text",
+                    required: true,
+                    prompt: 'Enter value with <special> & "characters"',
+                    outputVariable: "result"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.signals.pause).toBe(true);
+            expect(output.signals.pauseContext?.reason).toContain("<special>");
+        });
+
+        it("handles Unicode in prompts and inputs", async () => {
+            const context = createTestContext({
+                inputs: { greeting: "こんにちは" }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "humanReview",
+                nodeConfig: {
+                    variableName: "greeting",
+                    inputType: "text",
+                    required: true,
+                    prompt: "日本語の挨拶を入力してください",
+                    outputVariable: "japaneseGreeting"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.japaneseGreeting).toBe("こんにちは");
+        });
+
+        it("handles negative numbers", async () => {
+            const context = createTestContext({
+                inputs: { temperature: -15 }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "humanReview",
+                nodeConfig: {
+                    variableName: "temperature",
+                    inputType: "number",
+                    required: true,
+                    prompt: "Enter temperature",
+                    outputVariable: "temp"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.temp).toBe(-15);
+        });
+
+        it("handles floating point numbers", async () => {
+            const context = createTestContext({
+                inputs: { price: 19.99 }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "humanReview",
+                nodeConfig: {
+                    variableName: "price",
+                    inputType: "number",
+                    required: true,
+                    prompt: "Enter price",
+                    outputVariable: "itemPrice"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.itemPrice).toBe(19.99);
+        });
+
+        it("handles array input in json type", async () => {
+            const context = createTestContext({
+                inputs: { tags: ["urgent", "important", "review"] }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "humanReview",
+                nodeConfig: {
+                    variableName: "tags",
+                    inputType: "json",
+                    required: true,
+                    prompt: "Enter tags",
+                    outputVariable: "itemTags"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.itemTags).toEqual(["urgent", "important", "review"]);
+        });
+    });
+
+    describe("concurrent executions", () => {
+        it("handles multiple concurrent pause requests", async () => {
+            const inputs = [
+                createHandlerInput({
+                    nodeType: "humanReview",
+                    nodeConfig: {
+                        variableName: "input1",
+                        inputType: "text",
+                        required: true,
+                        prompt: "Enter input 1",
+                        outputVariable: "result1"
+                    }
+                }),
+                createHandlerInput({
+                    nodeType: "humanReview",
+                    nodeConfig: {
+                        variableName: "input2",
+                        inputType: "number",
+                        required: true,
+                        prompt: "Enter input 2",
+                        outputVariable: "result2"
+                    }
+                }),
+                createHandlerInput({
+                    nodeType: "humanReview",
+                    nodeConfig: {
+                        variableName: "input3",
+                        inputType: "boolean",
+                        required: true,
+                        prompt: "Enter input 3",
+                        outputVariable: "result3"
+                    }
+                })
+            ];
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(3);
+            outputs.forEach((output) => {
+                expect(output.signals.pause).toBe(true);
+            });
+        });
     });
 });

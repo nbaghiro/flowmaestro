@@ -946,5 +946,134 @@ describe("TransformNodeHandler", () => {
 
             await expect(handler.execute(input)).rejects.toThrow();
         });
+
+        it("handles sparse values in array", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.filter(
+                    varRef("data", "items"),
+                    "x => x !== null && x !== 0",
+                    "filtered"
+                ),
+                upstreamOutputs: {
+                    data: { items: [1, null, 2, 0, 3] }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["filtered"]);
+            expect(output.result.filtered).toEqual([1, 2, 3]);
+        });
+
+        it("handles mixed type arrays", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.filter(
+                    varRef("data", "items"),
+                    "x => typeof x === 'number'",
+                    "numbers"
+                ),
+                upstreamOutputs: {
+                    data: { items: [1, "two", 3, { four: 4 }, 5, true] }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["numbers"]);
+            expect(output.result.numbers).toEqual([1, 3, 5]);
+        });
+
+        it("handles deeply nested object extraction", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.extract(
+                    varRef("data", "response"),
+                    "level1.level2.level3.level4.value",
+                    "deepValue"
+                ),
+                upstreamOutputs: {
+                    data: {
+                        response: {
+                            level1: {
+                                level2: {
+                                    level3: {
+                                        level4: {
+                                            value: "found!"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["deepValue"]);
+            expect(output.result.deepValue).toBe("found!");
+        });
+
+        it("handles Unicode in data", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.map(
+                    varRef("data", "names"),
+                    "name => name.toUpperCase()",
+                    "upper"
+                ),
+                upstreamOutputs: {
+                    data: { names: ["こんにちは", "世界", "🌍"] }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["upper"]);
+            expect(output.result.upper).toEqual(["こんにちは", "世界", "🌍"]);
+        });
+    });
+
+    describe("concurrent transform execution", () => {
+        it("handles multiple concurrent transforms", async () => {
+            const inputs = [
+                createHandlerInputWithUpstream({
+                    nodeType: "transform",
+                    nodeConfig: CommonConfigs.transform.map(
+                        varRef("data", "items"),
+                        "x => x * 2",
+                        "result"
+                    ),
+                    upstreamOutputs: { data: { items: [1, 2, 3] } }
+                }),
+                createHandlerInputWithUpstream({
+                    nodeType: "transform",
+                    nodeConfig: CommonConfigs.transform.filter(
+                        varRef("data", "items"),
+                        "x => x > 5",
+                        "result"
+                    ),
+                    upstreamOutputs: { data: { items: [1, 10, 3, 20] } }
+                }),
+                createHandlerInputWithUpstream({
+                    nodeType: "transform",
+                    nodeConfig: CommonConfigs.transform.sort(
+                        varRef("data", "items"),
+                        "(a, b) => b - a",
+                        "result"
+                    ),
+                    upstreamOutputs: { data: { items: [3, 1, 2] } }
+                })
+            ];
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(3);
+            expect(outputs[0].result.result).toEqual([2, 4, 6]);
+            expect(outputs[1].result.result).toEqual([10, 20]);
+            expect(outputs[2].result.result).toEqual([3, 2, 1]);
+        });
     });
 });

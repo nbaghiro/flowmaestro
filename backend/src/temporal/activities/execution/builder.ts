@@ -1033,7 +1033,8 @@ export function constructNodes(loopResult: LoopConstructorResult): NodeConstruct
 
     // Copy all nodes, expanding parallel nodes if found
     for (const [nodeId, node] of loopResult.nodes) {
-        if (node.type === "parallel") {
+        // Future: support for "parallel" node type (not yet implemented)
+        if ((node.type as string) === "parallel") {
             // Future: expand parallel node into branches
             const branches = expandParallelNode(node);
             if (branches.length > 0) {
