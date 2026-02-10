@@ -1993,5 +1993,33 @@ const twilioEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(twilioEntry);
 
+// Register HiBob provider
+const hibobEntry: ProviderRegistryEntry = {
+    name: "hibob",
+    displayName: "HiBob",
+    authMethod: "api_key",
+    category: "hr",
+    loader: async () => {
+        const { HiBobProvider } = await import("./providers/hibob/HiBobProvider");
+        return new HiBobProvider();
+    }
+};
+
+providerRegistry.register(hibobEntry);
+
+// Register Personio provider
+const personioEntry: ProviderRegistryEntry = {
+    name: "personio",
+    displayName: "Personio",
+    authMethod: "api_key",
+    category: "hr",
+    loader: async () => {
+        const { PersonioProvider } = await import("./providers/personio/PersonioProvider");
+        return new PersonioProvider();
+    }
+};
+
+providerRegistry.register(personioEntry);
+
 // Export for use in application
 export { providerRegistry };
