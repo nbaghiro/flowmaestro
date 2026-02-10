@@ -40,10 +40,15 @@
                 }
                 // Check for explicit user preference
                 var theme = localStorage.getItem('marketing-theme');
+                if (!theme) {
+                    // No saved preference - check system preference, default to light
+                    var systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    theme = systemPrefersDark ? 'dark' : 'light';
+                    localStorage.setItem('marketing-theme', theme);
+                }
                 if (theme === 'dark') {
                     document.documentElement.classList.add('dark');
                 } else {
-                    // Ensure light mode - explicitly remove dark class if present
                     document.documentElement.classList.remove('dark');
                 }
             })();

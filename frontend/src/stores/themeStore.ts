@@ -55,8 +55,16 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
     },
 
     initializeTheme: () => {
-        // Load from localStorage or default to light
-        const savedTheme = (localStorage.getItem("theme") as Theme) || "light";
+        // Load from localStorage, or use system preference, or default to light
+        let savedTheme = localStorage.getItem("theme") as Theme | null;
+
+        if (!savedTheme) {
+            // No saved preference - check system preference, default to light
+            const systemTheme = getSystemTheme();
+            savedTheme = systemTheme;
+            localStorage.setItem("theme", savedTheme);
+        }
+
         const effectiveTheme = calculateEffectiveTheme(savedTheme);
 
         // Update state
