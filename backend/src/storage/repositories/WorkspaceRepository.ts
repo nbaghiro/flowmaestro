@@ -3,7 +3,8 @@ import {
     type Workspace,
     type WorkspaceWithStats,
     type WorkspaceCategory,
-    type WorkspaceType
+    type WorkspaceType,
+    type SubscriptionStatus
 } from "@flowmaestro/shared";
 import { db } from "../database";
 import { WorkspaceModel, CreateWorkspaceInput, UpdateWorkspaceInput } from "../models/Workspace";
@@ -25,6 +26,11 @@ interface WorkspaceRow {
     execution_history_days: number;
     stripe_subscription_id: string | null;
     billing_email: string | null;
+    subscription_status: SubscriptionStatus;
+    subscription_current_period_start: string | Date | null;
+    subscription_current_period_end: string | Date | null;
+    subscription_trial_end: string | Date | null;
+    subscription_cancel_at_period_end: boolean;
     settings: Record<string, unknown>;
     created_at: string | Date;
     updated_at: string | Date;
@@ -218,6 +224,26 @@ export class WorkspaceRepository {
             updates.push(`billing_email = $${paramIndex++}`);
             values.push(input.billing_email);
         }
+        if (input.subscription_status !== undefined) {
+            updates.push(`subscription_status = $${paramIndex++}`);
+            values.push(input.subscription_status);
+        }
+        if (input.subscription_current_period_start !== undefined) {
+            updates.push(`subscription_current_period_start = $${paramIndex++}`);
+            values.push(input.subscription_current_period_start);
+        }
+        if (input.subscription_current_period_end !== undefined) {
+            updates.push(`subscription_current_period_end = $${paramIndex++}`);
+            values.push(input.subscription_current_period_end);
+        }
+        if (input.subscription_trial_end !== undefined) {
+            updates.push(`subscription_trial_end = $${paramIndex++}`);
+            values.push(input.subscription_trial_end);
+        }
+        if (input.subscription_cancel_at_period_end !== undefined) {
+            updates.push(`subscription_cancel_at_period_end = $${paramIndex++}`);
+            values.push(input.subscription_cancel_at_period_end);
+        }
         if (input.settings !== undefined) {
             updates.push(`settings = $${paramIndex++}`);
             values.push(JSON.stringify(input.settings));
@@ -272,6 +298,16 @@ export class WorkspaceRepository {
         const params = excludeId ? [name, ownerId, excludeId] : [name, ownerId];
         const result = await db.query(query, params);
         return result.rowCount === 0;
+    }
+
+    async findByStripeSubscriptionId(subscriptionId: string): Promise<WorkspaceModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.workspaces
+            WHERE stripe_subscription_id = $1 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query<WorkspaceRow>(query, [subscriptionId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
     }
 
     async getResourceCounts(workspaceId: string): Promise<{
@@ -334,6 +370,17 @@ export class WorkspaceRepository {
             execution_history_days: row.execution_history_days,
             stripe_subscription_id: row.stripe_subscription_id,
             billing_email: row.billing_email,
+            subscription_status: row.subscription_status || "none",
+            subscription_current_period_start: row.subscription_current_period_start
+                ? new Date(row.subscription_current_period_start)
+                : null,
+            subscription_current_period_end: row.subscription_current_period_end
+                ? new Date(row.subscription_current_period_end)
+                : null,
+            subscription_trial_end: row.subscription_trial_end
+                ? new Date(row.subscription_trial_end)
+                : null,
+            subscription_cancel_at_period_end: row.subscription_cancel_at_period_end ?? false,
             settings: row.settings || {},
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at),
@@ -359,6 +406,18 @@ export class WorkspaceRepository {
             executionHistoryDays: row.execution_history_days,
             stripeSubscriptionId: row.stripe_subscription_id,
             billingEmail: row.billing_email,
+            subscriptionStatus: (row as WorkspaceRow).subscription_status || "none",
+            subscriptionCurrentPeriodStart: (row as WorkspaceRow).subscription_current_period_start
+                ? new Date((row as WorkspaceRow).subscription_current_period_start as string | Date)
+                : null,
+            subscriptionCurrentPeriodEnd: (row as WorkspaceRow).subscription_current_period_end
+                ? new Date((row as WorkspaceRow).subscription_current_period_end as string | Date)
+                : null,
+            subscriptionTrialEnd: (row as WorkspaceRow).subscription_trial_end
+                ? new Date((row as WorkspaceRow).subscription_trial_end as string | Date)
+                : null,
+            subscriptionCancelAtPeriodEnd:
+                (row as WorkspaceRow).subscription_cancel_at_period_end ?? false,
             settings: row.settings || {},
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at),
@@ -387,6 +446,11 @@ export class WorkspaceRepository {
             executionHistoryDays: model.execution_history_days,
             stripeSubscriptionId: model.stripe_subscription_id,
             billingEmail: model.billing_email,
+            subscriptionStatus: model.subscription_status,
+            subscriptionCurrentPeriodStart: model.subscription_current_period_start,
+            subscriptionCurrentPeriodEnd: model.subscription_current_period_end,
+            subscriptionTrialEnd: model.subscription_trial_end,
+            subscriptionCancelAtPeriodEnd: model.subscription_cancel_at_period_end,
             settings: model.settings,
             createdAt: model.created_at,
             updatedAt: model.updated_at

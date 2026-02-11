@@ -1,6 +1,8 @@
 // Workspace Types
 // ================
 
+import type { SubscriptionStatus } from "./billing";
+
 export type WorkspaceCategory = "personal" | "team";
 export type WorkspaceType = "free" | "pro" | "team";
 export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
@@ -125,9 +127,14 @@ export interface Workspace {
     maxConnections: number;
     executionHistoryDays: number;
 
-    // Billing
+    // Billing / Subscription
     stripeSubscriptionId: string | null;
     billingEmail: string | null;
+    subscriptionStatus: SubscriptionStatus;
+    subscriptionCurrentPeriodStart: Date | null;
+    subscriptionCurrentPeriodEnd: Date | null;
+    subscriptionTrialEnd: Date | null;
+    subscriptionCancelAtPeriodEnd: boolean;
 
     // Settings
     settings: Record<string, unknown>;

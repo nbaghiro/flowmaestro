@@ -228,6 +228,29 @@ export const config = {
     },
 
     // ==========================================================================
+    // Stripe Billing
+    // ==========================================================================
+    stripe: {
+        secretKey: process.env.STRIPE_SECRET_KEY || "",
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "",
+        // Price IDs for subscription plans (set after creating products in Stripe)
+        priceIds: {
+            proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY || "",
+            proAnnual: process.env.STRIPE_PRICE_PRO_ANNUAL || "",
+            teamMonthly: process.env.STRIPE_PRICE_TEAM_MONTHLY || "",
+            teamAnnual: process.env.STRIPE_PRICE_TEAM_ANNUAL || ""
+        },
+        // Price IDs for credit packs
+        creditPackPriceIds: {
+            starter: process.env.STRIPE_PRICE_CREDITS_STARTER || "",
+            growth: process.env.STRIPE_PRICE_CREDITS_GROWTH || "",
+            scale: process.env.STRIPE_PRICE_CREDITS_SCALE || "",
+            enterprise: process.env.STRIPE_PRICE_CREDITS_ENTERPRISE || ""
+        }
+    },
+
+    // ==========================================================================
     // SMS Services
     // ==========================================================================
     twilio: {

@@ -20,6 +20,7 @@ import { agentRoutes } from "./routes/agents";
 import { analyticsRoutes } from "./routes/analytics";
 import { apiKeyRoutes } from "./routes/api-keys";
 import { authRoutes } from "./routes/auth";
+import { billingRoutes } from "./routes/billing";
 import { blogAdminRoutes } from "./routes/blog";
 import { chatInterfaceRoutes } from "./routes/chat-interfaces";
 import { checkpointRoutes } from "./routes/checkpoints";
@@ -123,10 +124,14 @@ export async function buildServer() {
         }
     });
 
-    // Configure JSON parser to allow empty bodies
-    fastify.addContentTypeParser("application/json", { parseAs: "string" }, (_req, body, done) => {
+    // Configure JSON parser to allow empty bodies and store raw body for Stripe webhooks
+    fastify.addContentTypeParser("application/json", { parseAs: "buffer" }, (req, body, done) => {
         try {
-            const json = body === "" || body === "{}" ? {} : JSON.parse(body as string);
+            // Store raw body for Stripe webhook signature verification
+            (req as typeof req & { rawBody?: Buffer }).rawBody = body as Buffer;
+
+            const bodyString = body.toString();
+            const json = bodyString === "" || bodyString === "{}" ? {} : JSON.parse(bodyString);
             done(null, json);
         } catch (err) {
             done(err as Error, undefined);
@@ -219,6 +224,9 @@ export async function buildServer() {
 
     // Blog admin routes (authenticated)
     await fastify.register(blogAdminRoutes, { prefix: "/blog" });
+
+    // Billing routes (Stripe integration)
+    await fastify.register(billingRoutes);
 
     // WebSocket routes for real-time voice chat
     await fastify.register(voiceWebSocketRoutes);

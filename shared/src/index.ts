@@ -32,3 +32,4 @@ export * from "./persona";
 export * from "./kb-categories";
 export * from "./voice";
 export * from "./blog";
+export * from "./billing";

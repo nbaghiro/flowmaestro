@@ -1,4 +1,4 @@
-import type { WorkspaceCategory, WorkspaceType } from "@flowmaestro/shared";
+import type { WorkspaceCategory, WorkspaceType, SubscriptionStatus } from "@flowmaestro/shared";
 
 export interface WorkspaceModel {
     id: string;
@@ -18,9 +18,14 @@ export interface WorkspaceModel {
     max_connections: number;
     execution_history_days: number;
 
-    // Billing
+    // Billing / Subscription
     stripe_subscription_id: string | null;
     billing_email: string | null;
+    subscription_status: SubscriptionStatus;
+    subscription_current_period_start: Date | null;
+    subscription_current_period_end: Date | null;
+    subscription_trial_end: Date | null;
+    subscription_cancel_at_period_end: boolean;
 
     // Settings
     settings: Record<string, unknown>;
@@ -53,5 +58,10 @@ export interface UpdateWorkspaceInput {
     execution_history_days?: number;
     stripe_subscription_id?: string | null;
     billing_email?: string;
+    subscription_status?: SubscriptionStatus;
+    subscription_current_period_start?: Date | null;
+    subscription_current_period_end?: Date | null;
+    subscription_trial_end?: Date | null;
+    subscription_cancel_at_period_end?: boolean;
     settings?: Record<string, unknown>;
 }
