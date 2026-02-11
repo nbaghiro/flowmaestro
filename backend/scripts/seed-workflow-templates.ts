@@ -13,7 +13,7 @@
  * Uses the autoLayoutWorkflow algorithm from @flowmaestro/shared to ensure
  * consistent, visually appealing node positioning across all templates.
  *
- * Run with: npx tsx backend/scripts/seed-templates.ts
+ * Run with: npx tsx backend/scripts/seed-workflow-templates.ts
  */
 
 import * as path from "path";
