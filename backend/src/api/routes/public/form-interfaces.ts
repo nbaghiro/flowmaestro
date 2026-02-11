@@ -180,7 +180,7 @@ export async function publicFormInterfaceRoutes(fastify: FastifyInstance) {
                     executionId = await executeWorkflow(
                         formInterface,
                         submission.id,
-                        body.message,
+                        body.message || "",
                         body.files || [],
                         body.urls || []
                     );
@@ -188,7 +188,7 @@ export async function publicFormInterfaceRoutes(fastify: FastifyInstance) {
                     executionId = await executeAgent(
                         formInterface,
                         submission.id,
-                        body.message,
+                        body.message || "",
                         body.files || [],
                         body.urls || []
                     );

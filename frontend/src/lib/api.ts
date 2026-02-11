@@ -4002,7 +4002,8 @@ export async function submitPublicFormInterface(
  */
 export async function uploadPublicFormFile(
     slug: string,
-    file: File
+    file: File,
+    sessionId?: string
 ): Promise<{
     success: boolean;
     data: {
@@ -4016,6 +4017,9 @@ export async function uploadPublicFormFile(
 }> {
     const formData = new FormData();
     formData.append("file", file);
+    if (sessionId) {
+        formData.append("sessionId", sessionId);
+    }
 
     const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/upload`, {
         method: "POST",
@@ -4080,43 +4084,118 @@ export function subscribeToFormExecutionStream(
     const url = `${API_BASE_URL}/public/form-interfaces/${slug}/submissions/${submissionId}/stream?executionId=${executionId}`;
     const eventSource = new EventSource(url);
 
-    eventSource.onmessage = (event) => {
-        try {
-            const data = JSON.parse(event.data);
+    // Track whether stream has finished (complete or error)
+    // to avoid triggering error on normal connection close
+    let hasFinished = false;
 
-            switch (data.type) {
-                case "message":
-                case "token":
-                    if (handlers.onMessage && data.content) {
-                        handlers.onMessage(data.content);
-                    }
-                    break;
-                case "complete":
-                    if (handlers.onComplete) {
-                        handlers.onComplete(data.output || "");
-                    }
-                    eventSource.close();
-                    break;
-                case "error":
-                    if (handlers.onError) {
-                        handlers.onError(data.error || "Unknown error");
-                    }
-                    eventSource.close();
-                    break;
-            }
+    // Helper to parse event data
+    const parseEventData = (event: MessageEvent): unknown => {
+        try {
+            return JSON.parse(event.data);
         } catch {
-            // Ignore parse errors
+            return null;
         }
     };
 
-    eventSource.onerror = () => {
+    // Handle completion (agent or workflow)
+    const handleComplete = (data: { output?: string; finalMessage?: string }) => {
+        hasFinished = true;
+        if (handlers.onComplete) {
+            const output = data.output || data.finalMessage || "";
+            handlers.onComplete(output);
+        }
+        eventSource.close();
+    };
+
+    // Handle errors
+    const handleError = (data: { error?: string }) => {
+        hasFinished = true;
         if (handlers.onError) {
+            handlers.onError(data.error || "Execution failed");
+        }
+        eventSource.close();
+    };
+
+    // Backend sends NAMED SSE events, so we need addEventListener for each event type
+    // (onmessage only fires for unnamed events or "message" events)
+
+    // Agent completion events
+    eventSource.addEventListener("agent:execution:completed", (event) => {
+        const data = parseEventData(event as MessageEvent);
+        if (data) handleComplete(data as { output?: string; finalMessage?: string });
+    });
+
+    eventSource.addEventListener("agent:execution:failed", (event) => {
+        const data = parseEventData(event as MessageEvent);
+        if (data) handleError(data as { error?: string });
+    });
+
+    // Agent token streaming
+    eventSource.addEventListener("agent:execution:token", (event) => {
+        const data = parseEventData(event as MessageEvent) as { token?: string } | null;
+        if (data?.token && handlers.onMessage) {
+            handlers.onMessage(data.token);
+        }
+    });
+
+    // Workflow completion events
+    eventSource.addEventListener("execution:completed", (event) => {
+        const data = parseEventData(event as MessageEvent);
+        if (data) handleComplete(data as { output?: string; finalMessage?: string });
+    });
+
+    eventSource.addEventListener("execution:failed", (event) => {
+        const data = parseEventData(event as MessageEvent);
+        if (data) handleError(data as { error?: string });
+    });
+
+    // Status events (when execution is already complete on connect)
+    eventSource.addEventListener("agent:execution:status", (event) => {
+        const data = parseEventData(event as MessageEvent) as {
+            type?: string;
+            finalMessage?: string;
+            error?: string;
+        } | null;
+        if (data?.type === "agent:execution:completed") {
+            handleComplete({ finalMessage: data.finalMessage });
+        } else if (data?.type === "agent:execution:failed") {
+            handleError({ error: data.error });
+        }
+    });
+
+    eventSource.addEventListener("execution:status", (event) => {
+        const data = parseEventData(event as MessageEvent) as {
+            type?: string;
+            output?: string;
+            error?: string;
+        } | null;
+        if (data?.type === "execution:completed") {
+            handleComplete({ output: data.output });
+        } else if (data?.type === "execution:failed") {
+            handleError({ error: data.error });
+        }
+    });
+
+    // Ignore connected and ping events (no action needed)
+    eventSource.addEventListener("connected", () => {
+        // Connection established
+    });
+
+    eventSource.addEventListener("ping", () => {
+        // Keep-alive ping
+    });
+
+    eventSource.onerror = () => {
+        // Only trigger error if we haven't already completed
+        // (onerror fires when connection closes, even on success)
+        if (!hasFinished && handlers.onError) {
             handlers.onError("Connection error");
         }
         eventSource.close();
     };
 
     return () => {
+        hasFinished = true;
         eventSource.close();
     };
 }

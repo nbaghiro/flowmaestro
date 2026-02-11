@@ -66,21 +66,16 @@ export async function publicFormInterfaceFilesRoutes(fastify: FastifyInstance) {
                     });
                 }
 
-                // Validate file size
+                // Validate file size (use the smaller of form config and system max)
                 const fileBuffer = await data.toBuffer();
-                const maxSizeBytes = (formInterface.maxFileSizeMb || 25) * 1024 * 1024;
+                const formMaxBytes = (formInterface.maxFileSizeMb || 25) * 1024 * 1024;
+                const effectiveMaxBytes = Math.min(formMaxBytes, MAX_FILE_SIZE);
+                const effectiveMaxMb = effectiveMaxBytes / (1024 * 1024);
 
-                if (fileBuffer.length > maxSizeBytes) {
+                if (fileBuffer.length > effectiveMaxBytes) {
                     return reply.status(400).send({
                         success: false,
-                        error: `File size exceeds maximum of ${formInterface.maxFileSizeMb || 25}MB`
-                    });
-                }
-
-                if (fileBuffer.length > MAX_FILE_SIZE) {
-                    return reply.status(400).send({
-                        success: false,
-                        error: "File size exceeds maximum of 25MB"
+                        error: `File size exceeds maximum of ${effectiveMaxMb}MB`
                     });
                 }
 
@@ -105,8 +100,18 @@ export async function publicFormInterfaceFilesRoutes(fastify: FastifyInstance) {
                     }
                 }
 
-                // Generate a session ID for grouping files (use timestamp + random)
-                const sessionId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                // Use client-provided session ID to group files from the same submission,
+                // or generate one server-side if not provided
+                const sessionIdField = data.fields.sessionId;
+                const clientSessionId =
+                    sessionIdField && "value" in sessionIdField
+                        ? String(sessionIdField.value)
+                        : null;
+                // Validate session ID format (alphanumeric + hyphens only to prevent path traversal)
+                const isValidSessionId = clientSessionId && /^[a-zA-Z0-9-]+$/.test(clientSessionId);
+                const sessionId = isValidSessionId
+                    ? clientSessionId
+                    : `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                 const sanitizedFilename = sanitizeFilename(data.filename);
                 const fileName = `form-submissions/${formInterface.id}/${sessionId}/${Date.now()}_${sanitizedFilename}`;
 
@@ -123,8 +128,8 @@ export async function publicFormInterfaceFilesRoutes(fastify: FastifyInstance) {
                 logger.info(
                     {
                         formInterfaceId: formInterface.id,
-                        filename: data.filename,
-                        size: fileBuffer.length,
+                        fileName: data.filename,
+                        fileSize: fileBuffer.length,
                         mimeType: data.mimetype
                     },
                     "File uploaded for form interface"

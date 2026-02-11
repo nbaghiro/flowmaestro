@@ -36,6 +36,7 @@ export async function deleteFormInterfaceRoute(fastify: FastifyInstance) {
                     // Only delete if it's an auto-created trigger (has special naming convention)
                     if (trigger && trigger.name.startsWith("__form_interface_")) {
                         await triggerRepo.delete(existing.triggerId);
+                        await formInterfaceRepo.setTriggerId(id, null);
                         logger.info(
                             { formInterfaceId: id, triggerId: existing.triggerId },
                             "Deleted auto-created trigger on form interface delete"

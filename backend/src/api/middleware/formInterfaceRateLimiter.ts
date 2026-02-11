@@ -68,3 +68,10 @@ export const formInterfaceRateLimiter = createFormInterfaceRateLimiter(10);
  * Higher limit than submissions since users may upload multiple files per submission
  */
 export const formInterfaceFileUploadRateLimiter = createFormInterfaceRateLimiter(20);
+
+/**
+ * Query rate limiter instance (30 queries per minute per IP)
+ * Higher limit since RAG queries may need multiple lookups during execution
+ * but still limited to prevent embedding API abuse
+ */
+export const formInterfaceQueryRateLimiter = createFormInterfaceRateLimiter(30);

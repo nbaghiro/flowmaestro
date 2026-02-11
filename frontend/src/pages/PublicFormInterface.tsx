@@ -12,6 +12,7 @@ import {
 import { logger } from "../lib/logger";
 
 interface UploadedFile {
+    id: string; // Unique ID to track uploads (handles duplicate file names)
     fileName: string;
     fileSize: number;
     mimeType: string;
@@ -45,6 +46,15 @@ export function PublicFormInterfacePage() {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const streamCleanupRef = useRef<(() => void) | null>(null);
+    // Session ID for grouping file uploads in GCS (generated once per form session)
+    const uploadSessionIdRef = useRef<string>(crypto.randomUUID());
+    // Ref to track latest streaming output (avoids stale closure in onComplete callback)
+    const streamingOutputRef = useRef<string>("");
+
+    // Keep ref in sync with streaming output state (for use in callbacks)
+    useEffect(() => {
+        streamingOutputRef.current = streamingOutput;
+    }, [streamingOutput]);
 
     useEffect(() => {
         if (slug) {
@@ -96,8 +106,12 @@ export function PublicFormInterfacePage() {
                 continue;
             }
 
+            // Generate unique ID to track this upload (handles duplicate file names)
+            const uploadId = crypto.randomUUID();
+
             // Add placeholder while uploading
             const placeholderFile: UploadedFile = {
+                id: uploadId,
                 fileName: file.name,
                 fileSize: file.size,
                 mimeType: file.type,
@@ -108,15 +122,16 @@ export function PublicFormInterfacePage() {
             setUploadedFiles((prev) => [...prev, placeholderFile]);
 
             try {
-                // Upload the file immediately
-                const response = await uploadPublicFormFile(slug, file);
+                // Upload the file immediately (pass session ID to group files in GCS)
+                const response = await uploadPublicFormFile(slug, file, uploadSessionIdRef.current);
 
                 if (response.success && response.data) {
                     // Update with actual data
                     setUploadedFiles((prev) =>
                         prev.map((f) =>
-                            f.fileName === file.name && f.isUploading
+                            f.id === uploadId
                                 ? {
+                                      id: uploadId,
                                       fileName: response.data.fileName,
                                       fileSize: response.data.fileSize,
                                       mimeType: response.data.mimeType,
@@ -131,7 +146,7 @@ export function PublicFormInterfacePage() {
                     // Mark as error
                     setUploadedFiles((prev) =>
                         prev.map((f) =>
-                            f.fileName === file.name && f.isUploading
+                            f.id === uploadId
                                 ? { ...f, isUploading: false, error: "Upload failed" }
                                 : f
                         )
@@ -141,7 +156,7 @@ export function PublicFormInterfacePage() {
                 logger.error("Failed to upload file", uploadError);
                 setUploadedFiles((prev) =>
                     prev.map((f) =>
-                        f.fileName === file.name && f.isUploading
+                        f.id === uploadId
                             ? {
                                   ...f,
                                   isUploading: false,
@@ -228,7 +243,8 @@ export function PublicFormInterfacePage() {
                             setStreamingOutput((prev) => prev + content);
                         },
                         onComplete: (finalOutput) => {
-                            const displayOutput = finalOutput || streamingOutput;
+                            // Use ref to get latest streaming output (avoids stale closure)
+                            const displayOutput = finalOutput || streamingOutputRef.current;
                             setOutput(displayOutput);
                             setEditedOutput(displayOutput);
                             setStreamingOutput("");

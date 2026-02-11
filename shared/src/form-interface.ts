@@ -223,8 +223,8 @@ export interface PublicFormSubmitResponse {
 export interface PublicFileUploadResponse {
     gcsUri: string; // Internal reference: gs://bucket/path (stored in DB)
     downloadUrl: string; // Signed URL valid for 24h (for workflow access)
-    filename: string;
-    size: number;
+    fileName: string;
+    fileSize: number;
     mimeType: string;
 }
 
