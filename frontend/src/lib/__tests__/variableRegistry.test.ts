@@ -127,7 +127,7 @@ describe("computeUpstreamNodes", () => {
 describe("getAvailableVariables", () => {
     it("should return input variables", () => {
         const nodes = [
-            createNode("input-1", "input", { inputName: "userQuery" }),
+            createNode("input-1", "input", { variableName: "userQuery" }),
             createNode("llm-1", "llm")
         ];
         const edges = [createEdge("input-1", "llm-1")];
