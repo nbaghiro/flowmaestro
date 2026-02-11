@@ -16,6 +16,8 @@ export interface UserModel {
     two_factor_phone: string | null;
     two_factor_phone_verified: boolean;
     two_factor_secret: string | null;
+    is_admin: boolean;
+    stripe_customer_id: string | null;
 }
 
 export interface CreateUserInput {
@@ -43,4 +45,5 @@ export interface UpdateUserInput {
     two_factor_phone?: string | null;
     two_factor_phone_verified?: boolean;
     two_factor_secret?: string | null;
+    stripe_customer_id?: string | null;
 }

@@ -5,7 +5,10 @@ export const AGENT_TEMPLATE_CATEGORIES = [
     "sales",
     "operations",
     "engineering",
-    "support"
+    "support",
+    "ecommerce",
+    "hr",
+    "finance"
 ] as const;
 
 export type AgentTemplateCategory = (typeof AGENT_TEMPLATE_CATEGORIES)[number];

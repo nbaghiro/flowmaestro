@@ -5,6 +5,7 @@
  * Covers GET/POST requests, authentication, headers, retries, and error handling.
  */
 
+import zlib from "zlib";
 import nock from "nock";
 
 // Mock config before importing handler
@@ -1052,6 +1053,395 @@ describe("HTTPNodeHandler", () => {
 
             const output = await handler.execute(input);
             expect((output.result as JsonObject).status).toBe(200);
+        });
+
+        it("handles large JSON response", async () => {
+            const largeArray = Array.from({ length: 1000 }, (_, i) => ({
+                id: i,
+                name: `Item ${i}`,
+                description: "Lorem ipsum dolor sit amet ".repeat(10)
+            }));
+
+            nock("https://api.example.com").get("/large").reply(200, largeArray, {
+                "Content-Type": "application/json"
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/large",
+                    method: "GET"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(200);
+            expect((result.data as unknown[]).length).toBe(1000);
+        });
+
+        it("handles binary response as base64", async () => {
+            const binaryData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]); // PNG header
+
+            nock("https://api.example.com").get("/binary").reply(200, binaryData, {
+                "Content-Type": "image/png"
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/binary",
+                    method: "GET"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(200);
+            // Binary data should be returned in some form
+            expect(result.data).toBeDefined();
+        });
+
+        it("handles XML response", async () => {
+            const xmlData = '<?xml version="1.0"?><root><item>value</item></root>';
+
+            nock("https://api.example.com").get("/xml").reply(200, xmlData, {
+                "Content-Type": "application/xml"
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/xml",
+                    method: "GET"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(200);
+            expect(result.data).toContain("<?xml");
+        });
+
+        it("handles multiple query parameters with same key", async () => {
+            nock("https://api.example.com")
+                .get("/multi-param")
+                .query({ tag: ["a", "b", "c"] })
+                .reply(
+                    200,
+                    { tags: ["a", "b", "c"] },
+                    {
+                        "Content-Type": "application/json"
+                    }
+                );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/multi-param",
+                    method: "GET",
+                    queryParams: [
+                        { key: "tag", value: "a" },
+                        { key: "tag", value: "b" },
+                        { key: "tag", value: "c" }
+                    ]
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect((output.result as JsonObject).status).toBe(200);
+        });
+
+        it("handles Unicode in URL path", async () => {
+            nock("https://api.example.com").get(encodeURI("/products/日本語")).reply(
+                200,
+                { name: "日本語" },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/products/日本語",
+                    method: "GET"
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect((output.result as JsonObject).status).toBe(200);
+        });
+
+        it("handles very long URL", async () => {
+            const longPath = "/search?q=" + "a".repeat(2000);
+
+            nock("https://api.example.com").get(longPath).reply(
+                200,
+                { ok: true },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: `https://api.example.com${longPath}`,
+                    method: "GET"
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect((output.result as JsonObject).status).toBe(200);
+        });
+    });
+
+    describe("rate limiting and backoff", () => {
+        it("handles 429 Too Many Requests", async () => {
+            nock("https://api.example.com").get("/rate-limited").reply(
+                429,
+                { error: "Rate limit exceeded" },
+                {
+                    "Content-Type": "application/json",
+                    "Retry-After": "60"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/rate-limited",
+                    method: "GET",
+                    retryCount: 0
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(429);
+            expect((result.headers as Record<string, string>)["retry-after"]).toBe("60");
+        });
+
+        it("handles 503 Service Unavailable", async () => {
+            nock("https://api.example.com").get("/unavailable").reply(
+                503,
+                { error: "Service temporarily unavailable" },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/unavailable",
+                    method: "GET",
+                    retryCount: 0
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(503);
+        });
+    });
+
+    describe("content encoding", () => {
+        it("handles gzip encoded response", async () => {
+            const originalData = JSON.stringify({ compressed: true, data: "some data" });
+            const gzippedData = zlib.gzipSync(originalData);
+
+            nock("https://api.example.com").get("/gzip").reply(200, gzippedData, {
+                "Content-Type": "application/json",
+                "Content-Encoding": "gzip"
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/gzip",
+                    method: "GET"
+                }
+            });
+
+            // Note: Node's fetch handles decompression automatically
+            const output = await handler.execute(input);
+            expect((output.result as JsonObject).status).toBe(200);
+        });
+    });
+
+    describe("request body variations", () => {
+        it("handles nested JSON body", async () => {
+            const nestedBody = {
+                user: {
+                    profile: {
+                        name: "John",
+                        settings: {
+                            theme: "dark",
+                            notifications: { email: true, push: false }
+                        }
+                    }
+                }
+            };
+
+            nock("https://api.example.com").post("/nested", nestedBody).reply(
+                200,
+                { saved: true },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/nested",
+                    method: "POST",
+                    body: JSON.stringify(nestedBody),
+                    bodyType: "json"
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect((output.result as JsonObject).status).toBe(200);
+        });
+
+        it("handles array JSON body", async () => {
+            const arrayBody = [
+                { id: 1, value: "a" },
+                { id: 2, value: "b" },
+                { id: 3, value: "c" }
+            ];
+
+            nock("https://api.example.com").post("/batch", arrayBody).reply(
+                200,
+                { processed: 3 },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/batch",
+                    method: "POST",
+                    body: JSON.stringify(arrayBody),
+                    bodyType: "json"
+                }
+            });
+
+            const output = await handler.execute(input);
+            expect((output.result as JsonObject).status).toBe(200);
+        });
+    });
+
+    describe("authentication edge cases", () => {
+        it("handles OAuth2 client credentials flow", async () => {
+            // First get token
+            nock("https://auth.example.com").post("/oauth/token").reply(
+                200,
+                {
+                    access_token: "new-access-token",
+                    token_type: "Bearer",
+                    expires_in: 3600
+                },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://auth.example.com/oauth/token",
+                    method: "POST",
+                    body: JSON.stringify({
+                        grant_type: "client_credentials",
+                        client_id: "my-client",
+                        client_secret: "my-secret"
+                    }),
+                    bodyType: "json"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+            const data = result.data as JsonObject;
+
+            expect(result.status).toBe(200);
+            expect(data.access_token).toBe("new-access-token");
+        });
+
+        it("handles 401 Unauthorized response", async () => {
+            nock("https://api.example.com").get("/protected").reply(
+                401,
+                { error: "Invalid or expired token" },
+                {
+                    "Content-Type": "application/json",
+                    "WWW-Authenticate": 'Bearer realm="api"'
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/protected",
+                    method: "GET",
+                    authType: "bearer",
+                    authCredentials: "expired-token"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(401);
+            expect((result.headers as Record<string, string>)["www-authenticate"]).toContain(
+                "Bearer"
+            );
+        });
+
+        it("handles 403 Forbidden response", async () => {
+            nock("https://api.example.com").get("/admin").reply(
+                403,
+                { error: "Insufficient permissions" },
+                {
+                    "Content-Type": "application/json"
+                }
+            );
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    url: "https://api.example.com/admin",
+                    method: "GET",
+                    authType: "bearer",
+                    authCredentials: "valid-but-not-admin-token"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.status).toBe(403);
+        });
+    });
+
+    describe("concurrent requests", () => {
+        it("handles multiple concurrent requests", async () => {
+            nock("https://api.example.com")
+                .get("/data1")
+                .reply(200, { id: 1 }, { "Content-Type": "application/json" })
+                .get("/data2")
+                .reply(200, { id: 2 }, { "Content-Type": "application/json" })
+                .get("/data3")
+                .reply(200, { id: 3 }, { "Content-Type": "application/json" });
+
+            const inputs = [
+                createHandlerInput({ nodeConfig: { url: "https://api.example.com/data1" } }),
+                createHandlerInput({ nodeConfig: { url: "https://api.example.com/data2" } }),
+                createHandlerInput({ nodeConfig: { url: "https://api.example.com/data3" } })
+            ];
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(3);
+            outputs.forEach((output) => {
+                expect((output.result as JsonObject).status).toBe(200);
+            });
         });
     });
 });

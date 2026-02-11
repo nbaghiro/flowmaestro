@@ -282,7 +282,7 @@ export function VariableInput({
     };
 
     const inputClasses = cn(
-        "w-full px-3 py-2 text-sm bg-card border rounded-lg text-foreground font-mono",
+        "w-full flex-1 px-3 py-2 text-sm bg-card border rounded-lg text-foreground font-mono",
         "placeholder:text-muted-foreground",
         "focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent",
         "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -294,9 +294,9 @@ export function VariableInput({
     const InputComponent = multiline ? "textarea" : "input";
 
     return (
-        <div ref={containerRef} className="relative flex gap-1">
+        <div ref={containerRef} className="relative flex gap-2 items-stretch">
             {/* Input Field */}
-            <div className="flex-1 relative">
+            <div className="flex-1 relative flex">
                 <InputComponent
                     ref={inputRef as React.RefObject<HTMLInputElement & HTMLTextAreaElement>}
                     value={value}

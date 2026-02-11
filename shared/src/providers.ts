@@ -941,7 +941,13 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("hibob.com"),
         category: "HR",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Service User Credentials",
+            keyPlaceholder: "serviceUserId:token",
+            helpText:
+                "Enter your HiBob Service User ID and Token in the format 'id:token'. Create a Service User in Bob Settings > Integrations > Service Users.",
+            helpUrl: "https://apidocs.hibob.com/docs/api-service-users"
+        }
     },
     {
         provider: "deel",
@@ -959,7 +965,13 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("personio.com"),
         category: "HR",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Credentials",
+            keyPlaceholder: "clientId:clientSecret",
+            helpText:
+                "Enter your Personio Client ID and Client Secret in the format 'clientId:clientSecret'. Generate credentials in Personio Settings > API Credentials.",
+            helpUrl: "https://developer.personio.de/docs/getting-started-with-the-personio-api"
+        }
     },
     {
         provider: "sap-successfactors",

@@ -6,9 +6,14 @@ import { Tooltip } from "./Tooltip";
 interface ThemeToggleProps {
     size?: "sm" | "md";
     className?: string;
+    tooltipPosition?: "top" | "bottom" | "left" | "right";
 }
 
-export function ThemeToggle({ size = "sm", className }: ThemeToggleProps) {
+export function ThemeToggle({
+    size = "sm",
+    className,
+    tooltipPosition = "bottom"
+}: ThemeToggleProps) {
     const { theme, setTheme } = useThemeStore();
 
     const toggleTheme = () => {
@@ -23,7 +28,7 @@ export function ThemeToggle({ size = "sm", className }: ThemeToggleProps) {
     const iconSize = size === "sm" ? "w-4 h-4" : "w-5 h-5";
 
     return (
-        <Tooltip content={getThemeTooltip()} position="bottom" delay={200}>
+        <Tooltip content={getThemeTooltip()} position={tooltipPosition} delay={200}>
             <button
                 onClick={toggleTheme}
                 className={cn(

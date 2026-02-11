@@ -185,7 +185,7 @@ export function ActionNodeConfig({
     // Render provider selection
     if (viewState === "provider-list") {
         return (
-            <FormSection title="Select Integration">
+            <FormSection title="Select Integration" collapsible={false} scrollable>
                 <p className="text-sm text-muted-foreground mb-3">
                     Please select an integration to perform an action.
                 </p>
@@ -238,7 +238,7 @@ export function ActionNodeConfig({
 
     // Fallback
     return (
-        <FormSection title="Select Integration">
+        <FormSection title="Select Integration" collapsible={false} scrollable>
             <p className="text-sm text-muted-foreground mb-3">
                 Please select an integration to perform an action.
             </p>

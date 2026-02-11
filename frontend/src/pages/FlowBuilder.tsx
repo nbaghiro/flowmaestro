@@ -22,6 +22,7 @@ import { WorkflowSettingsDialog } from "../components/WorkflowSettingsDialog";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import {
     getWorkflow,
+    getWorkflowBySystemKey,
     updateWorkflow,
     createCheckpoint,
     deleteCheckpoint,
@@ -70,7 +71,7 @@ interface Checkpoint {
 }
 
 export function FlowBuilder() {
-    const { workflowId } = useParams<{ workflowId: string }>();
+    const { workflowId, systemKey } = useParams<{ workflowId?: string; systemKey?: string }>();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -100,6 +101,8 @@ export function FlowBuilder() {
     const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
     const [showMinorChangesDialog, setShowMinorChangesDialog] = useState(false);
     const [isFormInterfaceDialogOpen, setIsFormInterfaceDialogOpen] = useState(false);
+    // Actual workflow ID (set after loading, needed for system workflows loaded by key)
+    const [actualWorkflowId, setActualWorkflowId] = useState<string | null>(null);
 
     // Unified right panel state - only one can be open at a time
     const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(null);
@@ -254,10 +257,10 @@ export function FlowBuilder() {
     }, [workflowId, setCurrentWorkflowId]);
 
     useEffect(() => {
-        if (workflowId) {
+        if (workflowId || systemKey) {
             loadWorkflow();
         }
-    }, [workflowId]);
+    }, [workflowId, systemKey]);
 
     useEffect(() => {
         if (!isLoading && lastSavedState !== "") {
@@ -278,16 +281,30 @@ export function FlowBuilder() {
     }, [isLoading, nodes, edges, workflowName]);
 
     const loadWorkflow = async () => {
-        if (!workflowId) return;
+        // Support loading by either workflowId or systemKey
+        if (!workflowId && !systemKey) return;
 
         try {
-            const response = await getWorkflow(workflowId);
+            // Load workflow by ID or system key
+            const response = systemKey
+                ? await getWorkflowBySystemKey(systemKey)
+                : await getWorkflow(workflowId!);
             logger.debug("Loaded workflow definition", { definition: response.data.definition });
 
-            const cp = await listCheckpoints(workflowId);
+            // Get checkpoints (skip for system workflows as they have different ownership)
+            let cp: Checkpoint[] = [];
+            if (!systemKey) {
+                try {
+                    cp = await listCheckpoints(response.data.id);
+                } catch (err) {
+                    logger.debug("Could not load checkpoints", { error: err });
+                }
+            }
             resetWorkflow();
 
             if (response.success && response.data) {
+                // Store the actual workflow ID (needed for system workflows loaded by key)
+                setActualWorkflowId(response.data.id);
                 setWorkflowName(response.data.name);
                 setWorkflowDescription(response.data.description || "");
                 setAIMetadata(response.data.ai_generated || false, response.data.ai_prompt || null);
@@ -395,7 +412,8 @@ export function FlowBuilder() {
     }, [navigate, resetWorkflow, fromFolderId]);
 
     const handleSave = useCallback(async () => {
-        if (!workflowId) return;
+        const idToSave = actualWorkflowId || workflowId;
+        if (!idToSave) return;
 
         setSaveStatus("saving");
 
@@ -432,7 +450,7 @@ export function FlowBuilder() {
                 updatePayload.aiPrompt = aiPrompt;
             }
 
-            await updateWorkflow(workflowId, updatePayload as Parameters<typeof updateWorkflow>[1]);
+            await updateWorkflow(idToSave, updatePayload as Parameters<typeof updateWorkflow>[1]);
 
             setSaveStatus("saved");
             setLastSavedState(createWorkflowSnapshot(workflowName, nodes, edges));
@@ -443,10 +461,20 @@ export function FlowBuilder() {
             setSaveStatus("error");
             setTimeout(() => setSaveStatus("idle"), SAVE_ERROR_TIMEOUT);
         }
-    }, [workflowId, nodes, edges, workflowName, workflowDescription, aiGenerated, aiPrompt]);
+    }, [
+        actualWorkflowId,
+        workflowId,
+        nodes,
+        edges,
+        workflowName,
+        workflowDescription,
+        aiGenerated,
+        aiPrompt
+    ]);
 
     const handleSaveAndLeave = useCallback(async () => {
-        if (!workflowId) return;
+        const idToSave = actualWorkflowId || workflowId;
+        if (!idToSave) return;
 
         setSaveStatus("saving");
 
@@ -470,7 +498,7 @@ export function FlowBuilder() {
                 definition: workflowDefinition
             };
 
-            await updateWorkflow(workflowId, updatePayload as Parameters<typeof updateWorkflow>[1]);
+            await updateWorkflow(idToSave, updatePayload as Parameters<typeof updateWorkflow>[1]);
 
             setShowUnsavedDialog(false);
             // Use browser back if no specific folder, otherwise go to folder
@@ -484,7 +512,7 @@ export function FlowBuilder() {
             setSaveStatus("error");
             setTimeout(() => setSaveStatus("idle"), SAVE_ERROR_TIMEOUT);
         }
-    }, [workflowId, nodes, edges, workflowName, navigate, fromFolderId]);
+    }, [actualWorkflowId, workflowId, nodes, edges, workflowName, navigate, fromFolderId]);
 
     const handleDuplicateNode = useCallback(() => {
         if (!selectedNode) return;
@@ -591,10 +619,11 @@ export function FlowBuilder() {
     };
 
     const handleSettingsSave = async (name: string, description: string) => {
-        if (!workflowId) return;
+        const idToSave = actualWorkflowId || workflowId;
+        if (!idToSave) return;
 
         try {
-            await updateWorkflow(workflowId, { name, description });
+            await updateWorkflow(idToSave, { name, description });
             setWorkflowName(name);
             setWorkflowDescription(description);
         } catch (error) {

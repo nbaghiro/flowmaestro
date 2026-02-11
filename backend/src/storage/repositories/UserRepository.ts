@@ -93,6 +93,16 @@ export class UserRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
     }
 
+    async findByStripeCustomerId(stripeCustomerId: string): Promise<UserModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.users
+            WHERE stripe_customer_id = $1
+        `;
+
+        const result = await db.query<UserModel>(query, [stripeCustomerId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
+    }
+
     async update(id: string, input: UpdateUserInput): Promise<UserModel | null> {
         const updates: string[] = [];
         const values: unknown[] = [];
@@ -168,6 +178,11 @@ export class UserRepository {
             values.push(input.two_factor_secret);
         }
 
+        if (input.stripe_customer_id !== undefined) {
+            updates.push(`stripe_customer_id = $${paramIndex++}`);
+            values.push(input.stripe_customer_id);
+        }
+
         if (updates.length === 0) {
             return this.findById(id);
         }
@@ -236,6 +251,8 @@ export class UserRepository {
             two_factor_phone: string | null;
             two_factor_phone_verified: boolean;
             two_factor_secret: string | null;
+            is_admin: boolean;
+            stripe_customer_id: string | null;
         };
         return {
             id: r.id,
@@ -254,7 +271,9 @@ export class UserRepository {
             two_factor_enabled: r.two_factor_enabled,
             two_factor_phone: r.two_factor_phone,
             two_factor_phone_verified: r.two_factor_phone_verified,
-            two_factor_secret: r.two_factor_secret
+            two_factor_secret: r.two_factor_secret,
+            is_admin: r.is_admin ?? false,
+            stripe_customer_id: r.stripe_customer_id ?? null
         };
     }
 }

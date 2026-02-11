@@ -169,7 +169,7 @@ function createBatchProcessingWorkflow(): BuiltWorkflow {
     // Loop end
     nodes.set("LoopEnd", {
         id: "LoopEnd",
-        type: "echo",
+        type: "transform",
         name: "Loop End",
         config: {},
         depth: 7,

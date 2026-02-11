@@ -3,6 +3,7 @@ FROM node:22-alpine AS builder
 
 # Build arguments for environment variables baked into the static build
 ARG VITE_GA_MEASUREMENT_ID=""
+ARG VITE_API_URL="https://api.flowmaestro.ai"
 ARG VITE_APP_URL="https://app.flowmaestro.ai"
 ARG VITE_DOCS_URL="https://docs.flowmaestro.ai"
 
@@ -39,6 +40,7 @@ COPY marketing/ ./marketing/
 
 # Set environment variables for build
 ENV VITE_GA_MEASUREMENT_ID=${VITE_GA_MEASUREMENT_ID}
+ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_APP_URL=${VITE_APP_URL}
 ENV VITE_DOCS_URL=${VITE_DOCS_URL}
 

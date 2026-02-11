@@ -27,8 +27,8 @@ Our users build everything from customer support routing to multi-step approval 
 - **Workflow Engine** — Build and extend our 20+ node types that power workflows: LLM calls, database operations, HTTP requests, file processing, conditional logic, and loops
 - **AI Agents** — Develop our agent system including memory management (buffer, summary, vector), tool execution, and multi-turn conversations
 - **Integrations** — Expand our 100+ integration catalog, building OAuth flows and provider SDKs that work seamlessly with both workflows and agents
-- **Real-time Systems** — WebSocket events, SSE streaming for token-by-token LLM responses, and live execution monitoring
-- **Developer Experience** — SDKs (TypeScript, Python), CLI tools, and public APIs that our users love
+- **Real-time Systems** — WebSocket events for live execution monitoring, SSE streaming for token-by-token LLM responses across web, CLI, and SDK clients
+- **Developer Experience** — Build and maintain our CLI (`fm` command) for workflow execution, agent conversations, and execution monitoring. Develop our TypeScript and Python SDKs with full type support, streaming APIs, and webhook management
 
 **Our stack**
 
@@ -39,7 +39,7 @@ Our users build everything from customer support routing to multi-step approval 
 
 **What we're looking for**
 
-- 5+ years building production software
+- 10+ years building production software
 - Strong TypeScript skills (we use strict mode everywhere—no `any` types)
 - Deep experience across the stack: React frontends, Node.js backends, PostgreSQL
 - You've shipped features end-to-end—from database schema to UI polish
@@ -53,7 +53,7 @@ Our users build everything from customer support routing to multi-step approval 
 - Built integrations with third-party APIs (OAuth flows, webhooks, rate limiting)
 - Kubernetes and infrastructure-as-code (Pulumi, Terraform)
 - Real-time systems (WebSockets, SSE, streaming)
-- Contributed to or built developer tools, SDKs, or APIs
+- Built CLI tools or language SDKs (experience with Commander.js, httpx, or similar)
 
 **What we offer**
 
@@ -75,11 +75,12 @@ We're building FlowMaestro, the platform that makes AI automation accessible to 
 - Workflow engine with 20+ node types (LLM calls, database ops, HTTP, files, logic)
 - AI agents with memory, tools, and streaming
 - Integrations with Slack, GitHub, Salesforce, and 100+ more
+- CLI (`fm`) and SDKs (TypeScript, Python) for programmatic access
 - Real-time systems with WebSockets and SSE
 
 **Stack:** React, Fastify, PostgreSQL, Redis, Temporal, OpenAI/Anthropic/Gemini
 
-**Looking for:** 5+ years experience, strong TypeScript, full-stack ownership, product mindset, AI/ML experience
+**Looking for:** 10+ years experience, strong TypeScript, full-stack ownership, product mindset, AI/ML experience
 
 Early-stage equity. Remote-first. Small team, outsized impact.
 
@@ -87,7 +88,7 @@ Early-stage equity. Remote-first. Small team, outsized impact.
 
 ## One-Liner (for Twitter/cold outreach)
 
-Building the platform that makes AI automation accessible. Looking for senior engineers who want to own features end-to-end: workflow orchestration, AI agents, and 100+ integrations. TypeScript, Temporal, multi-provider LLM support. Remote.
+Building the platform that makes AI automation accessible. Looking for senior engineers who want to own features end-to-end: workflow orchestration, AI agents, CLI/SDKs, and 100+ integrations. TypeScript, Temporal, multi-provider LLM support. Remote.
 
 ---
 

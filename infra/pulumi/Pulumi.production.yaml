@@ -211,5 +211,8 @@ config:
       {"name":"bill-com-client-id","envVar":"BILL_COM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Bill.com OAuth client ID"},
       {"name":"bill-com-client-secret","envVar":"BILL_COM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Bill.com OAuth client secret"},
       {"name":"ramp-client-id","envVar":"RAMP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Ramp OAuth client ID"},
-      {"name":"ramp-client-secret","envVar":"RAMP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Ramp OAuth client secret"}
+      {"name":"ramp-client-secret","envVar":"RAMP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Ramp OAuth client secret"},
+      {"name":"stripe-secret-key","envVar":"STRIPE_SECRET_KEY","category":"service","deployments":["api"],"required":false,"description":"Stripe API secret key"},
+      {"name":"stripe-webhook-secret","envVar":"STRIPE_WEBHOOK_SECRET","category":"service","deployments":["api"],"required":false,"description":"Stripe webhook signing secret"},
+      {"name":"stripe-publishable-key","envVar":"STRIPE_PUBLISHABLE_KEY","category":"service","deployments":[],"required":false,"description":"Stripe publishable key (for frontend)"}
     ]

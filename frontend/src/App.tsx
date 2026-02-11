@@ -92,6 +92,16 @@ function App() {
                     }
                 />
 
+                {/* Full-screen builder for system workflows (admin only) - must be before :workflowId */}
+                <Route
+                    path="/builder/system/:systemKey"
+                    element={
+                        <ProtectedRoute>
+                            <FlowBuilder />
+                        </ProtectedRoute>
+                    }
+                />
+
                 {/* Full-screen builder without sidebar */}
                 <Route
                     path="/builder/:workflowId"

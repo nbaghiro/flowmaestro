@@ -91,7 +91,13 @@ import type {
     PersonaTaskTemplateListResponse,
     GenerateFromTemplateResponse,
     PersonaConnectionRequirement,
-    PersonaInstanceConnection
+    PersonaInstanceConnection,
+    SubscriptionPlan,
+    SubscriptionDetails,
+    CreditPack,
+    CreateCheckoutSessionResponse,
+    CreatePortalSessionResponse,
+    PaymentHistoryItem
 } from "@flowmaestro/shared";
 import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 import { logger } from "./logger";
@@ -822,6 +828,29 @@ export async function getWorkflow(workflowId: string) {
     return response.json();
 }
 
+/**
+ * Get a system workflow by its system_key
+ * Admin-only route for loading system workflows in Flow Builder
+ */
+export async function getWorkflowBySystemKey(systemKey: string) {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workflows/system/${systemKey}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
 export interface WorkflowDefinition {
     name?: string;
     description?: string;
@@ -1240,13 +1269,18 @@ export interface ListTriggerProvidersResponse {
 export async function getTriggerProviders(
     category?: string
 ): Promise<ListTriggerProvidersResponse> {
+    const token = getAuthToken();
+
     let url = `${API_BASE_URL}/triggers/providers`;
     if (category) {
         url += `?category=${encodeURIComponent(category)}`;
     }
 
     const response = await apiFetch(url, {
-        method: "GET"
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
     });
 
     if (!response.ok) {
@@ -1315,8 +1349,13 @@ export interface GetTriggerProviderResponse {
  * Get trigger provider details with events
  */
 export async function getTriggerProvider(providerId: string): Promise<GetTriggerProviderResponse> {
+    const token = getAuthToken();
+
     const response = await apiFetch(`${API_BASE_URL}/triggers/providers/${providerId}`, {
-        method: "GET"
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
     });
 
     if (!response.ok) {
@@ -1340,8 +1379,13 @@ export interface GetTriggerEventsResponse {
  * Get trigger events for a provider
  */
 export async function getTriggerEvents(providerId: string): Promise<GetTriggerEventsResponse> {
+    const token = getAuthToken();
+
     const response = await apiFetch(`${API_BASE_URL}/triggers/providers/${providerId}/events`, {
-        method: "GET"
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
     });
 
     if (!response.ok) {
@@ -6567,6 +6611,283 @@ export async function testSandboxOperation(
     }
 
     return response.json();
+}
+
+// =============================================================================
+// Billing API Functions
+// =============================================================================
+
+export type { SubscriptionPlan, SubscriptionDetails, CreditPack, PaymentHistoryItem };
+
+/**
+ * Get available subscription plans and credit packs
+ */
+export async function getBillingPlans(): Promise<{
+    subscriptionPlans: SubscriptionPlan[];
+    creditPacks: CreditPack[];
+}> {
+    const response = await apiFetch(`${API_BASE_URL}/billing/plans`);
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Get current subscription status for a workspace
+ */
+export async function getSubscription(workspaceId: string): Promise<SubscriptionDetails> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/billing/subscription?workspaceId=${workspaceId}`,
+        {
+            headers: {
+                ...(token && { Authorization: `Bearer ${token}` }),
+                "X-Workspace-Id": workspaceId
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Create a checkout session for subscription (redirect to Stripe checkout)
+ */
+export async function createSubscriptionCheckout(
+    workspaceId: string,
+    planSlug: "pro" | "team",
+    billingInterval: "monthly" | "annual",
+    successUrl: string,
+    cancelUrl: string
+): Promise<CreateCheckoutSessionResponse> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/billing/checkout?workspaceId=${workspaceId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+            "X-Workspace-Id": workspaceId
+        },
+        body: JSON.stringify({
+            planSlug,
+            billingInterval,
+            successUrl,
+            cancelUrl
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Response from embedded subscription creation
+ */
+export interface CreateEmbeddedSubscriptionResponse {
+    subscriptionId: string;
+    clientSecret: string;
+    intentType: "setup" | "payment";
+    trialDays: number;
+    customerId: string;
+}
+
+/**
+ * Create a subscription for embedded checkout with PaymentElement
+ * Returns clientSecret for Stripe Elements instead of redirecting
+ */
+export async function createEmbeddedSubscription(
+    workspaceId: string,
+    planSlug: "pro" | "team",
+    billingInterval: "monthly" | "annual"
+): Promise<CreateEmbeddedSubscriptionResponse> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/billing/create-subscription?workspaceId=${workspaceId}`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` }),
+                "X-Workspace-Id": workspaceId
+            },
+            body: JSON.stringify({
+                planSlug,
+                billingInterval
+            })
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Create a checkout session for credit pack purchase
+ */
+export async function createCreditPackCheckout(
+    workspaceId: string,
+    packId: string,
+    successUrl: string,
+    cancelUrl: string
+): Promise<CreateCheckoutSessionResponse> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/billing/purchase-credits?workspaceId=${workspaceId}`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` }),
+                "X-Workspace-Id": workspaceId
+            },
+            body: JSON.stringify({
+                packId,
+                successUrl,
+                cancelUrl
+            })
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Create a billing portal session for managing subscription
+ */
+export async function createPortalSession(returnUrl: string): Promise<CreatePortalSessionResponse> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/billing/portal`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ returnUrl })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Cancel subscription (at period end by default)
+ */
+export async function cancelSubscription(
+    workspaceId: string,
+    immediate: boolean = false
+): Promise<{ cancelAtPeriodEnd: boolean; message: string }> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/billing/cancel?workspaceId=${workspaceId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+            "X-Workspace-Id": workspaceId
+        },
+        body: JSON.stringify({ immediate })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Reactivate a subscription that was set to cancel
+ */
+export async function reactivateSubscription(workspaceId: string): Promise<{ message: string }> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/billing/reactivate?workspaceId=${workspaceId}`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` }),
+                "X-Workspace-Id": workspaceId
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Get payment history for a workspace
+ */
+export async function getPaymentHistory(
+    workspaceId: string,
+    options?: { limit?: number; offset?: number }
+): Promise<PaymentHistoryItem[]> {
+    const token = getAuthToken();
+    const params = new URLSearchParams({
+        workspaceId,
+        ...(options?.limit && { limit: options.limit.toString() }),
+        ...(options?.offset && { offset: options.offset.toString() })
+    });
+
+    const response = await apiFetch(`${API_BASE_URL}/billing/payment-history?${params}`, {
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` }),
+            "X-Workspace-Id": workspaceId
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
 }
 
 // Re-export persona types for components

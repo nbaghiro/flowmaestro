@@ -150,7 +150,7 @@ describe("Slider", () => {
             const container = screen.getByRole("slider").parentElement;
             expect(container).toHaveClass("flex");
             expect(container).toHaveClass("items-center");
-            expect(container).toHaveClass("gap-3");
+            expect(container).toHaveClass("gap-0.5");
         });
 
         it("slider has flex-1 for full width", () => {

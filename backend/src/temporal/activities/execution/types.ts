@@ -377,8 +377,7 @@ export type ExecutableNodeType =
     | "switch"
     | "loop"
     | "wait"
-    | "variable"
-    | "echo"
+    | "humanReview"
     | "vision"
     | "audio"
     | "embeddings"
@@ -386,9 +385,7 @@ export type ExecutableNodeType =
     | "integration"
     | "knowledgeBaseQuery"
     | "fileOperations"
-    | "pause"
-    | "userInput"
-    | "parallel"
+    | "shared-memory"
     | "loop-start"
     | "loop-end"
     // Built-in tools
@@ -396,10 +393,6 @@ export type ExecutableNodeType =
     | "web_search"
     | "webBrowse"
     | "web_browse"
-    | "codeExecute"
-    | "code_execute"
-    | "dataAnalyze"
-    | "data_analyze"
     | "imageGenerate"
     | "image_generate"
     | "pdfGenerate"
@@ -414,7 +407,12 @@ export type ExecutableNodeType =
     | "pdfExtract"
     | "fileDownload"
     | "fileRead"
-    | "fileWrite";
+    | "fileWrite"
+    | "audioInput"
+    | "audioOutput"
+    | "videoGeneration"
+    | "imageGeneration"
+    | "router";
 
 /**
  * Loop context for nodes inside a loop

@@ -10,7 +10,7 @@ interface SliderProps {
 
 export function Slider({ value, onChange, min, max, step }: SliderProps) {
     return (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-0.5">
             <Input
                 type="range"
                 value={value}
@@ -20,7 +20,7 @@ export function Slider({ value, onChange, min, max, step }: SliderProps) {
                 step={step}
                 className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
             />
-            <span className="text-sm font-mono w-12 text-right">{value}</span>
+            <span className="text-sm font-mono w-12 text-right pr-2">{value}</span>
         </div>
     );
 }

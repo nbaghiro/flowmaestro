@@ -9,7 +9,7 @@ import {
     FileText,
     CheckCircle2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { WorkflowTrigger } from "@flowmaestro/shared";
 import { executeTrigger, createTrigger, getTriggers } from "../lib/api";
@@ -20,6 +20,7 @@ import { Logo } from "./common/Logo";
 import { OverflowMenu } from "./common/OverflowMenu";
 import { ThemeToggle } from "./common/ThemeToggle";
 import { Tooltip } from "./common/Tooltip";
+import { ValidationErrorsDialog } from "./validation/ValidationErrorsDialog";
 import { ValidationSummaryBadge } from "./validation/ValidationPanel";
 import type { OverflowMenuItem } from "./common/OverflowMenu";
 
@@ -52,15 +53,36 @@ export function BuilderHeader({
     onBack,
     onOpenExecution
 }: BuilderHeaderProps) {
-    const { startExecution, currentExecution, selectNode } = useWorkflowStore();
+    const { startExecution, currentExecution, selectNode, workflowValidation, nodes } =
+        useWorkflowStore();
     const navigate = useNavigate();
     const [isRunning, setIsRunning] = useState(false);
     const [runError, setRunError] = useState<string | null>(null);
+    const [showValidationDialog, setShowValidationDialog] = useState(false);
+
+    // Build node name lookup map for validation dialog
+    const nodeNames = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const node of nodes) {
+            const label = (node.data?.label as string) || node.type || node.id;
+            map.set(node.id, label);
+        }
+        return map;
+    }, [nodes]);
+
+    // Check if workflow has validation errors (not warnings, only errors block execution)
+    const hasValidationErrors = workflowValidation && !workflowValidation.isValid;
 
     const handleRun = async () => {
         if (!workflowId) {
             logger.error("Cannot run workflow: workflowId is not provided");
             setRunError("Workflow ID is missing");
+            return;
+        }
+
+        // Block execution if there are validation errors
+        if (hasValidationErrors) {
+            setShowValidationDialog(true);
             return;
         }
 
@@ -292,6 +314,15 @@ export function BuilderHeader({
                     <OverflowMenu items={overflowMenuItems} />
                 </div>
             </div>
+
+            {/* Validation Errors Dialog */}
+            <ValidationErrorsDialog
+                isOpen={showValidationDialog}
+                onClose={() => setShowValidationDialog(false)}
+                validationResult={workflowValidation}
+                nodeNames={nodeNames}
+                onOpenValidationPanel={onOpenValidation}
+            />
         </header>
     );
 }

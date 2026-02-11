@@ -18,7 +18,7 @@ const communities = [
         title: "GitHub",
         description: "Star our repo, report issues, and contribute to the FlowMaestro ecosystem.",
         action: "View GitHub",
-        href: "https://github.com/flowmaestro",
+        href: "https://github.com/nbaghiro/flowmaestro",
         members: "1,200+ stars"
     },
     {
@@ -73,7 +73,7 @@ export const CommunityPage: React.FC = () => {
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
                                 Join Our <span className="gradient-text">Community</span>
                             </h1>
-                            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                                 Connect with thousands of automation enthusiasts, share ideas, and
                                 get help from the FlowMaestro team.
                             </p>
@@ -82,9 +82,8 @@ export const CommunityPage: React.FC = () => {
                 </section>
 
                 {/* Community Channels */}
-                <section className="relative py-16 px-4 sm:px-6 lg:px-8 bg-background-surface">
-                    <div className="absolute inset-0 grid-pattern opacity-50" />
-                    <div className="relative z-10 max-w-6xl mx-auto">
+                <section className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-6xl mx-auto">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -93,7 +92,7 @@ export const CommunityPage: React.FC = () => {
                             className="text-center mb-12"
                         >
                             <h2 className="text-3xl font-bold mb-4">Find Us Online</h2>
-                            <p className="text-gray-400">
+                            <p className="text-muted-foreground">
                                 Choose your favorite platform to connect with us.
                             </p>
                         </motion.div>
@@ -109,7 +108,7 @@ export const CommunityPage: React.FC = () => {
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}
-                                    className="p-6 rounded-xl bg-background border border-stroke hover:border-primary-500/50 transition-all group"
+                                    className="p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-all group"
                                 >
                                     <div className="flex items-start gap-4">
                                         <div className="w-14 h-14 rounded-xl bg-background-elevated border border-stroke flex items-center justify-center flex-shrink-0">
@@ -117,14 +116,14 @@ export const CommunityPage: React.FC = () => {
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex items-center justify-between mb-1">
-                                                <h3 className="text-lg font-semibold text-white group-hover:text-primary-400 transition-colors">
+                                                <h3 className="text-lg font-semibold text-foreground group-hover:text-primary-400 transition-colors">
                                                     {community.title}
                                                 </h3>
-                                                <span className="text-xs text-gray-500">
+                                                <span className="text-xs text-muted-foreground">
                                                     {community.members}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-gray-400 mb-3">
+                                            <p className="text-sm text-muted-foreground mb-3">
                                                 {community.description}
                                             </p>
                                             <span className="text-sm text-primary-400 group-hover:text-primary-300">
@@ -139,7 +138,7 @@ export const CommunityPage: React.FC = () => {
                 </section>
 
                 {/* Resources */}
-                <section className="py-16 px-4 sm:px-6 lg:px-8 bg-background">
+                <section className="py-16 px-4 sm:px-6 lg:px-8">
                     <div className="relative z-10 max-w-4xl mx-auto">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
@@ -149,7 +148,7 @@ export const CommunityPage: React.FC = () => {
                             className="text-center mb-12"
                         >
                             <h2 className="text-3xl font-bold mb-4">Resources</h2>
-                            <p className="text-gray-400">
+                            <p className="text-muted-foreground">
                                 Everything you need to become a FlowMaestro expert.
                             </p>
                         </motion.div>
@@ -165,15 +164,17 @@ export const CommunityPage: React.FC = () => {
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}
-                                    className="p-6 rounded-xl bg-background-surface border border-stroke hover:border-primary-500/50 transition-all group"
+                                    className="p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-all group"
                                 >
                                     <div className="w-12 h-12 rounded-lg bg-background-elevated border border-stroke flex items-center justify-center mb-4">
                                         <resource.icon className="w-6 h-6 text-primary-400" />
                                     </div>
-                                    <h3 className="text-lg font-semibold text-white group-hover:text-primary-400 transition-colors mb-2">
+                                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary-400 transition-colors mb-2">
                                         {resource.title}
                                     </h3>
-                                    <p className="text-sm text-gray-400">{resource.description}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {resource.description}
+                                    </p>
                                 </motion.a>
                             ))}
                         </div>
@@ -181,9 +182,8 @@ export const CommunityPage: React.FC = () => {
                 </section>
 
                 {/* CTA */}
-                <section className="relative py-20 px-4 sm:px-6 lg:px-8 bg-background-surface">
-                    <div className="absolute inset-0 grid-pattern opacity-50" />
-                    <div className="relative z-10 max-w-2xl mx-auto text-center">
+                <section className="py-20 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-2xl mx-auto text-center">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -191,14 +191,14 @@ export const CommunityPage: React.FC = () => {
                             transition={{ duration: 0.6 }}
                         >
                             <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
-                            <p className="text-gray-400 mb-8">
+                            <p className="text-muted-foreground mb-8">
                                 Join the community and start building powerful automations today.
                             </p>
                             <a
                                 href="https://discord.gg/flowmaestro"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors"
+                                className="btn-primary inline-flex items-center gap-2"
                             >
                                 <MessageSquare className="w-5 h-5" />
                                 Join Discord

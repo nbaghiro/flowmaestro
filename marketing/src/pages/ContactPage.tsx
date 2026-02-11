@@ -55,7 +55,7 @@ export const ContactPage: React.FC = () => {
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
                                 Get in <span className="gradient-text">Touch</span>
                             </h1>
-                            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                                 Have a question or want to learn more? We'd love to hear from you.
                             </p>
                         </motion.div>
@@ -63,9 +63,8 @@ export const ContactPage: React.FC = () => {
                 </section>
 
                 {/* Contact Methods */}
-                <section className="relative py-12 px-4 sm:px-6 lg:px-8 bg-background-surface">
-                    <div className="absolute inset-0 grid-pattern opacity-50" />
-                    <div className="relative z-10 max-w-4xl mx-auto">
+                <section className="py-12 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto">
                         <div className="grid md:grid-cols-2 gap-6">
                             {contactMethods.map((method, index) => (
                                 <motion.a
@@ -80,13 +79,13 @@ export const ContactPage: React.FC = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}
-                                    className="p-6 rounded-xl bg-background border border-stroke hover:border-primary-500/50 transition-all group"
+                                    className="p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-all group"
                                 >
                                     <div className="w-12 h-12 rounded-lg bg-background-elevated border border-stroke flex items-center justify-center mb-4">
                                         <method.icon className="w-6 h-6 text-primary-400" />
                                     </div>
                                     <h3 className="text-lg font-semibold mb-1">{method.title}</h3>
-                                    <p className="text-sm text-gray-400 mb-3">
+                                    <p className="text-sm text-muted-foreground mb-3">
                                         {method.description}
                                     </p>
                                     <span className="text-primary-400 group-hover:text-primary-300 text-sm">
@@ -99,7 +98,7 @@ export const ContactPage: React.FC = () => {
                 </section>
 
                 {/* Contact Form */}
-                <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
+                <section className="py-20 px-4 sm:px-6 lg:px-8">
                     <div className="relative z-10 max-w-2xl mx-auto">
                         <motion.div
                             initial={{ opacity: 0, y: 30 }}
@@ -114,7 +113,7 @@ export const ContactPage: React.FC = () => {
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
                                             Name
                                         </label>
                                         <input
@@ -124,12 +123,12 @@ export const ContactPage: React.FC = () => {
                                             onChange={(e) =>
                                                 setFormData({ ...formData, name: e.target.value })
                                             }
-                                            className="w-full px-4 py-3 rounded-lg bg-background-surface border border-stroke focus:border-primary-500 focus:outline-none transition-colors text-white"
+                                            className="w-full px-4 py-3 rounded-lg bg-card border border-stroke focus:border-primary-500 focus:outline-none transition-colors text-foreground"
                                             placeholder="Your name"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
                                             Email
                                         </label>
                                         <input
@@ -139,14 +138,14 @@ export const ContactPage: React.FC = () => {
                                             onChange={(e) =>
                                                 setFormData({ ...formData, email: e.target.value })
                                             }
-                                            className="w-full px-4 py-3 rounded-lg bg-background-surface border border-stroke focus:border-primary-500 focus:outline-none transition-colors text-white"
+                                            className="w-full px-4 py-3 rounded-lg bg-card border border-stroke focus:border-primary-500 focus:outline-none transition-colors text-foreground"
                                             placeholder="you@company.com"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
                                         Company
                                     </label>
                                     <input
@@ -155,13 +154,13 @@ export const ContactPage: React.FC = () => {
                                         onChange={(e) =>
                                             setFormData({ ...formData, company: e.target.value })
                                         }
-                                        className="w-full px-4 py-3 rounded-lg bg-background-surface border border-stroke focus:border-primary-500 focus:outline-none transition-colors text-white"
+                                        className="w-full px-4 py-3 rounded-lg bg-card border border-stroke focus:border-primary-500 focus:outline-none transition-colors text-foreground"
                                         placeholder="Your company"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
                                         Message
                                     </label>
                                     <textarea
@@ -171,15 +170,12 @@ export const ContactPage: React.FC = () => {
                                         onChange={(e) =>
                                             setFormData({ ...formData, message: e.target.value })
                                         }
-                                        className="w-full px-4 py-3 rounded-lg bg-background-surface border border-stroke focus:border-primary-500 focus:outline-none transition-colors text-white resize-none"
+                                        className="w-full px-4 py-3 rounded-lg bg-card border border-stroke focus:border-primary-500 focus:outline-none transition-colors text-foreground resize-none"
                                         placeholder="How can we help?"
                                     />
                                 </div>
 
-                                <button
-                                    type="submit"
-                                    className="w-full py-3 px-6 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors"
-                                >
+                                <button type="submit" className="w-full btn-primary">
                                     Send Message
                                 </button>
                             </form>
@@ -188,10 +184,9 @@ export const ContactPage: React.FC = () => {
                 </section>
 
                 {/* Office Info */}
-                <section className="relative py-16 px-4 sm:px-6 lg:px-8 bg-background-surface">
-                    <div className="absolute inset-0 grid-pattern opacity-50" />
-                    <div className="relative z-10 max-w-4xl mx-auto text-center">
-                        <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-gray-400">
+                <section className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-muted-foreground">
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-5 h-5" />
                                 <span>San Francisco, CA</span>

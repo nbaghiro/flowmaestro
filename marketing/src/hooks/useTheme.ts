@@ -12,15 +12,19 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<Theme>(() => {
-        // Check localStorage first - only respect explicit user choice
-        if (typeof window !== "undefined") {
-            const stored = localStorage.getItem("marketing-theme") as Theme | null;
-            if (stored === "light" || stored === "dark") {
-                return stored;
-            }
+        if (typeof window === "undefined") return "light";
+
+        // Check localStorage first - respect explicit user choice
+        const stored = localStorage.getItem("marketing-theme") as Theme | null;
+        if (stored === "light" || stored === "dark") {
+            return stored;
         }
-        // Default to light mode for marketing site to showcase the new design
-        return "light";
+
+        // No saved preference - check system preference, default to light
+        const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const initialTheme = systemPrefersDark ? "dark" : "light";
+        localStorage.setItem("marketing-theme", initialTheme);
+        return initialTheme;
     });
 
     useEffect(() => {

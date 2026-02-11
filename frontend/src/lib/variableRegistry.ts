@@ -124,7 +124,8 @@ export function getAvailableVariables(
     const inputNodes = nodes.filter((n) => n.type === "input");
     for (const inputNode of inputNodes) {
         const data = inputNode.data as Record<string, unknown>;
-        const inputName = (data.inputName as string) || "input";
+        // Use variableName (matching InputNodeConfig) with default "userInput"
+        const inputName = (data.variableName as string) || "userInput";
 
         if (upstreamNodeIds.includes(inputNode.id) || inputNode.id !== nodeId) {
             variables.push({

@@ -33,13 +33,16 @@ interface FormSectionProps {
     collapsible?: boolean;
     /** Whether the section is expanded by default. Defaults to true. */
     defaultExpanded?: boolean;
+    /** Whether the content should be scrollable with a max height. Useful for long lists. */
+    scrollable?: boolean;
 }
 
 export function FormSection({
     title,
     children,
     collapsible = true,
-    defaultExpanded = true
+    defaultExpanded = true,
+    scrollable = false
 }: FormSectionProps) {
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -50,7 +53,7 @@ export function FormSection({
     };
 
     return (
-        <div className="border-b border-border">
+        <div className={scrollable ? "" : "border-b border-border"}>
             <button
                 type="button"
                 onClick={toggleExpanded}
@@ -77,7 +80,13 @@ export function FormSection({
                     isExpanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
                 }`}
             >
-                <div className="px-4 pt-2 pb-4 space-y-4">{children}</div>
+                <div
+                    className={`px-4 pt-2 space-y-4 ${
+                        scrollable ? "overflow-y-auto max-h-[calc(100vh-280px)] pb-2" : "pb-4"
+                    }`}
+                >
+                    {children}
+                </div>
             </div>
         </div>
     );
