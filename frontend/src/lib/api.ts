@@ -3967,8 +3967,8 @@ export async function submitPublicFormInterface(
     data: {
         message: string;
         files?: Array<{
-            filename: string;
-            size: number;
+            fileName: string;
+            fileSize: number;
             mimeType: string;
             gcsUri: string;
             downloadUrl?: string;
@@ -4006,8 +4006,8 @@ export async function uploadPublicFormFile(
 ): Promise<{
     success: boolean;
     data: {
-        filename: string;
-        size: number;
+        fileName: string;
+        fileSize: number;
         mimeType: string;
         gcsUri: string;
         downloadUrl: string;
@@ -4017,7 +4017,7 @@ export async function uploadPublicFormFile(
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/files`, {
+    const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/upload`, {
         method: "POST",
         body: formData
     });

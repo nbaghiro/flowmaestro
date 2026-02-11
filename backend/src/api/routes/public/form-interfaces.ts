@@ -258,7 +258,16 @@ export async function publicFormInterfaceRoutes(fastify: FastifyInstance) {
                     }
                 });
             } catch (error) {
-                logger.error({ slug, error }, "Error processing form interface submission");
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                const errorStack = error instanceof Error ? error.stack : undefined;
+                logger.error(
+                    {
+                        slug,
+                        error: errorMessage,
+                        stack: errorStack
+                    },
+                    "Error processing form interface submission"
+                );
                 return reply.status(500).send({
                     success: false,
                     error: "Failed to process submission"

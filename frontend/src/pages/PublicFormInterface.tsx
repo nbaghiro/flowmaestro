@@ -12,8 +12,8 @@ import {
 import { logger } from "../lib/logger";
 
 interface UploadedFile {
-    filename: string;
-    size: number;
+    fileName: string;
+    fileSize: number;
     mimeType: string;
     gcsUri: string;
     downloadUrl: string;
@@ -98,8 +98,8 @@ export function PublicFormInterfacePage() {
 
             // Add placeholder while uploading
             const placeholderFile: UploadedFile = {
-                filename: file.name,
-                size: file.size,
+                fileName: file.name,
+                fileSize: file.size,
                 mimeType: file.type,
                 gcsUri: "",
                 downloadUrl: "",
@@ -115,9 +115,13 @@ export function PublicFormInterfacePage() {
                     // Update with actual data
                     setUploadedFiles((prev) =>
                         prev.map((f) =>
-                            f.filename === file.name && f.isUploading
+                            f.fileName === file.name && f.isUploading
                                 ? {
-                                      ...response.data,
+                                      fileName: response.data.fileName,
+                                      fileSize: response.data.fileSize,
+                                      mimeType: response.data.mimeType,
+                                      gcsUri: response.data.gcsUri,
+                                      downloadUrl: response.data.downloadUrl,
                                       isUploading: false
                                   }
                                 : f
@@ -127,7 +131,7 @@ export function PublicFormInterfacePage() {
                     // Mark as error
                     setUploadedFiles((prev) =>
                         prev.map((f) =>
-                            f.filename === file.name && f.isUploading
+                            f.fileName === file.name && f.isUploading
                                 ? { ...f, isUploading: false, error: "Upload failed" }
                                 : f
                         )
@@ -137,7 +141,7 @@ export function PublicFormInterfacePage() {
                 logger.error("Failed to upload file", uploadError);
                 setUploadedFiles((prev) =>
                     prev.map((f) =>
-                        f.filename === file.name && f.isUploading
+                        f.fileName === file.name && f.isUploading
                             ? {
                                   ...f,
                                   isUploading: false,
@@ -201,8 +205,8 @@ export function PublicFormInterfacePage() {
                 files:
                     validFiles.length > 0
                         ? validFiles.map((f) => ({
-                              filename: f.filename,
-                              size: f.size,
+                              fileName: f.fileName,
+                              fileSize: f.fileSize,
                               mimeType: f.mimeType,
                               gcsUri: f.gcsUri,
                               downloadUrl: f.downloadUrl
@@ -422,10 +426,10 @@ export function PublicFormInterfacePage() {
                                                             : "text-foreground"
                                                     }`}
                                                 >
-                                                    {file.filename}
+                                                    {file.fileName}
                                                 </span>
                                                 <span className="text-muted-foreground">
-                                                    ({(file.size / 1024).toFixed(1)} KB)
+                                                    ({(file.fileSize / 1024).toFixed(1)} KB)
                                                 </span>
                                                 {file.isUploading && (
                                                     <span className="text-muted-foreground">

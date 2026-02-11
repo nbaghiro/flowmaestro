@@ -5,6 +5,7 @@ import { duplicateFormInterfaceRoute } from "./duplicate";
 import { getFormInterfaceRoute } from "./get";
 import { listFormInterfacesRoute } from "./list";
 import { publishFormInterfaceRoute } from "./publish";
+import { submissionFileDownloadRoute } from "./submission-file-download";
 import { listFormInterfaceSubmissionsRoute } from "./submissions";
 import { unpublishFormInterfaceRoute } from "./unpublish";
 import { updateFormInterfaceRoute } from "./update";
@@ -24,6 +25,7 @@ export async function formInterfaceRoutes(fastify: FastifyInstance) {
             instance.register(duplicateFormInterfaceRoute);
             instance.register(uploadFormInterfaceAssetRoute);
             instance.register(listFormInterfaceSubmissionsRoute);
+            instance.register(submissionFileDownloadRoute);
         },
         { prefix: "/form-interfaces" }
     );

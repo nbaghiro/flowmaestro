@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
 import { getArtifactsStorageService } from "../../../services/GCSStorageService";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
-import { formInterfaceRateLimiter } from "../../middleware/formInterfaceRateLimiter";
+import { formInterfaceFileUploadRateLimiter } from "../../middleware/formInterfaceRateLimiter";
 
 const logger = createServiceLogger("PublicFormInterfaceFiles");
 
@@ -32,7 +32,7 @@ export async function publicFormInterfaceFilesRoutes(fastify: FastifyInstance) {
     fastify.post(
         "/:slug/upload",
         {
-            preHandler: [formInterfaceRateLimiter]
+            preHandler: [formInterfaceFileUploadRateLimiter]
         },
         async (request, reply) => {
             const { slug } = request.params as { slug: string };
@@ -135,13 +135,22 @@ export async function publicFormInterfaceFilesRoutes(fastify: FastifyInstance) {
                     data: {
                         gcsUri,
                         downloadUrl,
-                        filename: data.filename,
-                        size: fileBuffer.length,
+                        fileName: data.filename,
+                        fileSize: fileBuffer.length,
                         mimeType: data.mimetype
                     }
                 });
             } catch (error) {
-                logger.error({ slug, error }, "Error uploading file for form interface");
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                const errorStack = error instanceof Error ? error.stack : undefined;
+                logger.error(
+                    {
+                        slug,
+                        error: errorMessage,
+                        stack: errorStack
+                    },
+                    "Error uploading file for form interface"
+                );
                 return reply.status(500).send({
                     success: false,
                     error: "Failed to upload file"
