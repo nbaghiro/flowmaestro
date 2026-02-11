@@ -132,7 +132,7 @@ export function Tooltip({
                             transform
                         }}
                     >
-                        <div className="bg-card text-foreground text-xs px-3 py-2 rounded-lg shadow-lg border border-border max-w-xs whitespace-pre-wrap">
+                        <div className="bg-card text-foreground text-xs px-3 py-2 rounded-lg shadow-lg border border-border whitespace-nowrap">
                             {content}
                             <div className={arrowClass} />
                         </div>

@@ -35,12 +35,11 @@ export const Hero: React.FC = () => {
 
                 {/* Main Heading - Using serif font like Resend */}
                 <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-serif font-normal mb-6 leading-tight text-foreground">
-                    Automate everything
-                    <br className="hidden sm:block" />
-                    <span className="sm:hidden"> </span>
-                    with AI agents
-                    <br className="hidden sm:block" />
-                    <span className="sm:hidden"> </span>& workflows
+                    Automate
+                    <br />
+                    everything with
+                    <br />
+                    AI agents & workflows
                 </h1>
 
                 {/* Subheading */}
