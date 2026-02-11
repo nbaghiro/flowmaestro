@@ -104,13 +104,10 @@ export const CaseStudyContent: React.FC<CaseStudyContentProps> = ({ caseStudy })
                     <h3 className="text-2xl font-bold text-white mb-4">
                         Ready to achieve similar results?
                     </h3>
-                    <p className="text-gray-400 mb-6">
+                    <p className="text-muted-foreground mb-6">
                         Start building your own automated workflows and intelligent agents today.
                     </p>
-                    <a
-                        href={appUrl}
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors"
-                    >
+                    <a href={appUrl} className="btn-primary inline-flex items-center gap-2">
                         <span>Get Started Free</span>
                         <ArrowRight className="w-4 h-4" />
                     </a>

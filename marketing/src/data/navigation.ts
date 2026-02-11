@@ -2,11 +2,10 @@ import {
     Building2,
     Users,
     Mail,
-    BookOpen,
-    FileText,
-    History,
-    GraduationCap,
-    MessageSquare
+    MessageSquare,
+    Shield,
+    HelpCircle,
+    LayoutTemplate
 } from "lucide-react";
 import type { DropdownItem } from "../components/common/Dropdown";
 
@@ -24,10 +23,10 @@ export const COMPANY_NAV_ITEMS: DropdownItem[] = [
         description: "Join our team"
     },
     {
-        label: "Blog",
-        href: "/blog",
-        icon: FileText,
-        description: "Latest updates and insights"
+        label: "Security",
+        href: "/security",
+        icon: Shield,
+        description: "Enterprise-grade protection"
     },
     {
         label: "Contact",
@@ -39,22 +38,16 @@ export const COMPANY_NAV_ITEMS: DropdownItem[] = [
 
 export const RESOURCES_NAV_ITEMS: DropdownItem[] = [
     {
-        label: "Documentation",
-        href: "/docs",
-        icon: BookOpen,
-        description: "Guides and API reference"
+        label: "Templates",
+        href: "/templates",
+        icon: LayoutTemplate,
+        description: "Pre-built workflow templates"
     },
     {
-        label: "Case Studies",
-        href: "/case-studies",
-        icon: GraduationCap,
-        description: "Customer success stories"
-    },
-    {
-        label: "Changelog",
-        href: "/changelog",
-        icon: History,
-        description: "Product updates and releases"
+        label: "Help Center",
+        href: "/help",
+        icon: HelpCircle,
+        description: "FAQs and support resources"
     },
     {
         label: "Community",

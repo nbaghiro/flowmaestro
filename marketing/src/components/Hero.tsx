@@ -3,7 +3,6 @@ import { ArrowRight } from "lucide-react";
 import React, { useRef } from "react";
 import { useTheme } from "../hooks/useTheme";
 import { useThemedScreenshot } from "../hooks/useThemedScreenshot";
-import { InteractiveBackground } from "./InteractiveBackground";
 
 export const Hero: React.FC = () => {
     const sectionRef = useRef<HTMLElement>(null);
@@ -24,9 +23,6 @@ export const Hero: React.FC = () => {
             ref={sectionRef}
             className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-16"
         >
-            {/* Interactive Background with Mouse Effect */}
-            <InteractiveBackground />
-
             {/* Content */}
             <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-12 sm:pt-24 pb-8 sm:pb-12">
                 {/* Badge */}
@@ -73,8 +69,8 @@ export const Hero: React.FC = () => {
                         }}
                     />
 
-                    {/* Subtle glow on hover */}
-                    <div className="absolute -inset-4 bg-gradient-to-r from-foreground/5 via-foreground/10 to-foreground/5 rounded-2xl blur-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-500" />
+                    {/* Subtle glow effect */}
+                    <div className="absolute -inset-4 bg-gradient-to-r from-foreground/5 via-foreground/10 to-foreground/5 rounded-2xl blur-2xl opacity-60" />
 
                     {/* Screenshot image with scroll-based rotation */}
                     <motion.div

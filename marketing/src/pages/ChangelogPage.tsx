@@ -135,7 +135,7 @@ export const ChangelogPage: React.FC = () => {
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
                                 <span className="gradient-text">Changelog</span>
                             </h1>
-                            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                                 Stay up to date with the latest features, improvements, and fixes.
                             </p>
                         </motion.div>
@@ -143,9 +143,8 @@ export const ChangelogPage: React.FC = () => {
                 </section>
 
                 {/* Changelog Entries */}
-                <section className="relative py-16 px-4 sm:px-6 lg:px-8 bg-background-surface">
-                    <div className="absolute inset-0 grid-pattern opacity-50" />
-                    <div className="relative z-10 max-w-3xl mx-auto">
+                <section className="py-16 px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-3xl mx-auto">
                         <div className="space-y-12">
                             {changelog.map((entry, index) => (
                                 <motion.div
@@ -157,7 +156,7 @@ export const ChangelogPage: React.FC = () => {
                                     className="relative pl-8 border-l-2 border-stroke"
                                 >
                                     {/* Version dot */}
-                                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-primary-500 border-4 border-background-surface"></div>
+                                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-primary-500 border-4 border-background"></div>
 
                                     {/* Header */}
                                     <div className="mb-4">
@@ -165,11 +164,11 @@ export const ChangelogPage: React.FC = () => {
                                             <span className="text-sm font-mono text-primary-400">
                                                 v{entry.version}
                                             </span>
-                                            <span className="text-sm text-gray-500">
+                                            <span className="text-sm text-muted-foreground">
                                                 {entry.date}
                                             </span>
                                         </div>
-                                        <h2 className="text-xl font-bold text-white">
+                                        <h2 className="text-xl font-bold text-foreground">
                                             {entry.title}
                                         </h2>
                                     </div>
@@ -188,7 +187,7 @@ export const ChangelogPage: React.FC = () => {
                                                     >
                                                         {config.label}
                                                     </span>
-                                                    <span className="text-gray-300">
+                                                    <span className="text-muted-foreground">
                                                         {change.description}
                                                     </span>
                                                 </li>

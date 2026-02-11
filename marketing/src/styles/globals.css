@@ -50,12 +50,222 @@
         color: hsl(var(--foreground));
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        font-feature-settings: "rlig" 1, "calt" 1;
+        font-feature-settings:
+            "rlig" 1,
+            "calt" 1;
     }
 
     html {
         scroll-behavior: smooth;
     }
+}
+
+@layer components {
+    /* Primary button - solid background */
+    .btn-primary {
+        @apply px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium transition-colors hover:opacity-90;
+    }
+
+    /* Secondary button - outlined */
+    .btn-secondary {
+        @apply px-6 py-3 rounded-lg bg-transparent border border-border text-foreground font-medium transition-colors hover:bg-muted;
+    }
+}
+
+/* =============================================================================
+   NODE CATEGORY COLORS - Matching frontend for workflow canvas previews
+   ============================================================================= */
+
+:root {
+    /* INPUTS - emerald */
+    --category-inputs: #059669;
+    --category-inputs-text: #059669;
+    /* OUTPUTS - red */
+    --category-outputs: #ef4444;
+    --category-outputs-text: #ef4444;
+    /* AI - blue */
+    --category-ai: #3b82f6;
+    --category-ai-text: #3b82f6;
+    /* INTEGRATIONS - orange */
+    --category-integrations: #f97316;
+    --category-integrations-text: #f97316;
+    /* LOGIC - purple */
+    --category-logic: #a855f7;
+    --category-logic-text: #a855f7;
+    /* UTILS - stone */
+    --category-utils: #78716c;
+    --category-utils-text: #78716c;
+    /* DATA - teal */
+    --category-data: #14b8a6;
+    --category-data-text: #14b8a6;
+    /* Canvas background dots - slightly darker for better visibility */
+    --canvas-dots: #a1a1aa;
+}
+
+.dark {
+    --category-inputs: #10b981;
+    --category-inputs-text: #10b981;
+    --category-outputs: #f87171;
+    --category-outputs-text: #f87171;
+    --category-ai: #60a5fa;
+    --category-ai-text: #60a5fa;
+    --category-integrations: #fb923c;
+    --category-integrations-text: #fb923c;
+    --category-logic: #c084fc;
+    --category-logic-text: #c084fc;
+    --category-utils: #a8a29e;
+    --category-utils-text: #a8a29e;
+    --category-data: #2dd4bf;
+    --category-data-text: #2dd4bf;
+    /* Canvas background dots - subtle on dark backgrounds */
+    --canvas-dots: #52525b;
+}
+
+/* Category utility classes */
+.category-inputs-border {
+    border-left-color: var(--category-inputs);
+}
+.category-inputs-icon-bg {
+    background-color: color-mix(in srgb, var(--category-inputs) 15%, transparent);
+}
+.category-inputs-icon-text {
+    color: var(--category-inputs-text);
+}
+
+.category-outputs-border {
+    border-left-color: var(--category-outputs);
+}
+.category-outputs-icon-bg {
+    background-color: color-mix(in srgb, var(--category-outputs) 15%, transparent);
+}
+.category-outputs-icon-text {
+    color: var(--category-outputs-text);
+}
+
+.category-ai-border {
+    border-left-color: var(--category-ai);
+}
+.category-ai-icon-bg {
+    background-color: color-mix(in srgb, var(--category-ai) 15%, transparent);
+}
+.category-ai-icon-text {
+    color: var(--category-ai-text);
+}
+
+.category-integrations-border {
+    border-left-color: var(--category-integrations);
+}
+.category-integrations-icon-bg {
+    background-color: color-mix(in srgb, var(--category-integrations) 15%, transparent);
+}
+.category-integrations-icon-text {
+    color: var(--category-integrations-text);
+}
+
+.category-logic-border {
+    border-left-color: var(--category-logic);
+}
+.category-logic-icon-bg {
+    background-color: color-mix(in srgb, var(--category-logic) 15%, transparent);
+}
+.category-logic-icon-text {
+    color: var(--category-logic-text);
+}
+
+.category-utils-border {
+    border-left-color: var(--category-utils);
+}
+.category-utils-icon-bg {
+    background-color: color-mix(in srgb, var(--category-utils) 15%, transparent);
+}
+.category-utils-icon-text {
+    color: var(--category-utils-text);
+}
+
+.category-data-border {
+    border-left-color: var(--category-data);
+}
+.category-data-icon-bg {
+    background-color: color-mix(in srgb, var(--category-data) 15%, transparent);
+}
+.category-data-icon-text {
+    color: var(--category-data-text);
+}
+
+/* =============================================================================
+   REACT FLOW CUSTOM STYLES - Matching frontend App.css
+   ============================================================================= */
+
+/* React Flow canvas background */
+.react-flow {
+    background-color: hsl(0 0% 94%);
+}
+
+.dark .react-flow {
+    background-color: hsl(0 0% 12%);
+}
+
+/* Node styling - remove React Flow defaults but keep width/height intact */
+.react-flow__node {
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: inherit;
+    text-align: inherit;
+}
+
+/* Override React Flow's default input/output node styling */
+.react-flow__node-input,
+.react-flow__node-output {
+    border: none !important;
+    border-width: 0 !important;
+    border-style: none !important;
+    border-color: transparent !important;
+}
+
+/* Preview-specific styles */
+.workflow-preview {
+    isolation: isolate;
+}
+
+.workflow-preview .react-flow__node {
+    cursor: default;
+    pointer-events: none;
+}
+
+.workflow-preview .react-flow__handle {
+    pointer-events: none;
+    opacity: 1;
+}
+
+/* Edge styles - ensure visibility */
+.react-flow__edge-path {
+    stroke: #9ca3af;
+    stroke-width: 1.5px;
+}
+
+.dark .react-flow__edge-path {
+    stroke: #6b7280;
+    stroke-width: 1.5px;
+}
+
+/* Ensure edges are visible in workflow previews */
+.workflow-preview .react-flow__edge-path {
+    stroke: #9ca3af;
+    stroke-width: 1.5px;
+}
+
+.dark .workflow-preview .react-flow__edge-path {
+    stroke: #6b7280;
+    stroke-width: 1.5px;
+}
+
+/* Handle styles */
+.react-flow__handle {
+    width: 8px !important;
+    height: 8px !important;
 }
 
 @layer utilities {

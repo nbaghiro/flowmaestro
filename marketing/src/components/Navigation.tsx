@@ -2,23 +2,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Menu, Moon, Sun, X } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
+import { COMPANY_NAV_ITEMS, RESOURCES_NAV_ITEMS } from "../data/navigation";
 import { SOLUTION_NAV_ITEMS } from "../data/solutions";
 import { useTheme } from "../hooks/useTheme";
 import { Dropdown } from "./common/Dropdown";
-
-interface NavLinkProps {
-    label: string;
-    hasDropdown?: boolean;
-}
-
-const NavLink: React.FC<NavLinkProps> = ({ label, hasDropdown }) => {
-    return (
-        <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            {label}
-            {hasDropdown && <ChevronDown className="w-3 h-3" />}
-        </button>
-    );
-};
 
 const ThemeToggle: React.FC = () => {
     const { theme, toggleTheme } = useTheme();
@@ -37,6 +24,8 @@ const ThemeToggle: React.FC = () => {
 export const Navigation: React.FC = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const [isSolutionsExpanded, setIsSolutionsExpanded] = React.useState(false);
+    const [isCompanyExpanded, setIsCompanyExpanded] = React.useState(false);
+    const [isResourcesExpanded, setIsResourcesExpanded] = React.useState(false);
     const { theme, toggleTheme } = useTheme();
 
     // Close mobile menu on route change
@@ -110,8 +99,8 @@ export const Navigation: React.FC = () => {
                             >
                                 Integrations
                             </Link>
-                            <NavLink label="Company" hasDropdown />
-                            <NavLink label="Resources" hasDropdown />
+                            <Dropdown label="Company" items={COMPANY_NAV_ITEMS} />
+                            <Dropdown label="Resources" items={RESOURCES_NAV_ITEMS} />
                             <a
                                 href={import.meta.env.VITE_DOCS_URL}
                                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -234,14 +223,111 @@ export const Navigation: React.FC = () => {
                                 >
                                     Integrations
                                 </Link>
-                                <button className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border">
-                                    Company
-                                    <ChevronDown className="w-5 h-5" />
-                                </button>
-                                <button className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border">
-                                    Resources
-                                    <ChevronDown className="w-5 h-5" />
-                                </button>
+                                {/* Company Expandable Section */}
+                                <div>
+                                    <button
+                                        onClick={() => setIsCompanyExpanded(!isCompanyExpanded)}
+                                        className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border"
+                                    >
+                                        Company
+                                        <ChevronDown
+                                            className={`w-5 h-5 transition-transform duration-200 ${
+                                                isCompanyExpanded ? "rotate-180" : ""
+                                            }`}
+                                        />
+                                    </button>
+                                    <AnimatePresence>
+                                        {isCompanyExpanded && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: "auto", opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="py-2 pl-4 space-y-1">
+                                                    {COMPANY_NAV_ITEMS.map((item) => (
+                                                        <Link
+                                                            key={item.href}
+                                                            to={item.href}
+                                                            onClick={() =>
+                                                                setIsMobileMenuOpen(false)
+                                                            }
+                                                            className="flex items-center gap-3 py-3 text-muted-foreground hover:text-foreground transition-colors"
+                                                        >
+                                                            {item.icon && (
+                                                                <item.icon className="w-5 h-5" />
+                                                            )}
+                                                            <div>
+                                                                <div className="text-base font-medium">
+                                                                    {item.label}
+                                                                </div>
+                                                                {item.description && (
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        {item.description}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* Resources Expandable Section */}
+                                <div>
+                                    <button
+                                        onClick={() => setIsResourcesExpanded(!isResourcesExpanded)}
+                                        className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border"
+                                    >
+                                        Resources
+                                        <ChevronDown
+                                            className={`w-5 h-5 transition-transform duration-200 ${
+                                                isResourcesExpanded ? "rotate-180" : ""
+                                            }`}
+                                        />
+                                    </button>
+                                    <AnimatePresence>
+                                        {isResourcesExpanded && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: "auto", opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="py-2 pl-4 space-y-1">
+                                                    {RESOURCES_NAV_ITEMS.map((item) => (
+                                                        <Link
+                                                            key={item.href}
+                                                            to={item.href}
+                                                            onClick={() =>
+                                                                setIsMobileMenuOpen(false)
+                                                            }
+                                                            className="flex items-center gap-3 py-3 text-muted-foreground hover:text-foreground transition-colors"
+                                                        >
+                                                            {item.icon && (
+                                                                <item.icon className="w-5 h-5" />
+                                                            )}
+                                                            <div>
+                                                                <div className="text-base font-medium">
+                                                                    {item.label}
+                                                                </div>
+                                                                {item.description && (
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        {item.description}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
                                 <a
                                     href={import.meta.env.VITE_DOCS_URL}
                                     target="_blank"
