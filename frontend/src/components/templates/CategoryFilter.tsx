@@ -7,7 +7,15 @@ import {
     LayoutGrid,
     ShoppingCart,
     Cloud,
-    Heart
+    Heart,
+    Users,
+    DollarSign,
+    Sparkles,
+    BookOpen,
+    FileText,
+    BarChart3,
+    Mic,
+    GitBranch
 } from "lucide-react";
 import type { TemplateCategory, CategoryInfo } from "@flowmaestro/shared";
 import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
@@ -29,7 +37,15 @@ const categoryIcons: Record<string, React.ComponentType<{ className?: string }>>
     Headphones,
     ShoppingCart,
     Cloud,
-    Heart
+    Heart,
+    Users,
+    DollarSign,
+    Sparkles,
+    BookOpen,
+    FileText,
+    BarChart3,
+    Mic,
+    GitBranch
 };
 
 export function CategoryFilter({
@@ -126,6 +142,14 @@ export function CategoryFilter({
                         case "healthcare":
                             categoryColor =
                                 "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300";
+                            break;
+                        case "hr":
+                            categoryColor =
+                                "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300";
+                            break;
+                        case "finance":
+                            categoryColor =
+                                "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300";
                             break;
                     }
                 }
