@@ -53,7 +53,7 @@ spec:
               echo "========================================"
               echo ""
               echo "Seeding workflow templates..."
-              npx tsx backend/scripts/seed-templates.ts
+              npx tsx backend/scripts/seed-workflow-templates.ts
               echo ""
               echo "Seeding agent templates..."
               npx tsx backend/scripts/seed-agent-templates.ts
