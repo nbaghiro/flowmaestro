@@ -38,6 +38,7 @@ import {
     copyAgentTemplate,
     copyTemplate,
     createKnowledgeBase,
+    createWorkflow,
     getAgentTemplates,
     getAgents,
     getChatInterfaces,
@@ -49,7 +50,7 @@ import {
     getTemplates,
     getWorkflows
 } from "../lib/api";
-import type { KnowledgeBase, KnowledgeBaseStats } from "../lib/api";
+import type { KnowledgeBase, KnowledgeBaseStats, WorkflowDefinition } from "../lib/api";
 
 // Convert API response to WorkflowSummary format
 interface ApiWorkflow {
@@ -449,9 +450,11 @@ export function Home() {
 
     // Get Started panel handlers
     const handleCreateWorkflow = useCallback(
-        async (name: string, description?: string) => {
-            // Navigate to builder with new workflow
-            navigate("/builder/new", { state: { name, description } });
+        async (name: string, description?: string, definition?: WorkflowDefinition) => {
+            const response = await createWorkflow(name, description, definition);
+            if (response.success && response.data) {
+                navigate(`/builder/${response.data.id}`);
+            }
         },
         [navigate]
     );

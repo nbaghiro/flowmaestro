@@ -114,9 +114,11 @@ export function getOutputVariable(node: ValidatableNode): string | undefined {
         return data.outputVariable;
     }
 
-    // For input nodes, the variable name is the output
-    if (type === "input" && data.variableName && typeof data.variableName === "string") {
-        return data.variableName;
+    // For input nodes, the variable name is the output (default: "userInput")
+    if (type === "input") {
+        return typeof data.variableName === "string" && data.variableName
+            ? data.variableName
+            : "userInput";
     }
 
     // For files nodes
