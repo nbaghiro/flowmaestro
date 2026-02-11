@@ -20,6 +20,7 @@ import { agentRoutes } from "./routes/agents";
 import { analyticsRoutes } from "./routes/analytics";
 import { apiKeyRoutes } from "./routes/api-keys";
 import { authRoutes } from "./routes/auth";
+import { blogAdminRoutes } from "./routes/blog";
 import { chatInterfaceRoutes } from "./routes/chat-interfaces";
 import { checkpointRoutes } from "./routes/checkpoints";
 import { connectionRoutes } from "./routes/connections";
@@ -34,6 +35,7 @@ import { oauthRoutes } from "./routes/oauth";
 import { oauth1Routes } from "./routes/oauth1";
 import { personaInstanceRoutes } from "./routes/persona-instances";
 import { personaRoutes } from "./routes/personas";
+import { publicBlogRoutes } from "./routes/public/blog";
 import { publicChatInterfaceFileRoutes } from "./routes/public/chat-interface-files";
 import { publicChatInterfaceQueryRoutes } from "./routes/public/chat-interface-query";
 import { publicChatInterfaceStreamRoutes } from "./routes/public/chat-interface-stream";
@@ -213,6 +215,10 @@ export async function buildServer() {
     await fastify.register(publicChatInterfaceFileRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicChatInterfaceQueryRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicApiV1Routes, { prefix: "/api/v1" });
+    await fastify.register(publicBlogRoutes, { prefix: "/public/blog" });
+
+    // Blog admin routes (authenticated)
+    await fastify.register(blogAdminRoutes, { prefix: "/blog" });
 
     // WebSocket routes for real-time voice chat
     await fastify.register(voiceWebSocketRoutes);
