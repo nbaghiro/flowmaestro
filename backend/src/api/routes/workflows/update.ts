@@ -1,12 +1,13 @@
 import { FastifyInstance } from "fastify";
 import { WorkflowDefinition } from "@flowmaestro/shared";
-import { WorkflowRepository } from "../../../storage/repositories";
+import { WorkflowRepository, UserRepository } from "../../../storage/repositories";
 import {
     authMiddleware,
     workspaceContextMiddleware,
     validateRequest,
     validateParams,
-    NotFoundError
+    NotFoundError,
+    ForbiddenError
 } from "../../middleware";
 import { updateWorkflowSchema, workflowIdParamSchema } from "../../schemas/workflow-schemas";
 
@@ -23,6 +24,7 @@ export async function updateWorkflowRoute(fastify: FastifyInstance) {
         },
         async (request, reply) => {
             const workflowRepository = new WorkflowRepository();
+            const userRepository = new UserRepository();
             const { id } = request.params as { id: string };
             const body = request.body as {
                 name?: string;
@@ -32,14 +34,23 @@ export async function updateWorkflowRoute(fastify: FastifyInstance) {
                 aiPrompt?: string;
             };
 
-            // Check if workflow exists and belongs to this workspace
+            // Check if workflow exists
             const existingWorkflow = await workflowRepository.findById(id);
             if (!existingWorkflow) {
                 throw new NotFoundError("Workflow not found");
             }
 
-            if (existingWorkflow.workspace_id !== request.workspace!.id) {
-                throw new NotFoundError("Workflow not found");
+            // For system workflows, require admin access
+            if (existingWorkflow.workflow_type === "system") {
+                const user = await userRepository.findById(request.user.id);
+                if (!user?.is_admin) {
+                    throw new ForbiddenError("Admin access required to modify system workflows");
+                }
+            } else {
+                // For regular workflows, check workspace ownership
+                if (existingWorkflow.workspace_id !== request.workspace!.id) {
+                    throw new NotFoundError("Workflow not found");
+                }
             }
 
             // Update workflow

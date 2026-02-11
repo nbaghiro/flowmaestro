@@ -4,7 +4,7 @@
  * Populates the persona_task_templates table with pre-built task patterns
  * for each persona.
  *
- * Run with: npx tsx backend/scripts/seed-persona-templates.ts
+ * Run with: npm run db:seed:persona-task-templates
  */
 
 import * as path from "path";

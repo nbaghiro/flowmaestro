@@ -9,6 +9,7 @@ import { generateWorkflowRoute } from "./generate";
 import { generationChatRoute } from "./generation-chat";
 import { generationChatStreamHandler } from "./generation-chat-stream";
 import { getWorkflowRoute } from "./get";
+import { getWorkflowBySystemKeyRoute } from "./get-by-system-key";
 import { listWorkflowsRoute } from "./list";
 import { updateWorkflowRoute } from "./update";
 import { uploadWorkflowFilesRoute } from "./upload-files";
@@ -17,6 +18,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     // Register all workflow routes
     await listWorkflowsRoute(fastify);
     await createWorkflowRoute(fastify);
+    await getWorkflowBySystemKeyRoute(fastify); // Must be before getWorkflowRoute to avoid matching :id
     await getWorkflowRoute(fastify);
     await updateWorkflowRoute(fastify);
     await deleteWorkflowRoute(fastify);

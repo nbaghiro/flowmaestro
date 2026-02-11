@@ -1,6 +1,11 @@
 import type { JsonValue, WorkflowDefinition } from "@flowmaestro/shared";
 import { db } from "../database";
-import { WorkflowModel, CreateWorkflowInput, UpdateWorkflowInput } from "../models/Workflow";
+import {
+    WorkflowModel,
+    CreateWorkflowInput,
+    UpdateWorkflowInput,
+    WorkflowType
+} from "../models/Workflow";
 
 interface WorkflowRow {
     id: string;
@@ -12,6 +17,8 @@ interface WorkflowRow {
     version: number;
     ai_generated: boolean;
     ai_prompt: string | null;
+    workflow_type: WorkflowType;
+    system_key: string | null;
     created_at: string | Date;
     updated_at: string | Date;
     deleted_at: string | Date | null;
@@ -20,8 +27,8 @@ interface WorkflowRow {
 export class WorkflowRepository {
     async create(input: CreateWorkflowInput): Promise<WorkflowModel> {
         const query = `
-            INSERT INTO flowmaestro.workflows (name, description, definition, user_id, workspace_id, ai_generated, ai_prompt)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO flowmaestro.workflows (name, description, definition, user_id, workspace_id, ai_generated, ai_prompt, workflow_type, system_key)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
         `;
 
@@ -32,7 +39,9 @@ export class WorkflowRepository {
             input.user_id,
             input.workspace_id,
             input.ai_generated || false,
-            input.ai_prompt || null
+            input.ai_prompt || null,
+            input.workflow_type || "user",
+            input.system_key || null
         ];
 
         const result = await db.query<WorkflowRow>(query, values);
@@ -61,7 +70,12 @@ export class WorkflowRepository {
 
     async findByWorkspaceId(
         workspaceId: string,
-        options: { limit?: number; offset?: number; folderId?: string | null } = {}
+        options: {
+            limit?: number;
+            offset?: number;
+            folderId?: string | null;
+            includeSystem?: boolean;
+        } = {}
     ): Promise<{ workflows: WorkflowModel[]; total: number }> {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
@@ -82,10 +96,15 @@ export class WorkflowRepository {
             queryParams.push(options.folderId);
         }
 
+        // Filter out system workflows by default (unless includeSystem is true)
+        const systemFilter = options.includeSystem
+            ? ""
+            : " AND (workflow_type = 'user' OR workflow_type IS NULL)";
+
         const countQuery = `
             SELECT COUNT(*) as count
             FROM flowmaestro.workflows
-            WHERE workspace_id = $1 AND deleted_at IS NULL${folderFilter}
+            WHERE workspace_id = $1 AND deleted_at IS NULL${folderFilter}${systemFilter}
         `;
 
         const limitParamIndex = queryParams.length + 1;
@@ -93,7 +112,7 @@ export class WorkflowRepository {
         const query = `
             SELECT *
             FROM flowmaestro.workflows
-            WHERE workspace_id = $1 AND deleted_at IS NULL${folderFilter}
+            WHERE workspace_id = $1 AND deleted_at IS NULL${folderFilter}${systemFilter}
             ORDER BY created_at DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
@@ -197,6 +216,57 @@ export class WorkflowRepository {
         return (result.rowCount || 0) > 0;
     }
 
+    /**
+     * Find a system workflow by its system_key
+     */
+    async findBySystemKey(key: string): Promise<WorkflowModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.workflows
+            WHERE system_key = $1 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query<WorkflowRow>(query, [key]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as WorkflowRow) : null;
+    }
+
+    /**
+     * Upsert a system workflow by its system_key
+     * Used for seeding system workflows during deployment
+     */
+    async upsertBySystemKey(
+        input: CreateWorkflowInput & { system_key: string }
+    ): Promise<WorkflowModel> {
+        const query = `
+            INSERT INTO flowmaestro.workflows (
+                name, description, definition, user_id, workspace_id,
+                ai_generated, ai_prompt, workflow_type, system_key
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ON CONFLICT (system_key) WHERE system_key IS NOT NULL AND deleted_at IS NULL
+            DO UPDATE SET
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                definition = EXCLUDED.definition,
+                updated_at = NOW()
+            RETURNING *
+        `;
+
+        const values = [
+            input.name,
+            input.description || null,
+            JSON.stringify(input.definition),
+            input.user_id,
+            input.workspace_id,
+            input.ai_generated || false,
+            input.ai_prompt || null,
+            input.workflow_type || "system",
+            input.system_key
+        ];
+
+        const result = await db.query<WorkflowRow>(query, values);
+        return this.mapRow(result.rows[0] as WorkflowRow);
+    }
+
     private mapRow(row: WorkflowRow): WorkflowModel {
         return {
             id: row.id,
@@ -209,6 +279,8 @@ export class WorkflowRepository {
             version: row.version,
             ai_generated: row.ai_generated,
             ai_prompt: row.ai_prompt,
+            workflow_type: row.workflow_type || "user",
+            system_key: row.system_key,
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at),
             deleted_at: row.deleted_at ? new Date(row.deleted_at) : null
