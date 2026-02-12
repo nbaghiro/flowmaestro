@@ -32,7 +32,7 @@ export function CreateCard({ icon, label, onClick, className }: CreateCardProps)
                 className={cn(
                     "flex items-center justify-center",
                     "w-10 h-10 rounded-full",
-                    "bg-muted/50 group-hover:bg-primary/10 transition-colors"
+                    "bg-muted dark:bg-muted/50 group-hover:bg-primary/10 transition-colors"
                 )}
             >
                 <Plus className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />

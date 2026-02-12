@@ -169,6 +169,8 @@ if ! $SKIP_BUILD; then
             --build-arg VITE_API_URL="https://api.$DOMAIN" \
             --build-arg VITE_WS_URL="https://api.$DOMAIN" \
             --build-arg VITE_UNSPLASH_ACCESS_KEY="${VITE_UNSPLASH_ACCESS_KEY:-}" \
+            --build-arg VITE_POSTHOG_KEY="${VITE_POSTHOG_KEY:-phc_19ngK2JEzaHA8Z1RvdZsdGepCqqTKhyunujOw0NRz2F}" \
+            --build-arg VITE_POSTHOG_HOST="${VITE_POSTHOG_HOST:-https://us.i.posthog.com}" \
             -t "$REGISTRY/frontend:$IMAGE_TAG" \
             .
 

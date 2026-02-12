@@ -3,11 +3,12 @@
  *
  * Shows plan selection and embedded Stripe checkout with PaymentElement.
  */
-import { Check, Loader2, Zap, Users, ArrowLeft } from "lucide-react";
+import { Check, Zap, Users, ArrowLeft } from "lucide-react";
 import React from "react";
 import { SUBSCRIPTION_PLANS } from "@flowmaestro/shared";
 import { createEmbeddedSubscription, CreateEmbeddedSubscriptionResponse } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { Button } from "../common/Button";
 import { Dialog } from "../common/Dialog";
 import { CheckoutForm } from "./CheckoutForm";
 import { StripeProvider } from "./StripeProvider";
@@ -32,7 +33,6 @@ interface PlanOption {
     credits: number;
     features: string[];
     icon: React.ReactNode;
-    popular?: boolean;
 }
 
 const PLAN_OPTIONS: PlanOption[] = [
@@ -42,15 +42,15 @@ const PLAN_OPTIONS: PlanOption[] = [
         description: "For individuals and small teams",
         monthlyPrice: 29,
         annualPrice: 290,
-        credits: 2500,
+        credits: 5000,
         features: [
-            "2,500 credits/month",
+            "5,000 credits/month",
             "Unlimited workflows",
             "All integrations",
             "Priority support",
             "Custom branding"
         ],
-        icon: <Zap className="h-5 w-5" />
+        icon: <Zap className="h-4 w-4" />
     },
     {
         slug: "team",
@@ -58,16 +58,15 @@ const PLAN_OPTIONS: PlanOption[] = [
         description: "For growing organizations",
         monthlyPrice: 99,
         annualPrice: 990,
-        credits: 10000,
+        credits: 25000,
         features: [
-            "10,000 credits/month",
+            "25,000 credits/month",
             "Everything in Pro",
             "Team collaboration",
             "Advanced analytics",
             "SSO & audit logs"
         ],
-        icon: <Users className="h-5 w-5" />,
-        popular: true
+        icon: <Users className="h-4 w-4" />
     }
 ];
 
@@ -137,46 +136,48 @@ export const UpgradeDialog: React.FC<UpgradeDialogProps> = ({
     const returnUrl = `${window.location.origin}/billing/success?workspaceId=${workspaceId}`;
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title="" className="max-w-2xl">
+        <Dialog isOpen={isOpen} onClose={onClose} size="2xl">
             {/* Plan Selection Step */}
             {step === "select" && (
                 <div className="space-y-6">
                     <div>
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        <h2 className="text-lg font-semibold text-foreground">
                             Upgrade your workspace
                         </h2>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             Choose a plan that works best for your needs
                         </p>
                     </div>
 
                     {/* Billing Interval Toggle */}
-                    <div className="flex items-center justify-center gap-4">
-                        <button
-                            onClick={() => setBillingInterval("monthly")}
-                            className={cn(
-                                "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                                billingInterval === "monthly"
-                                    ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
-                                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                            )}
-                        >
-                            Monthly
-                        </button>
-                        <button
-                            onClick={() => setBillingInterval("annual")}
-                            className={cn(
-                                "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                                billingInterval === "annual"
-                                    ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
-                                    : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                            )}
-                        >
-                            Annual
-                            <span className="ml-1 text-xs text-green-600 dark:text-green-400">
-                                Save 17%
-                            </span>
-                        </button>
+                    <div className="flex items-center justify-center">
+                        <div className="flex bg-muted rounded-lg p-0.5">
+                            <button
+                                onClick={() => setBillingInterval("monthly")}
+                                className={cn(
+                                    "min-w-[6rem] px-3 py-1 text-sm font-medium text-center rounded-md transition-colors",
+                                    billingInterval === "monthly"
+                                        ? "bg-card text-foreground shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Monthly
+                            </button>
+                            <button
+                                onClick={() => setBillingInterval("annual")}
+                                className={cn(
+                                    "min-w-[6rem] px-3 py-1 text-sm font-medium text-center rounded-md transition-colors",
+                                    billingInterval === "annual"
+                                        ? "bg-card text-foreground shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                Annual
+                                <span className="ml-1.5 text-xs text-muted-foreground">
+                                    Save 17%
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Plan Cards */}
@@ -195,68 +196,56 @@ export const UpgradeDialog: React.FC<UpgradeDialogProps> = ({
                                     onClick={() => !isCurrent && setSelectedPlan(plan.slug)}
                                     disabled={isCurrent}
                                     className={cn(
-                                        "relative text-left p-4 rounded-xl border-2 transition-all",
+                                        "relative text-left p-4 rounded-lg border transition-all",
                                         isSelected && !isCurrent
-                                            ? "border-indigo-500 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20"
-                                            : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600",
+                                            ? "border-foreground/50 bg-muted/30"
+                                            : "border-border hover:border-border/80 hover:bg-muted/20",
                                         isCurrent && "opacity-50 cursor-not-allowed"
                                     )}
                                 >
-                                    {plan.popular && (
-                                        <span className="absolute -top-3 left-4 px-2 py-0.5 text-xs font-medium bg-indigo-500 text-white rounded-full">
-                                            Most Popular
-                                        </span>
-                                    )}
                                     {isCurrent && (
-                                        <span className="absolute -top-3 right-4 px-2 py-0.5 text-xs font-medium bg-gray-500 text-white rounded-full">
-                                            Current Plan
+                                        <span className="absolute -top-2.5 right-3 px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded border border-border">
+                                            Current
                                         </span>
                                     )}
 
                                     <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className={cn(
-                                                    "p-2 rounded-lg",
-                                                    isSelected
-                                                        ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400"
-                                                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                                                )}
-                                            >
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-1.5 rounded-md bg-muted text-muted-foreground">
                                                 {plan.icon}
                                             </div>
                                             <div>
-                                                <h3 className="font-semibold text-gray-900 dark:text-white">
+                                                <h3 className="font-medium text-foreground">
                                                     {plan.name}
                                                 </h3>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                <p className="text-xs text-muted-foreground">
                                                     {plan.description}
                                                 </p>
                                             </div>
                                         </div>
                                         {isSelected && !isCurrent && (
-                                            <div className="flex-shrink-0 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
-                                                <Check className="w-3 h-3 text-white" />
+                                            <div className="flex-shrink-0 w-5 h-5 bg-foreground rounded-full flex items-center justify-center">
+                                                <Check className="w-3 h-3 text-background" />
                                             </div>
                                         )}
                                     </div>
 
                                     <div className="mt-4">
-                                        <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                                        <span className="text-2xl font-semibold text-foreground">
                                             ${planPrice}
                                         </span>
-                                        <span className="text-gray-500 dark:text-gray-400">
+                                        <span className="text-sm text-muted-foreground">
                                             /{billingInterval === "monthly" ? "mo" : "yr"}
                                         </span>
                                     </div>
 
-                                    <ul className="mt-4 space-y-2">
+                                    <ul className="mt-4 space-y-1.5">
                                         {plan.features.map((feature, i) => (
                                             <li
                                                 key={i}
-                                                className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
+                                                className="flex items-center gap-2 text-sm text-muted-foreground"
                                             >
-                                                <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                                <Check className="w-3.5 h-3.5 flex-shrink-0" />
                                                 {feature}
                                             </li>
                                         ))}
@@ -267,38 +256,24 @@ export const UpgradeDialog: React.FC<UpgradeDialogProps> = ({
                     </div>
 
                     {error && (
-                        <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                            <p className="text-sm text-destructive">{error}</p>
                         </div>
                     )}
 
                     {/* Action Buttons */}
-                    <div className="flex justify-end gap-3">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                        >
+                    <div className="flex justify-end gap-3 pt-2">
+                        <Button variant="ghost" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="primary"
                             onClick={handleProceedToCheckout}
                             disabled={isLoading || currentPlan === selectedPlan}
-                            className={cn(
-                                "px-6 py-2 text-sm font-medium rounded-lg transition-colors",
-                                "bg-indigo-600 text-white hover:bg-indigo-700",
-                                "disabled:opacity-50 disabled:cursor-not-allowed",
-                                "flex items-center gap-2"
-                            )}
+                            loading={isLoading}
                         >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Loading...
-                                </>
-                            ) : (
-                                <>Continue to checkout</>
-                            )}
-                        </button>
+                            Continue to checkout
+                        </Button>
                     </div>
                 </div>
             )}
@@ -309,15 +284,15 @@ export const UpgradeDialog: React.FC<UpgradeDialogProps> = ({
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => setStep("select")}
-                            className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            className="p-1.5 rounded-md hover:bg-muted transition-colors"
                         >
-                            <ArrowLeft className="w-5 h-5 text-gray-500" />
+                            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
                         </button>
                         <div>
-                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                            <h2 className="text-lg font-semibold text-foreground">
                                 Complete your subscription
                             </h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                            <p className="text-sm text-muted-foreground">
                                 Enter your payment details below
                             </p>
                         </div>
@@ -344,22 +319,19 @@ export const UpgradeDialog: React.FC<UpgradeDialogProps> = ({
             {/* Success Step */}
             {step === "success" && (
                 <div className="text-center py-8 space-y-4">
-                    <div className="w-16 h-16 mx-auto rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                        <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
+                    <div className="w-14 h-14 mx-auto rounded-full bg-muted flex items-center justify-center">
+                        <Check className="w-6 h-6 text-foreground" />
                     </div>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    <h2 className="text-lg font-semibold text-foreground">
                         Welcome to {selectedPlanData.name}!
                     </h2>
-                    <p className="text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-muted-foreground">
                         Your subscription has been activated. You now have access to all{" "}
                         {selectedPlanData.name} features.
                     </p>
-                    <button
-                        onClick={onClose}
-                        className="px-6 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-                    >
+                    <Button variant="primary" onClick={onClose}>
                         Get started
-                    </button>
+                    </Button>
                 </div>
             )}
         </Dialog>

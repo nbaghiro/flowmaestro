@@ -313,6 +313,10 @@ VITE_API_URL=http://localhost:3001
 VITE_WS_URL=http://localhost:3001
 VITE_UNSPLASH_ACCESS_KEY=cNlNDO6FH0tAfqBa8wZJypg2aAhr9-3ZPud0omQzplo
 
+# PostHog Analytics
+VITE_POSTHOG_KEY=phc_19ngK2JEzaHA8Z1RvdZsdGepCqqTKhyunujOw0NRz2F
+VITE_POSTHOG_HOST=https://us.i.posthog.com
+
 # ==============================================================================
 # Google Cloud Storage
 # ==============================================================================

@@ -54,6 +54,8 @@ REGISTRY="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/flowmaestro"
 
 # Get configuration from Pulumi config
 GA_MEASUREMENT_ID=$(pulumi config get gaMeasurementId 2>/dev/null || echo "")
+POSTHOG_KEY=$(pulumi config get posthogKey 2>/dev/null || echo "")
+POSTHOG_HOST=$(pulumi config get posthogHost 2>/dev/null || echo "https://us.i.posthog.com")
 APP_URL=$(pulumi config get appUrl 2>/dev/null || echo "https://app.flowmaestro.ai")
 DOCS_URL=$(pulumi config get docsUrl 2>/dev/null || echo "https://docs.flowmaestro.ai")
 
@@ -64,6 +66,7 @@ echo "  Registry: $REGISTRY"
 echo "  App URL:  $APP_URL"
 echo "  Docs URL: $DOCS_URL"
 [ -n "$GA_MEASUREMENT_ID" ] && echo "  GA ID:    $GA_MEASUREMENT_ID"
+[ -n "$POSTHOG_KEY" ] && echo "  PostHog:  configured"
 echo ""
 
 cd "$REPO_ROOT" || exit 1
@@ -88,6 +91,8 @@ print_info "Building marketing Docker image for linux/amd64..."
 docker build \
     --platform linux/amd64 \
     --build-arg VITE_GA_MEASUREMENT_ID="$GA_MEASUREMENT_ID" \
+    --build-arg VITE_POSTHOG_KEY="$POSTHOG_KEY" \
+    --build-arg VITE_POSTHOG_HOST="$POSTHOG_HOST" \
     --build-arg VITE_APP_URL="$APP_URL" \
     --build-arg VITE_DOCS_URL="$DOCS_URL" \
     -f infra/docker/marketing/Dockerfile \

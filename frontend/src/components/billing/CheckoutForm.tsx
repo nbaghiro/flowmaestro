@@ -5,7 +5,7 @@
  * Styled to match the app's design system.
  */
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { Loader2, CreditCard, Shield, AlertCircle } from "lucide-react";
+import { CreditCard, Shield, AlertCircle } from "lucide-react";
 import React from "react";
 import { Button } from "../common/Button";
 
@@ -122,26 +122,22 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
             {/* Plan Summary */}
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4">
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h3 className="font-medium text-gray-900 dark:text-white">{planName}</h3>
+                        <h3 className="font-medium text-foreground">{planName}</h3>
                         {trialDays > 0 && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                            <p className="text-sm text-muted-foreground">
                                 {trialDays}-day free trial
                             </p>
                         )}
                     </div>
                     <div className="text-right">
-                        <p className="font-semibold text-gray-900 dark:text-white">
-                            {priceDisplay}
-                        </p>
+                        <p className="font-semibold text-foreground">{priceDisplay}</p>
                         {trialDays > 0 && (
-                            <p className="text-sm text-green-600 dark:text-green-400">
-                                Due after trial
-                            </p>
+                            <p className="text-sm text-muted-foreground">Due after trial</p>
                         )}
                     </div>
                 </div>
@@ -149,10 +145,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
 
             {/* Payment Element */}
             <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Payment details
-                </label>
-                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
+                <label className="block text-sm font-medium text-foreground">Payment details</label>
+                <div className="rounded-lg border border-border p-4 bg-card">
                     <PaymentElement
                         onReady={() => setIsReady(true)}
                         options={{
@@ -174,52 +168,41 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
 
             {/* Error Message */}
             {errorMessage && (
-                <div className="flex items-start gap-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
-                    <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+                    <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
                     <div>
-                        <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                            Payment failed
-                        </p>
-                        <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                            {errorMessage}
-                        </p>
+                        <p className="text-sm font-medium text-destructive">Payment failed</p>
+                        <p className="text-sm text-destructive/80 mt-0.5">{errorMessage}</p>
                     </div>
                 </div>
             )}
 
             {/* Security Badge */}
-            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <Shield className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Shield className="h-3.5 w-3.5" />
                 <span>Secured by Stripe. Your payment info is encrypted.</span>
             </div>
 
             {/* Submit Button */}
             <Button
                 type="submit"
+                variant="primary"
                 disabled={!stripe || !elements || isProcessing || !isReady}
+                loading={isProcessing}
                 className="w-full"
             >
-                {isProcessing ? (
-                    <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                    </>
-                ) : (
-                    <>
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        {trialDays > 0
-                            ? `Start ${trialDays}-day free trial`
-                            : `Subscribe for ${priceDisplay}`}
-                    </>
-                )}
+                {!isProcessing && <CreditCard className="mr-2 h-4 w-4" />}
+                {trialDays > 0
+                    ? `Start ${trialDays}-day free trial`
+                    : `Subscribe for ${priceDisplay}`}
             </Button>
 
             {/* Terms */}
-            <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-center text-muted-foreground">
                 By subscribing, you agree to our{" "}
                 <a
                     href="/terms"
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                    className="text-foreground hover:underline"
                     target="_blank"
                     rel="noopener noreferrer"
                 >
@@ -228,7 +211,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
                 and{" "}
                 <a
                     href="/privacy"
-                    className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                    className="text-foreground hover:underline"
                     target="_blank"
                     rel="noopener noreferrer"
                 >

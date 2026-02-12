@@ -41,7 +41,7 @@ export const WORKSPACE_LIMITS = {
         max_kb_chunks: 100,
         max_members: 1,
         max_connections: 5,
-        monthly_credits: 100,
+        monthly_credits: 250,
         execution_history_days: 7
     },
     pro: {
@@ -51,7 +51,7 @@ export const WORKSPACE_LIMITS = {
         max_kb_chunks: 5000,
         max_members: 5,
         max_connections: 25,
-        monthly_credits: 2500,
+        monthly_credits: 5000,
         execution_history_days: 30
     },
     team: {
@@ -61,7 +61,7 @@ export const WORKSPACE_LIMITS = {
         max_kb_chunks: 50000,
         max_members: -1,
         max_connections: -1,
-        monthly_credits: 10000,
+        monthly_credits: 25000,
         execution_history_days: 90
     }
 } as const;
@@ -274,9 +274,9 @@ export interface CreditPack {
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
-    { id: "starter", credits: 500, priceInCents: 500, label: "Starter", savingsPercent: 0 },
-    { id: "growth", credits: 2500, priceInCents: 2250, label: "Growth", savingsPercent: 10 },
-    { id: "scale", credits: 10000, priceInCents: 8000, label: "Scale", savingsPercent: 20 },
+    { id: "starter", credits: 1000, priceInCents: 1000, label: "Starter", savingsPercent: 0 },
+    { id: "growth", credits: 5000, priceInCents: 4500, label: "Growth", savingsPercent: 10 },
+    { id: "scale", credits: 15000, priceInCents: 12000, label: "Scale", savingsPercent: 20 },
     {
         id: "enterprise",
         credits: 50000,
