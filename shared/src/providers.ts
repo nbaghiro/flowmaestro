@@ -1645,8 +1645,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Business phone and messaging",
         logoUrl: getBrandLogo("ringcentral.com"),
         category: "Communication",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "webex",
@@ -1671,8 +1670,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Shared inbox and team collaboration",
         logoUrl: getBrandLogo("front.com"),
         category: "Communication",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "postmark",
@@ -1681,7 +1679,12 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("postmarkapp.com"),
         category: "Communication",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Server API Token",
+            keyPlaceholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+            helpText: "Find your Server API Token in Postmark → Server → API Tokens",
+            helpUrl: "https://postmarkapp.com/developer"
+        }
     },
     {
         provider: "messagebird",
