@@ -235,19 +235,20 @@ describe("CreditService", () => {
             expect(credits).toBeGreaterThanOrEqual(1);
         });
 
-        it("should return minimum 1 credit", () => {
-            // Very small token counts
+        it("should return minimum 25 credits", () => {
+            // Very small token counts - minimum is 25 credits
             const credits = service.calculateLLMCredits("gpt-4o-mini", 1, 1);
 
-            expect(credits).toBe(1);
+            expect(credits).toBe(25);
         });
 
         it("should scale linearly with token count", () => {
-            const credits1k = service.calculateLLMCredits("gpt-4o", 1000, 1000);
+            // Use larger token counts to avoid MIN_LLM_CREDITS floor
             const credits10k = service.calculateLLMCredits("gpt-4o", 10000, 10000);
+            const credits100k = service.calculateLLMCredits("gpt-4o", 100000, 100000);
 
-            // 10x tokens should be roughly 10x credits
-            expect(credits10k / credits1k).toBeGreaterThan(5);
+            // 10x tokens should be roughly 10x credits (above minimum threshold)
+            expect(credits100k / credits10k).toBeGreaterThan(5);
         });
 
         it("should handle large token counts", () => {
@@ -273,30 +274,31 @@ describe("CreditService", () => {
             expect(httpCost).toBeGreaterThanOrEqual(0);
             expect(unknownCost).toBeGreaterThanOrEqual(0);
 
-            // Unknown types should fall back to default (1)
-            expect(unknownCost).toBe(1);
+            // Unknown types should fall back to default (5)
+            expect(unknownCost).toBe(5);
         });
 
         it("should return correct credits for data processing nodes", () => {
-            expect(service.calculateNodeCredits("data_transform")).toBe(1);
-            expect(service.calculateNodeCredits("http_request")).toBe(2);
-            expect(service.calculateNodeCredits("code_execution")).toBe(3);
-            expect(service.calculateNodeCredits("database_query")).toBe(3);
+            expect(service.calculateNodeCredits("data_transform")).toBe(5);
+            expect(service.calculateNodeCredits("http_request")).toBe(10);
+            expect(service.calculateNodeCredits("code_execution")).toBe(15);
+            // database_query is not explicitly defined, uses default
+            expect(service.calculateNodeCredits("database_query")).toBe(5);
         });
 
         it("should return correct credits for knowledge base nodes", () => {
-            expect(service.calculateNodeCredits("knowledge_search")).toBe(5);
-            expect(service.calculateNodeCredits("knowledge_index")).toBe(10);
+            expect(service.calculateNodeCredits("knowledge_search")).toBe(25);
+            expect(service.calculateNodeCredits("knowledge_index")).toBe(50);
         });
 
         it("should return correct credits for image generation nodes", () => {
-            expect(service.calculateNodeCredits("image_generation_dalle")).toBe(50);
-            expect(service.calculateNodeCredits("image_generation_midjourney")).toBe(100);
-            expect(service.calculateNodeCredits("image_generation_stable")).toBe(30);
+            expect(service.calculateNodeCredits("image_generation_dalle_3")).toBe(150);
+            expect(service.calculateNodeCredits("image_generation_midjourney")).toBe(300);
+            expect(service.calculateNodeCredits("image_generation_stable")).toBe(100);
         });
 
         it("should return default credits for unknown nodes", () => {
-            expect(service.calculateNodeCredits("unknown_node_type")).toBe(1);
+            expect(service.calculateNodeCredits("unknown_node_type")).toBe(5);
         });
     });
 
@@ -376,7 +378,7 @@ describe("CreditService", () => {
             expect(estimate.breakdown[0]).toEqual({
                 nodeId: "node-1",
                 nodeType: "http_request",
-                credits: 2,
+                credits: 10,
                 description: "http_request execution"
             });
         });
