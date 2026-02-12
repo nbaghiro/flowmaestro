@@ -1,7 +1,8 @@
 import { Building2, Users, CreditCard, Trash2, ArrowUpCircle, Loader2 } from "lucide-react";
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { WORKSPACE_LIMITS } from "@flowmaestro/shared";
+import { UpgradeDialog } from "../components/billing";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
@@ -9,6 +10,7 @@ import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
 import { Textarea } from "../components/common/Textarea";
 import { CreateWorkspaceDialog, InviteMemberDialog, MemberList } from "../components/workspace";
+import { WorkspaceEvents, BillingEvents } from "../lib/analytics";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 
 function WorkspaceInfoSection() {
@@ -36,10 +38,20 @@ function WorkspaceInfoSection() {
         setIsSubmitting(true);
 
         try {
+            const fieldsUpdated: string[] = [];
+            if (name.trim() !== currentWorkspace.name) fieldsUpdated.push("name");
+            if (description.trim() !== (currentWorkspace.description || ""))
+                fieldsUpdated.push("description");
+
             await updateWorkspace(currentWorkspace.id, {
                 name: name.trim(),
                 description: description.trim() || undefined
             });
+
+            if (fieldsUpdated.length > 0) {
+                WorkspaceEvents.infoUpdated({ workspaceId: currentWorkspace.id, fieldsUpdated });
+            }
+
             setSuccess(true);
             setIsEditing(false);
             setTimeout(() => setSuccess(false), 3000);
@@ -300,11 +312,8 @@ function UsageSection() {
 }
 
 function UpgradeSection() {
-    const { currentWorkspace, upgradePlan } = useWorkspaceStore();
-    const [selectedPlan, setSelectedPlan] = useState<"pro" | "team" | null>(null);
-    const [isUpgrading, setIsUpgrading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState(false);
+    const { currentWorkspace, initialize } = useWorkspaceStore();
+    const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
     if (!currentWorkspace || currentWorkspace.type === "team") return null;
 
@@ -338,25 +347,10 @@ function UpgradeSection() {
 
     if (availablePlans.length === 0) return null;
 
-    const handleUpgrade = async () => {
-        if (!selectedPlan) return;
-
-        setIsUpgrading(true);
-        setError(null);
-
-        try {
-            await upgradePlan(selectedPlan);
-            setSuccess(true);
-            setSelectedPlan(null);
-            setTimeout(() => setSuccess(false), 5000);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to upgrade plan");
-        } finally {
-            setIsUpgrading(false);
-        }
+    const handleUpgradeSuccess = () => {
+        // Refresh workspace data to get updated plan/limits
+        initialize();
     };
-
-    const selectedPlanDetails = plans.find((p) => p.type === selectedPlan);
 
     return (
         <div className="bg-card border border-border rounded-lg p-6">
@@ -369,18 +363,6 @@ function UpgradeSection() {
                     <p className="text-sm text-muted-foreground mb-4">
                         Get more resources and features
                     </p>
-
-                    {error && (
-                        <Alert variant="error" className="mb-4" onClose={() => setError(null)}>
-                            {error}
-                        </Alert>
-                    )}
-
-                    {success && (
-                        <Alert variant="success" className="mb-4">
-                            Plan upgraded successfully! Your new limits are now active.
-                        </Alert>
-                    )}
 
                     <div className="grid gap-4 md:grid-cols-2">
                         {availablePlans.map((plan) => (
@@ -404,8 +386,13 @@ function UpgradeSection() {
                                     variant="secondary"
                                     size="sm"
                                     className="w-full"
-                                    onClick={() => setSelectedPlan(plan.type)}
-                                    disabled={isUpgrading}
+                                    onClick={() => {
+                                        BillingEvents.upgradeDialogOpened({
+                                            currentPlan: currentWorkspace.type,
+                                            targetPlan: plan.type
+                                        });
+                                        setShowUpgradeDialog(true);
+                                    }}
                                 >
                                     Upgrade to {plan.name}
                                 </Button>
@@ -415,16 +402,12 @@ function UpgradeSection() {
                 </div>
             </div>
 
-            <ConfirmDialog
-                isOpen={!!selectedPlan && !isUpgrading}
-                onClose={() => setSelectedPlan(null)}
-                onConfirm={handleUpgrade}
-                title={`Upgrade to ${selectedPlanDetails?.name}`}
-                message={`You are about to upgrade to the ${selectedPlanDetails?.name} plan (${selectedPlanDetails?.price}). This will immediately increase your workspace limits and add ${selectedPlanDetails?.credits} to your account.`}
-                confirmText={
-                    isUpgrading ? "Upgrading..." : `Upgrade to ${selectedPlanDetails?.name}`
-                }
-                variant="default"
+            <UpgradeDialog
+                isOpen={showUpgradeDialog}
+                onClose={() => setShowUpgradeDialog(false)}
+                workspaceId={currentWorkspace.id}
+                currentPlan={currentWorkspace.type}
+                onSuccess={handleUpgradeSuccess}
             />
         </div>
     );
@@ -449,6 +432,7 @@ function DangerZoneSection() {
         setError(null);
 
         try {
+            WorkspaceEvents.deleted({ workspaceId: currentWorkspace.id });
             await deleteWorkspace(currentWorkspace.id);
             navigate("/");
             window.location.reload();
@@ -517,6 +501,15 @@ export function WorkspaceSettings() {
 
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [showInviteDialog, setShowInviteDialog] = useState(false);
+
+    // Track page view
+    const hasTrackedPageView = useRef(false);
+    useEffect(() => {
+        if (currentWorkspace && !hasTrackedPageView.current) {
+            WorkspaceEvents.settingsOpened({ workspaceId: currentWorkspace.id });
+            hasTrackedPageView.current = true;
+        }
+    }, [currentWorkspace]);
 
     // Initialize workspace store
     useEffect(() => {

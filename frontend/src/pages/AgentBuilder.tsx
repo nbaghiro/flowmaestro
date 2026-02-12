@@ -36,6 +36,7 @@ import { Textarea } from "../components/common/Textarea";
 import { ThemeToggle } from "../components/common/ThemeToggle";
 import { Tooltip } from "../components/common/Tooltip";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
+import { AgentEvents } from "../lib/analytics";
 import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
@@ -136,6 +137,10 @@ export function AgentBuilder() {
     // Flag to prevent navigation during thread creation
     const isCreatingThreadRef = useRef(false);
 
+    // Track builder session for analytics
+    const builderSessionStartRef = useRef<number | null>(null);
+    const hasTrackedBuilderOpened = useRef(false);
+
     // Tools state
     const [tools, setTools] = useState<Tool[]>([]);
     const [removingToolId, setRemovingToolId] = useState<string | null>(null);
@@ -165,6 +170,13 @@ export function AgentBuilder() {
         resetAgentState();
 
         if (agentId && agentId !== "new") {
+            // Track builder opened
+            if (!hasTrackedBuilderOpened.current) {
+                builderSessionStartRef.current = Date.now();
+                AgentEvents.builderOpened({ agentId });
+                hasTrackedBuilderOpened.current = true;
+            }
+
             fetchAgent(agentId).then(() => {
                 // After fetching, populate form from the agent
                 const agent = useAgentStore.getState().currentAgent;
@@ -206,6 +218,10 @@ export function AgentBuilder() {
         fetchConnections();
 
         return () => {
+            // Track builder closed
+            if (agentId && hasTrackedBuilderOpened.current) {
+                AgentEvents.builderClosed({ agentId });
+            }
             // Also reset on unmount to ensure clean state
             resetAgentState();
         };
@@ -1063,11 +1079,32 @@ export function AgentBuilder() {
                                             connProvider,
                                             connModel
                                         ) => {
+                                            const previousProvider = provider;
+                                            const previousModel = model;
+
                                             setConnectionId(connId);
                                             const newProvider =
                                                 connProvider.toLowerCase() as Agent["provider"];
                                             setProvider(newProvider);
                                             setModel(connModel);
+
+                                            // Track model/provider changes
+                                            if (agentId) {
+                                                if (newProvider !== previousProvider) {
+                                                    AgentEvents.providerChanged({
+                                                        agentId,
+                                                        newProvider,
+                                                        previousProvider
+                                                    });
+                                                }
+                                                if (connModel !== previousModel) {
+                                                    AgentEvents.modelChanged({
+                                                        agentId,
+                                                        newModel: connModel,
+                                                        previousModel
+                                                    });
+                                                }
+                                            }
 
                                             // Clamp temperature if it exceeds the new provider's max
                                             const maxTemp =

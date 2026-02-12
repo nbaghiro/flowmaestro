@@ -1,4 +1,6 @@
 import { AlertTriangle } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { DialogEvents } from "../../lib/analytics";
 import { Dialog } from "./Dialog";
 
 interface ConfirmDialogProps {
@@ -27,13 +29,32 @@ export function ConfirmDialog({
     cancelText,
     variant = "default"
 }: ConfirmDialogProps) {
+    const hasTrackedShown = useRef(false);
+
+    // Track when dialog is shown
+    useEffect(() => {
+        if (isOpen && !hasTrackedShown.current) {
+            DialogEvents.confirmDialogShown({ actionType: title });
+            hasTrackedShown.current = true;
+        }
+        if (!isOpen) {
+            hasTrackedShown.current = false;
+        }
+    }, [isOpen, title]);
+
     const handleConfirm = () => {
+        DialogEvents.confirmActionAccepted({ actionType: title });
         onConfirm();
         onClose();
     };
 
+    const handleClose = () => {
+        DialogEvents.confirmActionDeclined({ actionType: title });
+        onClose();
+    };
+
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={title} size="sm">
+        <Dialog isOpen={isOpen} onClose={handleClose} title={title} size="sm">
             <div className="space-y-4">
                 {/* Warning Icon for danger variant */}
                 {variant === "danger" && (
@@ -51,7 +72,7 @@ export function ConfirmDialog({
                 <div className={`flex gap-3 pt-2 ${cancelText === undefined ? "justify-end" : ""}`}>
                     {cancelText !== undefined && (
                         <button
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/30 transition-colors"
                         >
                             {cancelText}

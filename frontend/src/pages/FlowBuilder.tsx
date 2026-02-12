@@ -20,6 +20,7 @@ import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfa
 import { ValidationPanel } from "../components/validation/ValidationPanel";
 import { WorkflowSettingsDialog } from "../components/WorkflowSettingsDialog";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { WorkflowEvents } from "../lib/analytics";
 import {
     getWorkflow,
     getWorkflowBySystemKey,
@@ -103,6 +104,8 @@ export function FlowBuilder() {
     const [isFormInterfaceDialogOpen, setIsFormInterfaceDialogOpen] = useState(false);
     // Actual workflow ID (set after loading, needed for system workflows loaded by key)
     const [actualWorkflowId, setActualWorkflowId] = useState<string | null>(null);
+    // Track session start time for analytics
+    const sessionStartTime = useRef<number>(Date.now());
 
     // Unified right panel state - only one can be open at a time
     const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(null);
@@ -256,6 +259,21 @@ export function FlowBuilder() {
         return () => setCurrentWorkflowId(null);
     }, [workflowId, setCurrentWorkflowId]);
 
+    // Track builder closed on unmount
+    useEffect(() => {
+        const wfId = workflowId;
+        return () => {
+            if (wfId) {
+                const sessionDurationMs = Date.now() - sessionStartTime.current;
+                WorkflowEvents.builderClosed({
+                    workflowId: wfId,
+                    unsavedChanges: hasUnsavedChanges,
+                    sessionDurationMs
+                });
+            }
+        };
+    }, [workflowId]);
+
     useEffect(() => {
         if (workflowId || systemKey) {
             loadWorkflow();
@@ -366,6 +384,10 @@ export function FlowBuilder() {
                 }
             }
             setCheckpoints(cp);
+
+            // Track builder opened
+            WorkflowEvents.builderOpened({ workflowId: response.data.id });
+            sessionStartTime.current = Date.now();
         } catch (error) {
             logger.error("Failed to load workflow", error);
         } finally {
@@ -451,6 +473,13 @@ export function FlowBuilder() {
             }
 
             await updateWorkflow(idToSave, updatePayload as Parameters<typeof updateWorkflow>[1]);
+
+            // Track save
+            WorkflowEvents.saved({
+                workflowId: idToSave,
+                nodeCount: nodes.length,
+                edgeCount: edges.length
+            });
 
             setSaveStatus("saved");
             setLastSavedState(createWorkflowSnapshot(workflowName, nodes, edges));
@@ -587,8 +616,12 @@ export function FlowBuilder() {
     const handleFitView = useCallback(() => {
         if (reactFlowInstanceRef.current) {
             reactFlowInstanceRef.current.fitView({ padding: FIT_VIEW_PADDING });
+            // Track fit to view
+            if (actualWorkflowId) {
+                WorkflowEvents.fitToViewTriggered({ workflowId: actualWorkflowId });
+            }
         }
-    }, []);
+    }, [actualWorkflowId]);
 
     const handleAutoLayout = useCallback(() => {
         if (nodes.length === 0) return;

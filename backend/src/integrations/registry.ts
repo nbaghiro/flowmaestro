@@ -2021,5 +2021,47 @@ const personioEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(personioEntry);
 
+// Register Postmark provider
+const postmarkEntry: ProviderRegistryEntry = {
+    name: "postmark",
+    displayName: "Postmark",
+    authMethod: "api_key",
+    category: "communication",
+    loader: async () => {
+        const { PostmarkProvider } = await import("./providers/postmark/PostmarkProvider");
+        return new PostmarkProvider();
+    }
+};
+
+providerRegistry.register(postmarkEntry);
+
+// Register Front provider
+const frontEntry: ProviderRegistryEntry = {
+    name: "front",
+    displayName: "Front",
+    authMethod: "oauth2",
+    category: "communication",
+    loader: async () => {
+        const { FrontProvider } = await import("./providers/front/FrontProvider");
+        return new FrontProvider();
+    }
+};
+
+providerRegistry.register(frontEntry);
+
+// Register RingCentral provider
+const ringcentralEntry: ProviderRegistryEntry = {
+    name: "ringcentral",
+    displayName: "RingCentral",
+    authMethod: "oauth2",
+    category: "communication",
+    loader: async () => {
+        const { RingCentralProvider } = await import("./providers/ringcentral/RingCentralProvider");
+        return new RingCentralProvider();
+    }
+};
+
+providerRegistry.register(ringcentralEntry);
+
 // Export for use in application
 export { providerRegistry };

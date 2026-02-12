@@ -1,5 +1,6 @@
 import { ChevronRight, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { NavigationEvents } from "../../lib/analytics";
 
 const routeLabels: Record<string, string> = {
     "/": "Home",
@@ -70,6 +71,9 @@ export function Breadcrumbs() {
                         ) : (
                             <Link
                                 to={crumb.path}
+                                onClick={() =>
+                                    NavigationEvents.breadcrumbClicked({ breadcrumbLevel: index })
+                                }
                                 className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                             >
                                 {isHome && <Home className="w-3.5 h-3.5" />}

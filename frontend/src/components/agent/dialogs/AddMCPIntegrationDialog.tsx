@@ -1,6 +1,7 @@
 import { ArrowLeft, Check, Globe, Plus, Search, Server, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ALL_PROVIDERS, supportsOAuth, type Provider } from "@flowmaestro/shared";
+import { MCPServerEvents } from "../../../lib/analytics";
 import { getConnectionMCPTools } from "../../../lib/api";
 import { useConnectionStore } from "../../../stores/connectionStore";
 import { Alert } from "../../common/Alert";
@@ -54,6 +55,7 @@ export function AddMCPIntegrationDialog({
 
     // For creating new connections
     const [isNewConnectionDialogOpen, setIsNewConnectionDialogOpen] = useState(false);
+    const hasTrackedDialogOpened = useRef(false);
 
     // Custom MCP server form state
     const [customServerName, setCustomServerName] = useState("");
@@ -63,6 +65,12 @@ export function AddMCPIntegrationDialog({
 
     useEffect(() => {
         if (isOpen) {
+            // Track dialog opened
+            if (!hasTrackedDialogOpened.current) {
+                MCPServerEvents.addServerDialogOpened();
+                hasTrackedDialogOpened.current = true;
+            }
+
             fetchConnections();
             // Reset state when opening
             setView("source-choice");
@@ -77,6 +85,8 @@ export function AddMCPIntegrationDialog({
             setCustomServerName("");
             setCustomServerUrl("");
             setCustomServerApiKey("");
+        } else {
+            hasTrackedDialogOpened.current = false;
         }
     }, [isOpen, fetchConnections]);
 
@@ -151,6 +161,12 @@ export function AddMCPIntegrationDialog({
             const response = await getConnectionMCPTools(connection.id);
             if (response.success && response.data.tools) {
                 setAvailableTools(response.data.tools);
+
+                // Track tools loaded
+                MCPServerEvents.toolsLoaded({
+                    connectionId: connection.id,
+                    toolCount: response.data.tools.length
+                });
 
                 // Pre-select tools that are already added to the agent
                 const preselectedTools = new Set<string>();
@@ -252,6 +268,14 @@ export function AddMCPIntegrationDialog({
                 }));
 
             await onAddTools(toolsToAdd);
+
+            // Track tools added
+            MCPServerEvents.toolsAdded({
+                connectionId: selectedConnection.id,
+                toolIds: toolsToAdd.map((t) => t.name),
+                count: toolsToAdd.length
+            });
+
             onClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to add tools");
@@ -290,6 +314,13 @@ export function AddMCPIntegrationDialog({
                 url: customServerUrl.trim(),
                 apiKey: customServerApiKey.trim() || undefined
             });
+
+            // Track custom MCP server added
+            MCPServerEvents.customServerAdded({
+                serverName: customServerName.trim(),
+                serverUrl: customServerUrl.trim()
+            });
+
             onClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to add custom MCP server");

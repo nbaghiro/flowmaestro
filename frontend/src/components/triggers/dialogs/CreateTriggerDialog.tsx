@@ -4,8 +4,9 @@
  */
 
 import { X, Calendar, Webhook, Play } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { TriggerType, CreateTriggerInput } from "@flowmaestro/shared";
+import { TriggerEvents, DialogEvents } from "../../../lib/analytics";
 import { createTrigger } from "../../../lib/api";
 import { logger } from "../../../lib/logger";
 import { Alert } from "../../common/Alert";
@@ -47,6 +48,19 @@ export function CreateTriggerDialog({
         { key: "", value: "" }
     ]);
     const [manualDescription, setManualDescription] = useState("");
+
+    // Track dialog opened
+    const hasTrackedDialogOpened = useRef(false);
+    useEffect(() => {
+        if (isOpen && !hasTrackedDialogOpened.current) {
+            // Note: Using "workflow" as dialogType since trigger dialogs are workflow-related
+            DialogEvents.createDialogOpened({ dialogType: "workflow" });
+            hasTrackedDialogOpened.current = true;
+        }
+        if (!isOpen) {
+            hasTrackedDialogOpened.current = false;
+        }
+    }, [isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -102,7 +116,15 @@ export function CreateTriggerDialog({
                 config: config as Record<string, unknown>
             };
 
-            await createTrigger(input);
+            const response = await createTrigger(input);
+            // Track trigger created
+            if (response.success && response.data) {
+                TriggerEvents.created({
+                    workflowId,
+                    triggerId: response.data.id,
+                    triggerType: triggerType as "webhook" | "schedule" | "manual" | "form" | "api"
+                });
+            }
             onSuccess();
         } catch (err) {
             logger.error("Failed to create trigger", err);

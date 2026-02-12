@@ -5065,6 +5065,131 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Front - Shared Inbox and Team Collaboration
+    // ==========================================================================
+
+    front: {
+        name: "front",
+        displayName: "Front",
+        authUrl: "https://app.frontapp.com/oauth/authorize",
+        tokenUrl: "https://app.frontapp.com/oauth/token",
+        scopes: [
+            "conversation:read",
+            "conversation:write",
+            "comment:read",
+            "comment:write",
+            "contact:read",
+            "contact:write",
+            "inbox:read",
+            "tag:read"
+        ],
+        clientId: config.oauth.front.clientId,
+        clientSecret: config.oauth.front.clientSecret,
+        redirectUri: getOAuthRedirectUri("front"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api2.frontapp.com/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    email?: string;
+                    first_name?: string;
+                    last_name?: string;
+                    username?: string;
+                };
+
+                return {
+                    userId: data.id || "unknown",
+                    email: data.email || data.username || "unknown@front",
+                    name: `${data.first_name || ""} ${data.last_name || ""}`.trim() || "Front User"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Front user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@front",
+                    name: "Front User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    // ==========================================================================
+    // RingCentral - Unified Communications (OAuth2 + PKCE)
+    // ==========================================================================
+
+    ringcentral: {
+        name: "ringcentral",
+        displayName: "RingCentral",
+        authUrl: "https://platform.ringcentral.com/restapi/oauth/authorize",
+        tokenUrl: "https://platform.ringcentral.com/restapi/oauth/token",
+        scopes: ["ReadMessages", "SMS", "RingOut", "ReadCallLog", "Meetings", "TeamMessaging"],
+        clientId: config.oauth.ringcentral.clientId,
+        clientSecret: config.oauth.ringcentral.clientSecret,
+        redirectUri: getOAuthRedirectUri("ringcentral"),
+        pkceEnabled: true,
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: number;
+                    extensionNumber?: string;
+                    name?: string;
+                    contact?: {
+                        email?: string;
+                        firstName?: string;
+                        lastName?: string;
+                    };
+                    account?: {
+                        id?: string;
+                    };
+                };
+
+                return {
+                    userId: data.id?.toString() || "unknown",
+                    extensionNumber: data.extensionNumber,
+                    name:
+                        data.name ||
+                        `${data.contact?.firstName || ""} ${data.contact?.lastName || ""}`.trim() ||
+                        "RingCentral User",
+                    email: data.contact?.email || "unknown@ringcentral",
+                    accountId: data.account?.id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get RingCentral user info");
+                return {
+                    userId: "unknown",
+                    name: "RingCentral User",
+                    email: "unknown@ringcentral"
+                };
+            }
+        },
+        refreshable: true,
+        tokenAuthMethod: "basic"
     }
 };
 

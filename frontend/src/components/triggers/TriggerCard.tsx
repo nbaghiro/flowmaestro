@@ -22,6 +22,7 @@ import type {
     WebhookTriggerConfig,
     ManualTriggerConfig
 } from "@flowmaestro/shared";
+import { TriggerEvents } from "../../lib/analytics";
 import { getWebhookUrl, deleteTrigger, updateTrigger, executeTrigger } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
@@ -143,7 +144,8 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
     const copyWebhookUrl = async () => {
         const url = getWebhookUrl(trigger.id);
         await navigator.clipboard.writeText(url);
-        // TODO: Show toast notification
+        // Track webhook URL copied
+        TriggerEvents.webhookUrlCopied({ triggerId: trigger.id });
     };
 
     const handleDeleteClick = () => {
@@ -155,6 +157,11 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
         setIsDeleting(true);
         try {
             await deleteTrigger(trigger.id);
+            // Track trigger deleted
+            TriggerEvents.deleted({
+                triggerId: trigger.id,
+                triggerType: trigger.trigger_type
+            });
             onUpdate();
         } catch (error) {
             logger.error("Failed to delete trigger", error);
@@ -168,7 +175,17 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
     const handleToggleEnabled = async () => {
         setIsToggling(true);
         try {
-            await updateTrigger(trigger.id, { enabled: !trigger.enabled });
+            const newEnabledState = !trigger.enabled;
+            await updateTrigger(trigger.id, { enabled: newEnabledState });
+            // Track enabled/disabled
+            if (newEnabledState) {
+                TriggerEvents.enabled({ triggerId: trigger.id, triggerType: trigger.trigger_type });
+            } else {
+                TriggerEvents.disabled({
+                    triggerId: trigger.id,
+                    triggerType: trigger.trigger_type
+                });
+            }
             onUpdate();
         } catch (error) {
             logger.error("Failed to toggle trigger", error);
@@ -227,6 +244,13 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
 
             if (response.success && response.data) {
                 const executionId = response.data.executionId;
+
+                // Track trigger tested successfully
+                TriggerEvents.tested({
+                    triggerId: trigger.id,
+                    triggerType: trigger.trigger_type,
+                    success: true
+                });
 
                 // Start execution monitoring in the workflow store
                 // SSE connection is managed by ExecutionPanel

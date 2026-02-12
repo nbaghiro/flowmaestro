@@ -43,13 +43,13 @@ export const SUBSCRIPTION_PLANS: Record<"free" | "pro" | "team", SubscriptionPla
         slug: "free",
         monthlyPriceCents: 0,
         annualPriceCents: 0,
-        monthlyCredits: 100,
+        monthlyCredits: 250,
         trialDays: 0,
         features: [
             "5 workflows",
             "2 agents",
             "1 knowledge base",
-            "100 credits/month",
+            "250 credits/month",
             "7 days execution history"
         ],
         limits: {
@@ -68,13 +68,13 @@ export const SUBSCRIPTION_PLANS: Record<"free" | "pro" | "team", SubscriptionPla
         slug: "pro",
         monthlyPriceCents: 2900,
         annualPriceCents: 29000,
-        monthlyCredits: 2500,
+        monthlyCredits: 5000,
         trialDays: 14,
         features: [
             "50 workflows",
             "20 agents",
             "10 knowledge bases",
-            "2,500 credits/month",
+            "5,000 credits/month",
             "30 days execution history",
             "5 team members",
             "Priority support"
@@ -95,13 +95,13 @@ export const SUBSCRIPTION_PLANS: Record<"free" | "pro" | "team", SubscriptionPla
         slug: "team",
         monthlyPriceCents: 9900,
         annualPriceCents: 99000,
-        monthlyCredits: 10000,
+        monthlyCredits: 25000,
         trialDays: 14,
         features: [
             "Unlimited workflows",
             "Unlimited agents",
             "50 knowledge bases",
-            "10,000 credits/month",
+            "25,000 credits/month",
             "90 days execution history",
             "Unlimited team members",
             "Priority support",

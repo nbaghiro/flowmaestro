@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AbstractBackground } from "../components/common/AbstractBackground";
 import { Alert } from "../components/common/Alert";
@@ -9,6 +9,7 @@ import { Logo } from "../components/common/Logo";
 import { Divider } from "../components/common/Separator";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import { useMicrosoftAuth } from "../hooks/useMicrosoftAuth";
+import { AuthEvents } from "../lib/analytics";
 import { useAuthStore } from "../stores/authStore";
 
 export function Login() {
@@ -24,6 +25,21 @@ export function Login() {
     const { loginWithGoogle, isLoading: isGoogleLoading } = useGoogleAuth();
     const { loginWithMicrosoft, isLoading: isMicrosoftLoading } = useMicrosoftAuth();
     const navigate = useNavigate();
+
+    // Track page view
+    useEffect(() => {
+        AuthEvents.loginStarted();
+    }, []);
+
+    const handleGoogleLogin = () => {
+        AuthEvents.signupGoogleInitiated();
+        loginWithGoogle();
+    };
+
+    const handleMicrosoftLogin = () => {
+        AuthEvents.signupMicrosoftInitiated();
+        loginWithMicrosoft();
+    };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -42,12 +58,17 @@ export function Login() {
                 setMaskedPhone(result.maskedPhone);
                 setCode("");
                 setUseBackupCode(false);
+                AuthEvents.twoFactorCodeSent();
                 return;
             }
 
+            AuthEvents.loginCompleted({ authMethod: "email", has2faEnabled: twoFactorRequired });
             navigate("/app");
         } catch (err: unknown) {
-            setError((err as Error).message || "Failed to login. Please check your credentials.");
+            const errorMessage =
+                (err as Error).message || "Failed to login. Please check your credentials.";
+            AuthEvents.loginFailed({ reason: errorMessage });
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -194,7 +215,7 @@ export function Login() {
                         <Button
                             type="button"
                             variant="secondary"
-                            onClick={loginWithGoogle}
+                            onClick={handleGoogleLogin}
                             disabled={isLoading || isGoogleLoading || isMicrosoftLoading}
                             className="w-full gap-3"
                         >
@@ -232,7 +253,7 @@ export function Login() {
                         <Button
                             type="button"
                             variant="secondary"
-                            onClick={loginWithMicrosoft}
+                            onClick={handleMicrosoftLogin}
                             disabled={isLoading || isGoogleLoading || isMicrosoftLoading}
                             className="w-full gap-3"
                         >

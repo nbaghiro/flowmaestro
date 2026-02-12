@@ -700,6 +700,18 @@ export const config = {
         ramp: {
             clientId: process.env.RAMP_CLIENT_ID || "",
             clientSecret: process.env.RAMP_CLIENT_SECRET || ""
+        },
+
+        // Front
+        front: {
+            clientId: process.env.FRONT_CLIENT_ID || "",
+            clientSecret: process.env.FRONT_CLIENT_SECRET || ""
+        },
+
+        // RingCentral
+        ringcentral: {
+            clientId: process.env.RINGCENTRAL_CLIENT_ID || "",
+            clientSecret: process.env.RINGCENTRAL_CLIENT_SECRET || ""
         }
     }
 };
@@ -817,7 +829,11 @@ export function getOAuthRedirectUri(provider: string): string {
         ramp: "/oauth/ramp/callback",
 
         // OAuth 1.0a providers
-        evernote: "/oauth1/evernote/callback"
+        evernote: "/oauth1/evernote/callback",
+
+        // Communication providers
+        front: "/oauth/front/callback",
+        ringcentral: "/oauth/ringcentral/callback"
     };
 
     const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
@@ -928,7 +944,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         gorgias: "gorgias",
         "zoho-crm": "zohoCrm",
         "bill-com": "billCom",
-        ramp: "ramp"
+        ramp: "ramp",
+        front: "front",
+        ringcentral: "ringcentral"
     };
 
     const configKey = providerMap[provider];

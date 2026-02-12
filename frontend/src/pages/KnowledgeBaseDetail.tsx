@@ -24,6 +24,7 @@ import {
 import { DocumentList } from "../components/knowledge-bases/DocumentList";
 import { KBContextPanel } from "../components/knowledge-bases/KBContextPanel";
 import { KBOverviewSidebar } from "../components/knowledge-bases/KBOverviewSidebar";
+import { KnowledgeBaseEvents } from "../lib/analytics";
 import { logger } from "../lib/logger";
 import { streamKnowledgeBase } from "../lib/sse";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
@@ -70,9 +71,15 @@ export function KnowledgeBaseDetail() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const hasTrackedPageView = useRef(false);
 
     useEffect(() => {
         if (id) {
+            // Track page view
+            if (!hasTrackedPageView.current) {
+                KnowledgeBaseEvents.documentListViewed({ kbId: id });
+                hasTrackedPageView.current = true;
+            }
             fetchKnowledgeBase(id);
             fetchDocuments(id);
             fetchStats(id);
@@ -122,6 +129,14 @@ export function KnowledgeBaseDetail() {
         setUploading(true);
         try {
             await uploadDoc(id, file);
+            // Track document upload
+            const fileExtension = file.name.split(".").pop()?.toLowerCase() || "unknown";
+            const fileSizeMb = file.size / (1024 * 1024);
+            KnowledgeBaseEvents.documentUploaded({
+                kbId: id,
+                fileType: fileExtension,
+                fileSizeMb: Math.round(fileSizeMb * 100) / 100
+            });
             fetchStats(id);
         } catch (error) {
             logger.error("Failed to upload file", error);
@@ -143,6 +158,14 @@ export function KnowledgeBaseDetail() {
         setUploading(true);
         try {
             await addUrl(id, url, name);
+            // Track URL addition
+            let domain = "unknown";
+            try {
+                domain = new URL(url).hostname;
+            } catch {
+                // Keep domain as unknown if URL parsing fails
+            }
+            KnowledgeBaseEvents.documentUrlAdded({ kbId: id, domain });
             setShowUrlModal(false);
             fetchStats(id);
         } catch (error) {
@@ -158,6 +181,8 @@ export function KnowledgeBaseDetail() {
         setProcessingDocId(deleteConfirmDocId);
         try {
             await deleteDoc(id, deleteConfirmDocId);
+            // Track document deletion
+            KnowledgeBaseEvents.documentDeleted({ kbId: id, documentId: deleteConfirmDocId });
             setDeleteConfirmDocId(null);
             // If we were viewing this document, close the viewer
             if (selectedDocument?.id === deleteConfirmDocId) {
@@ -187,11 +212,22 @@ export function KnowledgeBaseDetail() {
     const handleSearch = async (searchQuery: string, topK: number, similarityThreshold: number) => {
         if (!id) return [];
 
-        return await query(id, {
+        const startTime = Date.now();
+        const results = await query(id, {
             query: searchQuery,
             top_k: topK,
             similarity_threshold: similarityThreshold
         });
+
+        // Track KB query
+        KnowledgeBaseEvents.queried({
+            kbId: id,
+            queryTextLength: searchQuery.length,
+            resultsCount: results.length,
+            queryTimeMs: Date.now() - startTime
+        });
+
+        return results;
     };
 
     const handleDeleteKnowledgeBase = async () => {
@@ -200,6 +236,8 @@ export function KnowledgeBaseDetail() {
         setDeletingKB(true);
         try {
             await deleteKB(id);
+            // Track KB deletion
+            KnowledgeBaseEvents.deleted({ kbId: id });
             navigate("/knowledge-bases");
         } catch (error) {
             logger.error("Failed to delete knowledge base", error);

@@ -24,6 +24,7 @@ import { Input } from "../components/common/Input";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import { LoadingState } from "../components/common/Spinner";
 import { ThemeToggle } from "../components/common/ThemeToggle";
+import { FormInterfaceEvents } from "../lib/analytics";
 import { getFormInterface, uploadFormInterfaceAsset } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useFormInterfaceBuilderStore } from "../stores/formInterfaceBuilderStore";
@@ -69,14 +70,21 @@ export function FormInterfaceEditor() {
 
     // Refs
     const iconButtonRef = useRef<HTMLDivElement>(null);
+    const hasTrackedEditorOpened = useRef(false);
 
     // Load form interface on mount
     useEffect(() => {
         if (id) {
+            // Track editor opened
+            if (!hasTrackedEditorOpened.current) {
+                FormInterfaceEvents.editorOpened({ interfaceId: id });
+                hasTrackedEditorOpened.current = true;
+            }
             loadFormInterface();
         }
 
         return () => {
+            // Track editor closed on unmount (no specific event exists, using edited pattern)
             reset();
         };
     }, [id]);
@@ -134,22 +142,22 @@ export function FormInterfaceEditor() {
 
     const handleSave = async () => {
         const success = await save();
-        if (success) {
-            // Show success feedback
+        if (success && id) {
+            FormInterfaceEvents.edited({ interfaceId: id });
         }
     };
 
     const handlePublish = async () => {
         const success = await publish();
-        if (success) {
-            // Show success feedback
+        if (success && id) {
+            FormInterfaceEvents.published({ interfaceId: id });
         }
     };
 
     const handleUnpublish = async () => {
         const success = await unpublish();
-        if (success) {
-            // Show success feedback
+        if (success && id) {
+            FormInterfaceEvents.unpublished({ interfaceId: id });
         }
     };
 
