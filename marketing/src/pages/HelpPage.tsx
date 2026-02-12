@@ -12,11 +12,12 @@ import {
     CreditCard,
     Shield
 } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
 import { faqCategories, type FAQItem } from "../data/faq";
+import { OtherPagesEvents } from "../lib/analytics";
 
 const categoryIcons: Record<string, React.ElementType> = {
     "getting-started": Rocket,
@@ -68,6 +69,15 @@ export const HelpPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [openQuestions, setOpenQuestions] = useState<Set<string>>(new Set());
+    const hasTrackedPageView = useRef(false);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            OtherPagesEvents.helpPageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
 
     const filteredCategories = useMemo(() => {
         if (!searchQuery.trim()) {

@@ -1,11 +1,12 @@
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Calendar, Clock, ArrowRight, Search, Loader2 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import type { BlogCategory, BlogPostSummary } from "@flowmaestro/shared";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { BlogEvents } from "../lib/analytics";
 import { getBlogPosts, getBlogCategories } from "../lib/api";
 
 const POSTS_PER_PAGE = 12;
@@ -81,6 +82,15 @@ export const BlogPage: React.FC = () => {
     const [selectedCategory, setSelectedCategory] = React.useState<BlogCategory | "all">("all");
     const [searchQuery, setSearchQuery] = React.useState("");
     const [debouncedSearch, setDebouncedSearch] = React.useState("");
+    const hasTrackedPageView = useRef(false);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            BlogEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
 
     // Debounce search query
     React.useEffect(() => {
@@ -89,6 +99,13 @@ export const BlogPage: React.FC = () => {
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    const handleCategoryChange = (category: BlogCategory | "all") => {
+        setSelectedCategory(category);
+        if (category !== "all") {
+            BlogEvents.categoryFiltered({ category });
+        }
+    };
 
     // Fetch categories
     const { data: categoriesData } = useQuery({
@@ -187,7 +204,7 @@ export const BlogPage: React.FC = () => {
                             {categories.map((category) => (
                                 <button
                                     key={category.key}
-                                    onClick={() => setSelectedCategory(category.key)}
+                                    onClick={() => handleCategoryChange(category.key)}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                         selectedCategory === category.key
                                             ? "bg-primary text-primary-foreground"

@@ -16,9 +16,10 @@ import {
     FileCheck,
     Bot
 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { PricingEvents } from "../lib/analytics";
 
 // Credit tier breakpoints for labels
 const CREDIT_TIERS = [
@@ -243,8 +244,38 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnu
 export const PricingPage: React.FC = () => {
     const [sliderValue, setSliderValue] = React.useState(() => creditsToSlider(25000)); // Default to 25k
     const [isAnnual, setIsAnnual] = React.useState(false);
+    const hasTrackedPageView = useRef(false);
+    const lastTrackedCredits = useRef<number | null>(null);
 
     const selectedCredits = sliderToCredits(sliderValue);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            PricingEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
+    // Track credit slider changes (debounced)
+    useEffect(() => {
+        if (lastTrackedCredits.current === null) {
+            lastTrackedCredits.current = selectedCredits;
+            return;
+        }
+        if (lastTrackedCredits.current === selectedCredits) return;
+
+        const timer = setTimeout(() => {
+            const price = calculatePrice(29, 25000, selectedCredits); // Use Solo plan as reference
+            PricingEvents.creditSliderMoved({
+                selectedCreditAmount: selectedCredits,
+                estimatedPrice: price
+            });
+            lastTrackedCredits.current = selectedCredits;
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [selectedCredits]);
 
     return (
         <div className="min-h-screen bg-background text-foreground relative">
@@ -277,7 +308,10 @@ export const PricingPage: React.FC = () => {
                     <div className="max-w-5xl mx-auto">
                         <div className="flex justify-center items-center gap-3">
                             <button
-                                onClick={() => setIsAnnual(false)}
+                                onClick={() => {
+                                    setIsAnnual(false);
+                                    PricingEvents.annualToggled({ isAnnual: false });
+                                }}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                                     !isAnnual
                                         ? "bg-foreground text-background"
@@ -287,7 +321,10 @@ export const PricingPage: React.FC = () => {
                                 Monthly
                             </button>
                             <button
-                                onClick={() => setIsAnnual(true)}
+                                onClick={() => {
+                                    setIsAnnual(true);
+                                    PricingEvents.annualToggled({ isAnnual: true });
+                                }}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                                     isAnnual
                                         ? "bg-foreground text-background"

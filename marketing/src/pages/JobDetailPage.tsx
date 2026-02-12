@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Clock, Briefcase, Mail } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { OtherPagesEvents } from "../lib/analytics";
 
 interface JobData {
     id: string;
@@ -26,6 +27,18 @@ const jobs: Record<string, JobData> = {
 export const JobDetailPage: React.FC = () => {
     const { jobId } = useParams<{ jobId: string }>();
     const job = jobId ? jobs[jobId] : null;
+    const hasTrackedJobView = useRef(false);
+
+    useEffect(() => {
+        if (job && jobId && !hasTrackedJobView.current) {
+            OtherPagesEvents.jobListingViewed({
+                jobId,
+                jobTitle: job.title,
+                department: job.department
+            });
+            hasTrackedJobView.current = true;
+        }
+    }, [job, jobId]);
 
     if (!job) {
         return <Navigate to="/careers" replace />;

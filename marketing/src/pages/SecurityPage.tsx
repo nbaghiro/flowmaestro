@@ -11,10 +11,11 @@ import {
     Clock,
     CheckCircle
 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { OtherPagesEvents } from "../lib/analytics";
 
 interface SecurityFeature {
     icon: React.ElementType;
@@ -162,6 +163,15 @@ const SecurityFeatureCard: React.FC<{ feature: SecurityFeature; index: number }>
 };
 
 export const SecurityPage: React.FC = () => {
+    const hasTrackedPageView = useRef(false);
+
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            OtherPagesEvents.securityPageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             <div className="fixed inset-0 grid-pattern opacity-50 pointer-events-none" />

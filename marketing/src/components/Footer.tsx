@@ -1,8 +1,12 @@
 import { Github, Linkedin, Mail, Twitter } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
+import { NavigationEvents } from "../lib/analytics";
 
 export const Footer: React.FC = () => {
+    const handleSocialClick = (socialPlatform: string) => {
+        NavigationEvents.footerSocialClicked({ socialPlatform });
+    };
     const currentYear = new Date().getFullYear();
 
     return (
@@ -21,6 +25,7 @@ export const Footer: React.FC = () => {
                                 href="https://github.com/nbaghiro/flowmaestro"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => handleSocialClick("github")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <Github className="w-5 h-5" />
@@ -30,6 +35,7 @@ export const Footer: React.FC = () => {
                                 href="https://x.com/nbaghiro"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => handleSocialClick("twitter")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <Twitter className="w-5 h-5" />
@@ -38,12 +44,14 @@ export const Footer: React.FC = () => {
                                 href="https://www.linkedin.com/company/flowmaestro/"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => handleSocialClick("linkedin")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <Linkedin className="w-5 h-5" />
                             </a>
                             <a
                                 href="mailto:support@flowmaestro.ai"
+                                onClick={() => handleSocialClick("email")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <Mail className="w-5 h-5" />
@@ -52,6 +60,7 @@ export const Footer: React.FC = () => {
                                 href="https://discord.gg/zHCkfBeP"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => handleSocialClick("discord")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">

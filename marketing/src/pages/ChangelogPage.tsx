@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import { Sparkles, Bug, Zap, Shield } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { OtherPagesEvents } from "../lib/analytics";
 
 interface ChangelogEntry {
     version: string;
@@ -117,6 +118,15 @@ const typeConfig = {
 };
 
 export const ChangelogPage: React.FC = () => {
+    const hasTrackedPageView = useRef(false);
+
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            OtherPagesEvents.changelogPageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             {/* Full-page background pattern */}

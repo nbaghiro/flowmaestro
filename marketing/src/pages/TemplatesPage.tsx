@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, ArrowRight, GitBranch, Bot, Loader2, AlertCircle, Eye, Copy } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
     ALL_PROVIDERS,
@@ -19,6 +19,7 @@ import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
 import { WorkflowCanvasPreview } from "../components/WorkflowCanvasPreview";
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
+import { TemplatesPageEvents } from "../lib/analytics";
 import {
     getTemplates,
     getAgentTemplates,
@@ -264,6 +265,15 @@ export const TemplatesPage: React.FC = () => {
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [templateType, setTemplateType] = useState<TemplateType>("workflow");
     const [activeCategory, setActiveCategory] = useState<TemplateCategory | null>(null);
+    const hasTrackedPageView = useRef(false);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            TemplatesPageEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
 
     // Debounce search query
     React.useEffect(() => {
@@ -272,6 +282,13 @@ export const TemplatesPage: React.FC = () => {
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    // Track search (debounced)
+    useEffect(() => {
+        if (!debouncedSearch) return;
+        // resultsCount will be determined after templates are fetched
+        TemplatesPageEvents.searched({ query: debouncedSearch, resultsCount: 0 });
+    }, [debouncedSearch]);
 
     // Fetch workflow categories
     const { data: workflowCategoriesData } = useQuery({

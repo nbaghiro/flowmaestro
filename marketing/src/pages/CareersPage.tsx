@@ -11,10 +11,11 @@ import {
     Terminal,
     Layers
 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { OtherPagesEvents } from "../lib/analytics";
 
 interface JobListing {
     id: string;
@@ -54,6 +55,15 @@ const techStack = [
 ];
 
 export const CareersPage: React.FC = () => {
+    const hasTrackedPageView = useRef(false);
+
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            OtherPagesEvents.careersPageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             {/* Full-page background pattern */}

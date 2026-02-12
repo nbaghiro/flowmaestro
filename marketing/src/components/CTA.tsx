@@ -1,8 +1,16 @@
 import { motion, useInView } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import React from "react";
+import { AuthLinkEvents, EngagementEvents } from "../lib/analytics";
 
 export const CTA: React.FC = () => {
+    const handleGetStartedClick = () => {
+        AuthLinkEvents.getStartedClicked({ referringPage: "home", ctaVariant: "cta_section" });
+    };
+
+    const handleDemoClick = () => {
+        EngagementEvents.demoRequested({ referringPage: "home" });
+    };
     const ref = React.useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
@@ -32,6 +40,7 @@ export const CTA: React.FC = () => {
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <a
                             href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                            onClick={handleGetStartedClick}
                             className="group px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg"
                         >
                             Get Started Free
@@ -41,6 +50,7 @@ export const CTA: React.FC = () => {
                             href="https://cal.com/naib-baghirov-o5surn/30min"
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={handleDemoClick}
                             className="px-8 py-4 bg-card hover:bg-accent border border-border rounded-lg font-semibold transition-all duration-200 text-foreground"
                         >
                             Schedule a Demo

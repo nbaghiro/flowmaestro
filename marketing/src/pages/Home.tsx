@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { CTA } from "../components/CTA";
 import { Features } from "../components/Features";
 import { Footer } from "../components/Footer";
@@ -6,8 +6,17 @@ import { Hero } from "../components/Hero";
 import { Integrations } from "../components/Integrations";
 import { Navigation } from "../components/Navigation";
 import { ProductShowcase } from "../components/ProductShowcase";
+import { HomePageEvents } from "../lib/analytics";
 
 export const Home: React.FC = () => {
+    const hasTrackedPageView = useRef(false);
+
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            HomePageEvents.viewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             {/* Full-page background pattern */}
