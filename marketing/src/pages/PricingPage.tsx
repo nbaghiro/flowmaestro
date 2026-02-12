@@ -164,9 +164,15 @@ interface PricingCardProps {
     plan: PricingPlan;
     selectedCredits: number;
     isAnnual: boolean;
+    onCtaClick: (planName: string, creditAmount: number) => void;
 }
 
-const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnual }) => {
+const PricingCard: React.FC<PricingCardProps> = ({
+    plan,
+    selectedCredits,
+    isAnnual,
+    onCtaClick
+}) => {
     const monthlyPrice = calculatePrice(plan.basePrice, plan.baseCredits, selectedCredits);
     const displayPrice = isAnnual ? Math.round(monthlyPrice * 0.8) : monthlyPrice;
     const creditsDisplay =
@@ -229,6 +235,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnu
             {/* CTA Button */}
             <a
                 href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                onClick={() => onCtaClick(plan.name, selectedCredits)}
                 className={`w-full py-3 rounded-lg font-semibold text-center transition-all duration-200 ${
                     plan.popular
                         ? "bg-foreground text-background hover:opacity-90"
@@ -276,6 +283,14 @@ export const PricingPage: React.FC = () => {
 
         return () => clearTimeout(timer);
     }, [selectedCredits]);
+
+    const handlePricingCtaClick = (planName: string, creditAmount: number) => {
+        PricingEvents.pricingCtaClicked({ planName, creditAmount });
+    };
+
+    const handleContactSalesClick = () => {
+        PricingEvents.billingContactClicked();
+    };
 
     return (
         <div className="min-h-screen bg-background text-foreground relative">
@@ -412,6 +427,7 @@ export const PricingPage: React.FC = () => {
                                     plan={plan}
                                     selectedCredits={selectedCredits}
                                     isAnnual={isAnnual}
+                                    onCtaClick={handlePricingCtaClick}
                                 />
                             ))}
                         </div>
@@ -523,6 +539,7 @@ export const PricingPage: React.FC = () => {
                                 href="https://cal.com/naib-baghirov-o5surn/30min"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={handleContactSalesClick}
                                 className="block w-full py-3 rounded-lg font-semibold text-center bg-foreground text-background hover:opacity-90 transition-all duration-200"
                             >
                                 Contact Sales

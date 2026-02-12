@@ -366,6 +366,12 @@ export const JobDetailPage: React.FC = () => {
                             </p>
                             <a
                                 href={`mailto:careers@flowmaestro.ai?subject=Application: ${job.title}`}
+                                onClick={() =>
+                                    OtherPagesEvents.jobApplyClicked({
+                                        jobId: job.id,
+                                        jobTitle: job.title
+                                    })
+                                }
                                 className="btn-primary inline-flex items-center justify-center gap-2"
                             >
                                 <Mail className="w-4 h-4" />

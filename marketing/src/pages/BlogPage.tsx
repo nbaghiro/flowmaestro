@@ -23,7 +23,11 @@ function formatDate(dateString: string | null): string {
 }
 
 // Blog post card component
-const BlogCard: React.FC<{ post: BlogPostSummary; index: number }> = ({ post, index }) => {
+const BlogCard: React.FC<{
+    post: BlogPostSummary;
+    index: number;
+    onPostClick: (slug: string, category: string) => void;
+}> = ({ post, index, onPostClick }) => {
     const categoryLabel =
         post.category === "case-study"
             ? "Case Study"
@@ -36,7 +40,11 @@ const BlogCard: React.FC<{ post: BlogPostSummary; index: number }> = ({ post, in
             transition={{ duration: 0.5, delay: index * 0.05 }}
             className="group"
         >
-            <Link to={`/blog/${post.slug}`} className="block">
+            <Link
+                to={`/blog/${post.slug}`}
+                onClick={() => onPostClick(post.slug, post.category)}
+                className="block"
+            >
                 <div className="aspect-video rounded-xl overflow-hidden mb-4 bg-card border border-stroke">
                     {post.featuredImageUrl ? (
                         <img
@@ -105,6 +113,10 @@ export const BlogPage: React.FC = () => {
         if (category !== "all") {
             BlogEvents.categoryFiltered({ category });
         }
+    };
+
+    const handlePostClick = (blogSlug: string, category: string) => {
+        BlogEvents.postClicked({ blogSlug, category });
     };
 
     // Fetch categories
@@ -248,7 +260,12 @@ export const BlogPage: React.FC = () => {
                             <>
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                                     {allPosts.map((post, index) => (
-                                        <BlogCard key={post.id} post={post} index={index} />
+                                        <BlogCard
+                                            key={post.id}
+                                            post={post}
+                                            index={index}
+                                            onPostClick={handlePostClick}
+                                        />
                                     ))}
                                 </div>
 

@@ -38,10 +38,15 @@ function getCategoryLabel(category: string): string {
 }
 
 // Related post card component
-const RelatedPostCard: React.FC<{ post: BlogPostSummary }> = ({ post }) => {
+const RelatedPostCard: React.FC<{
+    post: BlogPostSummary;
+    fromSlug: string;
+    onRelatedClick: (fromSlug: string, toSlug: string) => void;
+}> = ({ post, fromSlug, onRelatedClick }) => {
     return (
         <Link
             to={`/blog/${post.slug}`}
+            onClick={() => onRelatedClick(fromSlug, post.slug)}
             className="group block bg-card border border-stroke rounded-xl overflow-hidden hover:border-primary-500/50 transition-colors"
         >
             <div className="aspect-video overflow-hidden">
@@ -164,6 +169,10 @@ export const BlogDetailPage: React.FC = () => {
         await navigator.clipboard.writeText(shareUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleRelatedPostClick = (fromSlug: string, toSlug: string) => {
+        BlogEvents.relatedPostClicked({ fromSlug, toSlug });
     };
 
     if (isLoading) {
@@ -442,7 +451,12 @@ export const BlogDetailPage: React.FC = () => {
                             <h2 className="text-2xl font-bold mb-8 text-center">Related Posts</h2>
                             <div className="grid md:grid-cols-3 gap-6">
                                 {post.relatedPosts.map((relatedPost) => (
-                                    <RelatedPostCard key={relatedPost.id} post={relatedPost} />
+                                    <RelatedPostCard
+                                        key={relatedPost.id}
+                                        post={relatedPost}
+                                        fromSlug={slug || ""}
+                                        onRelatedClick={handleRelatedPostClick}
+                                    />
                                 ))}
                             </div>
                         </div>

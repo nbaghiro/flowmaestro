@@ -5,14 +5,23 @@ import { Link } from "react-router-dom";
 import { COMPANY_NAV_ITEMS, RESOURCES_NAV_ITEMS } from "../data/navigation";
 import { SOLUTION_NAV_ITEMS } from "../data/solutions";
 import { useTheme } from "../hooks/useTheme";
+import { AuthLinkEvents, NavigationEvents } from "../lib/analytics";
 import { Dropdown } from "./common/Dropdown";
 
-const ThemeToggle: React.FC = () => {
+const ThemeToggle: React.FC<{ onToggle?: (newTheme: "light" | "dark") => void }> = ({
+    onToggle
+}) => {
     const { theme, toggleTheme } = useTheme();
+
+    const handleToggle = () => {
+        const newTheme = theme === "light" ? "dark" : "light";
+        toggleTheme();
+        onToggle?.(newTheme);
+    };
 
     return (
         <button
-            onClick={toggleTheme}
+            onClick={handleToggle}
             className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary"
             aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
         >
@@ -27,6 +36,27 @@ export const Navigation: React.FC = () => {
     const [isCompanyExpanded, setIsCompanyExpanded] = React.useState(false);
     const [isResourcesExpanded, setIsResourcesExpanded] = React.useState(false);
     const { theme, toggleTheme } = useTheme();
+
+    const handleMobileMenuToggle = () => {
+        const newState = !isMobileMenuOpen;
+        setIsMobileMenuOpen(newState);
+        NavigationEvents.navMenuToggled({ isOpen: newState });
+    };
+
+    const handleThemeToggle = (newTheme: "light" | "dark") => {
+        NavigationEvents.themeToggled({ newTheme });
+    };
+
+    const handleLoginClick = () => {
+        AuthLinkEvents.loginLinkClicked({ referringPage: window.location.pathname });
+    };
+
+    const handleGetStartedClick = () => {
+        AuthLinkEvents.getStartedClicked({
+            referringPage: window.location.pathname,
+            ctaVariant: "nav_header"
+        });
+    };
 
     // Close mobile menu on route change
     React.useEffect(() => {
@@ -119,15 +149,17 @@ export const Navigation: React.FC = () => {
 
                         {/* Auth Buttons + Theme Toggle + Mobile Menu Toggle */}
                         <div className="flex items-center gap-2">
-                            <ThemeToggle />
+                            <ThemeToggle onToggle={handleThemeToggle} />
                             <a
                                 href={import.meta.env.VITE_APP_URL}
+                                onClick={handleLoginClick}
                                 className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-2"
                             >
                                 Log In
                             </a>
                             <a
                                 href={import.meta.env.VITE_APP_URL}
+                                onClick={handleGetStartedClick}
                                 className="hidden sm:block px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
                             >
                                 Get Started
@@ -135,7 +167,7 @@ export const Navigation: React.FC = () => {
 
                             {/* Mobile Menu Button */}
                             <button
-                                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                onClick={handleMobileMenuToggle}
                                 className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
                                 aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
                             >
@@ -350,7 +382,11 @@ export const Navigation: React.FC = () => {
                             <div className="mt-6 flex items-center justify-between py-4 border-b border-border">
                                 <span className="text-foreground font-medium">Theme</span>
                                 <button
-                                    onClick={toggleTheme}
+                                    onClick={() => {
+                                        const newTheme = theme === "light" ? "dark" : "light";
+                                        toggleTheme();
+                                        handleThemeToggle(newTheme);
+                                    }}
                                     className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-md text-foreground"
                                 >
                                     {theme === "light" ? (
@@ -369,12 +405,14 @@ export const Navigation: React.FC = () => {
                             <div className="mt-6 space-y-3">
                                 <a
                                     href={import.meta.env.VITE_APP_URL}
+                                    onClick={handleLoginClick}
                                     className="block w-full py-3 text-center text-foreground border border-border rounded-lg hover:bg-secondary transition-colors"
                                 >
                                     Log In
                                 </a>
                                 <a
                                     href={import.meta.env.VITE_APP_URL}
+                                    onClick={handleGetStartedClick}
                                     className="block w-full py-3 text-center bg-foreground text-background font-medium rounded-lg hover:opacity-90 transition-opacity"
                                 >
                                     Get Started

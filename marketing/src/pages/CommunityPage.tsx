@@ -114,6 +114,11 @@ export const CommunityPage: React.FC = () => {
                                     href={community.href}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={() =>
+                                        OtherPagesEvents.communityLinkClicked({
+                                            platform: community.title.toLowerCase()
+                                        })
+                                    }
                                     initial={{ opacity: 0, y: 20 }}
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true }}
@@ -170,6 +175,11 @@ export const CommunityPage: React.FC = () => {
                                     href={resource.href}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={() =>
+                                        OtherPagesEvents.communityLinkClicked({
+                                            platform: resource.title.toLowerCase().replace(" ", "-")
+                                        })
+                                    }
                                     initial={{ opacity: 0, y: 20 }}
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true }}
@@ -208,6 +218,9 @@ export const CommunityPage: React.FC = () => {
                                 href="https://discord.gg/flowmaestro"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() =>
+                                    OtherPagesEvents.communityLinkClicked({ platform: "discord" })
+                                }
                                 className="btn-primary inline-flex items-center gap-2"
                             >
                                 <MessageSquare className="w-5 h-5" />
