@@ -1,6 +1,7 @@
 import { BarChart3, TrendingUp, DollarSign, Clock, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PageHeader } from "../components/common/PageHeader";
+import { AnalyticsPageEvents } from "../lib/analytics";
 import {
     getAnalyticsOverview,
     getModelAnalytics,
@@ -8,12 +9,23 @@ import {
     type ModelAnalytics
 } from "../lib/api";
 import { logger } from "../lib/logger";
+import { useWorkspaceStore } from "../stores/workspaceStore";
 
 export function Analytics() {
     const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
     const [models, setModels] = useState<ModelAnalytics[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedPeriod, setSelectedPeriod] = useState<number>(7);
+    const hasTrackedPageView = useRef(false);
+    const { currentWorkspace } = useWorkspaceStore();
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current && currentWorkspace) {
+            AnalyticsPageEvents.pageViewed({ workspaceId: currentWorkspace.id });
+            hasTrackedPageView.current = true;
+        }
+    }, [currentWorkspace]);
 
     useEffect(() => {
         loadAnalytics();
@@ -82,7 +94,10 @@ export function Analytics() {
                 {[7, 14, 30, 90].map((days) => (
                     <button
                         key={days}
-                        onClick={() => setSelectedPeriod(days)}
+                        onClick={() => {
+                            AnalyticsPageEvents.periodChanged({ period: `${days}d` });
+                            setSelectedPeriod(days);
+                        }}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                             selectedPeriod === days
                                 ? "bg-indigo-600 text-white"

@@ -25,7 +25,7 @@ import {
     HeartHandshake,
     type LucideIcon
 } from "lucide-react";
-import { useState, FormEvent, useMemo } from "react";
+import { useState, FormEvent, useMemo, useEffect, useRef } from "react";
 import {
     getAdvancedAgentPatterns,
     getAllAgentPatterns,
@@ -37,6 +37,7 @@ import {
     ALL_PROVIDERS,
     getProviderLogo
 } from "@flowmaestro/shared";
+import { AgentEvents, DialogEvents } from "../lib/analytics";
 import { getAgentTemplates, getAgentTemplateCategories } from "../lib/api";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
@@ -115,6 +116,18 @@ export function CreateAgentDialog({ isOpen, onClose, onCreated }: CreateAgentDia
     // UI state
     const [error, setError] = useState("");
     const [isCreating, setIsCreating] = useState(false);
+    const hasTrackedDialogOpened = useRef(false);
+
+    // Track dialog opened
+    useEffect(() => {
+        if (isOpen && !hasTrackedDialogOpened.current) {
+            DialogEvents.createDialogOpened({ dialogType: "agent" });
+            hasTrackedDialogOpened.current = true;
+        }
+        if (!isOpen) {
+            hasTrackedDialogOpened.current = false;
+        }
+    }, [isOpen]);
 
     // Get patterns
     const basicPatterns = useMemo(() => getAllAgentPatterns(), []);
@@ -214,6 +227,16 @@ export function CreateAgentDialog({ isOpen, onClose, onCreated }: CreateAgentDia
                     max_tokens: selectedPattern.maxTokens ?? 4096
                 });
 
+                // Track agent creation
+                AgentEvents.created({
+                    agentId: agent.id,
+                    provider: defaultProvider,
+                    model: defaultModel,
+                    toolsCount: 0,
+                    templateUsed: selectedPattern.id
+                });
+                DialogEvents.createItemSubmitted({ dialogType: "agent", itemName: agentName });
+
                 resetForm();
                 onCreated(agent.id);
             } else if (selectedTemplate) {
@@ -227,6 +250,16 @@ export function CreateAgentDialog({ isOpen, onClose, onCreated }: CreateAgentDia
                     temperature: selectedTemplate.temperature,
                     max_tokens: selectedTemplate.max_tokens
                 });
+
+                // Track agent creation from template
+                AgentEvents.created({
+                    agentId: agent.id,
+                    provider: selectedTemplate.provider,
+                    model: selectedTemplate.model,
+                    toolsCount: 0,
+                    templateUsed: selectedTemplate.id
+                });
+                DialogEvents.createItemSubmitted({ dialogType: "agent", itemName: agentName });
 
                 resetForm();
                 onCreated(agent.id);

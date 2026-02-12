@@ -18,6 +18,7 @@ import {
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { WORKSPACE_LIMITS } from "@flowmaestro/shared";
+import { NavigationEvents, SettingsEvents } from "../../lib/analytics";
 import { cn } from "../../lib/utils";
 import { usePersonaStore } from "../../stores/personaStore";
 import { useThemeStore } from "../../stores/themeStore";
@@ -260,7 +261,14 @@ export function AppSidebar() {
     }, [fetchNeedsAttentionCount]);
 
     const toggleTheme = () => {
-        setTheme(theme === "light" ? "dark" : "light");
+        const newTheme = theme === "light" ? "dark" : "light";
+        SettingsEvents.themeChanged({ newTheme });
+        setTheme(newTheme);
+    };
+
+    const handleSidebarToggle = (collapsed: boolean) => {
+        NavigationEvents.sidebarCollapsed({ collapsed });
+        setTargetCollapsed(collapsed);
     };
 
     const getThemeIcon = () => {
@@ -296,7 +304,7 @@ export function AppSidebar() {
                 )}
             >
                 <button
-                    onClick={() => setTargetCollapsed(!targetCollapsed)}
+                    onClick={() => handleSidebarToggle(!targetCollapsed)}
                     className="flex items-center gap-2 p-1 hover:bg-muted rounded-md transition-colors flex-shrink-0"
                     title={targetCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
@@ -309,7 +317,7 @@ export function AppSidebar() {
                     FlowMaestro
                 </CollapsibleText>
                 <button
-                    onClick={() => setTargetCollapsed(true)}
+                    onClick={() => handleSidebarToggle(true)}
                     className={cn(
                         "ml-auto hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-all duration-300 flex-shrink-0",
                         targetCollapsed ? "opacity-0 w-0 p-0" : "opacity-100 p-1.5"

@@ -1,5 +1,5 @@
 import { Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FolderWithCounts, AgentSummary, FolderResourceType } from "@flowmaestro/shared";
 import { AgentCard } from "../components/cards";
@@ -25,6 +25,7 @@ import { AgentCardSkeleton } from "../components/skeletons";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, AGENT_SORT_FIELDS } from "../hooks/useSort";
+import { AgentEvents } from "../lib/analytics";
 import { getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
@@ -65,6 +66,7 @@ export function Agents() {
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+    const hasTrackedPageView = useRef(false);
 
     // Use folder management hook
     const {
@@ -143,6 +145,23 @@ export function Agents() {
         availableFields: AGENT_SORT_FIELDS
     });
 
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            AgentEvents.listViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
+    // Track search with debounce
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            AgentEvents.searched({ query: searchQuery });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
     // Load agents when folder changes
     useEffect(() => {
         const folderId = currentFolderId || undefined;
@@ -155,6 +174,7 @@ export function Agents() {
         setIsDeleting(true);
         try {
             await deleteAgent(agentToDelete.id);
+            AgentEvents.deleted({ agentId: agentToDelete.id });
             const folderId = currentFolderId || undefined;
             await fetchAgents({ folderId });
             setAgentToDelete(null);
@@ -259,9 +279,12 @@ export function Agents() {
 
         setIsBatchDeleting(true);
         try {
+            const idsToDelete = Array.from(selectedIds);
             // Delete all selected agents
-            const deletePromises = Array.from(selectedIds).map((id) => deleteAgent(id));
+            const deletePromises = idsToDelete.map((id) => deleteAgent(id));
             await Promise.all(deletePromises);
+
+            AgentEvents.batchDeleted({ agentIds: idsToDelete, count: idsToDelete.length });
 
             // Refresh the agent list and clear selection
             const folderId = currentFolderId || undefined;

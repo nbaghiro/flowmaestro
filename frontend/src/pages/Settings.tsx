@@ -1,11 +1,22 @@
 import { Palette, Bell, Key, Shield, Sun, Moon, Monitor } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { PageHeader } from "../components/common/PageHeader";
 import { ApiKeysSection } from "../components/settings/ApiKeysSection";
+import { SettingsEvents } from "../lib/analytics";
 import { cn } from "../lib/utils";
 import { useThemeStore } from "../stores/themeStore";
 
 export function Settings() {
     const { theme, setTheme } = useThemeStore();
+    const hasTrackedPageView = useRef(false);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            SettingsEvents.accountPageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
 
     const themeOptions = [
         {
@@ -43,7 +54,12 @@ export function Settings() {
                             return (
                                 <button
                                     key={option.value}
-                                    onClick={() => setTheme(option.value)}
+                                    onClick={() => {
+                                        SettingsEvents.themeChanged({
+                                            newTheme: option.value
+                                        });
+                                        setTheme(option.value);
+                                    }}
                                     className={cn(
                                         "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
                                         isActive

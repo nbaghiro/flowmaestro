@@ -1,8 +1,9 @@
 import { ArrowLeft, Plus, Play, CheckCircle, Archive, Eye } from "lucide-react";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { InstanceCard } from "../components/persona-instances/InstanceCard";
 import { useToast } from "../hooks/useToast";
+import { PersonaEvents } from "../lib/analytics";
 import { usePersonaStore } from "../stores/personaStore";
 import type { PersonaInstanceStatus } from "../lib/api";
 
@@ -50,6 +51,21 @@ export const PersonaInstances: React.FC = () => {
         usePersonaStore();
 
     const [filter, setFilter] = useState<FilterStatus>("all");
+    const hasTrackedPageView = useRef(false);
+
+    // Track page view when dashboard loads
+    useEffect(() => {
+        if (!hasTrackedPageView.current && dashboard) {
+            PersonaEvents.dashboardViewed({
+                instanceCountTotal:
+                    (dashboard.needs_attention?.length || 0) +
+                    (dashboard.running?.length || 0) +
+                    (dashboard.recent_completed?.length || 0),
+                instanceCountActive: dashboard.running?.length || 0
+            });
+            hasTrackedPageView.current = true;
+        }
+    }, [dashboard]);
 
     useEffect(() => {
         fetchDashboard();
@@ -103,12 +119,14 @@ export const PersonaInstances: React.FC = () => {
     }, [filteredInstances]);
 
     const handleInstanceClick = (id: string) => {
+        PersonaEvents.instanceViewed({ instanceId: id });
         navigate(`/persona-instances/${id}`);
     };
 
     const handleCancel = async (id: string) => {
         try {
             await cancelInstance(id);
+            PersonaEvents.instanceCancelled({ instanceId: id });
             toast.success("Task cancelled");
         } catch (_error) {
             toast.error("Failed to cancel task");

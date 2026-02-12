@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { Search, FileText, AlertCircle, Bot, Loader2 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Template, TemplateCategory, CategoryInfo, AgentTemplate } from "@flowmaestro/shared";
 import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
@@ -15,6 +15,7 @@ import { AgentTemplatePreviewDialog } from "../components/templates/dialogs/Agen
 import { TemplatePreviewDialog } from "../components/templates/dialogs/TemplatePreviewDialog";
 import { TemplateTypeToggle, type TemplateType } from "../components/templates/TemplateTypeToggle";
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
+import { TemplateEvents } from "../lib/analytics";
 import {
     getTemplates,
     getTemplateCategories,
@@ -34,6 +35,34 @@ export function Templates() {
     const [searchQuery, setSearchQuery] = useState("");
     const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
     const [previewAgentTemplate, setPreviewAgentTemplate] = useState<AgentTemplate | null>(null);
+    const hasTrackedPageView = useRef(false);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            TemplateEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
+    // Track search with debounce
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            TemplateEvents.searched({
+                query: searchQuery,
+                templateType: templateType === "workflows" ? "workflow" : "agent"
+            });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery, templateType]);
+
+    // Track category filter
+    useEffect(() => {
+        if (selectedCategory) {
+            TemplateEvents.categoryBrowsed({ category: selectedCategory });
+        }
+    }, [selectedCategory]);
 
     // Fetch workflow categories
     const { data: workflowCategoriesData, isLoading: workflowCategoriesLoading } = useQuery({
@@ -153,18 +182,22 @@ export function Templates() {
     };
 
     const handleWorkflowCardClick = (template: Template) => {
+        TemplateEvents.detailsOpened({ templateId: template.id });
         setPreviewTemplate(template);
     };
 
     const handleAgentCardClick = (template: AgentTemplate) => {
+        TemplateEvents.detailsOpened({ templateId: template.id });
         setPreviewAgentTemplate(template);
     };
 
     const handleUseWorkflow = async (template: Template) => {
+        TemplateEvents.copied({ templateId: template.id, templateType: "workflow" });
         copyWorkflowMutation.mutate(template);
     };
 
     const handleUseAgent = async (template: AgentTemplate) => {
+        TemplateEvents.copied({ templateId: template.id, templateType: "agent" });
         copyAgentMutation.mutate(template);
     };
 

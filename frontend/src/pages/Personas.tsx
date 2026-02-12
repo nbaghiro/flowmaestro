@@ -1,5 +1,5 @@
 import { Search, Sparkles } from "lucide-react";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Select } from "../components/common/Select";
 import { SkeletonGrid } from "../components/common/SkeletonGrid";
@@ -7,6 +7,7 @@ import { PersonaCard } from "../components/personas/cards/PersonaCard";
 import { PersonaDetailModal } from "../components/personas/modals/PersonaDetailModal";
 import { TaskLaunchDialog } from "../components/personas/modals/TaskLaunchDialog";
 import { PersonaCardSkeleton } from "../components/skeletons";
+import { PersonaEvents } from "../lib/analytics";
 import { getPersona } from "../lib/api";
 import { usePersonaStore } from "../stores/personaStore";
 import type { PersonaDefinition, PersonaDefinitionSummary, PersonaCategory } from "../lib/api";
@@ -51,6 +52,31 @@ export const Personas: React.FC = () => {
     const [isLaunchDialogOpen, setIsLaunchDialogOpen] = useState(false);
     const [isLoadingPersonaDetail, setIsLoadingPersonaDetail] = useState(false);
     const [launchDialogFromDetail, setLaunchDialogFromDetail] = useState(false);
+    const hasTrackedPageView = useRef(false);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            PersonaEvents.listViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
+    // Track search with debounce
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            PersonaEvents.searched({ query: searchQuery });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Track category filter
+    useEffect(() => {
+        if (selectedCategory !== "all") {
+            PersonaEvents.categoryFiltered({ category: selectedCategory });
+        }
+    }, [selectedCategory]);
 
     useEffect(() => {
         fetchPersonasByCategory();
@@ -92,6 +118,7 @@ export const Personas: React.FC = () => {
     }, [personasByCategory, searchQuery, selectedCategory]);
 
     const handleCardClick = async (persona: PersonaDefinitionSummary) => {
+        PersonaEvents.detailsViewed({ personaSlug: persona.slug });
         setSelectedPersonaSummary(persona);
         setIsDetailModalOpen(true);
         setIsLoadingPersonaDetail(true);
@@ -108,6 +135,7 @@ export const Personas: React.FC = () => {
     };
 
     const handleLaunchClick = async (persona: PersonaDefinitionSummary) => {
+        PersonaEvents.instanceLaunchInitiated({ personaSlug: persona.slug });
         setSelectedPersonaSummary(persona);
         setIsLoadingPersonaDetail(true);
         setLaunchDialogFromDetail(false);

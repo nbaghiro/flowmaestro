@@ -32,7 +32,7 @@ import {
     Loader2,
     type LucideIcon
 } from "lucide-react";
-import { useState, FormEvent, useMemo, useRef } from "react";
+import { useState, FormEvent, useMemo, useRef, useEffect } from "react";
 import {
     getAdvancedPatterns,
     getIntermediatePatterns,
@@ -45,6 +45,7 @@ import {
     getProviderLogo
 } from "@flowmaestro/shared";
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
+import { DialogEvents, WorkflowEvents } from "../lib/analytics";
 import { getTemplates, getTemplateCategories } from "../lib/api";
 import { cn } from "../lib/utils";
 import { Alert } from "./common/Alert";
@@ -286,6 +287,18 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
     // UI state
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState("");
+    const hasTrackedDialogOpened = useRef(false);
+
+    // Track dialog opened
+    useEffect(() => {
+        if (isOpen && !hasTrackedDialogOpened.current) {
+            DialogEvents.createDialogOpened({ dialogType: "workflow" });
+            hasTrackedDialogOpened.current = true;
+        }
+        if (!isOpen) {
+            hasTrackedDialogOpened.current = false;
+        }
+    }, [isOpen]);
 
     const validateAndParseJSON = (
         json: string
@@ -481,6 +494,18 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
         setIsCreating(true);
         try {
             await onCreate(workflowName, workflowDescription, workflowDefinition);
+
+            // Track workflow creation
+            const method =
+                step === "json-import" ? "blank" : selectedTemplate ? "from_template" : "blank";
+            WorkflowEvents.created({
+                templateUsed: selectedTemplate?.id || selectedPattern?.id,
+                method,
+                nodeCount: workflowDefinition
+                    ? Object.keys(workflowDefinition.nodes || {}).length
+                    : 0
+            });
+            DialogEvents.createItemSubmitted({ dialogType: "workflow", itemName: workflowName });
 
             // Reset form
             resetForm();

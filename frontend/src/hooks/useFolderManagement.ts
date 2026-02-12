@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import type { Folder, FolderWithCounts, FolderResourceType } from "@flowmaestro/shared";
+import { FolderEvents } from "../lib/analytics";
 import { getFolders, updateFolder, removeItemsFromFolder } from "../lib/api";
 import { checkItemsInFolder, extractFolderIdFromPath } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
@@ -214,7 +215,13 @@ export function useFolderManagement({
     const handleDeleteFolder = useCallback(async () => {
         if (!folderToDelete) return;
         try {
+            const itemCount = folderToDelete.itemCounts?.total || 0;
             await deleteFolderStore(folderToDelete.id);
+            // Track folder deleted
+            FolderEvents.deleted({
+                folderId: folderToDelete.id,
+                itemCountDeleted: itemCount
+            });
             await loadFolders();
             await onReloadItems();
             queryClient.invalidateQueries({ queryKey: ["folderContents", folderToDelete.id] });

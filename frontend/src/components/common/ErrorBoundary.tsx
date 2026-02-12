@@ -5,6 +5,7 @@
 
 import { AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
 import React from "react";
+import { ErrorEvents } from "../../lib/analytics";
 import { logger } from "../../lib/logger";
 import { Button } from "./Button";
 
@@ -41,6 +42,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
         logger.error("React error boundary caught error", error, {
             componentStack: errorInfo.componentStack,
             traceId: logger.getLastTraceId() || undefined
+        });
+
+        // Track error in analytics
+        ErrorEvents.errorOccurred({
+            errorType: "react_boundary",
+            errorMessage: error.message,
+            pageName: window.location.pathname
         });
 
         this.setState({ errorInfo });

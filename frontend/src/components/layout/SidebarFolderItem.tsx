@@ -2,6 +2,7 @@ import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { FolderTreeNode, FolderWithCounts, FolderResourceType } from "@flowmaestro/shared";
+import { FolderEvents } from "../../lib/analytics";
 import { cn } from "../../lib/utils";
 import { Tooltip } from "../common/Tooltip";
 
@@ -34,6 +35,7 @@ export function SidebarFolderItem({
     const hasChildren = folder.children && folder.children.length > 0;
 
     const handleClick = () => {
+        FolderEvents.opened({ folderId: folder.id });
         navigate(`/folders/${folder.id}`);
     };
 
@@ -78,6 +80,12 @@ export function SidebarFolderItem({
         try {
             const data = JSON.parse(e.dataTransfer.getData("application/json"));
             if (data.itemIds && data.itemType && onDrop) {
+                // Track items moved to folder
+                FolderEvents.itemMovedToFolder({
+                    folderId: folder.id,
+                    itemCount: data.itemIds.length,
+                    resourceType: data.itemType
+                });
                 onDrop(folder.id, data.itemIds, data.itemType as FolderResourceType);
             }
         } catch {

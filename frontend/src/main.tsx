@@ -3,9 +3,13 @@ import React, { useEffect, ReactNode } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { initAnalytics } from "./lib/analytics";
 import { useAuthStore } from "./stores/authStore";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 import "./App.css";
+
+// Initialize analytics before React renders
+initAnalytics();
 
 // Create a client for TanStack Query
 const queryClient = new QueryClient({

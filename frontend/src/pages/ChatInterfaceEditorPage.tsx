@@ -30,6 +30,7 @@ import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import { Select, SelectItem } from "../components/common/Select";
 import { LoadingState } from "../components/common/Spinner";
 import { ThemeToggle } from "../components/common/ThemeToggle";
+import { ChatInterfaceEvents } from "../lib/analytics";
 import { getChatInterface, uploadChatInterfaceAsset } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useChatInterfaceBuilderStore } from "../stores/chatInterfaceBuilderStore";
@@ -79,14 +80,24 @@ export function ChatInterfaceEditorPage() {
 
     // Refs
     const iconButtonRef = useRef<HTMLDivElement>(null);
+    const hasTrackedEditorOpened = useRef(false);
 
     // Load chat interface on mount
     useEffect(() => {
         if (id) {
+            // Track editor opened
+            if (!hasTrackedEditorOpened.current) {
+                ChatInterfaceEvents.editorOpened({ interfaceId: id });
+                hasTrackedEditorOpened.current = true;
+            }
             loadChatInterface();
         }
 
         return () => {
+            // Track editor closed
+            if (id && hasTrackedEditorOpened.current) {
+                ChatInterfaceEvents.editorClosed({ interfaceId: id });
+            }
             reset();
         };
     }, [id]);
@@ -143,15 +154,24 @@ export function ChatInterfaceEditorPage() {
     };
 
     const handleSave = async () => {
-        await save();
+        const success = await save();
+        if (success && id) {
+            ChatInterfaceEvents.edited({ interfaceId: id });
+        }
     };
 
     const handlePublish = async () => {
-        await publish();
+        const success = await publish();
+        if (success && id) {
+            ChatInterfaceEvents.published({ interfaceId: id });
+        }
     };
 
     const handleUnpublish = async () => {
-        await unpublish();
+        const success = await unpublish();
+        if (success && id) {
+            ChatInterfaceEvents.unpublished({ interfaceId: id });
+        }
     };
 
     const handleAddPrompt = () => {

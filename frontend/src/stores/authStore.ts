@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { identifyUser, resetUser, AuthEvents } from "../lib/analytics";
 import {
     login as apiLogin,
     register as apiRegister,
@@ -55,6 +56,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                     try {
                         const user = JSON.parse(decodeURIComponent(userData));
                         set({ user, isAuthenticated: true, isLoading: false, isInitialized: true });
+                        identifyUser(user.id, { email: user.email, name: user.name });
                         // Refresh to ensure we have the latest fields (including 2FA status)
                         get().refreshUser();
 
@@ -85,6 +87,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 try {
                     const user = JSON.parse(storedUser);
                     set({ user, isAuthenticated: true, isLoading: false, isInitialized: true });
+                    identifyUser(user.id, { email: user.email, name: user.name });
                     return;
                 } catch (error) {
                     logger.error("Failed to parse stored user", error);
@@ -103,6 +106,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                         isAuthenticated: true,
                         isLoading: false,
                         isInitialized: true
+                    });
+                    identifyUser(response.data.user.id, {
+                        email: response.data.user.email,
+                        name: response.data.user.name
                     });
                 } else {
                     // Token is invalid, clear it
@@ -138,6 +145,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             if (response.success && response.data && "token" in response.data) {
                 setAuthToken(response.data.token);
                 set({ user: response.data.user, isAuthenticated: true });
+                identifyUser(response.data.user.id, {
+                    email: response.data.user.email,
+                    name: response.data.user.name
+                });
                 return { twoFactorRequired: false };
             }
 
@@ -154,6 +165,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             if (response.success && response.data) {
                 setAuthToken(response.data.token);
                 set({ user: response.data.user, isAuthenticated: true });
+                identifyUser(response.data.user.id, {
+                    email: response.data.user.email,
+                    name: response.data.user.name
+                });
             } else {
                 throw new Error(response.error || "Registration failed");
             }
@@ -164,7 +179,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     },
 
     logout: () => {
+        AuthEvents.logout();
         clearAuthToken();
+        resetUser();
         set({ user: null, isAuthenticated: false });
     },
 

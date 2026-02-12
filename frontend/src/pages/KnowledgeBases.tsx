@@ -1,5 +1,5 @@
 import { Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
     FolderWithCounts,
@@ -27,6 +27,7 @@ import { CreateKnowledgeBaseModal } from "../components/knowledge-bases";
 import { KnowledgeBaseCardSkeleton } from "../components/skeletons";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
+import { KnowledgeBaseEvents } from "../lib/analytics";
 import { getKnowledgeBaseStats, type KnowledgeBaseStats, type KnowledgeBase } from "../lib/api";
 import { getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
@@ -72,6 +73,7 @@ export function KnowledgeBases() {
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "kb" });
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+    const hasTrackedPageView = useRef(false);
 
     // Use folder management hook
     const {
@@ -132,6 +134,23 @@ export function KnowledgeBases() {
         searchFields: ["name", "description"]
     });
 
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            KnowledgeBaseEvents.listViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
+    // Track search with debounce
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            KnowledgeBaseEvents.searched({ query: searchQuery });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
     // Load knowledge bases when folder changes
     useEffect(() => {
         const folderId = currentFolderId || undefined;
@@ -188,6 +207,7 @@ export function KnowledgeBases() {
         setIsDeleting(true);
         try {
             await deleteKB(kbToDelete.id);
+            KnowledgeBaseEvents.deleted({ kbId: kbToDelete.id });
             const folderId = currentFolderId || undefined;
             await fetchKnowledgeBases({ folderId });
             setKbToDelete(null);
@@ -271,9 +291,12 @@ export function KnowledgeBases() {
 
         setIsBatchDeleting(true);
         try {
+            const idsToDelete = Array.from(selectedIds);
             // Delete all selected knowledge bases
-            const deletePromises = Array.from(selectedIds).map((id) => deleteKB(id));
+            const deletePromises = idsToDelete.map((id) => deleteKB(id));
             await Promise.all(deletePromises);
+
+            KnowledgeBaseEvents.batchDeleted({ kbIds: idsToDelete, count: idsToDelete.length });
 
             // Refresh the list and clear selection
             const folderId = currentFolderId || undefined;

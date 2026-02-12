@@ -1,5 +1,5 @@
 import { Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
     ChatInterface,
@@ -30,6 +30,7 @@ import { ChatInterfaceCardSkeleton } from "../components/skeletons";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, CHAT_INTERFACE_SORT_FIELDS } from "../hooks/useSort";
+import { ChatInterfaceEvents } from "../lib/analytics";
 import { getChatInterfaces, deleteChatInterface, duplicateChatInterface } from "../lib/api";
 import { getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
@@ -73,6 +74,7 @@ export function ChatInterfacesPage() {
         position: { x: number; y: number };
         type: "chat" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "chat" });
+    const hasTrackedPageView = useRef(false);
 
     // Use folder management hook
     const {
@@ -151,6 +153,26 @@ export function ChatInterfacesPage() {
         availableFields: CHAT_INTERFACE_SORT_FIELDS
     });
 
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            ChatInterfaceEvents.listViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
+    // Track search with debounce
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            ChatInterfaceEvents.searched({
+                query: searchQuery,
+                resultsCount: searchFilteredChatInterfaces.length
+            });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery, searchFilteredChatInterfaces.length]);
+
     // Load chat interfaces when folder changes
     useEffect(() => {
         const folderId = currentFolderId || undefined;
@@ -180,6 +202,7 @@ export function ChatInterfacesPage() {
 
         try {
             await deleteChatInterface(deleteTarget.id);
+            ChatInterfaceEvents.deleted({ interfaceId: deleteTarget.id });
             setChatInterfaces((prev) => prev.filter((ci) => ci.id !== deleteTarget.id));
             setDeleteTarget(null);
         } catch (err) {
@@ -195,6 +218,7 @@ export function ChatInterfacesPage() {
         try {
             const response = await duplicateChatInterface(chatInterface.id);
             if (response.success && response.data) {
+                ChatInterfaceEvents.duplicated({ interfaceId: chatInterface.id });
                 setChatInterfaces((prev) => [response.data, ...prev]);
             }
         } catch (err) {
@@ -309,9 +333,15 @@ export function ChatInterfacesPage() {
 
         setIsBatchDeleting(true);
         try {
+            const idsToDelete = Array.from(selectedIds);
             // Delete all selected chat interfaces
-            const deletePromises = Array.from(selectedIds).map((id) => deleteChatInterface(id));
+            const deletePromises = idsToDelete.map((id) => deleteChatInterface(id));
             await Promise.all(deletePromises);
+
+            ChatInterfaceEvents.batchDeleted({
+                interfaceIds: idsToDelete,
+                count: idsToDelete.length
+            });
 
             // Refresh the list and clear selection
             const folderId = currentFolderId || undefined;

@@ -1,5 +1,5 @@
 import { Plus, Sparkles, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     type WorkflowNode,
@@ -32,6 +32,7 @@ import { WorkflowCardSkeleton } from "../components/skeletons";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, WORKFLOW_SORT_FIELDS } from "../hooks/useSort";
+import { WorkflowEvents } from "../lib/analytics";
 import {
     getWorkflows,
     createWorkflow,
@@ -173,6 +174,18 @@ export function Workflows() {
         searchFields: ["name", "description"]
     });
 
+    // Track search usage (debounced)
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            WorkflowEvents.searched({
+                query: searchQuery,
+                resultsCount: searchFilteredWorkflows.length
+            });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery, searchFilteredWorkflows.length]);
+
     // Sorting functionality
     const {
         sortState,
@@ -188,6 +201,15 @@ export function Workflows() {
         },
         availableFields: WORKFLOW_SORT_FIELDS
     });
+
+    // Track page view on mount
+    const hasTrackedPageView = useRef(false);
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            WorkflowEvents.listViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
 
     // Load workflows when folder changes
     useEffect(() => {
@@ -220,6 +242,7 @@ export function Workflows() {
 
         if (response.success && response.data) {
             const workflowId = response.data.id;
+            WorkflowEvents.created({ method: "blank" });
             navigate(`/builder/${workflowId}`, {
                 state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
             });
@@ -288,6 +311,10 @@ export function Workflows() {
                     definition: workflowDefinition
                 });
 
+                // Track AI workflow creation
+                const nodeCount = Object.keys(nodesMap).length;
+                WorkflowEvents.created({ method: "from_ai", nodeCount });
+
                 // Navigate to the builder with the new workflow
                 navigate(`/builder/${workflowId}`, {
                     state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
@@ -306,6 +333,7 @@ export function Workflows() {
         setIsDeleting(true);
         try {
             await deleteWorkflow(workflowToDelete.id);
+            WorkflowEvents.deleted({ workflowId: workflowToDelete.id });
             // Refresh the workflow list
             await loadWorkflows();
             await refreshFolders(); // Refresh folder counts
@@ -353,6 +381,7 @@ export function Workflows() {
             );
 
             if (createData.success && createData.data) {
+                WorkflowEvents.duplicated({ workflowId: workflow.id });
                 // Refresh the workflow list
                 await loadWorkflows();
 
@@ -472,9 +501,12 @@ export function Workflows() {
 
         setIsBatchDeleting(true);
         try {
+            const idsToDelete = Array.from(selectedIds);
             // Delete all selected workflows
-            const deletePromises = Array.from(selectedIds).map((id) => deleteWorkflow(id));
+            const deletePromises = idsToDelete.map((id) => deleteWorkflow(id));
             await Promise.all(deletePromises);
+
+            WorkflowEvents.batchDeleted({ workflowIds: idsToDelete, count: idsToDelete.length });
 
             // Refresh the workflow list and clear selection
             await loadWorkflows();

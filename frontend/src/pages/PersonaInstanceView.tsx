@@ -25,6 +25,7 @@ import { ClarifyingPhaseUI } from "../components/personas/clarification";
 import { ContinueWorkDialog } from "../components/personas/modals/ContinueWorkDialog";
 import { usePersonaStream } from "../hooks/usePersonaStream";
 import { useToast } from "../hooks/useToast";
+import { PersonaEvents } from "../lib/analytics";
 import { usePersonaStore } from "../stores/personaStore";
 import type {
     PersonaCategory,
@@ -181,6 +182,16 @@ export const PersonaInstanceView: React.FC = () => {
         error: streamError
     } = usePersonaStream(instanceIsActive && id ? id : null);
 
+    const hasTrackedView = useRef(false);
+
+    // Track instance view
+    useEffect(() => {
+        if (id && !hasTrackedView.current) {
+            PersonaEvents.instanceViewed({ instanceId: id });
+            hasTrackedView.current = true;
+        }
+    }, [id]);
+
     useEffect(() => {
         if (id) {
             fetchInstance(id);
@@ -238,6 +249,7 @@ export const PersonaInstanceView: React.FC = () => {
 
         try {
             await sendMessage(id, messageToSend);
+            PersonaEvents.instanceMessageSent({ instanceId: id });
             setSendStatus("sent");
             setPendingMessage(null);
             // Clear "sent" status after 2 seconds
@@ -257,6 +269,7 @@ export const PersonaInstanceView: React.FC = () => {
         if (!id) return;
         try {
             await cancelInstance(id);
+            PersonaEvents.instanceCancelled({ instanceId: id });
             setShowCancelDialog(false);
             toast.success("Task cancelled");
         } catch (_error) {
@@ -268,6 +281,14 @@ export const PersonaInstanceView: React.FC = () => {
         if (!id) return;
         try {
             await completeInstance(id);
+            // Calculate duration in days
+            const durationDays = currentInstance
+                ? Math.ceil(
+                      (Date.now() - new Date(currentInstance.created_at).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                  )
+                : 0;
+            PersonaEvents.instanceCompleted({ instanceId: id, durationDays });
             toast.success("Task marked as complete");
         } catch (_error) {
             toast.error("Failed to complete task");

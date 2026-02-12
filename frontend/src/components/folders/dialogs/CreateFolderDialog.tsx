@@ -1,6 +1,7 @@
 import { Check, Plus } from "lucide-react";
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { FOLDER_COLORS, type Folder } from "@flowmaestro/shared";
+import { DialogEvents, FolderEvents } from "../../../lib/analytics";
 import { Alert } from "../../common/Alert";
 import { Button } from "../../common/Button";
 import { Dialog } from "../../common/Dialog";
@@ -38,6 +39,9 @@ export function CreateFolderDialog({
     // Initialize form when folder changes or dialog opens
     useEffect(() => {
         if (isOpen) {
+            // Track dialog opened
+            DialogEvents.createDialogOpened({ dialogType: "folder" });
+
             if (folder) {
                 setName(folder.name);
                 setColor(folder.color);
@@ -52,7 +56,7 @@ export function CreateFolderDialog({
             setError("");
             setShowCustomColorPicker(false);
         }
-    }, [isOpen, folder]);
+    }, [isOpen, folder, isEditMode]);
 
     // Close color picker when clicking outside
     useEffect(() => {
@@ -87,6 +91,13 @@ export function CreateFolderDialog({
         setIsSubmitting(true);
         try {
             await onSubmit(trimmedName, color);
+            // Track folder created/edited
+            if (isEditMode) {
+                FolderEvents.renamed({ folderId: folder!.id });
+            } else {
+                FolderEvents.created({ resourceType: "folder" });
+            }
+            DialogEvents.createItemSubmitted({ dialogType: "folder", itemName: trimmedName });
             handleClose();
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to save folder");

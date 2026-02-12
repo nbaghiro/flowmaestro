@@ -4,7 +4,8 @@
  */
 
 import { RefreshCw, Zap } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { TriggerEvents } from "../../lib/analytics";
 import { getTriggers } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTriggerStore } from "../../stores/triggerStore";
@@ -20,6 +21,7 @@ export function TriggerPanelContent({ workflowId }: TriggerPanelContentProps) {
 
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const hasTrackedListView = useRef(false);
 
     const loadTriggerList = useCallback(async () => {
         if (!workflowId) return;
@@ -31,6 +33,11 @@ export function TriggerPanelContent({ workflowId }: TriggerPanelContentProps) {
             const response = await getTriggers(workflowId);
             if (response.success && response.data) {
                 setTriggers(response.data);
+                // Track list viewed (only once per mount)
+                if (!hasTrackedListView.current) {
+                    TriggerEvents.listViewed({ workflowId });
+                    hasTrackedListView.current = true;
+                }
             }
         } catch (err) {
             logger.error("Failed to load triggers", err);

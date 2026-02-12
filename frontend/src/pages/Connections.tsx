@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ALL_PROVIDERS, supportsOAuth, type Provider } from "@flowmaestro/shared";
 import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
@@ -8,6 +8,7 @@ import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { ConnectionDetailsDialog } from "../components/connections/dialogs/ConnectionDetailsDialog";
 import { NewConnectionDialog } from "../components/connections/dialogs/NewConnectionDialog";
 import { ConnectionCardSkeleton } from "../components/skeletons";
+import { IntegrationEvents } from "../lib/analytics";
 import { useConnectionStore } from "../stores/connectionStore";
 import type { Connection } from "../lib/api";
 
@@ -95,10 +96,19 @@ export function Connections() {
     const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
+    const hasTrackedPageView = useRef(false);
 
     useEffect(() => {
         fetchConnections();
     }, [fetchConnections]);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            IntegrationEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
 
     // Get connections for a specific provider
     const getConnectionsForProvider = (provider: string) => {
@@ -178,6 +188,28 @@ export function Connections() {
         }))
         .filter((category) => category.providers.length > 0);
 
+    // Track search with debounce
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            IntegrationEvents.searched({
+                query: searchQuery,
+                resultsCount: filteredProviders.length
+            });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery, filteredProviders.length]);
+
+    // Track category filter changes
+    useEffect(() => {
+        if (selectedCategory !== "all") {
+            IntegrationEvents.filtered({
+                filterType: "category",
+                filterValue: selectedCategory
+            });
+        }
+    }, [selectedCategory]);
+
     const handleConnect = (provider: Provider) => {
         // Check if provider is already connected
         const existingConnections = getConnectionsForProvider(provider.provider);
@@ -185,18 +217,30 @@ export function Connections() {
 
         // Only allow connection if not already connected
         if (!hasActiveConnection) {
+            IntegrationEvents.connectionInitiated({ provider: provider.provider });
             setSelectedProvider(provider);
             setIsAddDialogOpen(true);
         }
     };
 
     const handleViewDetails = (connection: Connection) => {
+        IntegrationEvents.connectionDetailsViewed({
+            provider: connection.provider,
+            connectionId: connection.id
+        });
         setSelectedConnection(connection);
         setIsDetailsDialogOpen(true);
     };
 
     const handleDisconnect = async (connectionId: string) => {
+        const connection = connections.find((c) => c.id === connectionId);
         await deleteConnectionById(connectionId);
+        if (connection) {
+            IntegrationEvents.connectionDeleted({
+                provider: connection.provider,
+                connectionId
+            });
+        }
         await fetchConnections(); // Refresh the list
     };
 

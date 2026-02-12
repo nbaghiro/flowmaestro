@@ -1,5 +1,5 @@
 import { Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
     FormInterface,
@@ -30,6 +30,7 @@ import { FormInterfaceCardSkeleton } from "../components/skeletons";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, FORM_INTERFACE_SORT_FIELDS } from "../hooks/useSort";
+import { FormInterfaceEvents } from "../lib/analytics";
 import { getFormInterfaces, deleteFormInterface, duplicateFormInterface } from "../lib/api";
 import { getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
@@ -72,6 +73,7 @@ export function FormInterfaces() {
         position: { x: number; y: number };
         type: "form" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "form" });
+    const hasTrackedPageView = useRef(false);
 
     // Use folder management hook
     const {
@@ -150,6 +152,26 @@ export function FormInterfaces() {
         availableFields: FORM_INTERFACE_SORT_FIELDS
     });
 
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            FormInterfaceEvents.listViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
+    // Track search with debounce
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            FormInterfaceEvents.searched({
+                query: searchQuery,
+                resultsCount: searchFilteredFormInterfaces.length
+            });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery, searchFilteredFormInterfaces.length]);
+
     // Load form interfaces when folder changes
     useEffect(() => {
         const folderId = currentFolderId || undefined;
@@ -179,6 +201,7 @@ export function FormInterfaces() {
 
         try {
             await deleteFormInterface(deleteTarget.id);
+            FormInterfaceEvents.deleted({ interfaceId: deleteTarget.id });
             setFormInterfaces((prev) => prev.filter((fi) => fi.id !== deleteTarget.id));
             setDeleteTarget(null);
         } catch (err) {
@@ -194,6 +217,7 @@ export function FormInterfaces() {
         try {
             const response = await duplicateFormInterface(formInterface.id);
             if (response.success && response.data) {
+                FormInterfaceEvents.duplicated({ interfaceId: formInterface.id });
                 setFormInterfaces((prev) => [response.data, ...prev]);
             }
         } catch (err) {
@@ -308,9 +332,15 @@ export function FormInterfaces() {
 
         setIsBatchDeleting(true);
         try {
+            const idsToDelete = Array.from(selectedIds);
             // Delete all selected form interfaces
-            const deletePromises = Array.from(selectedIds).map((id) => deleteFormInterface(id));
+            const deletePromises = idsToDelete.map((id) => deleteFormInterface(id));
             await Promise.all(deletePromises);
+
+            FormInterfaceEvents.batchDeleted({
+                interfaceIds: idsToDelete,
+                count: idsToDelete.length
+            });
 
             // Refresh the list and clear selection
             const folderId = currentFolderId || undefined;

@@ -52,11 +52,12 @@ import {
     FilePenLine,
     type LucideIcon
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { ALL_PROVIDERS, getProvidersByCategory } from "@flowmaestro/shared";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { Tooltip } from "../../components/common/Tooltip";
+import { WorkflowEvents } from "../../lib/analytics";
 import { useThemeStore } from "../../stores/themeStore";
 
 interface NodeDefinition {
@@ -446,6 +447,15 @@ export function NodeLibrary({
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState("");
     const effectiveTheme = useThemeStore((state) => state.effectiveTheme);
+
+    // Track node palette search with debounce
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            WorkflowEvents.nodePaletteSearched({ query: searchQuery });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     const toggleCategory = (categoryId: string) => {
         setExpandedCategories((prev) => {

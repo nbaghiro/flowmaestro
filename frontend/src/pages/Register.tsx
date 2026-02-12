@@ -1,4 +1,4 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AbstractBackground } from "../components/common/AbstractBackground";
 import { Alert } from "../components/common/Alert";
@@ -8,6 +8,7 @@ import { Logo } from "../components/common/Logo";
 import { Divider } from "../components/common/Separator";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import { useMicrosoftAuth } from "../hooks/useMicrosoftAuth";
+import { AuthEvents } from "../lib/analytics";
 import { useAuthStore } from "../stores/authStore";
 
 export function Register() {
@@ -21,6 +22,21 @@ export function Register() {
     const navigate = useNavigate();
     const { loginWithGoogle, isLoading: isGoogleLoading } = useGoogleAuth();
     const { loginWithMicrosoft, isLoading: isMicrosoftLoading } = useMicrosoftAuth();
+
+    // Track page view
+    useEffect(() => {
+        AuthEvents.signupStarted();
+    }, []);
+
+    const handleGoogleSignup = () => {
+        AuthEvents.signupGoogleInitiated();
+        loginWithGoogle();
+    };
+
+    const handleMicrosoftSignup = () => {
+        AuthEvents.signupMicrosoftInitiated();
+        loginWithMicrosoft();
+    };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -42,6 +58,8 @@ export function Register() {
 
         try {
             await register(email, password, name || undefined);
+            const emailDomain = email.split("@")[1];
+            AuthEvents.signupCompleted({ authMethod: "email", emailDomain });
             navigate("/app");
         } catch (err: unknown) {
             setError((err as Error).message || "Failed to register. Please try again.");
@@ -171,7 +189,7 @@ export function Register() {
                         <Button
                             type="button"
                             variant="secondary"
-                            onClick={loginWithGoogle}
+                            onClick={handleGoogleSignup}
                             disabled={isLoading || isGoogleLoading || isMicrosoftLoading}
                             loading={isGoogleLoading}
                             className="w-full gap-3"
@@ -203,7 +221,7 @@ export function Register() {
                         <Button
                             type="button"
                             variant="secondary"
-                            onClick={loginWithMicrosoft}
+                            onClick={handleMicrosoftSignup}
                             disabled={isLoading || isGoogleLoading || isMicrosoftLoading}
                             loading={isMicrosoftLoading}
                             className="w-full gap-3"
