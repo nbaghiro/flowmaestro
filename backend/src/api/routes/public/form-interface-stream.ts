@@ -91,8 +91,8 @@ export async function publicFormInterfaceStreamRoutes(fastify: FastifyInstance) 
             const executionId = submission.executionId;
             const isWorkflow = formInterface.targetType === "workflow";
 
-            // Subscription channel for cleanup
-            let subscriptionChannel: string | null = null;
+            // Track subscriptions for cleanup
+            const subscriptions: Array<{ channel: string; handler: (data: unknown) => void }> = [];
 
             const sendEvent = (event: string, data: unknown) => {
                 reply.raw.write(`event: ${event}\n`);
@@ -106,8 +106,8 @@ export async function publicFormInterfaceStreamRoutes(fastify: FastifyInstance) 
 
             const cleanup = async () => {
                 clearInterval(pingInterval);
-                if (subscriptionChannel) {
-                    await redisEventBus.unsubscribe(subscriptionChannel);
+                for (const { channel, handler } of subscriptions) {
+                    await redisEventBus.unsubscribe(channel, handler);
                 }
             };
 
@@ -118,75 +118,109 @@ export async function publicFormInterfaceStreamRoutes(fastify: FastifyInstance) 
 
             // Subscribe to execution events based on target type
             if (isWorkflow) {
-                // For workflows, subscribe to execution events
-                subscriptionChannel = `execution:${executionId}:*`;
-                await redisEventBus.subscribe(subscriptionChannel, async (wsEvent) => {
-                    const event = wsEvent as unknown as {
-                        type: string;
-                        status?: string;
-                        output?: string;
-                        error?: string;
+                // For workflows, subscribe to workflow:events channels and filter by executionId
+                // (same pattern as executions/stream.ts)
+                const subscribeToWorkflowEvent = (
+                    eventType: string,
+                    onEvent: (data: Record<string, unknown>) => Promise<void>
+                ) => {
+                    const channel = `workflow:events:${eventType}`;
+                    const handler = async (event: unknown) => {
+                        const data = event as Record<string, unknown>;
+                        if (data.executionId === executionId) {
+                            await onEvent(data);
+                        }
                     };
+                    subscriptions.push({ channel, handler });
+                    redisEventBus.subscribe(channel, handler);
+                };
 
-                    sendEvent(event.type, event);
+                // Subscribe to completion events
+                subscribeToWorkflowEvent("execution:completed", async (data) => {
+                    // Transform outputs to output for frontend compatibility
+                    const outputValue =
+                        typeof data.outputs === "string"
+                            ? data.outputs
+                            : JSON.stringify(data.outputs);
+                    sendEvent("execution:completed", {
+                        ...data,
+                        output: outputValue
+                    });
+                    await submissionRepo.updateExecutionStatus(
+                        submissionId,
+                        "completed",
+                        undefined,
+                        outputValue
+                    );
+                    await cleanup();
+                    reply.raw.end();
+                });
 
-                    // Update submission on completion
-                    if (event.type === "execution:completed" || event.type === "execution:failed") {
-                        const status = event.status === "completed" ? "completed" : "failed";
-                        await submissionRepo.updateExecutionStatus(
-                            submissionId,
-                            status,
-                            undefined,
-                            event.output
-                        );
+                subscribeToWorkflowEvent("execution:failed", async (data) => {
+                    sendEvent("execution:failed", data);
+                    await submissionRepo.updateExecutionStatus(
+                        submissionId,
+                        "failed",
+                        undefined,
+                        data.error as string
+                    );
+                    await cleanup();
+                    reply.raw.end();
+                });
 
-                        // Close the stream
-                        await cleanup();
-                        reply.raw.end();
-                    }
+                // Also subscribe to progress events for feedback
+                subscribeToWorkflowEvent("execution:progress", async (data) => {
+                    sendEvent("execution:progress", data);
+                });
+
+                subscribeToWorkflowEvent("node:completed", async (data) => {
+                    sendEvent("node:completed", data);
                 });
             } else {
-                // For agents, subscribe to agent events
-                subscriptionChannel = "agent:events:*";
-                await redisEventBus.subscribe(subscriptionChannel, async (wsEvent) => {
-                    const event = wsEvent as unknown as {
-                        type: string;
-                        executionId?: string;
-                        status?: string;
-                        token?: string;
-                        finalMessage?: string;
-                        error?: string;
+                // For agents, subscribe to agent:events channels and filter by executionId
+                const subscribeToAgentEvent = (
+                    eventType: string,
+                    onEvent: (data: Record<string, unknown>) => Promise<void>
+                ) => {
+                    const channel = `agent:events:${eventType}`;
+                    const handler = async (event: unknown) => {
+                        const data = event as Record<string, unknown>;
+                        if (data.executionId === executionId) {
+                            await onEvent(data);
+                        }
                     };
+                    subscriptions.push({ channel, handler });
+                    redisEventBus.subscribe(channel, handler);
+                };
 
-                    // Filter by execution ID
-                    if (event.executionId !== executionId) {
-                        return;
-                    }
+                // Subscribe to token streaming
+                subscribeToAgentEvent("token", async (data) => {
+                    sendEvent("agent:execution:token", { token: data.token });
+                });
 
-                    sendEvent(event.type, event);
+                // Subscribe to completion events
+                subscribeToAgentEvent("execution:completed", async (data) => {
+                    sendEvent("agent:execution:completed", data);
+                    await submissionRepo.updateExecutionStatus(
+                        submissionId,
+                        "completed",
+                        undefined,
+                        data.finalMessage as string
+                    );
+                    await cleanup();
+                    reply.raw.end();
+                });
 
-                    // Update submission on completion
-                    if (event.type === "agent:execution:completed") {
-                        await submissionRepo.updateExecutionStatus(
-                            submissionId,
-                            "completed",
-                            undefined,
-                            event.finalMessage
-                        );
-
-                        await cleanup();
-                        reply.raw.end();
-                    } else if (event.type === "agent:execution:failed") {
-                        await submissionRepo.updateExecutionStatus(
-                            submissionId,
-                            "failed",
-                            undefined,
-                            event.error
-                        );
-
-                        await cleanup();
-                        reply.raw.end();
-                    }
+                subscribeToAgentEvent("execution:failed", async (data) => {
+                    sendEvent("agent:execution:failed", data);
+                    await submissionRepo.updateExecutionStatus(
+                        submissionId,
+                        "failed",
+                        undefined,
+                        data.error as string
+                    );
+                    await cleanup();
+                    reply.raw.end();
                 });
             }
 
