@@ -576,6 +576,12 @@ export const config = {
             clientSecret: process.env.GUSTO_CLIENT_SECRET || ""
         },
 
+        // SAP SuccessFactors
+        sapSuccessFactors: {
+            clientId: process.env.SAP_SUCCESSFACTORS_CLIENT_ID || "",
+            clientSecret: process.env.SAP_SUCCESSFACTORS_CLIENT_SECRET || ""
+        },
+
         // Square
         square: {
             clientId: process.env.SQUARE_CLIENT_ID || "",
@@ -802,6 +808,7 @@ export function getOAuthRedirectUri(provider: string): string {
         rippling: "/oauth/rippling/callback",
         adp: "/oauth/adp/callback",
         gusto: "/oauth/gusto/callback",
+        "sap-successfactors": "/oauth/sap-successfactors/callback",
         bamboohr: "/oauth/bamboohr/callback",
         square: "/oauth/square/callback",
         paypal: "/oauth/paypal/callback",
@@ -922,6 +929,7 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         rippling: "rippling",
         adp: "adp",
         gusto: "gusto",
+        "sap-successfactors": "sapSuccessFactors",
         bamboohr: "bamboohr",
         paypal: "paypal",
         "amazon-seller-central": "amazonSellerCentral",

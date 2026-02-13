@@ -1,23 +1,8 @@
-import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
-import type { OAuth2TokenData } from "../../../../storage/models/Connection";
+import { GoogleBaseClient } from "../../../core/google";
 
 export interface GoogleDriveClientConfig {
     accessToken: string;
     connectionId?: string;
-    onTokenRefresh?: (tokens: OAuth2TokenData) => Promise<void>;
-}
-
-interface GoogleDriveErrorResponse {
-    error: {
-        code: number;
-        message: string;
-        status: string;
-        errors?: Array<{
-            domain?: string;
-            reason?: string;
-            message?: string;
-        }>;
-    };
 }
 
 /**
@@ -26,91 +11,20 @@ interface GoogleDriveErrorResponse {
  * API Documentation: https://developers.google.com/drive/api/reference/rest/v3
  * Base URL: https://www.googleapis.com
  */
-export class GoogleDriveClient extends BaseAPIClient {
-    private accessToken: string;
-
+export class GoogleDriveClient extends GoogleBaseClient {
     constructor(config: GoogleDriveClientConfig) {
-        const clientConfig: BaseAPIClientConfig = {
+        super({
+            accessToken: config.accessToken,
             baseURL: "https://www.googleapis.com",
-            timeout: 30000,
-            retryConfig: {
-                maxRetries: 3,
-                retryableStatuses: [429, 500, 502, 503, 504],
-                backoffStrategy: "exponential"
-            },
-            connectionPool: {
-                maxSockets: 50,
-                maxFreeSockets: 10,
-                keepAlive: true
-            }
-        };
-
-        super(clientConfig);
-        this.accessToken = config.accessToken;
-
-        // Add request interceptor for auth header
-        this.client.addRequestInterceptor((config) => {
-            if (!config.headers) {
-                config.headers = {};
-            }
-            config.headers["Authorization"] = `Bearer ${this.accessToken}`;
-            return config;
+            serviceName: "Google Drive"
         });
     }
 
     /**
-     * Handle Google Drive API-specific errors
+     * Override to provide service-specific not found message
      */
-    protected async handleError(
-        error: Error & {
-            response?: { status?: number; data?: unknown; headers?: Record<string, string> };
-        }
-    ): Promise<never> {
-        if (error.response) {
-            const { status, data } = error.response;
-
-            // Map common Google Drive errors
-            if (status === 401) {
-                throw new Error("Google Drive authentication failed. Please reconnect.");
-            }
-
-            if (status === 403) {
-                const errorData = data as GoogleDriveErrorResponse;
-                const reason = errorData?.error?.errors?.[0]?.reason;
-
-                if (reason === "rateLimitExceeded" || reason === "userRateLimitExceeded") {
-                    throw new Error("Google Drive rate limit exceeded. Please try again later.");
-                }
-
-                throw new Error(
-                    `Permission denied: ${errorData?.error?.message || "You don't have permission to access this resource."}`
-                );
-            }
-
-            if (status === 404) {
-                throw new Error("File or folder not found.");
-            }
-
-            if (status === 429) {
-                const retryAfter = error.response.headers?.["retry-after"];
-                throw new Error(
-                    `Google Drive rate limit exceeded. Retry after ${retryAfter || "60"} seconds.`
-                );
-            }
-
-            if (status === 400) {
-                const errorData = data as GoogleDriveErrorResponse;
-                throw new Error(`Invalid request: ${errorData?.error?.message || "Bad request"}`);
-            }
-
-            // Handle structured error response
-            if ((data as GoogleDriveErrorResponse)?.error) {
-                const errorData = data as GoogleDriveErrorResponse;
-                throw new Error(`Google Drive API error: ${errorData.error.message}`);
-            }
-        }
-
-        throw error;
+    protected getNotFoundMessage(): string {
+        return "File or folder not found.";
     }
 
     // ==================== File Operations ====================

@@ -8,6 +8,8 @@
  * since they are stored as files in OneDrive/SharePoint.
  */
 
+import { MicrosoftGraphClient } from "../../../core/microsoft";
+
 export interface PowerPointClientConfig {
     accessToken: string;
 }
@@ -55,74 +57,22 @@ export interface SearchResult {
     "@odata.nextLink"?: string;
 }
 
-export class MicrosoftPowerPointClient {
-    private readonly baseUrl = "https://graph.microsoft.com/v1.0";
-    private readonly accessToken: string;
+const POWERPOINT_MIME_TYPE =
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
+export class MicrosoftPowerPointClient extends MicrosoftGraphClient {
     constructor(config: PowerPointClientConfig) {
-        this.accessToken = config.accessToken;
-    }
-
-    /**
-     * Make authenticated request to Microsoft Graph API
-     */
-    private async request<T>(
-        endpoint: string,
-        options: {
-            method?: string;
-            body?: unknown;
-            headers?: Record<string, string>;
-            isBlob?: boolean;
-        } = {}
-    ): Promise<T> {
-        const url = endpoint.startsWith("http") ? endpoint : `${this.baseUrl}${endpoint}`;
-        const { method = "GET", body, headers = {}, isBlob = false } = options;
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type": "application/json",
-                ...headers
-            },
-            body: body ? JSON.stringify(body) : undefined
+        super({
+            accessToken: config.accessToken,
+            serviceName: "Microsoft PowerPoint"
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Microsoft Graph API error: ${response.status}`;
-
-            try {
-                const errorJson = JSON.parse(errorText) as {
-                    error?: { message?: string; code?: string };
-                };
-                if (errorJson.error?.message) {
-                    errorMessage = errorJson.error.message;
-                }
-            } catch {
-                // Use default error message
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        if (response.status === 204) {
-            return {} as T;
-        }
-
-        if (isBlob) {
-            const arrayBuffer = await response.arrayBuffer();
-            return Buffer.from(arrayBuffer).toString("base64") as unknown as T;
-        }
-
-        return (await response.json()) as T;
     }
 
     /**
      * Get presentation metadata
      */
     async getPresentation(itemId: string): Promise<DriveItemInfo> {
-        return this.request(`/me/drive/items/${itemId}`);
+        return this.get(`/me/drive/items/${itemId}`);
     }
 
     /**
@@ -130,23 +80,25 @@ export class MicrosoftPowerPointClient {
      */
     async getPresentationByPath(path: string): Promise<DriveItemInfo> {
         const encodedPath = encodeURIComponent(path).replace(/%2F/g, "/");
-        return this.request(`/me/drive/root:/${encodedPath}`);
+        return this.get(`/me/drive/root:/${encodedPath}`);
     }
 
     /**
      * Download presentation content as base64
      */
     async downloadPresentation(itemId: string): Promise<string> {
-        return this.request(`/me/drive/items/${itemId}/content`, { isBlob: true });
+        const arrayBuffer = await this.downloadBinary(`/me/drive/items/${itemId}/content`);
+        return Buffer.from(arrayBuffer).toString("base64");
     }
 
     /**
      * Convert presentation to another format (PDF)
      */
     async convertPresentation(itemId: string, format: "pdf"): Promise<string> {
-        return this.request(`/me/drive/items/${itemId}/content?format=${format}`, {
-            isBlob: true
-        });
+        const arrayBuffer = await this.downloadBinary(
+            `/me/drive/items/${itemId}/content?format=${format}`
+        );
+        return Buffer.from(arrayBuffer).toString("base64");
     }
 
     /**
@@ -168,36 +120,11 @@ export class MicrosoftPowerPointClient {
             uploadUrl = `/me/drive/root:/${fileName}:/content?@microsoft.graph.conflictBehavior=${conflictBehavior}`;
         }
 
-        const url = `${this.baseUrl}${uploadUrl}`;
-        const response = await fetch(url, {
+        return this.requestBinary(uploadUrl, {
             method: "PUT",
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type":
-                    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            },
-            body: contentBuffer
+            body: contentBuffer,
+            contentType: POWERPOINT_MIME_TYPE
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Microsoft Graph API error: ${response.status}`;
-
-            try {
-                const errorJson = JSON.parse(errorText) as {
-                    error?: { message?: string; code?: string };
-                };
-                if (errorJson.error?.message) {
-                    errorMessage = errorJson.error.message;
-                }
-            } catch {
-                // Use default error message
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return (await response.json()) as DriveItemInfo;
     }
 
     /**
@@ -207,36 +134,11 @@ export class MicrosoftPowerPointClient {
         const contentBuffer =
             typeof content === "string" ? Buffer.from(content, "base64") : content;
 
-        const url = `${this.baseUrl}/me/drive/items/${itemId}/content`;
-        const response = await fetch(url, {
+        return this.requestBinary(`/me/drive/items/${itemId}/content`, {
             method: "PUT",
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type":
-                    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            },
-            body: contentBuffer
+            body: contentBuffer,
+            contentType: POWERPOINT_MIME_TYPE
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Microsoft Graph API error: ${response.status}`;
-
-            try {
-                const errorJson = JSON.parse(errorText) as {
-                    error?: { message?: string; code?: string };
-                };
-                if (errorJson.error?.message) {
-                    errorMessage = errorJson.error.message;
-                }
-            } catch {
-                // Use default error message
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        return (await response.json()) as DriveItemInfo;
     }
 
     /**
@@ -251,7 +153,7 @@ export class MicrosoftPowerPointClient {
             url += `?$top=${top}`;
         }
 
-        return this.request(url);
+        return this.get(url);
     }
 
     /**
@@ -261,7 +163,7 @@ export class MicrosoftPowerPointClient {
         itemId: string,
         newName: string,
         destinationFolderId?: string
-    ): Promise<{ location: string }> {
+    ): Promise<{ monitorUrl: string }> {
         const body: Record<string, unknown> = {
             name: newName
         };
@@ -270,45 +172,14 @@ export class MicrosoftPowerPointClient {
             body.parentReference = { id: destinationFolderId };
         }
 
-        // Copy is an async operation, returns a location header to monitor
-        const url = `${this.baseUrl}/me/drive/items/${itemId}/copy`;
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok && response.status !== 202) {
-            const errorText = await response.text();
-            let errorMessage = `Microsoft Graph API error: ${response.status}`;
-
-            try {
-                const errorJson = JSON.parse(errorText) as {
-                    error?: { message?: string; code?: string };
-                };
-                if (errorJson.error?.message) {
-                    errorMessage = errorJson.error.message;
-                }
-            } catch {
-                // Use default error message
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        // Return the monitoring URL
-        const location = response.headers.get("Location") || "";
-        return { location };
+        return this.post(`/me/drive/items/${itemId}/copy`, body);
     }
 
     /**
      * Delete a presentation
      */
     async deletePresentation(itemId: string): Promise<void> {
-        await this.request(`/me/drive/items/${itemId}`, { method: "DELETE" });
+        await this.delete(`/me/drive/items/${itemId}`);
     }
 
     /**
@@ -324,19 +195,13 @@ export class MicrosoftPowerPointClient {
             body.scope = scope;
         }
 
-        return this.request(`/me/drive/items/${itemId}/createLink`, {
-            method: "POST",
-            body
-        });
+        return this.post(`/me/drive/items/${itemId}/createLink`, body);
     }
 
     /**
      * Get presentation preview URL
      */
     async getPreviewUrl(itemId: string): Promise<{ getUrl: string }> {
-        return this.request(`/me/drive/items/${itemId}/preview`, {
-            method: "POST",
-            body: {}
-        });
+        return this.post(`/me/drive/items/${itemId}/preview`, {});
     }
 }

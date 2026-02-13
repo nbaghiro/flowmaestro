@@ -5,7 +5,7 @@
  * standardized error types for consistent handling across all AWS services.
  */
 
-import type { OperationError } from "../../core/types";
+import type { OperationError } from "../types";
 
 /**
  * AWS error codes mapped to FlowMaestro error types

@@ -3,6 +3,8 @@
  * HTTP client for Microsoft Graph API - Mail and Calendar endpoints
  */
 
+import { MicrosoftGraphClient } from "../../../core/microsoft";
+
 export interface OutlookClientConfig {
     accessToken: string;
 }
@@ -160,59 +162,12 @@ export interface EventsResponse {
 // Client Implementation
 // ============================================================================
 
-export class MicrosoftOutlookClient {
-    private readonly baseUrl = "https://graph.microsoft.com/v1.0";
-    private readonly accessToken: string;
-
+export class MicrosoftOutlookClient extends MicrosoftGraphClient {
     constructor(config: OutlookClientConfig) {
-        this.accessToken = config.accessToken;
-    }
-
-    /**
-     * Generic request method with error handling
-     */
-    private async request<T>(
-        endpoint: string,
-        options: {
-            method?: string;
-            body?: unknown;
-            headers?: Record<string, string>;
-        } = {}
-    ): Promise<T> {
-        const url = endpoint.startsWith("http") ? endpoint : `${this.baseUrl}${endpoint}`;
-        const { method = "GET", body, headers = {} } = options;
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type": "application/json",
-                ...headers
-            },
-            body: body ? JSON.stringify(body) : undefined
+        super({
+            accessToken: config.accessToken,
+            serviceName: "Microsoft Outlook"
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Microsoft Graph API error: ${response.status}`;
-
-            try {
-                const errorJson = JSON.parse(errorText);
-                if (errorJson.error?.message) {
-                    errorMessage = errorJson.error.message;
-                }
-            } catch {
-                // Use default error message
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        if (response.status === 204) {
-            return {} as T;
-        }
-
-        return (await response.json()) as T;
     }
 
     // ============================================================================
@@ -223,7 +178,7 @@ export class MicrosoftOutlookClient {
      * List all mail folders
      */
     async listMailFolders(): Promise<MailFoldersResponse> {
-        return this.request("/me/mailFolders");
+        return this.get("/me/mailFolders");
     }
 
     // ============================================================================
@@ -257,14 +212,14 @@ export class MicrosoftOutlookClient {
         const queryString = params.toString();
         const endpoint = `/me/mailFolders/${folderId}/messages${queryString ? `?${queryString}` : ""}`;
 
-        return this.request(endpoint);
+        return this.get(endpoint);
     }
 
     /**
      * Get a specific message by ID
      */
     async getMessage(messageId: string): Promise<Message> {
-        return this.request(`/me/messages/${messageId}`);
+        return this.get(`/me/messages/${messageId}`);
     }
 
     /**
@@ -309,12 +264,9 @@ export class MicrosoftOutlookClient {
             importance
         };
 
-        await this.request<void>("/me/sendMail", {
-            method: "POST",
-            body: {
-                message,
-                saveToSentItems
-            }
+        await this.post<void>("/me/sendMail", {
+            message,
+            saveToSentItems
         });
     }
 
@@ -327,24 +279,18 @@ export class MicrosoftOutlookClient {
         replyAll: boolean = false
     ): Promise<void> {
         const endpoint = `/me/messages/${messageId}/${replyAll ? "replyAll" : "reply"}`;
-        await this.request<void>(endpoint, {
-            method: "POST",
-            body: { comment }
-        });
+        await this.post<void>(endpoint, { comment });
     }
 
     /**
      * Forward a message
      */
     async forwardMessage(messageId: string, to: string[], comment?: string): Promise<void> {
-        await this.request<void>(`/me/messages/${messageId}/forward`, {
-            method: "POST",
-            body: {
-                comment,
-                toRecipients: to.map((email) => ({
-                    emailAddress: { address: email }
-                }))
-            }
+        await this.post<void>(`/me/messages/${messageId}/forward`, {
+            comment,
+            toRecipients: to.map((email) => ({
+                emailAddress: { address: email }
+            }))
         });
     }
 
@@ -352,9 +298,8 @@ export class MicrosoftOutlookClient {
      * Move a message to another folder
      */
     async moveMessage(messageId: string, destinationFolderId: string): Promise<Message> {
-        return this.request(`/me/messages/${messageId}/move`, {
-            method: "POST",
-            body: { destinationId: destinationFolderId }
+        return this.post(`/me/messages/${messageId}/move`, {
+            destinationId: destinationFolderId
         });
     }
 
@@ -362,19 +307,14 @@ export class MicrosoftOutlookClient {
      * Delete a message
      */
     async deleteMessage(messageId: string): Promise<void> {
-        await this.request<void>(`/me/messages/${messageId}`, {
-            method: "DELETE"
-        });
+        await this.delete(`/me/messages/${messageId}`);
     }
 
     /**
      * Mark a message as read or unread
      */
     async markAsRead(messageId: string, isRead: boolean): Promise<Message> {
-        return this.request(`/me/messages/${messageId}`, {
-            method: "PATCH",
-            body: { isRead }
-        });
+        return this.patch(`/me/messages/${messageId}`, { isRead });
     }
 
     // ============================================================================
@@ -385,7 +325,7 @@ export class MicrosoftOutlookClient {
      * List user's calendars
      */
     async listCalendars(): Promise<CalendarsResponse> {
-        return this.request("/me/calendars");
+        return this.get("/me/calendars");
     }
 
     /**
@@ -410,14 +350,14 @@ export class MicrosoftOutlookClient {
             ? `/me/calendars/${calendarId}/calendarView`
             : "/me/calendarView";
 
-        return this.request(`${baseEndpoint}?${params.toString()}`);
+        return this.get(`${baseEndpoint}?${params.toString()}`);
     }
 
     /**
      * Get a specific event by ID
      */
     async getEvent(eventId: string): Promise<Event> {
-        return this.request(`/me/events/${eventId}`);
+        return this.get(`/me/events/${eventId}`);
     }
 
     /**
@@ -485,10 +425,7 @@ export class MicrosoftOutlookClient {
 
         const endpoint = calendarId ? `/me/calendars/${calendarId}/events` : "/me/events";
 
-        return this.request(endpoint, {
-            method: "POST",
-            body: event
-        });
+        return this.post(endpoint, event);
     }
 
     /**
@@ -538,19 +475,14 @@ export class MicrosoftOutlookClient {
             };
         }
 
-        return this.request(`/me/events/${eventId}`, {
-            method: "PATCH",
-            body: event
-        });
+        return this.patch(`/me/events/${eventId}`, event);
     }
 
     /**
      * Delete a calendar event
      */
     async deleteEvent(eventId: string): Promise<void> {
-        await this.request<void>(`/me/events/${eventId}`, {
-            method: "DELETE"
-        });
+        await this.delete(`/me/events/${eventId}`);
     }
 
     /**
@@ -566,12 +498,9 @@ export class MicrosoftOutlookClient {
     ): Promise<void> {
         const { sendResponse = true, comment } = options || {};
 
-        await this.request<void>(`/me/events/${eventId}/${response}`, {
-            method: "POST",
-            body: {
-                sendResponse,
-                comment
-            }
+        await this.post<void>(`/me/events/${eventId}/${response}`, {
+            sendResponse,
+            comment
         });
     }
 }

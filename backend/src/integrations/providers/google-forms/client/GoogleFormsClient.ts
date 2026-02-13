@@ -1,17 +1,8 @@
-import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
+import { GoogleBaseClient } from "../../../core/google";
 
 export interface GoogleFormsClientConfig {
     accessToken: string;
     connectionId?: string;
-}
-
-interface GoogleFormsErrorResponse {
-    error: {
-        code: number;
-        message: string;
-        status: string;
-        details?: unknown[];
-    };
 }
 
 /**
@@ -20,86 +11,20 @@ interface GoogleFormsErrorResponse {
  * API Documentation: https://developers.google.com/forms/api/reference/rest
  * Base URL: https://forms.googleapis.com
  */
-export class GoogleFormsClient extends BaseAPIClient {
-    private accessToken: string;
-
+export class GoogleFormsClient extends GoogleBaseClient {
     constructor(config: GoogleFormsClientConfig) {
-        const clientConfig: BaseAPIClientConfig = {
+        super({
+            accessToken: config.accessToken,
             baseURL: "https://forms.googleapis.com",
-            timeout: 30000,
-            retryConfig: {
-                maxRetries: 3,
-                retryableStatuses: [429, 500, 502, 503, 504],
-                backoffStrategy: "exponential"
-            },
-            connectionPool: {
-                maxSockets: 50,
-                maxFreeSockets: 10,
-                keepAlive: true
-            }
-        };
-
-        super(clientConfig);
-        this.accessToken = config.accessToken;
-
-        // Add request interceptor for auth header
-        this.client.addRequestInterceptor((config) => {
-            if (!config.headers) {
-                config.headers = {};
-            }
-            config.headers["Authorization"] = `Bearer ${this.accessToken}`;
-            config.headers["Content-Type"] = "application/json";
-            return config;
+            serviceName: "Google Forms"
         });
     }
 
     /**
-     * Handle Google Forms API-specific errors
+     * Override to provide service-specific not found message
      */
-    protected async handleError(
-        error: Error & {
-            response?: { status?: number; data?: unknown; headers?: Record<string, string> };
-        }
-    ): Promise<never> {
-        if (error.response) {
-            const { status, data } = error.response;
-
-            // Map common Google Forms errors
-            if (status === 401) {
-                throw new Error("Google Forms authentication failed. Please reconnect.");
-            }
-
-            if (status === 403) {
-                const errorData = data as GoogleFormsErrorResponse;
-                throw new Error(
-                    `Permission denied: ${errorData?.error?.message || "You don't have permission to access this resource."}`
-                );
-            }
-
-            if (status === 404) {
-                throw new Error("Form or resource not found.");
-            }
-
-            if (status === 429) {
-                const retryAfter = error.response.headers?.["retry-after"];
-                throw new Error(
-                    `Google Forms rate limit exceeded. Retry after ${retryAfter || "60"} seconds.`
-                );
-            }
-
-            if (status === 400) {
-                const errorData = data as GoogleFormsErrorResponse;
-                throw new Error(`Invalid request: ${errorData?.error?.message || "Bad request"}`);
-            }
-
-            // Handle structured error response
-            if ((data as GoogleFormsErrorResponse)?.error) {
-                const errorData = data as GoogleFormsErrorResponse;
-                throw new Error(`Google Forms API error: ${errorData.error.message}`);
-            }
-        }
-
-        throw error;
+    protected getNotFoundMessage(): string {
+        return "Form or resource not found.";
     }
 
     // ==================== Form Operations ====================

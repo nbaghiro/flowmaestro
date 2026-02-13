@@ -24,7 +24,7 @@ export default function App() {
     }
 
     return (
-        <div className="flex flex-col h-screen bg-background">
+        <div className="flex flex-col h-screen abstract-bg">
             <Header />
             <TabNavigation />
             <main className="flex-1 overflow-hidden">

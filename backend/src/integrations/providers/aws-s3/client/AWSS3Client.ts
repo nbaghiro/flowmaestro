@@ -1,9 +1,5 @@
-import {
-    AWSSignatureV4,
-    parseS3ErrorXML,
-    parseListBucketsXML,
-    parseListObjectsXML
-} from "../utils/signature-v4";
+import { AWSSignatureV4 } from "../../../core/aws";
+import { parseS3ErrorXML, parseListBucketsXML, parseListObjectsXML } from "../utils/xml-parser";
 
 export interface AWSS3ClientConfig {
     accessKeyId: string;

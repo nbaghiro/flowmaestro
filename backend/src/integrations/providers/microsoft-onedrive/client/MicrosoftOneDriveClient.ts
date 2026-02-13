@@ -5,6 +5,8 @@
  * Uses Microsoft Graph API v1.0.
  */
 
+import { MicrosoftGraphClient } from "../../../core/microsoft";
+
 export interface OneDriveClientConfig {
     accessToken: string;
 }
@@ -38,69 +40,19 @@ export interface DriveItemsResponse {
     "@odata.nextLink"?: string;
 }
 
-export class MicrosoftOneDriveClient {
-    private readonly baseUrl = "https://graph.microsoft.com/v1.0";
-    private readonly accessToken: string;
-
+export class MicrosoftOneDriveClient extends MicrosoftGraphClient {
     constructor(config: OneDriveClientConfig) {
-        this.accessToken = config.accessToken;
-    }
-
-    /**
-     * Make authenticated request to Microsoft Graph API
-     */
-    private async request<T>(
-        endpoint: string,
-        options: {
-            method?: string;
-            body?: unknown;
-            headers?: Record<string, string>;
-        } = {}
-    ): Promise<T> {
-        const url = endpoint.startsWith("http") ? endpoint : `${this.baseUrl}${endpoint}`;
-        const { method = "GET", body, headers = {} } = options;
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type": "application/json",
-                ...headers
-            },
-            body: body ? JSON.stringify(body) : undefined
+        super({
+            accessToken: config.accessToken,
+            serviceName: "Microsoft OneDrive"
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Microsoft Graph API error: ${response.status}`;
-
-            try {
-                const errorJson = JSON.parse(errorText) as {
-                    error?: { message?: string; code?: string };
-                };
-                if (errorJson.error?.message) {
-                    errorMessage = errorJson.error.message;
-                }
-            } catch {
-                // Use default error message
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        // Handle empty responses (204 No Content)
-        if (response.status === 204) {
-            return {} as T;
-        }
-
-        return (await response.json()) as T;
     }
 
     /**
      * Get current user's drive information
      */
     async getDrive(): Promise<{ id: string; driveType: string; quota: unknown }> {
-        return this.request("/me/drive");
+        return this.get("/me/drive");
     }
 
     /**
@@ -133,14 +85,14 @@ export class MicrosoftOneDriveClient {
             endpoint += `?${queryParams.join("&")}`;
         }
 
-        return this.request(endpoint);
+        return this.get(endpoint);
     }
 
     /**
      * Get file metadata by ID
      */
     async getFile(fileId: string): Promise<DriveItem> {
-        return this.request(`/me/drive/items/${fileId}`);
+        return this.get(`/me/drive/items/${fileId}`);
     }
 
     /**
@@ -148,27 +100,14 @@ export class MicrosoftOneDriveClient {
      */
     async getFileByPath(filePath: string): Promise<DriveItem> {
         const encodedPath = encodeURIComponent(filePath);
-        return this.request(`/me/drive/root:/${encodedPath}`);
+        return this.get(`/me/drive/root:/${encodedPath}`);
     }
 
     /**
      * Download file content
      */
     async downloadFile(fileId: string): Promise<ArrayBuffer> {
-        const url = `${this.baseUrl}/me/drive/items/${fileId}/content`;
-
-        const response = await fetch(url, {
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`
-            },
-            redirect: "follow"
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to download file: ${response.status}`);
-        }
-
-        return response.arrayBuffer();
+        return this.downloadBinary(`/me/drive/items/${fileId}/content`);
     }
 
     /**
@@ -196,22 +135,11 @@ export class MicrosoftOneDriveClient {
             endpoint += `?@microsoft.graph.conflictBehavior=${params.conflictBehavior}`;
         }
 
-        const url = `${this.baseUrl}${endpoint}`;
-        const response = await fetch(url, {
+        return this.requestBinary(endpoint, {
             method: "PUT",
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type": "application/octet-stream"
-            },
-            body: params.content
+            body: params.content,
+            contentType: "application/octet-stream"
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to upload file: ${response.status} - ${errorText}`);
-        }
-
-        return (await response.json()) as DriveItem;
     }
 
     /**
@@ -231,13 +159,10 @@ export class MicrosoftOneDriveClient {
             endpoint = `/me/drive/root:/${encodedPath}:/children`;
         }
 
-        return this.request(endpoint, {
-            method: "POST",
-            body: {
-                name: params.name,
-                folder: {},
-                "@microsoft.graph.conflictBehavior": "rename"
-            }
+        return this.post(endpoint, {
+            name: params.name,
+            folder: {},
+            "@microsoft.graph.conflictBehavior": "rename"
         });
     }
 
@@ -245,9 +170,7 @@ export class MicrosoftOneDriveClient {
      * Delete a file or folder
      */
     async deleteFile(fileId: string): Promise<void> {
-        await this.request(`/me/drive/items/${fileId}`, {
-            method: "DELETE"
-        });
+        await this.delete(`/me/drive/items/${fileId}`);
     }
 
     /**
@@ -268,10 +191,7 @@ export class MicrosoftOneDriveClient {
             body.name = params.newName;
         }
 
-        return this.request(`/me/drive/items/${params.fileId}`, {
-            method: "PATCH",
-            body
-        });
+        return this.patch(`/me/drive/items/${params.fileId}`, body);
     }
 
     /**
@@ -292,25 +212,7 @@ export class MicrosoftOneDriveClient {
             body.name = params.newName;
         }
 
-        // Copy returns 202 Accepted with a Location header for monitoring
-        const url = `${this.baseUrl}/me/drive/items/${params.fileId}/copy`;
-
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to copy file: ${response.status}`);
-        }
-
-        return {
-            monitorUrl: response.headers.get("Location") || ""
-        };
+        return this.post(`/me/drive/items/${params.fileId}/copy`, body);
     }
 
     /**
@@ -321,12 +223,9 @@ export class MicrosoftOneDriveClient {
         type: "view" | "edit" | "embed";
         scope?: "anonymous" | "organization";
     }): Promise<{ link: { webUrl: string; type: string; scope: string } }> {
-        return this.request(`/me/drive/items/${params.fileId}/createLink`, {
-            method: "POST",
-            body: {
-                type: params.type,
-                scope: params.scope || "anonymous"
-            }
+        return this.post(`/me/drive/items/${params.fileId}/createLink`, {
+            type: params.type,
+            scope: params.scope || "anonymous"
         });
     }
 
@@ -340,6 +239,6 @@ export class MicrosoftOneDriveClient {
             endpoint += `?$top=${top}`;
         }
 
-        return this.request(endpoint);
+        return this.get(endpoint);
     }
 }
