@@ -2,12 +2,18 @@ import { create } from "zustand";
 import type {
     ExtensionAuthState,
     ExtensionUserContext,
+    ExtensionWorkspace,
     PageContext,
     ExtensionAgentSummary,
     ExtensionWorkflowSummary
 } from "@flowmaestro/shared";
 import { api } from "../../shared/api";
-import { getAuthState, getUserContext } from "../../shared/storage";
+import {
+    getAuthState,
+    getUserContext,
+    setAuthState,
+    consumeInitialTab
+} from "../../shared/storage";
 
 export type TabType = "agents" | "workflows" | "kb";
 
@@ -28,7 +34,9 @@ interface SidebarState {
     isAuthenticated: boolean;
     isLoading: boolean;
     user: ExtensionAuthState["user"] | null;
-    workspace: ExtensionAuthState["workspace"] | null;
+    workspace: ExtensionWorkspace | null;
+    workspaces: ExtensionWorkspace[];
+    switchWorkspace: (workspace: ExtensionWorkspace) => Promise<void>;
 
     // UI state
     activeTab: TabType;
@@ -74,6 +82,35 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
     isLoading: true,
     user: null,
     workspace: null,
+    workspaces: [],
+
+    switchWorkspace: async (workspace) => {
+        console.log("[SidebarStore] Switching to workspace:", workspace.name);
+
+        // Update the selected workspace in state
+        set({ workspace, userContext: null });
+
+        // Update stored auth state with new workspace
+        const authState = await getAuthState();
+        if (authState) {
+            await setAuthState({
+                ...authState,
+                workspace
+            });
+        }
+
+        // Reload user context for the new workspace
+        await get().loadUserContext();
+
+        // Clear any active chat/workflow state
+        set({
+            selectedAgent: null,
+            selectedWorkflow: null,
+            messages: [],
+            threadId: null,
+            executionResult: null
+        });
+    },
 
     // UI state
     activeTab: "agents",
@@ -357,30 +394,126 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
         set({ isLoading: true });
 
         try {
+            // Check if a specific tab was requested (from popup menu)
+            const initialTab = await consumeInitialTab();
+            if (initialTab) {
+                set({ activeTab: initialTab });
+            }
+
             const authState = await getAuthState();
+            console.log("[SidebarStore] Auth state from storage:", authState);
 
             if (authState?.isAuthenticated && authState.accessToken) {
-                // Verify auth is still valid
-                const isValid = await api.checkAuth();
+                // Check if token is expired or about to expire (within 5 minutes)
+                const expiryBuffer = 5 * 60 * 1000;
+                const isExpiredOrExpiring =
+                    authState.expiresAt &&
+                    new Date(authState.expiresAt).getTime() - Date.now() < expiryBuffer;
 
-                if (isValid) {
+                if (isExpiredOrExpiring && authState.refreshToken) {
+                    console.log("[SidebarStore] Token expired/expiring, attempting refresh...");
+                    const refreshResult = await api.refreshToken(authState.refreshToken);
+
+                    if (refreshResult) {
+                        console.log("[SidebarStore] Token refreshed successfully");
+                        const newExpiresAt = new Date(
+                            Date.now() + refreshResult.expiresIn * 1000
+                        ).toISOString();
+
+                        await setAuthState({
+                            isAuthenticated: true,
+                            accessToken: refreshResult.accessToken,
+                            refreshToken: refreshResult.refreshToken,
+                            expiresAt: newExpiresAt,
+                            user: refreshResult.user,
+                            workspace: refreshResult.workspace || authState.workspace,
+                            workspaces: refreshResult.workspaces || []
+                        });
+
+                        set({
+                            isAuthenticated: true,
+                            user: refreshResult.user,
+                            workspace: refreshResult.workspace || authState.workspace,
+                            workspaces: refreshResult.workspaces || []
+                        });
+
+                        await get().loadUserContext();
+                        return;
+                    } else {
+                        console.log("[SidebarStore] Token refresh failed");
+                        set({ isAuthenticated: false, workspaces: [] });
+                        return;
+                    }
+                }
+
+                // Verify auth is still valid and get fresh user/workspace data
+                console.log("[SidebarStore] Verifying auth...");
+                const verifyResult = await api.verifyAuth();
+                console.log("[SidebarStore] Verify result:", verifyResult);
+
+                if (verifyResult) {
+                    // Update auth state with workspace and workspaces if missing
+                    if (!authState.workspace && verifyResult.workspace) {
+                        console.log("[SidebarStore] Updating auth state with workspace");
+                        await setAuthState({
+                            ...authState,
+                            workspace: verifyResult.workspace,
+                            workspaces: verifyResult.workspaces || []
+                        });
+                    }
+
                     set({
                         isAuthenticated: true,
-                        user: authState.user,
-                        workspace: authState.workspace
+                        user: verifyResult.user,
+                        workspace: verifyResult.workspace || authState.workspace,
+                        workspaces: verifyResult.workspaces || []
                     });
 
                     // Load user context
                     await get().loadUserContext();
                 } else {
-                    set({ isAuthenticated: false });
+                    // Verification failed - try refresh as last resort
+                    console.log("[SidebarStore] Verify failed, attempting refresh...");
+                    if (authState.refreshToken) {
+                        const refreshResult = await api.refreshToken(authState.refreshToken);
+
+                        if (refreshResult) {
+                            console.log("[SidebarStore] Token refreshed after verify failure");
+                            const newExpiresAt = new Date(
+                                Date.now() + refreshResult.expiresIn * 1000
+                            ).toISOString();
+
+                            await setAuthState({
+                                isAuthenticated: true,
+                                accessToken: refreshResult.accessToken,
+                                refreshToken: refreshResult.refreshToken,
+                                expiresAt: newExpiresAt,
+                                user: refreshResult.user,
+                                workspace: refreshResult.workspace || authState.workspace,
+                                workspaces: refreshResult.workspaces || []
+                            });
+
+                            set({
+                                isAuthenticated: true,
+                                user: refreshResult.user,
+                                workspace: refreshResult.workspace || authState.workspace,
+                                workspaces: refreshResult.workspaces || []
+                            });
+
+                            await get().loadUserContext();
+                            return;
+                        }
+                    }
+                    console.log("[SidebarStore] All auth attempts failed");
+                    set({ isAuthenticated: false, workspaces: [] });
                 }
             } else {
-                set({ isAuthenticated: false });
+                console.log("[SidebarStore] No auth state or token, setting isAuthenticated=false");
+                set({ isAuthenticated: false, workspaces: [] });
             }
         } catch (error) {
-            console.error("Failed to initialize:", error);
-            set({ isAuthenticated: false });
+            console.error("[SidebarStore] Failed to initialize:", error);
+            set({ isAuthenticated: false, workspaces: [] });
         } finally {
             set({ isLoading: false });
         }
