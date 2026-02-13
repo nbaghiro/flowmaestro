@@ -1,6 +1,7 @@
 import { motion, useInView } from "framer-motion";
 import { AlertCircle, CheckCircle2, Quote, ArrowRight } from "lucide-react";
 import React from "react";
+import { CaseStudiesEvents } from "../lib/analytics";
 import type { CaseStudy } from "../data/caseStudies";
 
 interface CaseStudyContentProps {
@@ -12,6 +13,13 @@ export const CaseStudyContent: React.FC<CaseStudyContentProps> = ({ caseStudy })
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     const appUrl = import.meta.env.VITE_APP_URL || "http://localhost:3000";
+
+    const handleCtaClick = () => {
+        CaseStudiesEvents.ctaClicked({
+            caseStudySlug: caseStudy.slug,
+            ctaType: "get_started"
+        });
+    };
 
     return (
         <section ref={ref} className="py-16 px-4 sm:px-6 lg:px-8 bg-background">
@@ -107,7 +115,11 @@ export const CaseStudyContent: React.FC<CaseStudyContentProps> = ({ caseStudy })
                     <p className="text-muted-foreground mb-6">
                         Start building your own automated workflows and intelligent agents today.
                     </p>
-                    <a href={appUrl} className="btn-primary inline-flex items-center gap-2">
+                    <a
+                        href={appUrl}
+                        onClick={handleCtaClick}
+                        className="btn-primary inline-flex items-center gap-2"
+                    >
                         <span>Get Started Free</span>
                         <ArrowRight className="w-4 h-4" />
                     </a>

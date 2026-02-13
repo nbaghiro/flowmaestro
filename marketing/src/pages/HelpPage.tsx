@@ -79,6 +79,22 @@ export const HelpPage: React.FC = () => {
         }
     }, []);
 
+    // Track search (debounced)
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            const resultsCount = faqCategories
+                .flatMap((c) => c.items)
+                .filter(
+                    (item) =>
+                        item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        item.answer.toLowerCase().includes(searchQuery.toLowerCase())
+                ).length;
+            OtherPagesEvents.helpSearched({ query: searchQuery, resultsCount });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
     const filteredCategories = useMemo(() => {
         if (!searchQuery.trim()) {
             return faqCategories;
@@ -97,7 +113,7 @@ export const HelpPage: React.FC = () => {
             .filter((category) => category.items.length > 0);
     }, [searchQuery]);
 
-    const toggleQuestion = (categoryId: string, questionIndex: number) => {
+    const toggleQuestion = (categoryId: string, questionIndex: number, _question: string) => {
         const key = `${categoryId}-${questionIndex}`;
         setOpenQuestions((prev) => {
             const next = new Set(prev);
@@ -105,6 +121,11 @@ export const HelpPage: React.FC = () => {
                 next.delete(key);
             } else {
                 next.add(key);
+                // Track article/question click when expanding
+                OtherPagesEvents.helpArticleClicked({
+                    articleId: key,
+                    category: categoryId
+                });
             }
             return next;
         });
@@ -112,6 +133,17 @@ export const HelpPage: React.FC = () => {
 
     const isQuestionOpen = (categoryId: string, questionIndex: number) => {
         return openQuestions.has(`${categoryId}-${questionIndex}`);
+    };
+
+    const handleDocsClick = () => {
+        OtherPagesEvents.docsLinkClicked({
+            referringPage: "/help",
+            docSection: undefined
+        });
+    };
+
+    const handleCommunityClick = () => {
+        OtherPagesEvents.communityLinkClicked({ platform: "discord" });
     };
 
     return (
@@ -164,6 +196,7 @@ export const HelpPage: React.FC = () => {
                                 }
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={handleDocsClick}
                                 className="p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-colors group"
                             >
                                 <BookOpen className="w-8 h-8 text-primary-400 mb-3" />
@@ -182,6 +215,7 @@ export const HelpPage: React.FC = () => {
                                 href="https://discord.gg/zHCkfBeP"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={handleCommunityClick}
                                 className="p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-colors group"
                             >
                                 <MessageSquare className="w-8 h-8 text-primary-400 mb-3" />
@@ -309,7 +343,8 @@ export const HelpPage: React.FC = () => {
                                                             onToggle={() =>
                                                                 toggleQuestion(
                                                                     category.id,
-                                                                    itemIndex
+                                                                    itemIndex,
+                                                                    item.question
                                                                 )
                                                             }
                                                         />

@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { COMPANY_NAV_ITEMS, RESOURCES_NAV_ITEMS } from "../data/navigation";
 import { SOLUTION_NAV_ITEMS } from "../data/solutions";
 import { useTheme } from "../hooks/useTheme";
-import { AuthLinkEvents, NavigationEvents } from "../lib/analytics";
+import { AuthLinkEvents, NavigationEvents, OtherPagesEvents } from "../lib/analytics";
 import { Dropdown } from "./common/Dropdown";
 
 const ThemeToggle: React.FC<{ onToggle?: (newTheme: "light" | "dark") => void }> = ({
@@ -55,6 +55,17 @@ export const Navigation: React.FC = () => {
         AuthLinkEvents.getStartedClicked({
             referringPage: window.location.pathname,
             ctaVariant: "nav_header"
+        });
+    };
+
+    const handleNavLinkClick = (menuItem: string) => {
+        NavigationEvents.navLinkClicked({ menuItem, isDropdown: false });
+    };
+
+    const handleDocsClick = () => {
+        OtherPagesEvents.docsLinkClicked({
+            referringPage: window.location.pathname,
+            docSection: undefined
         });
     };
 
@@ -125,6 +136,7 @@ export const Navigation: React.FC = () => {
                             <Dropdown label="Solutions" items={SOLUTION_NAV_ITEMS} />
                             <Link
                                 to="/integrations"
+                                onClick={() => handleNavLinkClick("Integrations")}
                                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 Integrations
@@ -133,6 +145,10 @@ export const Navigation: React.FC = () => {
                             <Dropdown label="Resources" items={RESOURCES_NAV_ITEMS} />
                             <a
                                 href={import.meta.env.VITE_DOCS_URL}
+                                onClick={() => {
+                                    handleNavLinkClick("Docs");
+                                    handleDocsClick();
+                                }}
                                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -141,6 +157,7 @@ export const Navigation: React.FC = () => {
                             </a>
                             <Link
                                 to="/pricing"
+                                onClick={() => handleNavLinkClick("Pricing")}
                                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 Pricing

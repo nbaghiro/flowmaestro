@@ -46,6 +46,14 @@ export const ContactPage: React.FC = () => {
         }
     };
 
+    const handleContactMethodClick = (method: (typeof contactMethods)[0]) => {
+        if (method.href.startsWith("mailto:")) {
+            ContactEvents.emailLinkClicked();
+        } else if (method.href.includes("cal.com")) {
+            ContactEvents.calendarOpened();
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         ContactEvents.formSubmitted({
@@ -97,6 +105,7 @@ export const ContactPage: React.FC = () => {
                                             ? "noopener noreferrer"
                                             : undefined
                                     }
+                                    onClick={() => handleContactMethodClick(method)}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}

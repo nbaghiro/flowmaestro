@@ -1,6 +1,7 @@
 import { motion, useInView } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import React from "react";
+import { SolutionsPageEvents } from "../../lib/analytics";
 import type { SolutionCategory } from "../../data/solutions";
 
 interface SolutionCTAProps {
@@ -10,6 +11,10 @@ interface SolutionCTAProps {
 export const SolutionCTA: React.FC<SolutionCTAProps> = ({ solution }) => {
     const ref = React.useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+    const handleCtaClick = (ctaType: string) => {
+        SolutionsPageEvents.ctaClicked({ solutionName: solution.name, ctaType });
+    };
 
     return (
         <section
@@ -36,6 +41,7 @@ export const SolutionCTA: React.FC<SolutionCTAProps> = ({ solution }) => {
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <a
                             href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                            onClick={() => handleCtaClick("get_started")}
                             className="group px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg"
                         >
                             Get Started Free
@@ -45,6 +51,7 @@ export const SolutionCTA: React.FC<SolutionCTAProps> = ({ solution }) => {
                             href="https://cal.com/naib-baghirov-o5surn/30min"
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={() => handleCtaClick("schedule_demo")}
                             className="px-8 py-4 bg-card hover:bg-accent border border-border rounded-lg font-semibold transition-all duration-200 text-foreground"
                         >
                             Schedule a Demo
