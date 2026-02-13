@@ -1383,6 +1383,48 @@ const bigcommerceEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(bigcommerceEntry);
 
+// Register Magento provider
+const magentoEntry: ProviderRegistryEntry = {
+    name: "magento",
+    displayName: "Magento",
+    authMethod: "api_key",
+    category: "ecommerce",
+    loader: async () => {
+        const { MagentoProvider } = await import("./providers/magento/MagentoProvider");
+        return new MagentoProvider();
+    }
+};
+
+providerRegistry.register(magentoEntry);
+
+// Register Shippo provider
+const shippoEntry: ProviderRegistryEntry = {
+    name: "shippo",
+    displayName: "Shippo",
+    authMethod: "api_key",
+    category: "ecommerce",
+    loader: async () => {
+        const { ShippoProvider } = await import("./providers/shippo/ShippoProvider");
+        return new ShippoProvider();
+    }
+};
+
+providerRegistry.register(shippoEntry);
+
+// Register ShipStation provider
+const shipstationEntry: ProviderRegistryEntry = {
+    name: "shipstation",
+    displayName: "ShipStation",
+    authMethod: "api_key",
+    category: "ecommerce",
+    loader: async () => {
+        const { ShipStationProvider } = await import("./providers/shipstation/ShipStationProvider");
+        return new ShipStationProvider();
+    }
+};
+
+providerRegistry.register(shipstationEntry);
+
 // Register Google Analytics provider
 const googleAnalyticsEntry: ProviderRegistryEntry = {
     name: "google-analytics",
@@ -2062,6 +2104,36 @@ const ringcentralEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(ringcentralEntry);
+
+// Register Deel provider
+const deelEntry: ProviderRegistryEntry = {
+    name: "deel",
+    displayName: "Deel",
+    authMethod: "api_key",
+    category: "hr",
+    loader: async () => {
+        const { DeelProvider } = await import("./providers/deel/DeelProvider");
+        return new DeelProvider();
+    }
+};
+
+providerRegistry.register(deelEntry);
+
+// Register SAP SuccessFactors provider
+const sapSuccessFactorsEntry: ProviderRegistryEntry = {
+    name: "sap-successfactors",
+    displayName: "SAP SuccessFactors",
+    authMethod: "oauth2",
+    category: "hr",
+    loader: async () => {
+        const { SAPSuccessFactorsProvider } = await import(
+            "./providers/sap-successfactors/SAPSuccessFactorsProvider"
+        );
+        return new SAPSuccessFactorsProvider();
+    }
+};
+
+providerRegistry.register(sapSuccessFactorsEntry);
 
 // Export for use in application
 export { providerRegistry };
