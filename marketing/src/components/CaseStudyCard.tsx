@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
+import { CaseStudiesEvents } from "../lib/analytics";
 import type { CaseStudy } from "../data/caseStudies";
 
 interface CaseStudyCardProps {
@@ -18,6 +19,12 @@ export const CaseStudyCard: React.FC<CaseStudyCardProps> = ({ caseStudy, index }
         >
             <Link
                 to={`/case-studies/${caseStudy.slug}`}
+                onClick={() =>
+                    CaseStudiesEvents.cardClicked({
+                        caseStudySlug: caseStudy.slug,
+                        company: caseStudy.company.name
+                    })
+                }
                 className="group block h-full p-6 rounded-2xl bg-background-surface border border-stroke hover:border-primary-500/50 transition-all duration-300"
             >
                 {/* Header with logo and company info */}

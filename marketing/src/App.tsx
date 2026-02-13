@@ -18,6 +18,7 @@ import { HelpPage } from "./pages/HelpPage";
 import { Home } from "./pages/Home";
 import { IntegrationsPage } from "./pages/IntegrationsPage";
 import { JobDetailPage } from "./pages/JobDetailPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { PricingPage } from "./pages/PricingPage";
 import { PrivacyPage } from "./pages/PrivacyPage";
 import { SecurityPage } from "./pages/SecurityPage";
@@ -75,6 +76,8 @@ const App: React.FC = () => {
                         <Route path="/privacy" element={<PrivacyPage />} />
                         <Route path="/terms" element={<TermsPage />} />
                         <Route path="/cookies" element={<CookiesPage />} />
+                        {/* 404 */}
+                        <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                 </ThemeProvider>
             </QueryClientProvider>

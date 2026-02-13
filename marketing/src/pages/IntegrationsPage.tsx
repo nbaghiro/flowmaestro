@@ -1,11 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Search, Cpu, ChevronLeft, ChevronRight } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import type { Provider } from "@flowmaestro/shared";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
 import { useTheme } from "../hooks/useTheme";
+import { IntegrationsPageEvents, SolutionsPageEvents } from "../lib/analytics";
 
 // Get unique categories from providers
 const getCategories = (providers: Provider[]): string[] => {
@@ -64,14 +65,20 @@ const workflowExamples: WorkflowExample[] = [
 
 interface IntegrationCardProps {
     provider: Provider;
+    onIntegrationClick: (name: string, category: string) => void;
 }
 
-const IntegrationCard: React.FC<IntegrationCardProps> = ({ provider }) => {
+const IntegrationCard: React.FC<IntegrationCardProps> = ({ provider, onIntegrationClick }) => {
+    const handleClick = () => {
+        onIntegrationClick(provider.displayName, provider.category);
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="group relative p-4 rounded-xl bg-card border border-border hover:bg-accent hover:border-muted-foreground/30 transition-all duration-300"
+            className="group relative p-4 rounded-xl bg-card border border-border hover:bg-accent hover:border-muted-foreground/30 transition-all duration-300 cursor-pointer"
+            onClick={handleClick}
         >
             {provider.comingSoon && (
                 <span className="absolute top-2 right-2 px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full">
@@ -103,8 +110,42 @@ export const IntegrationsPage: React.FC = () => {
     const { theme } = useTheme();
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
+    const hasTrackedPageView = useRef(false);
 
     const categories = React.useMemo(() => ["All", ...getCategories(ALL_PROVIDERS)], []);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            IntegrationsPageEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
+    // Track search (debounced)
+    useEffect(() => {
+        if (!searchQuery) return;
+        const timer = setTimeout(() => {
+            const resultsCount = ALL_PROVIDERS.filter(
+                (p) =>
+                    p.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.description.toLowerCase().includes(searchQuery.toLowerCase())
+            ).length;
+            IntegrationsPageEvents.searched({ query: searchQuery, resultsCount });
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const handleCategoryChange = (category: string) => {
+        setSelectedCategory(category);
+        if (category !== "All") {
+            IntegrationsPageEvents.categoryFiltered({ category });
+        }
+    };
+
+    const handleIntegrationClick = (integrationName: string, category: string) => {
+        IntegrationsPageEvents.integrationClicked({ integrationName, category });
+    };
 
     const filteredProviders = React.useMemo(() => {
         return ALL_PROVIDERS.filter((provider) => {
@@ -131,13 +172,39 @@ export const IntegrationsPage: React.FC = () => {
 
     const totalCount = ALL_PROVIDERS.length;
 
-    const nextSlide = useCallback(() => {
-        setCurrentSlide((prev) => (prev + 1) % workflowExamples.length);
+    const trackSlideView = useCallback((slideIndex: number) => {
+        const example = workflowExamples[slideIndex];
+        SolutionsPageEvents.workflowExampleViewed({
+            solutionName: "integrations",
+            exampleName: example.id
+        });
     }, []);
 
+    const nextSlide = useCallback(() => {
+        setCurrentSlide((prev) => {
+            const next = (prev + 1) % workflowExamples.length;
+            trackSlideView(next);
+            return next;
+        });
+    }, [trackSlideView]);
+
     const prevSlide = useCallback(() => {
-        setCurrentSlide((prev) => (prev - 1 + workflowExamples.length) % workflowExamples.length);
-    }, []);
+        setCurrentSlide((prev) => {
+            const next = (prev - 1 + workflowExamples.length) % workflowExamples.length;
+            trackSlideView(next);
+            return next;
+        });
+    }, [trackSlideView]);
+
+    const goToSlide = useCallback(
+        (index: number) => {
+            if (index !== currentSlide) {
+                trackSlideView(index);
+            }
+            setCurrentSlide(index);
+        },
+        [currentSlide, trackSlideView]
+    );
 
     // Auto-advance carousel
     useEffect(() => {
@@ -277,7 +344,7 @@ export const IntegrationsPage: React.FC = () => {
                                     {workflowExamples.map((example, index) => (
                                         <button
                                             key={example.id}
-                                            onClick={() => setCurrentSlide(index)}
+                                            onClick={() => goToSlide(index)}
                                             className={`w-2 h-2 rounded-full transition-all duration-300 ${
                                                 index === currentSlide
                                                     ? "bg-foreground w-6"
@@ -312,7 +379,7 @@ export const IntegrationsPage: React.FC = () => {
                             {categories.map((category) => (
                                 <button
                                     key={category}
-                                    onClick={() => setSelectedCategory(category)}
+                                    onClick={() => handleCategoryChange(category)}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                                         selectedCategory === category
                                             ? "bg-foreground text-background"
@@ -344,7 +411,11 @@ export const IntegrationsPage: React.FC = () => {
                         {/* Grid */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                             {sortedProviders.map((provider) => (
-                                <IntegrationCard key={provider.provider} provider={provider} />
+                                <IntegrationCard
+                                    key={provider.provider}
+                                    provider={provider}
+                                    onIntegrationClick={handleIntegrationClick}
+                                />
                             ))}
                         </div>
 

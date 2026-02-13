@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, ArrowRight, GitBranch, Bot, Loader2, AlertCircle, Eye, Copy } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
     ALL_PROVIDERS,
@@ -19,6 +19,7 @@ import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
 import { WorkflowCanvasPreview } from "../components/WorkflowCanvasPreview";
 import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
+import { TemplatesPageEvents } from "../lib/analytics";
 import {
     getTemplates,
     getAgentTemplates,
@@ -41,9 +42,10 @@ const getIntegrationLogo = (integration: string): string => {
 
 interface WorkflowCardProps {
     template: Template;
+    onTemplateClick: (templateId: string, templateName: string, category: string) => void;
 }
 
-const WorkflowCard: React.FC<WorkflowCardProps> = ({ template }) => {
+const WorkflowCard: React.FC<WorkflowCardProps> = ({ template, onTemplateClick }) => {
     const category = TEMPLATE_CATEGORY_META[template.category];
     const appUrl = import.meta.env.VITE_APP_URL || "https://app.flowmaestro.ai";
 
@@ -52,6 +54,7 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({ template }) => {
     return (
         <a
             href={`${appUrl}/templates`}
+            onClick={() => onTemplateClick(template.id, template.name, template.category)}
             className={cn(
                 "block bg-card rounded-xl border border-stroke",
                 "hover:shadow-xl hover:border-stroke/60 hover:scale-[1.02]",
@@ -128,9 +131,10 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({ template }) => {
 
 interface AgentCardProps {
     template: AgentTemplate;
+    onTemplateClick: (templateId: string, templateName: string, category: string) => void;
 }
 
-const AgentCard: React.FC<AgentCardProps> = ({ template }) => {
+const AgentCard: React.FC<AgentCardProps> = ({ template, onTemplateClick }) => {
     const category = TEMPLATE_CATEGORY_META[template.category];
     const appUrl = import.meta.env.VITE_APP_URL || "https://app.flowmaestro.ai";
 
@@ -149,6 +153,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ template }) => {
     return (
         <a
             href={`${appUrl}/templates`}
+            onClick={() => onTemplateClick(template.id, template.name, template.category)}
             className={cn(
                 "block bg-card rounded-xl border border-stroke",
                 "hover:shadow-xl hover:border-stroke/60 hover:scale-[1.02]",
@@ -264,6 +269,15 @@ export const TemplatesPage: React.FC = () => {
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [templateType, setTemplateType] = useState<TemplateType>("workflow");
     const [activeCategory, setActiveCategory] = useState<TemplateCategory | null>(null);
+    const hasTrackedPageView = useRef(false);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            TemplatesPageEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
 
     // Debounce search query
     React.useEffect(() => {
@@ -272,6 +286,13 @@ export const TemplatesPage: React.FC = () => {
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    // Track search (debounced)
+    useEffect(() => {
+        if (!debouncedSearch) return;
+        // resultsCount will be determined after templates are fetched
+        TemplatesPageEvents.searched({ query: debouncedSearch, resultsCount: 0 });
+    }, [debouncedSearch]);
 
     // Fetch workflow categories
     const { data: workflowCategoriesData } = useQuery({
@@ -385,6 +406,17 @@ export const TemplatesPage: React.FC = () => {
         setDebouncedSearch("");
     };
 
+    const handleTemplateClick = (templateId: string, templateName: string, category: string) => {
+        TemplatesPageEvents.templateClicked({ templateId, templateName, category });
+    };
+
+    const handleCategoryChange = (category: TemplateCategory | null) => {
+        setActiveCategory(category);
+        if (category) {
+            TemplatesPageEvents.categoryFiltered({ category });
+        }
+    };
+
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             <div className="fixed inset-0 grid-pattern opacity-50 pointer-events-none" />
@@ -460,7 +492,7 @@ export const TemplatesPage: React.FC = () => {
                     <div className="max-w-6xl mx-auto">
                         <div className="flex flex-wrap gap-2 justify-center">
                             <button
-                                onClick={() => setActiveCategory(null)}
+                                onClick={() => handleCategoryChange(null)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                     activeCategory === null
                                         ? "bg-primary text-primary-foreground"
@@ -474,7 +506,7 @@ export const TemplatesPage: React.FC = () => {
                                 return (
                                     <button
                                         key={category.category}
-                                        onClick={() => setActiveCategory(category.category)}
+                                        onClick={() => handleCategoryChange(category.category)}
                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                             activeCategory === category.category
                                                 ? "bg-primary text-primary-foreground"
@@ -544,10 +576,18 @@ export const TemplatesPage: React.FC = () => {
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {templateType === "workflow"
                                         ? workflowTemplates.map((template) => (
-                                              <WorkflowCard key={template.id} template={template} />
+                                              <WorkflowCard
+                                                  key={template.id}
+                                                  template={template}
+                                                  onTemplateClick={handleTemplateClick}
+                                              />
                                           ))
                                         : agentTemplates.map((template) => (
-                                              <AgentCard key={template.id} template={template} />
+                                              <AgentCard
+                                                  key={template.id}
+                                                  template={template}
+                                                  onTemplateClick={handleTemplateClick}
+                                              />
                                           ))}
                                 </div>
 

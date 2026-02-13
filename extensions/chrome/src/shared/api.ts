@@ -57,15 +57,78 @@ class ExtensionApiClient {
     }
 
     /**
-     * Check if user is authenticated by trying to fetch user context
+     * Verify authentication token and get user/workspace info
+     * Returns user and workspace data if valid, null if invalid
+     */
+    async verifyAuth(): Promise<{
+        user: { id: string; email: string; name: string; avatar_url?: string };
+        workspace: { id: string; name: string } | null;
+        workspaces: Array<{ id: string; name: string }>;
+    } | null> {
+        try {
+            const baseUrl = await this.getBaseUrl();
+            const auth = await getAuthState();
+
+            if (!auth?.accessToken) {
+                return null;
+            }
+
+            const response = await fetch(`${baseUrl}/extension/auth/verify`, {
+                headers: {
+                    Authorization: `Bearer ${auth.accessToken}`
+                }
+            });
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = await response.json();
+            return data.data;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Check if user is authenticated (legacy method for compatibility)
      */
     async checkAuth(): Promise<boolean> {
+        const result = await this.verifyAuth();
+        return result !== null;
+    }
+
+    /**
+     * Refresh access token using refresh token
+     * Returns new tokens and user/workspace data, or null if refresh fails
+     */
+    async refreshToken(refreshToken: string): Promise<{
+        user: { id: string; email: string; name: string; avatar_url?: string };
+        workspace: { id: string; name: string } | null;
+        workspaces: Array<{ id: string; name: string }>;
+        accessToken: string;
+        refreshToken: string;
+        expiresIn: number;
+    } | null> {
         try {
-            // Use user-context endpoint to verify auth since /auth/me requires workspace context
-            await this.request("/extension/user-context");
-            return true;
+            const baseUrl = await this.getBaseUrl();
+
+            const response = await fetch(`${baseUrl}/extension/auth/refresh`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ refreshToken })
+            });
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = await response.json();
+            return data.data;
         } catch {
-            return false;
+            return null;
         }
     }
 
@@ -73,7 +136,32 @@ class ExtensionApiClient {
      * Get user context (workflows, agents, KBs)
      */
     async getUserContext(): Promise<ExtensionUserContext> {
-        return this.request<ExtensionUserContext>("/extension/user-context");
+        const baseUrl = await this.getBaseUrl();
+        const auth = await getAuthState();
+
+        const headers: Record<string, string> = {};
+
+        if (auth?.accessToken) {
+            headers["Authorization"] = `Bearer ${auth.accessToken}`;
+        }
+
+        if (auth?.workspace?.id) {
+            headers["X-Workspace-Id"] = auth.workspace.id;
+        }
+
+        // Use cache: "no-store" to avoid stale cached redirects
+        const response = await fetch(`${baseUrl}/extension/user-context`, {
+            headers,
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const json = await response.json();
+        return json.data !== undefined ? json.data : json;
     }
 
     /**
@@ -185,6 +273,7 @@ class ExtensionApiClient {
     ): Promise<{
         user: { id: string; email: string; name: string; avatar_url?: string };
         workspace: { id: string; name: string } | null;
+        workspaces: Array<{ id: string; name: string }>;
         accessToken: string;
         refreshToken: string;
         expiresIn: number;

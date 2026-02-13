@@ -1,8 +1,24 @@
 import { Github, Linkedin, Mail, Twitter } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
+import { NavigationEvents, OtherPagesEvents } from "../lib/analytics";
 
 export const Footer: React.FC = () => {
+    const handleSocialClick = (socialPlatform: string) => {
+        NavigationEvents.footerSocialClicked({ socialPlatform });
+    };
+
+    const handleLinkClick = (linkCategory: string, linkTarget: string) => {
+        NavigationEvents.footerLinkClicked({ linkCategory, linkTarget });
+    };
+
+    const handleDocsClick = () => {
+        OtherPagesEvents.docsLinkClicked({
+            referringPage: window.location.pathname,
+            docSection: undefined
+        });
+    };
+
     const currentYear = new Date().getFullYear();
 
     return (
@@ -21,6 +37,7 @@ export const Footer: React.FC = () => {
                                 href="https://github.com/nbaghiro/flowmaestro"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => handleSocialClick("github")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <Github className="w-5 h-5" />
@@ -30,6 +47,7 @@ export const Footer: React.FC = () => {
                                 href="https://x.com/nbaghiro"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => handleSocialClick("twitter")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <Twitter className="w-5 h-5" />
@@ -38,12 +56,14 @@ export const Footer: React.FC = () => {
                                 href="https://www.linkedin.com/company/flowmaestro/"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => handleSocialClick("linkedin")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <Linkedin className="w-5 h-5" />
                             </a>
                             <a
                                 href="mailto:support@flowmaestro.ai"
+                                onClick={() => handleSocialClick("email")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <Mail className="w-5 h-5" />
@@ -52,6 +72,7 @@ export const Footer: React.FC = () => {
                                 href="https://discord.gg/zHCkfBeP"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() => handleSocialClick("discord")}
                                 className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
                             >
                                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -66,13 +87,18 @@ export const Footer: React.FC = () => {
                         <h3 className="font-semibold mb-4 text-foreground">Product</h3>
                         <ul className="space-y-2 text-muted-foreground">
                             <li>
-                                <a href="#" className="hover:text-foreground transition-colors">
+                                <a
+                                    href="#"
+                                    onClick={() => handleLinkClick("product", "features")}
+                                    className="hover:text-foreground transition-colors"
+                                >
                                     Features
                                 </a>
                             </li>
                             <li>
                                 <Link
                                     to="/integrations"
+                                    onClick={() => handleLinkClick("product", "integrations")}
                                     className="hover:text-foreground transition-colors"
                                 >
                                     Integrations
@@ -81,6 +107,7 @@ export const Footer: React.FC = () => {
                             <li>
                                 <Link
                                     to="/pricing"
+                                    onClick={() => handleLinkClick("product", "pricing")}
                                     className="hover:text-foreground transition-colors"
                                 >
                                     Pricing
@@ -94,6 +121,10 @@ export const Footer: React.FC = () => {
                                     }
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={() => {
+                                        handleLinkClick("product", "documentation");
+                                        handleDocsClick();
+                                    }}
                                     className="hover:text-foreground transition-colors"
                                 >
                                     Documentation
@@ -109,6 +140,7 @@ export const Footer: React.FC = () => {
                             <li>
                                 <Link
                                     to="/about"
+                                    onClick={() => handleLinkClick("company", "about")}
                                     className="hover:text-foreground transition-colors"
                                 >
                                     About
@@ -117,6 +149,7 @@ export const Footer: React.FC = () => {
                             <li>
                                 <Link
                                     to="/blog"
+                                    onClick={() => handleLinkClick("company", "blog")}
                                     className="hover:text-foreground transition-colors"
                                 >
                                     Blog
@@ -125,6 +158,7 @@ export const Footer: React.FC = () => {
                             <li>
                                 <Link
                                     to="/careers"
+                                    onClick={() => handleLinkClick("company", "careers")}
                                     className="hover:text-foreground transition-colors"
                                 >
                                     Careers
@@ -133,6 +167,7 @@ export const Footer: React.FC = () => {
                             <li>
                                 <Link
                                     to="/contact"
+                                    onClick={() => handleLinkClick("company", "contact")}
                                     className="hover:text-foreground transition-colors"
                                 >
                                     Contact
@@ -146,13 +181,25 @@ export const Footer: React.FC = () => {
                 <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
                     <p>© {currentYear} FlowMaestro. All rights reserved.</p>
                     <div className="flex gap-6">
-                        <Link to="/privacy" className="hover:text-foreground transition-colors">
+                        <Link
+                            to="/privacy"
+                            onClick={() => handleLinkClick("legal", "privacy")}
+                            className="hover:text-foreground transition-colors"
+                        >
                             Privacy Policy
                         </Link>
-                        <Link to="/terms" className="hover:text-foreground transition-colors">
+                        <Link
+                            to="/terms"
+                            onClick={() => handleLinkClick("legal", "terms")}
+                            className="hover:text-foreground transition-colors"
+                        >
                             Terms of Service
                         </Link>
-                        <Link to="/cookies" className="hover:text-foreground transition-colors">
+                        <Link
+                            to="/cookies"
+                            onClick={() => handleLinkClick("legal", "cookies")}
+                            className="hover:text-foreground transition-colors"
+                        >
                             Cookie Policy
                         </Link>
                     </div>

@@ -1,6 +1,7 @@
 import { motion, useInView } from "framer-motion";
 import { Bot, Clock, Database, GitBranch, Layers, Workflow } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import { HomePageEvents } from "../lib/analytics";
 
 interface Feature {
     icon: React.ReactNode;
@@ -51,13 +52,18 @@ const FeatureCard: React.FC<{ feature: Feature; index: number }> = ({ feature, i
     const ref = React.useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
+    const handleClick = () => {
+        HomePageEvents.featureClicked({ featureName: feature.title });
+    };
+
     return (
         <motion.div
             ref={ref}
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.4, delay: index * 0.05 }}
-            className="relative group"
+            className="relative group cursor-pointer"
+            onClick={handleClick}
         >
             <div className="relative rounded-xl border border-border hover:border-muted-foreground/50 transition-all duration-300 h-full bg-card p-6">
                 {/* Icon */}
@@ -94,6 +100,14 @@ const FeatureCard: React.FC<{ feature: Feature; index: number }> = ({ feature, i
 export const Features: React.FC = () => {
     const ref = React.useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
+    const hasTrackedView = useRef(false);
+
+    useEffect(() => {
+        if (isInView && !hasTrackedView.current) {
+            HomePageEvents.featuresSectionViewed();
+            hasTrackedView.current = true;
+        }
+    }, [isInView]);
 
     return (
         <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-secondary">

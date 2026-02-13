@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import { MessageSquare, Github, Twitter, Youtube, Users, BookOpen } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { OtherPagesEvents } from "../lib/analytics";
 
 const communities = [
     {
@@ -55,6 +56,15 @@ const resources = [
 ];
 
 export const CommunityPage: React.FC = () => {
+    const hasTrackedPageView = useRef(false);
+
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            OtherPagesEvents.communityPageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             {/* Full-page background pattern */}
@@ -104,6 +114,11 @@ export const CommunityPage: React.FC = () => {
                                     href={community.href}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={() =>
+                                        OtherPagesEvents.communityLinkClicked({
+                                            platform: community.title.toLowerCase()
+                                        })
+                                    }
                                     initial={{ opacity: 0, y: 20 }}
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true }}
@@ -160,6 +175,11 @@ export const CommunityPage: React.FC = () => {
                                     href={resource.href}
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    onClick={() =>
+                                        OtherPagesEvents.communityLinkClicked({
+                                            platform: resource.title.toLowerCase().replace(" ", "-")
+                                        })
+                                    }
                                     initial={{ opacity: 0, y: 20 }}
                                     whileInView={{ opacity: 1, y: 0 }}
                                     viewport={{ once: true }}
@@ -198,6 +218,9 @@ export const CommunityPage: React.FC = () => {
                                 href="https://discord.gg/flowmaestro"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={() =>
+                                    OtherPagesEvents.communityLinkClicked({ platform: "discord" })
+                                }
                                 className="btn-primary inline-flex items-center gap-2"
                             >
                                 <MessageSquare className="w-5 h-5" />

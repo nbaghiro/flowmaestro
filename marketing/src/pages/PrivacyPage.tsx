@@ -1,10 +1,19 @@
 import { motion } from "framer-motion";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { OtherPagesEvents } from "../lib/analytics";
 
 export const PrivacyPage: React.FC = () => {
     const lastUpdated = "February 1, 2025";
+    const hasTrackedPageView = useRef(false);
+
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            OtherPagesEvents.privacyPageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
 
     return (
         <div className="min-h-screen bg-background text-foreground relative">

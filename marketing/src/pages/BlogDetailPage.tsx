@@ -11,12 +11,13 @@ import {
     Loader2,
     ChevronRight
 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import type { BlogPostSummary } from "@flowmaestro/shared";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { BlogEvents } from "../lib/analytics";
 import { getBlogPost } from "../lib/api";
 
 // Format date for display
@@ -37,10 +38,15 @@ function getCategoryLabel(category: string): string {
 }
 
 // Related post card component
-const RelatedPostCard: React.FC<{ post: BlogPostSummary }> = ({ post }) => {
+const RelatedPostCard: React.FC<{
+    post: BlogPostSummary;
+    fromSlug: string;
+    onRelatedClick: (fromSlug: string, toSlug: string) => void;
+}> = ({ post, fromSlug, onRelatedClick }) => {
     return (
         <Link
             to={`/blog/${post.slug}`}
+            onClick={() => onRelatedClick(fromSlug, post.slug)}
             className="group block bg-card border border-stroke rounded-xl overflow-hidden hover:border-primary-500/50 transition-colors"
         >
             <div className="aspect-video overflow-hidden">
@@ -104,6 +110,7 @@ export const BlogDetailPage: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const [copied, setCopied] = React.useState(false);
+    const hasTrackedPostView = useRef(false);
 
     // Fetch blog post
     const {
@@ -124,11 +131,24 @@ export const BlogDetailPage: React.FC = () => {
 
     const post = postData;
 
+    // Track post view
+    useEffect(() => {
+        if (post && slug && !hasTrackedPostView.current) {
+            BlogEvents.postOpened({
+                blogSlug: slug,
+                category: post.category,
+                author: post.author.name
+            });
+            hasTrackedPostView.current = true;
+        }
+    }, [post, slug]);
+
     // Share handlers
     const shareUrl = typeof window !== "undefined" ? window.location.href : "";
 
     const shareOnTwitter = () => {
-        if (!post) return;
+        if (!post || !slug) return;
+        BlogEvents.shareClicked({ blogSlug: slug, platform: "twitter" });
         const text = encodeURIComponent(post.title);
         window.open(
             `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(shareUrl)}`,
@@ -137,7 +157,8 @@ export const BlogDetailPage: React.FC = () => {
     };
 
     const shareOnLinkedIn = () => {
-        if (!post) return;
+        if (!post || !slug) return;
+        BlogEvents.shareClicked({ blogSlug: slug, platform: "linkedin" });
         window.open(
             `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
             "_blank"
@@ -148,6 +169,10 @@ export const BlogDetailPage: React.FC = () => {
         await navigator.clipboard.writeText(shareUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleRelatedPostClick = (fromSlug: string, toSlug: string) => {
+        BlogEvents.relatedPostClicked({ fromSlug, toSlug });
     };
 
     if (isLoading) {
@@ -426,7 +451,12 @@ export const BlogDetailPage: React.FC = () => {
                             <h2 className="text-2xl font-bold mb-8 text-center">Related Posts</h2>
                             <div className="grid md:grid-cols-3 gap-6">
                                 {post.relatedPosts.map((relatedPost) => (
-                                    <RelatedPostCard key={relatedPost.id} post={relatedPost} />
+                                    <RelatedPostCard
+                                        key={relatedPost.id}
+                                        post={relatedPost}
+                                        fromSlug={slug || ""}
+                                        onRelatedClick={handleRelatedPostClick}
+                                    />
                                 ))}
                             </div>
                         </div>

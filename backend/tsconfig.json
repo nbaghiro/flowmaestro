@@ -5,7 +5,8 @@
         "rootDir": "..",
         "composite": true,
         "jsx": "react",
-        "types": ["node", "jest", "ws"]
+        "types": ["node", "jest", "ws"],
+        "typeRoots": ["../node_modules/@types", "./node_modules/@types", "./__tests__/__mocks__"]
     },
     "include": ["src/**/*", "__tests__/**/*", "../shared/src/**/*"],
     "exclude": ["node_modules", "dist"]

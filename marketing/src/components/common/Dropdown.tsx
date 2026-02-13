@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
+import { NavigationEvents } from "../../lib/analytics";
 
 export interface DropdownItem {
     label: string;
@@ -18,17 +19,31 @@ interface DropdownProps {
 export const Dropdown: React.FC<DropdownProps> = ({ label, items }) => {
     const [isOpen, setIsOpen] = React.useState(false);
     const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hasTrackedOpen = React.useRef(false);
 
     const handleMouseEnter = () => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
         }
+        if (!isOpen && !hasTrackedOpen.current) {
+            NavigationEvents.dropdownOpened({ menuItem: label });
+            hasTrackedOpen.current = true;
+        }
         setIsOpen(true);
     };
 
+    const handleLinkClick = (itemLabel: string) => {
+        NavigationEvents.navLinkClicked({ menuItem: itemLabel, isDropdown: true });
+        setIsOpen(false);
+        hasTrackedOpen.current = false;
+    };
+
     const handleMouseLeave = () => {
-        timeoutRef.current = setTimeout(() => setIsOpen(false), 150);
+        timeoutRef.current = setTimeout(() => {
+            setIsOpen(false);
+            hasTrackedOpen.current = false;
+        }, 150);
     };
 
     // Cleanup timeout on unmount
@@ -68,7 +83,7 @@ export const Dropdown: React.FC<DropdownProps> = ({ label, items }) => {
                                 <Link
                                     key={item.href}
                                     to={item.href}
-                                    onClick={() => setIsOpen(false)}
+                                    onClick={() => handleLinkClick(item.label)}
                                     className="flex items-center gap-3 px-4 py-3 hover:bg-secondary transition-colors"
                                 >
                                     {item.icon && (

@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import { Mail, MessageSquare, MapPin, Clock } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { ContactEvents } from "../lib/analytics";
 
 const contactMethods = [
     {
@@ -28,9 +29,37 @@ export const ContactPage: React.FC = () => {
         company: "",
         message: ""
     });
+    const hasTrackedPageView = useRef(false);
+    const hasTrackedFormStarted = useRef(false);
+
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            ContactEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
+    const handleFormFocus = () => {
+        if (!hasTrackedFormStarted.current) {
+            ContactEvents.formStarted();
+            hasTrackedFormStarted.current = true;
+        }
+    };
+
+    const handleContactMethodClick = (method: (typeof contactMethods)[0]) => {
+        if (method.href.startsWith("mailto:")) {
+            ContactEvents.emailLinkClicked();
+        } else if (method.href.includes("cal.com")) {
+            ContactEvents.calendarOpened();
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        ContactEvents.formSubmitted({
+            inquiryType: "general",
+            company: formData.company || undefined
+        });
         // For now, just open mailto
         const subject = encodeURIComponent(`Contact from ${formData.name} at ${formData.company}`);
         const body = encodeURIComponent(formData.message);
@@ -76,6 +105,7 @@ export const ContactPage: React.FC = () => {
                                             ? "noopener noreferrer"
                                             : undefined
                                     }
+                                    onClick={() => handleContactMethodClick(method)}
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -123,6 +153,7 @@ export const ContactPage: React.FC = () => {
                                             onChange={(e) =>
                                                 setFormData({ ...formData, name: e.target.value })
                                             }
+                                            onFocus={handleFormFocus}
                                             className="w-full px-4 py-3 rounded-lg bg-card border border-stroke focus:border-primary-500 focus:outline-none transition-colors text-foreground"
                                             placeholder="Your name"
                                         />

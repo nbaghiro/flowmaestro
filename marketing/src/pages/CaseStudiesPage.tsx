@@ -1,10 +1,20 @@
 import { motion } from "framer-motion";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { CaseStudiesGrid } from "../components/CaseStudiesGrid";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { CaseStudiesEvents } from "../lib/analytics";
 
 export const CaseStudiesPage: React.FC = () => {
+    const hasTrackedPageView = useRef(false);
+
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            CaseStudiesEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             {/* Full-page background pattern */}

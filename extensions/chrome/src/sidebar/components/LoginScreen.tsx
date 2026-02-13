@@ -74,7 +74,8 @@ export function LoginScreen() {
                                 refreshToken: authData.refreshToken,
                                 expiresAt,
                                 user: authData.user,
-                                workspace: authData.workspace || undefined
+                                workspace: authData.workspace || undefined,
+                                workspaces: authData.workspaces || []
                             });
 
                             // Re-initialize to load user data
@@ -146,7 +147,7 @@ export function LoginScreen() {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center h-screen bg-background p-6">
+        <div className="flex flex-col items-center justify-center h-screen abstract-bg p-6">
             <img
                 src="/assets/icons/icon-128.png"
                 alt="FlowMaestro"

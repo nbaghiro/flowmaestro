@@ -8,8 +8,11 @@ const STORAGE_KEYS = {
     AUTH: "flowmaestro_auth",
     SETTINGS: "flowmaestro_settings",
     USER_CONTEXT: "flowmaestro_user_context",
-    THEME: "flowmaestro_theme"
+    THEME: "flowmaestro_theme",
+    INITIAL_TAB: "flowmaestro_initial_tab"
 } as const;
+
+export type SidebarTab = "agents" | "workflows" | "kb";
 
 export type Theme = "light" | "dark" | "system";
 
@@ -92,6 +95,13 @@ export async function setUserContext(context: ExtensionUserContext): Promise<voi
 }
 
 /**
+ * Clear user context from storage
+ */
+export async function clearUserContext(): Promise<void> {
+    await chrome.storage.local.remove(STORAGE_KEYS.USER_CONTEXT);
+}
+
+/**
  * Clear all extension data
  */
 export async function clearAllData(): Promise<void> {
@@ -133,4 +143,23 @@ export function applyTheme(theme: Theme): void {
     } else {
         document.documentElement.classList.remove("dark");
     }
+}
+
+/**
+ * Set initial tab to open in sidebar (used when opening from popup)
+ */
+export async function setInitialTab(tab: SidebarTab): Promise<void> {
+    await chrome.storage.local.set({ [STORAGE_KEYS.INITIAL_TAB]: tab });
+}
+
+/**
+ * Get and clear initial tab (one-time use)
+ */
+export async function consumeInitialTab(): Promise<SidebarTab | null> {
+    const result = await chrome.storage.local.get(STORAGE_KEYS.INITIAL_TAB);
+    const tab = result[STORAGE_KEYS.INITIAL_TAB] as SidebarTab | undefined;
+    if (tab) {
+        await chrome.storage.local.remove(STORAGE_KEYS.INITIAL_TAB);
+    }
+    return tab || null;
 }

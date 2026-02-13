@@ -1,7 +1,8 @@
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import { Bot, Sparkles, Workflow } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTheme } from "../hooks/useTheme";
+import { HomePageEvents } from "../lib/analytics";
 
 interface Tab {
     id: string;
@@ -39,7 +40,15 @@ export const ProductShowcase: React.FC = () => {
     const [activeTab, setActiveTab] = useState("workflows");
     const ref = React.useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
+    const hasTrackedView = useRef(false);
     const { theme } = useTheme();
+
+    useEffect(() => {
+        if (isInView && !hasTrackedView.current) {
+            HomePageEvents.productShowcaseViewed();
+            hasTrackedView.current = true;
+        }
+    }, [isInView]);
 
     const activeTabData = tabs.find((tab) => tab.id === activeTab);
     const screenshotPath = activeTabData

@@ -1,8 +1,37 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
+import type { WorkspaceRole } from "@flowmaestro/shared";
 import { config } from "../../../core/config";
 import { UserRepository } from "../../../storage/repositories/UserRepository";
+import { WorkspaceMemberRepository } from "../../../storage/repositories/WorkspaceMemberRepository";
 import { WorkspaceRepository } from "../../../storage/repositories/WorkspaceRepository";
+
+/**
+ * Helper to get all workspaces a user has access to
+ */
+async function getUserWorkspaces(userId: string): Promise<Array<{ id: string; name: string }>> {
+    const workspaceRepo = new WorkspaceRepository();
+    const memberRepo = new WorkspaceMemberRepository();
+
+    // Get all workspace memberships
+    const memberships = await memberRepo.findByUserId(userId);
+    const workspaceIds = memberships.map((m) => m.workspace_id);
+
+    // Get workspace details for each membership
+    const workspaces: Array<{ id: string; name: string }> = [];
+    for (const wsId of workspaceIds) {
+        const workspace = await workspaceRepo.findById(wsId);
+        if (workspace && !workspace.deleted_at) {
+            workspaces.push({ id: workspace.id, name: workspace.name });
+        }
+    }
+
+    return workspaces;
+}
+
+const refreshTokenSchema = z.object({
+    refreshToken: z.string()
+});
 
 const initOAuthSchema = z.object({
     provider: z.enum(["google", "microsoft"]),
@@ -42,6 +71,155 @@ interface MicrosoftUserInfo {
  * These routes handle OAuth for Chrome/Firefox extensions which need custom redirect URIs
  */
 export async function extensionAuthRoutes(fastify: FastifyInstance) {
+    /**
+     * GET /extension/auth/verify
+     *
+     * Verifies that the JWT token is valid.
+     * Does NOT require workspace context - just validates the token.
+     */
+    fastify.get("/auth/verify", async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            // Try to verify JWT from Authorization header
+            const authHeader = request.headers.authorization;
+            if (!authHeader || !authHeader.startsWith("Bearer ")) {
+                return reply.status(401).send({
+                    success: false,
+                    error: "No authentication token provided"
+                });
+            }
+
+            const token = authHeader.substring(7);
+            const decoded = fastify.jwt.verify(token) as { id: string; email: string };
+
+            // Token is valid - look up user to get workspace info
+            const userRepository = new UserRepository();
+
+            const user = await userRepository.findById(decoded.id);
+            if (!user) {
+                return reply.status(401).send({
+                    success: false,
+                    error: "User not found"
+                });
+            }
+
+            // Get all workspaces user has access to
+            const workspaces = await getUserWorkspaces(user.id);
+            const defaultWorkspace = workspaces[0] || null;
+
+            return reply.send({
+                success: true,
+                data: {
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        avatar_url: user.avatar_url
+                    },
+                    workspace: defaultWorkspace,
+                    workspaces
+                }
+            });
+        } catch (error) {
+            fastify.log.error(error, "Token verification failed");
+            return reply.status(401).send({
+                success: false,
+                error: "Invalid or expired token"
+            });
+        }
+    });
+
+    /**
+     * POST /extension/auth/refresh
+     *
+     * Refreshes an expired access token using a refresh token.
+     * Returns new access and refresh tokens.
+     */
+    fastify.post(
+        "/auth/refresh",
+        async (
+            request: FastifyRequest<{ Body: z.infer<typeof refreshTokenSchema> }>,
+            reply: FastifyReply
+        ) => {
+            try {
+                const body = refreshTokenSchema.parse(request.body);
+                const { refreshToken } = body;
+
+                // Verify the refresh token
+                let decoded: { id: string; type?: string };
+                try {
+                    decoded = fastify.jwt.verify(refreshToken) as { id: string; type?: string };
+                } catch {
+                    return reply.status(401).send({
+                        success: false,
+                        error: "Invalid or expired refresh token"
+                    });
+                }
+
+                // Validate it's a refresh token
+                if (decoded.type !== "refresh") {
+                    return reply.status(401).send({
+                        success: false,
+                        error: "Invalid token type"
+                    });
+                }
+
+                // Look up the user
+                const userRepository = new UserRepository();
+
+                const user = await userRepository.findById(decoded.id);
+                if (!user) {
+                    return reply.status(401).send({
+                        success: false,
+                        error: "User not found"
+                    });
+                }
+
+                // Get all workspaces user has access to
+                const workspaces = await getUserWorkspaces(user.id);
+                const defaultWorkspace = workspaces[0] || null;
+
+                // Generate new tokens
+                const newAccessToken = fastify.jwt.sign({
+                    id: user.id,
+                    email: user.email
+                });
+
+                const newRefreshToken = fastify.jwt.sign(
+                    {
+                        id: user.id,
+                        type: "refresh"
+                    },
+                    { expiresIn: "30d" }
+                );
+
+                fastify.log.info({ userId: user.id }, "Extension token refreshed");
+
+                return reply.send({
+                    success: true,
+                    data: {
+                        user: {
+                            id: user.id,
+                            email: user.email,
+                            name: user.name,
+                            avatar_url: user.avatar_url
+                        },
+                        workspace: defaultWorkspace,
+                        workspaces,
+                        accessToken: newAccessToken,
+                        refreshToken: newRefreshToken,
+                        expiresIn: 3600 // 1 hour
+                    }
+                });
+            } catch (error) {
+                fastify.log.error(error, "Extension token refresh failed");
+                return reply.status(400).send({
+                    success: false,
+                    error: error instanceof Error ? error.message : "Token refresh failed"
+                });
+            }
+        }
+    );
+
     /**
      * GET /extension/auth/init
      *
@@ -268,10 +446,19 @@ export async function extensionAuthRoutes(fastify: FastifyInstance) {
                         .replace(/^-|-$/g, "");
                     const slug = `${baseSlug}-${Date.now().toString(36)}`;
 
-                    await workspaceRepository.create({
+                    const newWorkspace = await workspaceRepository.create({
                         name: `${userInfo.name}'s Workspace`,
                         slug,
                         owner_id: user.id
+                    });
+
+                    // Add owner as workspace member with owner role
+                    const memberRepo = new WorkspaceMemberRepository();
+                    await memberRepo.create({
+                        workspace_id: newWorkspace.id,
+                        user_id: user.id,
+                        role: "owner" as WorkspaceRole,
+                        accepted_at: new Date()
                     });
 
                     fastify.log.info(
@@ -299,9 +486,9 @@ export async function extensionAuthRoutes(fastify: FastifyInstance) {
                     await userRepository.update(user.id, updateData);
                 }
 
-                // Get user's workspaces
-                const workspaces = await workspaceRepository.findByOwnerId(user.id);
-                const defaultWorkspace = workspaces[0];
+                // Get all workspaces user has access to
+                const workspaces = await getUserWorkspaces(user.id);
+                const defaultWorkspace = workspaces[0] || null;
 
                 // Generate FlowMaestro JWT token
                 const accessToken = fastify.jwt.sign({
@@ -329,12 +516,8 @@ export async function extensionAuthRoutes(fastify: FastifyInstance) {
                             name: user.name,
                             avatar_url: user.avatar_url
                         },
-                        workspace: defaultWorkspace
-                            ? {
-                                  id: defaultWorkspace.id,
-                                  name: defaultWorkspace.name
-                              }
-                            : null,
+                        workspace: defaultWorkspace,
+                        workspaces,
                         accessToken,
                         refreshToken,
                         expiresIn: 3600 // 1 hour

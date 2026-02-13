@@ -11,7 +11,14 @@ import {
 import { useEffect, useState } from "react";
 import type { ExtensionAuthState, ExtensionSettings } from "@flowmaestro/shared";
 import { ThemeToggle } from "../shared/components/ThemeToggle";
-import { applyTheme, getAuthState, getSettings, getTheme } from "../shared/storage";
+import {
+    applyTheme,
+    getAuthState,
+    getSettings,
+    getTheme,
+    setInitialTab,
+    type SidebarTab
+} from "../shared/storage";
 
 export default function Popup() {
     const [authState, setAuthState] = useState<ExtensionAuthState | null>(null);
@@ -33,9 +40,12 @@ export default function Popup() {
         load();
     }, []);
 
-    const openSidePanel = async () => {
+    const openSidePanel = async (initialTab?: SidebarTab) => {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab?.id) {
+            if (initialTab) {
+                await setInitialTab(initialTab);
+            }
             await chrome.sidePanel.open({ tabId: tab.id });
             window.close();
         }
@@ -62,7 +72,7 @@ export default function Popup() {
     const isAuthenticated = authState?.isAuthenticated;
 
     return (
-        <div className="p-3 bg-card">
+        <div className="p-3 abstract-bg">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
@@ -88,7 +98,7 @@ export default function Popup() {
                         Sign in to use FlowMaestro with this page
                     </p>
                     <button
-                        onClick={openSidePanel}
+                        onClick={() => openSidePanel()}
                         className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
                     >
                         <LogIn className="w-4 h-4" />
@@ -99,7 +109,7 @@ export default function Popup() {
                 /* Authenticated Menu */
                 <div className="space-y-1">
                     <button
-                        onClick={openSidePanel}
+                        onClick={() => openSidePanel("agents")}
                         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent rounded-lg transition-colors group"
                     >
                         <div className="flex items-center gap-3">
@@ -112,7 +122,7 @@ export default function Popup() {
                     </button>
 
                     <button
-                        onClick={openSidePanel}
+                        onClick={() => openSidePanel("workflows")}
                         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent rounded-lg transition-colors group"
                     >
                         <div className="flex items-center gap-3">
@@ -125,7 +135,7 @@ export default function Popup() {
                     </button>
 
                     <button
-                        onClick={openSidePanel}
+                        onClick={() => openSidePanel("kb")}
                         className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-accent rounded-lg transition-colors group"
                     >
                         <div className="flex items-center gap-3">

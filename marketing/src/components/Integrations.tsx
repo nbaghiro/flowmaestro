@@ -1,9 +1,10 @@
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getProviderLogoUrl } from "@flowmaestro/shared";
 import { useTheme } from "../hooks/useTheme";
+import { HomePageEvents, SolutionsPageEvents } from "../lib/analytics";
 
 // Alias for cleaner code
 const getBrandLogo = getProviderLogoUrl;
@@ -176,19 +177,53 @@ const workflowExamples: WorkflowExample[] = [
 export const Integrations: React.FC = () => {
     const ref = React.useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
+    const hasTrackedView = useRef(false);
     const { theme } = useTheme();
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
 
     const totalIntegrations = 110;
 
-    const nextSlide = useCallback(() => {
-        setCurrentSlide((prev) => (prev + 1) % workflowExamples.length);
+    useEffect(() => {
+        if (isInView && !hasTrackedView.current) {
+            HomePageEvents.integrationsSectionViewed();
+            hasTrackedView.current = true;
+        }
+    }, [isInView]);
+
+    const trackSlideView = useCallback((slideIndex: number) => {
+        const example = workflowExamples[slideIndex];
+        SolutionsPageEvents.workflowExampleViewed({
+            solutionName: "homepage",
+            exampleName: example.id
+        });
     }, []);
 
+    const nextSlide = useCallback(() => {
+        setCurrentSlide((prev) => {
+            const next = (prev + 1) % workflowExamples.length;
+            trackSlideView(next);
+            return next;
+        });
+    }, [trackSlideView]);
+
     const prevSlide = useCallback(() => {
-        setCurrentSlide((prev) => (prev - 1 + workflowExamples.length) % workflowExamples.length);
-    }, []);
+        setCurrentSlide((prev) => {
+            const next = (prev - 1 + workflowExamples.length) % workflowExamples.length;
+            trackSlideView(next);
+            return next;
+        });
+    }, [trackSlideView]);
+
+    const goToSlide = useCallback(
+        (index: number) => {
+            if (index !== currentSlide) {
+                trackSlideView(index);
+            }
+            setCurrentSlide(index);
+        },
+        [currentSlide, trackSlideView]
+    );
 
     // Auto-advance carousel
     useEffect(() => {
@@ -326,7 +361,7 @@ export const Integrations: React.FC = () => {
                             {workflowExamples.map((example, index) => (
                                 <button
                                     key={example.id}
-                                    onClick={() => setCurrentSlide(index)}
+                                    onClick={() => goToSlide(index)}
                                     className={`w-2 h-2 rounded-full transition-all duration-300 ${
                                         index === currentSlide
                                             ? "bg-foreground w-6"

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { Footer } from "../components/Footer";
@@ -9,13 +9,23 @@ import { SolutionCTA } from "../components/solutions/SolutionCTA";
 import { SolutionHero } from "../components/solutions/SolutionHero";
 import { WorkflowExamples } from "../components/solutions/WorkflowExamples";
 import { getSolutionBySlug, getProvidersForSolution, getAllSolutionSlugs } from "../data/solutions";
+import { SolutionsPageEvents } from "../lib/analytics";
 
 export const SolutionPage: React.FC = () => {
     const { category } = useParams<{ category: string }>();
+    const hasTrackedPageView = useRef(false);
 
     // Validate category and get solution data
     const solution = getSolutionBySlug(category || "");
     const validSlugs = getAllSolutionSlugs();
+
+    // Track page view
+    useEffect(() => {
+        if (solution && category && !hasTrackedPageView.current) {
+            SolutionsPageEvents.pageViewed({ solutionName: solution.name });
+            hasTrackedPageView.current = true;
+        }
+    }, [solution, category]);
 
     // Redirect to sales if invalid category
     if (!solution || !category || !validSlugs.includes(category)) {

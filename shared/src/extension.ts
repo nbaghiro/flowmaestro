@@ -405,6 +405,14 @@ export interface PageContextResultMessage {
 // ============================================================================
 
 /**
+ * Workspace info for extension
+ */
+export interface ExtensionWorkspace {
+    id: string;
+    name: string;
+}
+
+/**
  * Authentication state stored in extension
  */
 export interface ExtensionAuthState {
@@ -423,10 +431,9 @@ export interface ExtensionAuthState {
         name?: string;
     };
     /** Active workspace */
-    workspace?: {
-        id: string;
-        name: string;
-    };
+    workspace?: ExtensionWorkspace;
+    /** All available workspaces */
+    workspaces?: ExtensionWorkspace[];
 }
 
 /**

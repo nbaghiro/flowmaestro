@@ -1,11 +1,12 @@
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Calendar, Clock, ArrowRight, Search, Loader2 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import type { BlogCategory, BlogPostSummary } from "@flowmaestro/shared";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { BlogEvents } from "../lib/analytics";
 import { getBlogPosts, getBlogCategories } from "../lib/api";
 
 const POSTS_PER_PAGE = 12;
@@ -22,7 +23,11 @@ function formatDate(dateString: string | null): string {
 }
 
 // Blog post card component
-const BlogCard: React.FC<{ post: BlogPostSummary; index: number }> = ({ post, index }) => {
+const BlogCard: React.FC<{
+    post: BlogPostSummary;
+    index: number;
+    onPostClick: (slug: string, category: string) => void;
+}> = ({ post, index, onPostClick }) => {
     const categoryLabel =
         post.category === "case-study"
             ? "Case Study"
@@ -35,7 +40,11 @@ const BlogCard: React.FC<{ post: BlogPostSummary; index: number }> = ({ post, in
             transition={{ duration: 0.5, delay: index * 0.05 }}
             className="group"
         >
-            <Link to={`/blog/${post.slug}`} className="block">
+            <Link
+                to={`/blog/${post.slug}`}
+                onClick={() => onPostClick(post.slug, post.category)}
+                className="block"
+            >
                 <div className="aspect-video rounded-xl overflow-hidden mb-4 bg-card border border-stroke">
                     {post.featuredImageUrl ? (
                         <img
@@ -81,6 +90,15 @@ export const BlogPage: React.FC = () => {
     const [selectedCategory, setSelectedCategory] = React.useState<BlogCategory | "all">("all");
     const [searchQuery, setSearchQuery] = React.useState("");
     const [debouncedSearch, setDebouncedSearch] = React.useState("");
+    const hasTrackedPageView = useRef(false);
+
+    // Track page view
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            BlogEvents.pageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
 
     // Debounce search query
     React.useEffect(() => {
@@ -89,6 +107,17 @@ export const BlogPage: React.FC = () => {
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    const handleCategoryChange = (category: BlogCategory | "all") => {
+        setSelectedCategory(category);
+        if (category !== "all") {
+            BlogEvents.categoryFiltered({ category });
+        }
+    };
+
+    const handlePostClick = (blogSlug: string, category: string) => {
+        BlogEvents.postClicked({ blogSlug, category });
+    };
 
     // Fetch categories
     const { data: categoriesData } = useQuery({
@@ -187,7 +216,7 @@ export const BlogPage: React.FC = () => {
                             {categories.map((category) => (
                                 <button
                                     key={category.key}
-                                    onClick={() => setSelectedCategory(category.key)}
+                                    onClick={() => handleCategoryChange(category.key)}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                         selectedCategory === category.key
                                             ? "bg-primary text-primary-foreground"
@@ -231,7 +260,12 @@ export const BlogPage: React.FC = () => {
                             <>
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                                     {allPosts.map((post, index) => (
-                                        <BlogCard key={post.id} post={post} index={index} />
+                                        <BlogCard
+                                            key={post.id}
+                                            post={post}
+                                            index={index}
+                                            onPostClick={handlePostClick}
+                                        />
                                     ))}
                                 </div>
 

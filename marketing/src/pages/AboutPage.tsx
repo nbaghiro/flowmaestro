@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import { Target, Zap, Shield, Users } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
+import { OtherPagesEvents } from "../lib/analytics";
 
 const values = [
     {
@@ -32,6 +33,15 @@ const values = [
 ];
 
 export const AboutPage: React.FC = () => {
+    const hasTrackedPageView = useRef(false);
+
+    useEffect(() => {
+        if (!hasTrackedPageView.current) {
+            OtherPagesEvents.aboutPageViewed();
+            hasTrackedPageView.current = true;
+        }
+    }, []);
+
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             {/* Full-page background pattern */}
