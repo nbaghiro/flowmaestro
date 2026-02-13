@@ -1,9 +1,20 @@
 import { motion, useInView } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import React from "react";
-import { AuthLinkEvents, EngagementEvents } from "../lib/analytics";
+import React, { useEffect, useRef } from "react";
+import { AuthLinkEvents, EngagementEvents, HomePageEvents } from "../lib/analytics";
 
 export const CTA: React.FC = () => {
+    const ref = React.useRef<HTMLDivElement>(null);
+    const isInView = useInView(ref, { once: true, margin: "-100px" });
+    const hasTrackedView = useRef(false);
+
+    useEffect(() => {
+        if (isInView && !hasTrackedView.current) {
+            HomePageEvents.ctaSectionViewed();
+            hasTrackedView.current = true;
+        }
+    }, [isInView]);
+
     const handleGetStartedClick = () => {
         AuthLinkEvents.getStartedClicked({ referringPage: "home", ctaVariant: "cta_section" });
     };
@@ -11,8 +22,6 @@ export const CTA: React.FC = () => {
     const handleDemoClick = () => {
         EngagementEvents.demoRequested({ referringPage: "home" });
     };
-    const ref = React.useRef<HTMLDivElement>(null);
-    const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
         <section
