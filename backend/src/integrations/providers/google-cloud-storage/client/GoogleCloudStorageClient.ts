@@ -1,24 +1,10 @@
-import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
-import type { OAuth2TokenData } from "../../../../storage/models/Connection";
+import { GoogleBaseClient } from "../../../core/google";
+import { parseGoogleErrorMessage } from "../../../core/google/error-types";
 
 export interface GoogleCloudStorageClientConfig {
     accessToken: string;
     projectId: string;
     connectionId?: string;
-    onTokenRefresh?: (tokens: OAuth2TokenData) => Promise<void>;
-}
-
-interface GCSErrorResponse {
-    error: {
-        code: number;
-        message: string;
-        status: string;
-        errors?: Array<{
-            domain?: string;
-            reason?: string;
-            message?: string;
-        }>;
-    };
 }
 
 /**
@@ -28,100 +14,44 @@ interface GCSErrorResponse {
  * Base URL: https://storage.googleapis.com
  * Upload URL: https://storage.googleapis.com/upload/storage/v1
  */
-export class GoogleCloudStorageClient extends BaseAPIClient {
-    private accessToken: string;
+export class GoogleCloudStorageClient extends GoogleBaseClient {
     private projectId: string;
 
     constructor(config: GoogleCloudStorageClientConfig) {
-        const clientConfig: BaseAPIClientConfig = {
+        super({
+            accessToken: config.accessToken,
             baseURL: "https://storage.googleapis.com",
-            timeout: 60000, // 60 seconds for large file operations
-            retryConfig: {
-                maxRetries: 3,
-                retryableStatuses: [429, 500, 502, 503, 504],
-                backoffStrategy: "exponential"
-            },
-            connectionPool: {
-                maxSockets: 50,
-                maxFreeSockets: 10,
-                keepAlive: true
-            }
-        };
-
-        super(clientConfig);
-        this.accessToken = config.accessToken;
-        this.projectId = config.projectId;
-
-        // Add request interceptor for auth header
-        this.client.addRequestInterceptor((config) => {
-            if (!config.headers) {
-                config.headers = {};
-            }
-            config.headers["Authorization"] = `Bearer ${this.accessToken}`;
-            return config;
+            serviceName: "Google Cloud Storage",
+            timeout: 60000 // 60 seconds for large file operations
         });
+        this.projectId = config.projectId;
     }
 
     /**
-     * Handle Google Cloud Storage API-specific errors
+     * Override to provide service-specific not found message
+     */
+    protected getNotFoundMessage(): string {
+        return "Bucket or object not found.";
+    }
+
+    /**
+     * Override to handle GCS-specific 409 conflict error
      */
     protected async handleError(
         error: Error & {
             response?: { status?: number; data?: unknown; headers?: Record<string, string> };
         }
     ): Promise<never> {
-        if (error.response) {
-            const { status, data } = error.response;
-
-            if (status === 401) {
-                throw new Error("Google Cloud Storage authentication failed. Please reconnect.");
-            }
-
-            if (status === 403) {
-                const errorData = data as GCSErrorResponse;
-                const reason = errorData?.error?.errors?.[0]?.reason;
-
-                if (reason === "rateLimitExceeded" || reason === "userRateLimitExceeded") {
-                    throw new Error(
-                        "Google Cloud Storage rate limit exceeded. Please try again later."
-                    );
-                }
-
-                throw new Error(
-                    `Permission denied: ${errorData?.error?.message || "You don't have permission to access this resource."}`
-                );
-            }
-
-            if (status === 404) {
-                throw new Error("Bucket or object not found.");
-            }
-
-            if (status === 409) {
-                const errorData = data as GCSErrorResponse;
-                throw new Error(
-                    `Conflict: ${errorData?.error?.message || "Resource already exists or conflict occurred."}`
-                );
-            }
-
-            if (status === 429) {
-                const retryAfter = error.response.headers?.["retry-after"];
-                throw new Error(
-                    `Google Cloud Storage rate limit exceeded. Retry after ${retryAfter || "60"} seconds.`
-                );
-            }
-
-            if (status === 400) {
-                const errorData = data as GCSErrorResponse;
-                throw new Error(`Invalid request: ${errorData?.error?.message || "Bad request"}`);
-            }
-
-            if ((data as GCSErrorResponse)?.error) {
-                const errorData = data as GCSErrorResponse;
-                throw new Error(`Google Cloud Storage API error: ${errorData.error.message}`);
-            }
+        // Handle 409 Conflict specifically for GCS (e.g., bucket already exists)
+        if (error.response?.status === 409) {
+            const errorMessage = parseGoogleErrorMessage(error.response.data);
+            throw new Error(
+                `Conflict: ${errorMessage || "Resource already exists or conflict occurred."}`
+            );
         }
 
-        throw error;
+        // Let the base class handle all other errors
+        return super.handleError(error);
     }
 
     // ==================== Bucket Operations ====================

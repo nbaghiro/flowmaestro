@@ -5,10 +5,10 @@
  * connection pooling, retry logic, and error handling.
  */
 
-import { BaseAPIClient, type BaseAPIClientConfig } from "../../core/BaseAPIClient";
+import { BaseAPIClient, type BaseAPIClientConfig } from "../BaseAPIClient";
 import { parseAWSError } from "./error-parser";
 import { AWSSignatureV4 } from "./signature-v4";
-import type { RequestConfig } from "../../core/types";
+import type { RequestConfig } from "../types";
 
 export interface AWSClientConfig extends Omit<BaseAPIClientConfig, "baseURL"> {
     accessKeyId: string;

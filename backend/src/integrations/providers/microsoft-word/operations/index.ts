@@ -328,7 +328,7 @@ export async function executeCopyDocument(
             success: true,
             data: {
                 copyInProgress: true,
-                monitorUrl: result.location,
+                monitorUrl: result.monitorUrl,
                 message: "Copy operation started. Use the monitorUrl to check status."
             }
         };

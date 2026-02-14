@@ -72,7 +72,7 @@ export default function Options() {
             : theme;
 
     return (
-        <div className="min-h-screen bg-background p-8">
+        <div className="min-h-screen abstract-bg p-8">
             <div className="max-w-2xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-8">

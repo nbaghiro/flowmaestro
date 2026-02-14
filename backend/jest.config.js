@@ -33,6 +33,8 @@ const baseConfig = {
 module.exports = {
     verbose: true,
     testTimeout: 30000,
+    cache: true,
+    cacheDirectory: "<rootDir>/.jest-cache",
     projects: [
         {
             ...baseConfig,

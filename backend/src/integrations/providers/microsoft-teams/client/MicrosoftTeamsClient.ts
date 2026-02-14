@@ -3,6 +3,8 @@
  * HTTP client for Microsoft Graph API - Teams endpoints
  */
 
+import { MicrosoftGraphClient } from "../../../core/microsoft";
+
 export interface TeamsClientConfig {
     accessToken: string;
 }
@@ -104,59 +106,12 @@ export interface MembersResponse {
 // Client Implementation
 // ============================================================================
 
-export class MicrosoftTeamsClient {
-    private readonly baseUrl = "https://graph.microsoft.com/v1.0";
-    private readonly accessToken: string;
-
+export class MicrosoftTeamsClient extends MicrosoftGraphClient {
     constructor(config: TeamsClientConfig) {
-        this.accessToken = config.accessToken;
-    }
-
-    /**
-     * Generic request method with error handling
-     */
-    private async request<T>(
-        endpoint: string,
-        options: {
-            method?: string;
-            body?: unknown;
-            headers?: Record<string, string>;
-        } = {}
-    ): Promise<T> {
-        const url = endpoint.startsWith("http") ? endpoint : `${this.baseUrl}${endpoint}`;
-        const { method = "GET", body, headers = {} } = options;
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type": "application/json",
-                ...headers
-            },
-            body: body ? JSON.stringify(body) : undefined
+        super({
+            accessToken: config.accessToken,
+            serviceName: "Microsoft Teams"
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Microsoft Graph API error: ${response.status}`;
-
-            try {
-                const errorJson = JSON.parse(errorText);
-                if (errorJson.error?.message) {
-                    errorMessage = errorJson.error.message;
-                }
-            } catch {
-                // Use default error message
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        if (response.status === 204) {
-            return {} as T;
-        }
-
-        return (await response.json()) as T;
     }
 
     // ============================================================================
@@ -167,14 +122,14 @@ export class MicrosoftTeamsClient {
      * List teams the user is a member of
      */
     async listJoinedTeams(): Promise<TeamsResponse> {
-        return this.request("/me/joinedTeams");
+        return this.get("/me/joinedTeams");
     }
 
     /**
      * Get team details by ID
      */
     async getTeam(teamId: string): Promise<Team> {
-        return this.request(`/teams/${teamId}`);
+        return this.get(`/teams/${teamId}`);
     }
 
     // ============================================================================
@@ -185,14 +140,14 @@ export class MicrosoftTeamsClient {
      * List channels in a team
      */
     async listChannels(teamId: string): Promise<ChannelsResponse> {
-        return this.request(`/teams/${teamId}/channels`);
+        return this.get(`/teams/${teamId}/channels`);
     }
 
     /**
      * Get channel details
      */
     async getChannel(teamId: string, channelId: string): Promise<Channel> {
-        return this.request(`/teams/${teamId}/channels/${channelId}`);
+        return this.get(`/teams/${teamId}/channels/${channelId}`);
     }
 
     /**
@@ -204,13 +159,10 @@ export class MicrosoftTeamsClient {
         description?: string,
         membershipType: "standard" | "private" = "standard"
     ): Promise<Channel> {
-        return this.request(`/teams/${teamId}/channels`, {
-            method: "POST",
-            body: {
-                displayName,
-                description,
-                membershipType
-            }
+        return this.post(`/teams/${teamId}/channels`, {
+            displayName,
+            description,
+            membershipType
         });
     }
 
@@ -223,13 +175,10 @@ export class MicrosoftTeamsClient {
         content: string,
         contentType: "text" | "html" = "text"
     ): Promise<ChatMessage> {
-        return this.request(`/teams/${teamId}/channels/${channelId}/messages`, {
-            method: "POST",
+        return this.post(`/teams/${teamId}/channels/${channelId}/messages`, {
             body: {
-                body: {
-                    contentType,
-                    content
-                }
+                contentType,
+                content
             }
         });
     }
@@ -246,7 +195,7 @@ export class MicrosoftTeamsClient {
         if (top) {
             endpoint += `?$top=${top}`;
         }
-        return this.request(endpoint);
+        return this.get(endpoint);
     }
 
     /**
@@ -259,18 +208,12 @@ export class MicrosoftTeamsClient {
         content: string,
         contentType: "text" | "html" = "text"
     ): Promise<ChatMessage> {
-        return this.request(
-            `/teams/${teamId}/channels/${channelId}/messages/${messageId}/replies`,
-            {
-                method: "POST",
-                body: {
-                    body: {
-                        contentType,
-                        content
-                    }
-                }
+        return this.post(`/teams/${teamId}/channels/${channelId}/messages/${messageId}/replies`, {
+            body: {
+                contentType,
+                content
             }
-        );
+        });
     }
 
     // ============================================================================
@@ -285,14 +228,14 @@ export class MicrosoftTeamsClient {
         if (top) {
             endpoint += `?$top=${top}`;
         }
-        return this.request(endpoint);
+        return this.get(endpoint);
     }
 
     /**
      * Get chat details
      */
     async getChat(chatId: string): Promise<Chat> {
-        return this.request(`/chats/${chatId}`);
+        return this.get(`/chats/${chatId}`);
     }
 
     /**
@@ -303,13 +246,10 @@ export class MicrosoftTeamsClient {
         content: string,
         contentType: "text" | "html" = "text"
     ): Promise<ChatMessage> {
-        return this.request(`/chats/${chatId}/messages`, {
-            method: "POST",
+        return this.post(`/chats/${chatId}/messages`, {
             body: {
-                body: {
-                    contentType,
-                    content
-                }
+                contentType,
+                content
             }
         });
     }
@@ -322,13 +262,13 @@ export class MicrosoftTeamsClient {
         if (top) {
             endpoint += `?$top=${top}`;
         }
-        return this.request(endpoint);
+        return this.get(endpoint);
     }
 
     /**
      * List members of a chat
      */
     async listChatMembers(chatId: string): Promise<MembersResponse> {
-        return this.request(`/chats/${chatId}/members`);
+        return this.get(`/chats/${chatId}/members`);
     }
 }

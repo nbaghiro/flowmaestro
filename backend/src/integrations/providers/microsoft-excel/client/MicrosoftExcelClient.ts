@@ -8,6 +8,8 @@
  * Some features may have limited functionality with personal OneDrive accounts.
  */
 
+import { MicrosoftGraphClient } from "../../../core/microsoft";
+
 export interface ExcelClientConfig {
     accessToken: string;
 }
@@ -59,61 +61,12 @@ export interface TableRowsResponse {
     }>;
 }
 
-export class MicrosoftExcelClient {
-    private readonly baseUrl = "https://graph.microsoft.com/v1.0";
-    private readonly accessToken: string;
-
+export class MicrosoftExcelClient extends MicrosoftGraphClient {
     constructor(config: ExcelClientConfig) {
-        this.accessToken = config.accessToken;
-    }
-
-    /**
-     * Make authenticated request to Microsoft Graph API
-     */
-    private async request<T>(
-        endpoint: string,
-        options: {
-            method?: string;
-            body?: unknown;
-            headers?: Record<string, string>;
-        } = {}
-    ): Promise<T> {
-        const url = endpoint.startsWith("http") ? endpoint : `${this.baseUrl}${endpoint}`;
-        const { method = "GET", body, headers = {} } = options;
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                Authorization: `Bearer ${this.accessToken}`,
-                "Content-Type": "application/json",
-                ...headers
-            },
-            body: body ? JSON.stringify(body) : undefined
+        super({
+            accessToken: config.accessToken,
+            serviceName: "Microsoft Excel"
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorMessage = `Microsoft Graph API error: ${response.status}`;
-
-            try {
-                const errorJson = JSON.parse(errorText) as {
-                    error?: { message?: string; code?: string };
-                };
-                if (errorJson.error?.message) {
-                    errorMessage = errorJson.error.message;
-                }
-            } catch {
-                // Use default error message
-            }
-
-            throw new Error(errorMessage);
-        }
-
-        if (response.status === 204) {
-            return {} as T;
-        }
-
-        return (await response.json()) as T;
     }
 
     /**
@@ -127,14 +80,14 @@ export class MicrosoftExcelClient {
      * List worksheets in a workbook
      */
     async getWorksheets(itemId: string): Promise<WorksheetsResponse> {
-        return this.request(`${this.getWorkbookPath(itemId)}/worksheets`);
+        return this.get(`${this.getWorkbookPath(itemId)}/worksheets`);
     }
 
     /**
      * Get a specific worksheet
      */
     async getWorksheet(itemId: string, worksheetIdOrName: string): Promise<WorksheetInfo> {
-        return this.request(
+        return this.get(
             `${this.getWorkbookPath(itemId)}/worksheets/${encodeURIComponent(worksheetIdOrName)}`
         );
     }
@@ -144,10 +97,7 @@ export class MicrosoftExcelClient {
      */
     async createWorksheet(itemId: string, name?: string): Promise<WorksheetInfo> {
         const body = name ? { name } : {};
-        return this.request(`${this.getWorkbookPath(itemId)}/worksheets/add`, {
-            method: "POST",
-            body
-        });
+        return this.post(`${this.getWorkbookPath(itemId)}/worksheets/add`, body);
     }
 
     /**
@@ -159,7 +109,7 @@ export class MicrosoftExcelClient {
         address: string
     ): Promise<RangeData> {
         const encodedAddress = encodeURIComponent(address);
-        return this.request(
+        return this.get(
             `${this.getWorkbookPath(itemId)}/worksheets/${encodeURIComponent(worksheetIdOrName)}/range(address='${encodedAddress}')`
         );
     }
@@ -174,12 +124,9 @@ export class MicrosoftExcelClient {
         values: unknown[][]
     ): Promise<RangeData> {
         const encodedAddress = encodeURIComponent(address);
-        return this.request(
+        return this.patch(
             `${this.getWorkbookPath(itemId)}/worksheets/${encodeURIComponent(worksheetIdOrName)}/range(address='${encodedAddress}')`,
-            {
-                method: "PATCH",
-                body: { values }
-            }
+            { values }
         );
     }
 
@@ -187,7 +134,7 @@ export class MicrosoftExcelClient {
      * Get used range in worksheet
      */
     async getUsedRange(itemId: string, worksheetIdOrName: string): Promise<RangeData> {
-        return this.request(
+        return this.get(
             `${this.getWorkbookPath(itemId)}/worksheets/${encodeURIComponent(worksheetIdOrName)}/usedRange`
         );
     }
@@ -196,14 +143,14 @@ export class MicrosoftExcelClient {
      * List tables in a workbook
      */
     async getTables(itemId: string): Promise<TablesResponse> {
-        return this.request(`${this.getWorkbookPath(itemId)}/tables`);
+        return this.get(`${this.getWorkbookPath(itemId)}/tables`);
     }
 
     /**
      * Get table rows
      */
     async getTableRows(itemId: string, tableIdOrName: string): Promise<TableRowsResponse> {
-        return this.request(
+        return this.get(
             `${this.getWorkbookPath(itemId)}/tables/${encodeURIComponent(tableIdOrName)}/rows`
         );
     }
@@ -216,13 +163,10 @@ export class MicrosoftExcelClient {
         tableIdOrName: string,
         values: unknown[]
     ): Promise<{ index: number; values: unknown[][] }> {
-        return this.request(
+        return this.post(
             `${this.getWorkbookPath(itemId)}/tables/${encodeURIComponent(tableIdOrName)}/rows`,
             {
-                method: "POST",
-                body: {
-                    values: [values]
-                }
+                values: [values]
             }
         );
     }
@@ -235,12 +179,9 @@ export class MicrosoftExcelClient {
         tableIdOrName: string,
         values: unknown[][]
     ): Promise<TableRowsResponse> {
-        return this.request(
+        return this.post(
             `${this.getWorkbookPath(itemId)}/tables/${encodeURIComponent(tableIdOrName)}/rows/add`,
-            {
-                method: "POST",
-                body: { values }
-            }
+            { values }
         );
     }
 
@@ -248,7 +189,7 @@ export class MicrosoftExcelClient {
      * Get table header row
      */
     async getTableHeaderRow(itemId: string, tableIdOrName: string): Promise<RangeData> {
-        return this.request(
+        return this.get(
             `${this.getWorkbookPath(itemId)}/tables/${encodeURIComponent(tableIdOrName)}/headerRowRange`
         );
     }
@@ -263,12 +204,9 @@ export class MicrosoftExcelClient {
         applyTo?: "all" | "formats" | "contents"
     ): Promise<void> {
         const encodedAddress = encodeURIComponent(address);
-        await this.request(
+        await this.post(
             `${this.getWorkbookPath(itemId)}/worksheets/${encodeURIComponent(worksheetIdOrName)}/range(address='${encodedAddress}')/clear`,
-            {
-                method: "POST",
-                body: { applyTo: applyTo || "all" }
-            }
+            { applyTo: applyTo || "all" }
         );
     }
 
@@ -282,12 +220,9 @@ export class MicrosoftExcelClient {
         shift: "down" | "right"
     ): Promise<RangeData> {
         const encodedAddress = encodeURIComponent(address);
-        return this.request(
+        return this.post(
             `${this.getWorkbookPath(itemId)}/worksheets/${encodeURIComponent(worksheetIdOrName)}/range(address='${encodedAddress}')/insert`,
-            {
-                method: "POST",
-                body: { shift }
-            }
+            { shift }
         );
     }
 
@@ -301,12 +236,9 @@ export class MicrosoftExcelClient {
         shift: "up" | "left"
     ): Promise<void> {
         const encodedAddress = encodeURIComponent(address);
-        await this.request(
+        await this.post(
             `${this.getWorkbookPath(itemId)}/worksheets/${encodeURIComponent(worksheetIdOrName)}/range(address='${encodedAddress}')/delete`,
-            {
-                method: "POST",
-                body: { shift }
-            }
+            { shift }
         );
     }
 
@@ -317,9 +249,8 @@ export class MicrosoftExcelClient {
         itemId: string,
         persistChanges?: boolean
     ): Promise<{ id: string; persistChanges: boolean }> {
-        return this.request(`${this.getWorkbookPath(itemId)}/createSession`, {
-            method: "POST",
-            body: { persistChanges: persistChanges ?? true }
+        return this.post(`${this.getWorkbookPath(itemId)}/createSession`, {
+            persistChanges: persistChanges ?? true
         });
     }
 

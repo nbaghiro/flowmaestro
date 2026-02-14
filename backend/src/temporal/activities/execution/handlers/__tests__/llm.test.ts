@@ -9,8 +9,29 @@
  * - Token usage tracking
  * - Error handling
  *
- * Note: External API calls are mocked using nock
+ * Note: External API calls are mocked using nock for OpenAI/Anthropic,
+ * and Jest module mocks for Google/Cohere (their SDKs don't work with nock)
  */
+
+// Create mock functions before any imports (for Google and Cohere SDKs)
+const mockGoogleGenerateContent = jest.fn();
+const mockCohereChat = jest.fn();
+
+// Mock Google Generative AI SDK (doesn't work with nock)
+jest.mock("@google/generative-ai", () => ({
+    GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
+        getGenerativeModel: jest.fn().mockReturnValue({
+            generateContent: mockGoogleGenerateContent
+        })
+    }))
+}));
+
+// Mock Cohere SDK (doesn't work with nock)
+jest.mock("cohere-ai", () => ({
+    CohereClient: jest.fn().mockImplementation(() => ({
+        chat: mockCohereChat
+    }))
+}));
 
 import nock from "nock";
 import {
@@ -320,34 +341,26 @@ describe("LLMNodeHandler", () => {
         });
     });
 
-    // Note: Google and Cohere provider tests are skipped because their SDKs
-    // use custom HTTP handling that doesn't work well with nock HTTP interception.
-    // These providers are tested via integration tests instead.
-    describe.skip("Google provider", () => {
+    // Google and Cohere provider tests use Jest module mocks since their SDKs
+    // don't work well with nock HTTP interception.
+    describe("Google provider", () => {
         beforeEach(() => {
-            process.env.GOOGLE_AI_API_KEY = "test-google-key";
+            process.env.GOOGLE_API_KEY = "test-google-key";
             resetAIClient();
+            mockGoogleGenerateContent.mockReset();
         });
 
         it("calls Google Gemini API and returns response", async () => {
-            nock("https://generativelanguage.googleapis.com")
-                .post(/\/v1beta\/models\/gemini-pro:generateContent/)
-                .reply(200, {
-                    candidates: [
-                        {
-                            content: {
-                                parts: [{ text: "Hello from Gemini!" }],
-                                role: "model"
-                            },
-                            finishReason: "STOP"
-                        }
-                    ],
+            mockGoogleGenerateContent.mockResolvedValue({
+                response: {
+                    text: () => "Hello from Gemini!",
                     usageMetadata: {
                         promptTokenCount: 10,
                         candidatesTokenCount: 15,
                         totalTokenCount: 25
                     }
-                });
+                }
+            });
 
             const input = createHandlerInput({
                 nodeType: "llm",
@@ -363,27 +376,20 @@ describe("LLMNodeHandler", () => {
             expect(output.result.text).toBe("Hello from Gemini!");
             expect(output.result.provider).toBe("google");
             expect(output.result.model).toBe("gemini-pro");
+            expect(mockGoogleGenerateContent).toHaveBeenCalled();
         });
 
         it("includes token usage from Google response", async () => {
-            nock("https://generativelanguage.googleapis.com")
-                .post(/\/v1beta\/models\/gemini-pro:generateContent/)
-                .reply(200, {
-                    candidates: [
-                        {
-                            content: {
-                                parts: [{ text: "Response" }],
-                                role: "model"
-                            },
-                            finishReason: "STOP"
-                        }
-                    ],
+            mockGoogleGenerateContent.mockResolvedValue({
+                response: {
+                    text: () => "Response",
                     usageMetadata: {
                         promptTokenCount: 15,
                         candidatesTokenCount: 25,
                         totalTokenCount: 40
                     }
-                });
+                }
+            });
 
             const input = createHandlerInput({
                 nodeType: "llm",
@@ -402,28 +408,24 @@ describe("LLMNodeHandler", () => {
         });
     });
 
-    // Note: Cohere SDK uses custom HTTP handling that doesn't work with nock
-    describe.skip("Cohere provider", () => {
+    // Cohere provider tests use Jest module mocks
+    describe("Cohere provider", () => {
         beforeEach(() => {
             process.env.COHERE_API_KEY = "test-cohere-key";
             resetAIClient();
+            mockCohereChat.mockReset();
         });
 
         it("calls Cohere API and returns response", async () => {
-            nock("https://api.cohere.ai")
-                .post("/v1/chat")
-                .reply(200, {
-                    response_id: "chat-123",
-                    text: "Hello from Cohere!",
-                    generation_id: "gen-456",
-                    finish_reason: "COMPLETE",
-                    meta: {
-                        tokens: {
-                            input_tokens: 8,
-                            output_tokens: 12
-                        }
+            mockCohereChat.mockResolvedValue({
+                text: "Hello from Cohere!",
+                meta: {
+                    tokens: {
+                        inputTokens: 8,
+                        outputTokens: 12
                     }
-                });
+                }
+            });
 
             const input = createHandlerInput({
                 nodeType: "llm",
@@ -439,22 +441,19 @@ describe("LLMNodeHandler", () => {
             expect(output.result.text).toBe("Hello from Cohere!");
             expect(output.result.provider).toBe("cohere");
             expect(output.result.model).toBe("command-r-plus");
+            expect(mockCohereChat).toHaveBeenCalled();
         });
 
         it("includes token usage from Cohere response", async () => {
-            nock("https://api.cohere.ai")
-                .post("/v1/chat")
-                .reply(200, {
-                    response_id: "chat-123",
-                    text: "Response",
-                    finish_reason: "COMPLETE",
-                    meta: {
-                        tokens: {
-                            input_tokens: 20,
-                            output_tokens: 30
-                        }
+            mockCohereChat.mockResolvedValue({
+                text: "Response",
+                meta: {
+                    tokens: {
+                        inputTokens: 20,
+                        outputTokens: 30
                     }
-                });
+                }
+            });
 
             const input = createHandlerInput({
                 nodeType: "llm",

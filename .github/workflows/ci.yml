@@ -41,7 +41,17 @@ jobs:
         id: cache-restore
         uses: actions/cache/restore@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
           key: ${{ steps.cache-key.outputs.key }}
 
       - name: Install dependencies
@@ -52,7 +62,17 @@ jobs:
         if: steps.cache-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
           key: ${{ steps.cache-key.outputs.key }}
 
   # ============================================================================
@@ -75,7 +95,17 @@ jobs:
       - name: Restore cached dependencies
         uses: actions/cache/restore@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
           key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Type check
@@ -97,7 +127,17 @@ jobs:
       - name: Restore cached dependencies
         uses: actions/cache/restore@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
           key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Lint code
@@ -147,7 +187,17 @@ jobs:
       - name: Restore cached dependencies
         uses: actions/cache/restore@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
           key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Type check JavaScript SDK
@@ -169,7 +219,17 @@ jobs:
       - name: Restore cached dependencies
         uses: actions/cache/restore@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
           key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Type check Widget SDK
@@ -205,7 +265,17 @@ jobs:
       - name: Restore cached dependencies
         uses: actions/cache/restore@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
           key: ${{ needs.setup.outputs.cache-key }}
 
       # Run shared tests (small, no sharding needed) - only on first shard
@@ -253,7 +323,17 @@ jobs:
       - name: Restore cached dependencies
         uses: actions/cache/restore@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
           key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Install netcat for readiness checks
@@ -382,7 +462,17 @@ jobs:
       - name: Restore cached dependencies
         uses: actions/cache/restore@v4
         with:
-          path: node_modules
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
           key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Build all packages

@@ -430,6 +430,161 @@ cd backend && npx tsc --noEmit
 
 ---
 
+## Platform-Specific Base Clients
+
+When adding a new integration for a service that belongs to an existing platform (Google, Microsoft, SAP, AWS), **always use the shared base client** instead of extending `BaseAPIClient` directly. This ensures consistent authentication, error handling, and retry logic across the platform family.
+
+### Available Base Clients
+
+| Platform      | Base Client                           | Location                      | Use For                                                                  |
+| ------------- | ------------------------------------- | ----------------------------- | ------------------------------------------------------------------------ |
+| **Google**    | `GoogleBaseClient`                    | `integrations/core/google`    | Google Calendar, Docs, Drive, Sheets, Forms, Slides, Cloud Storage, etc. |
+| **Microsoft** | `MicrosoftGraphClient`                | `integrations/core/microsoft` | Teams, Outlook, Excel, OneDrive, PowerPoint, Word, etc.                  |
+| **SAP**       | `BaseAPIClient` + `ODataQueryBuilder` | `integrations/core/sap`       | SAP S/4HANA, SuccessFactors, etc.                                        |
+| **AWS**       | `AWSBaseClient`                       | `integrations/core/aws`       | Lambda, CloudWatch, ECS, S3, etc.                                        |
+
+### When to Use a Platform Base Client
+
+Use the platform-specific base client when:
+
+1. **The service uses the same API domain** (e.g., `graph.microsoft.com`, `googleapis.com`)
+2. **The service uses the same authentication pattern** (e.g., Bearer token OAuth2)
+3. **Error response formats are consistent** across the platform
+
+### Example: Adding a New Google Provider
+
+```typescript
+// backend/src/integrations/providers/google-meet/client/GoogleMeetClient.ts
+import { GoogleBaseClient } from "../../../core/google";
+
+export interface GoogleMeetClientConfig {
+    accessToken: string;
+}
+
+export class GoogleMeetClient extends GoogleBaseClient {
+    constructor(config: GoogleMeetClientConfig) {
+        super({
+            accessToken: config.accessToken,
+            serviceName: "Google Meet" // Used in error messages
+        });
+    }
+
+    // Just add your service-specific methods
+    async createMeeting(params: CreateMeetingParams): Promise<Meeting> {
+        return this.post("/v1/spaces", params);
+    }
+
+    async getMeeting(spaceId: string): Promise<Meeting> {
+        return this.get(`/v1/spaces/${spaceId}`);
+    }
+}
+```
+
+### Example: Adding a New Microsoft Provider
+
+```typescript
+// backend/src/integrations/providers/microsoft-planner/client/MicrosoftPlannerClient.ts
+import { MicrosoftGraphClient } from "../../../core/microsoft";
+
+export interface PlannerClientConfig {
+    accessToken: string;
+}
+
+export class MicrosoftPlannerClient extends MicrosoftGraphClient {
+    constructor(config: PlannerClientConfig) {
+        super({
+            accessToken: config.accessToken,
+            serviceName: "Microsoft Planner"
+        });
+    }
+
+    async listPlans(groupId: string): Promise<PlanList> {
+        return this.get(`/groups/${groupId}/planner/plans`);
+    }
+
+    async createTask(planId: string, task: CreateTaskParams): Promise<Task> {
+        return this.post("/planner/tasks", { planId, ...task });
+    }
+}
+```
+
+### Example: Adding a New SAP Provider
+
+```typescript
+// backend/src/integrations/providers/sap-ariba/client/SAPAribaClient.ts
+import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
+import { ODataQueryBuilder, SapODataErrorResponse, parseSapODataError } from "../../../core/sap";
+import { isFetchError } from "../../../../core/utils/fetch-client";
+
+export class SAPAribaClient extends BaseAPIClient {
+    private accessToken: string;
+
+    constructor(config: SAPAribaClientConfig) {
+        const clientConfig: BaseAPIClientConfig = {
+            baseURL: `https://${config.realm}.ariba.com/api`,
+            timeout: 30000,
+            retryConfig: {
+                maxRetries: 3,
+                retryableStatuses: [429, 500, 502, 503, 504],
+                backoffStrategy: "exponential"
+            }
+        };
+        super(clientConfig);
+        this.accessToken = config.accessToken;
+
+        this.client.addRequestInterceptor((reqConfig) => {
+            reqConfig.headers = reqConfig.headers || {};
+            reqConfig.headers["Authorization"] = `Bearer ${this.accessToken}`;
+            reqConfig.headers["Accept"] = "application/json";
+            return reqConfig;
+        });
+    }
+
+    // Use shared ODataQueryBuilder for query construction
+    async listDocuments(params?: ListParams): Promise<DocumentList> {
+        const query = ODataQueryBuilder.create().formatJson().inlineCount();
+
+        if (params?.top) query.top(params.top);
+        if (params?.filter) query.filter(params.filter);
+
+        return this.get(`/documents${query.buildWithPrefix()}`);
+    }
+
+    // Use shared error parsing
+    protected async handleError(error: unknown): Promise<never> {
+        if (isFetchError(error) && error.response) {
+            const data = error.response.data as SapODataErrorResponse;
+            const errorMessage = parseSapODataError(data);
+            if (errorMessage) {
+                throw new Error(`SAP Ariba error: ${errorMessage}`);
+            }
+        }
+        throw error;
+    }
+}
+```
+
+### What the Base Clients Provide
+
+| Feature          | GoogleBaseClient             | MicrosoftGraphClient               | SAP (via core/sap)       |
+| ---------------- | ---------------------------- | ---------------------------------- | ------------------------ |
+| Base URL         | `https://www.googleapis.com` | `https://graph.microsoft.com/v1.0` | Configurable             |
+| Auth             | Bearer token interceptor     | Bearer token in headers            | Bearer token interceptor |
+| Error handling   | 401, 403, 404, 429           | 401, 403, 404, 429                 | OData error parsing      |
+| Retry logic      | Via BaseAPIClient            | Built-in                           | Via BaseAPIClient        |
+| Binary downloads | `downloadBinary()`           | `downloadBinary()`                 | -                        |
+| Binary uploads   | -                            | `requestBinary()`                  | -                        |
+| OData queries    | -                            | -                                  | `ODataQueryBuilder`      |
+
+### Benefits
+
+1. **Consistency**: All Google/Microsoft/SAP providers handle errors the same way
+2. **Less code**: No need to duplicate auth interceptors or error handling
+3. **Easier maintenance**: Fix a bug in the base client, all providers benefit
+4. **Better error messages**: Platform-specific error messages are already implemented
+
+---
+
 ## Required File Templates
 
 ### Provider Class Template (OAuth)
@@ -682,6 +837,9 @@ export class [Provider]Provider extends BaseProvider {
 
 ### Client Template
 
+> **Note**: For Google, Microsoft, SAP, or AWS providers, use the platform-specific base client instead.
+> See the "Platform-Specific Base Clients" section above.
+
 ```typescript
 // backend/src/integrations/providers/[provider-id]/client/[Provider]Client.ts
 import { createServiceLogger } from "../../../../core/logging";
@@ -903,6 +1061,10 @@ If the provider requires user input before OAuth (like Zendesk subdomain), add t
 | `backend/src/integrations/registry.ts`                                   | Register provider (add entry here)           |
 | `backend/src/services/oauth/OAuthProviderRegistry.ts`                    | OAuth config (OAuth providers only)          |
 | `backend/src/core/config/index.ts`                                       | Environment variable config + callback paths |
+| `backend/src/integrations/core/google/`                                  | GoogleBaseClient for Google providers        |
+| `backend/src/integrations/core/microsoft/`                               | MicrosoftGraphClient for Microsoft providers |
+| `backend/src/integrations/core/sap/`                                     | ODataQueryBuilder + error types for SAP      |
+| `backend/src/integrations/core/aws/`                                     | AWSBaseClient + signature utils for AWS      |
 | `shared/src/providers.ts`                                                | Frontend provider definitions + logo domains |
 | `shared/src/connections.ts`                                              | Connection data types                        |
 | `infra/pulumi/Pulumi.production.yaml`                                    | Secret definitions (REQUIRED for OAuth)      |
@@ -936,3 +1098,4 @@ If the provider requires user input before OAuth (like Zendesk subdomain), add t
 10. **Sandbox Fixtures**: ALWAYS create `__tests__/fixtures.ts` with test data for all operations - agent integration tests depend on this
 11. **Fixture Registration**: Don't forget to register fixtures in `FixtureRegistry.ts` - unregistered fixtures won't be used by the sandbox
 12. **Realistic Fixtures**: Use realistic sample data in fixtures (real-looking IDs, names, timestamps) - this helps catch edge cases
+13. **Platform Base Clients**: When adding a Google/Microsoft/SAP/AWS provider, ALWAYS use the platform-specific base client from `core/google`, `core/microsoft`, `core/sap`, or `core/aws` - don't extend `BaseAPIClient` directly

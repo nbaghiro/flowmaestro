@@ -2,7 +2,7 @@ import { Loader2 } from "lucide-react";
 
 export function LoadingScreen() {
     return (
-        <div className="flex flex-col items-center justify-center h-screen bg-background">
+        <div className="flex flex-col items-center justify-center h-screen abstract-bg">
             <img
                 src="/assets/icons/icon-48.png"
                 alt="FlowMaestro"

@@ -5,7 +5,7 @@
  * Uses AWS Signature V4 authentication and handles service-specific endpoints.
  */
 
-import { AWSBaseClient, type AWSClientConfig } from "../../../shared/aws";
+import { AWSBaseClient, type AWSClientConfig } from "../../../core/aws";
 
 export interface AWSUnifiedClientConfig {
     accessKeyId: string;

@@ -196,6 +196,42 @@ async function handleCaptureScreenshot(tabId?: number): Promise<ExtensionMessage
 }
 
 /**
+ * Attempt to refresh the access token using the refresh token
+ * Returns true if refresh was successful, false otherwise
+ */
+async function tryRefreshToken(): Promise<boolean> {
+    const authState = await getAuthState();
+
+    if (!authState?.refreshToken) {
+        console.log("[ServiceWorker] No refresh token available");
+        return false;
+    }
+
+    console.log("[ServiceWorker] Attempting token refresh...");
+    const refreshResult = await api.refreshToken(authState.refreshToken);
+
+    if (!refreshResult) {
+        console.log("[ServiceWorker] Token refresh failed");
+        return false;
+    }
+
+    // Update auth state with new tokens
+    const newExpiresAt = new Date(Date.now() + refreshResult.expiresIn * 1000).toISOString();
+
+    await setAuthState({
+        isAuthenticated: true,
+        accessToken: refreshResult.accessToken,
+        refreshToken: refreshResult.refreshToken,
+        expiresAt: newExpiresAt,
+        user: refreshResult.user,
+        workspace: refreshResult.workspace || authState.workspace
+    });
+
+    console.log("[ServiceWorker] Token refreshed successfully");
+    return true;
+}
+
+/**
  * Check authentication status
  */
 async function handleAuthStatus(): Promise<ExtensionMessage> {
@@ -208,23 +244,57 @@ async function handleAuthStatus(): Promise<ExtensionMessage> {
         };
     }
 
-    // Check if token is expired
-    if (authState.expiresAt && new Date(authState.expiresAt) < new Date()) {
-        // TODO: Implement token refresh
-        await clearAuthState();
+    // Check if token is expired or about to expire (within 5 minutes)
+    const expiryBuffer = 5 * 60 * 1000; // 5 minutes in milliseconds
+    const isExpiredOrExpiring =
+        authState.expiresAt && new Date(authState.expiresAt).getTime() - Date.now() < expiryBuffer;
+
+    if (isExpiredOrExpiring) {
+        // Try to refresh the token
+        const refreshed = await tryRefreshToken();
+
+        if (!refreshed) {
+            await clearAuthState();
+            return {
+                type: "AUTH_STATUS",
+                payload: { isAuthenticated: false }
+            };
+        }
+
+        // Get updated auth state after refresh
+        const newAuthState = await getAuthState();
         return {
             type: "AUTH_STATUS",
-            payload: { isAuthenticated: false }
+            payload: {
+                isAuthenticated: true,
+                user: newAuthState?.user,
+                workspace: newAuthState?.workspace
+            }
         };
     }
 
     // Verify token is still valid
     const isValid = await api.checkAuth();
     if (!isValid) {
-        await clearAuthState();
+        // Token invalid - try refresh before giving up
+        const refreshed = await tryRefreshToken();
+
+        if (!refreshed) {
+            await clearAuthState();
+            return {
+                type: "AUTH_STATUS",
+                payload: { isAuthenticated: false }
+            };
+        }
+
+        const newAuthState = await getAuthState();
         return {
             type: "AUTH_STATUS",
-            payload: { isAuthenticated: false }
+            payload: {
+                isAuthenticated: true,
+                user: newAuthState?.user,
+                workspace: newAuthState?.workspace
+            }
         };
     }
 

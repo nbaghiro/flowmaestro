@@ -183,7 +183,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     "google-meet": "meet.google.com",
     supabase: "supabase.com",
     gitbook: "gitbook.com",
-    "bill-com": "bill.com"
+    "bill-com": "bill.com",
+    deel: "letsdeel.com",
+    crisp: "crisp.chat"
 };
 
 /**
@@ -952,11 +954,17 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "deel",
         displayName: "Deel",
-        description: "Global HR and payroll",
+        description: "Global HR and payroll platform for employees, contractors, and EOR workers",
         logoUrl: getBrandLogo("deel.com"),
         category: "HR",
-        methods: ["api_key", "oauth2"],
-        comingSoon: true
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "API Token",
+            keyPlaceholder: "deel_api_...",
+            helpText: "Generate an API token in Deel Settings > Integrations > API",
+            helpUrl:
+                "https://help.letsdeel.com/hc/en-gb/articles/4414311682321-How-do-I-create-an-API-token"
+        }
     },
     {
         provider: "personio",
@@ -976,11 +984,23 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "sap-successfactors",
         displayName: "SAP SuccessFactors",
-        description: "Enterprise HCM suite",
+        description: "Enterprise HCM suite for talent management, HR, and payroll",
         logoUrl: getBrandLogo("sap.com"),
         category: "HR",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "apiServer",
+                label: "API Server",
+                placeholder: "api8.successfactors.com",
+                helpText:
+                    "Enter your SAP SuccessFactors API server hostname (e.g., api8.successfactors.com). Find this in your SuccessFactors instance settings.",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9.-]*\\.[a-zA-Z]{2,}$",
+                patternError: "Please enter a valid hostname (e.g., api8.successfactors.com)"
+            }
+        ]
     },
     {
         provider: "lattice",
@@ -1111,7 +1131,25 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("crisp.chat"),
         category: "Customer Support",
         methods: ["api_key"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "website_id",
+                label: "Website ID",
+                placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+                helpText: "Your Crisp website ID (found in Settings > Website Settings)",
+                required: true,
+                type: "text",
+                pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+                patternError: "Must be a valid UUID format"
+            }
+        ],
+        apiKeySettings: {
+            keyLabel: "API Token",
+            keyPlaceholder: "identifier:key",
+            helpText:
+                "Enter your Crisp API token in format: identifier:key (from Crisp Marketplace)",
+            helpUrl: "https://docs.crisp.chat/guides/rest-api/authentication/"
+        }
     },
     {
         provider: "gorgias",
@@ -1169,11 +1207,20 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "magento",
         displayName: "Magento",
-        description: "E-commerce platform",
+        description: "Manage products, orders, customers, and inventory in Adobe Commerce",
         logoUrl: getBrandLogo("magento.com"),
         category: "E-commerce",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Integration Access Token",
+            keyPlaceholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Store URL",
+            secretPlaceholder: "https://your-store.com",
+            helpText: "Create an Integration in System > Extensions > Integrations",
+            helpUrl:
+                "https://experienceleague.adobe.com/docs/commerce-admin/systems/integrations/integrations.html"
+        }
     },
     {
         provider: "bigcommerce",
@@ -1271,20 +1318,34 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "shippo",
         displayName: "Shippo",
-        description: "Multi-carrier shipping API",
+        description:
+            "Multi-carrier shipping API for rates, labels, tracking, and address validation",
         logoUrl: getBrandLogo("goshippo.com"),
         category: "E-commerce",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Live Token",
+            keyPlaceholder: "shippo_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            helpText: "Find your API token in Shippo Settings > API",
+            helpUrl: "https://apps.goshippo.com/settings/api"
+        }
     },
     {
         provider: "shipstation",
         displayName: "ShipStation",
-        description: "Shipping and fulfillment",
+        description: "Shipping management with multi-carrier rates, labels, and order tracking",
         logoUrl: getBrandLogo("shipstation.com"),
         category: "E-commerce",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "API Secret",
+            secretPlaceholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            helpText: "Generate API credentials in ShipStation Settings > Account > API Settings",
+            helpUrl: "https://ss.shipstation.com/#/settings/api"
+        }
     },
 
     // Marketing (Additional)

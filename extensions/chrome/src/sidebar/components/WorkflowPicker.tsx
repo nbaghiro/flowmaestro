@@ -154,33 +154,36 @@ export function WorkflowPicker() {
 
             {/* Page Context Options */}
             <div className="px-3 py-2 border-t border-border bg-muted">
-                <div className="text-xs font-medium text-muted-foreground mb-2">Page Context:</div>
                 <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={includePageText}
-                            onChange={(e) => setIncludePageText(e.target.checked)}
-                            className="w-4 h-4 rounded border-border bg-background"
-                        />
-                        <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-xs text-foreground">Page text</span>
-                    </label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={includeScreenshot}
-                            onChange={async (e) => {
-                                if (e.target.checked) {
-                                    await captureScreenshot();
-                                }
-                                setIncludeScreenshot(e.target.checked);
-                            }}
-                            className="w-4 h-4 rounded border-border bg-background"
-                        />
-                        <Camera className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-xs text-foreground">Screenshot</span>
-                    </label>
+                    <button
+                        onClick={() => setIncludePageText(!includePageText)}
+                        className={clsx(
+                            "flex items-center gap-1.5 px-2 py-1 text-xs rounded-md transition-colors",
+                            includePageText
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-secondary-foreground hover:bg-accent"
+                        )}
+                    >
+                        <FileText className="w-3.5 h-3.5" />
+                        Page Text
+                    </button>
+                    <button
+                        onClick={async () => {
+                            if (!includeScreenshot) {
+                                await captureScreenshot();
+                            }
+                            setIncludeScreenshot(!includeScreenshot);
+                        }}
+                        className={clsx(
+                            "flex items-center gap-1.5 px-2 py-1 text-xs rounded-md transition-colors",
+                            includeScreenshot
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-secondary-foreground hover:bg-accent"
+                        )}
+                    >
+                        <Camera className="w-3.5 h-3.5" />
+                        Screenshot
+                    </button>
                 </div>
             </div>
 

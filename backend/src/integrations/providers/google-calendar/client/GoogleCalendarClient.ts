@@ -1,20 +1,7 @@
-import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
+import { GoogleBaseClient } from "../../../core/google";
 
 export interface GoogleCalendarClientConfig {
     accessToken: string;
-}
-
-interface GoogleCalendarErrorResponse {
-    error: {
-        code: number;
-        message: string;
-        status?: string;
-        errors?: Array<{
-            domain: string;
-            reason: string;
-            message: string;
-        }>;
-    };
 }
 
 /**
@@ -23,86 +10,20 @@ interface GoogleCalendarErrorResponse {
  * Provides methods to interact with Google Calendar API v3
  * https://developers.google.com/calendar/api/v3/reference
  */
-export class GoogleCalendarClient extends BaseAPIClient {
-    private accessToken: string;
-
+export class GoogleCalendarClient extends GoogleBaseClient {
     constructor(config: GoogleCalendarClientConfig) {
-        const clientConfig: BaseAPIClientConfig = {
+        super({
+            accessToken: config.accessToken,
             baseURL: "https://www.googleapis.com/calendar/v3",
-            timeout: 30000,
-            retryConfig: {
-                maxRetries: 3,
-                retryableStatuses: [429, 500, 502, 503, 504],
-                backoffStrategy: "exponential"
-            },
-            connectionPool: {
-                maxSockets: 50,
-                maxFreeSockets: 10,
-                keepAlive: true
-            }
-        };
-
-        super(clientConfig);
-        this.accessToken = config.accessToken;
-
-        // Add request interceptor for auth header
-        this.client.addRequestInterceptor((requestConfig) => {
-            if (!requestConfig.headers) {
-                requestConfig.headers = {};
-            }
-            requestConfig.headers["Authorization"] = `Bearer ${this.accessToken}`;
-            requestConfig.headers["Content-Type"] = "application/json";
-            return requestConfig;
+            serviceName: "Google Calendar"
         });
     }
 
     /**
-     * Handle Google Calendar API-specific errors
+     * Override to provide service-specific not found message
      */
-    protected async handleError(
-        error: Error & {
-            response?: { status?: number; data?: unknown; headers?: Record<string, string> };
-        }
-    ): Promise<never> {
-        if (error.response) {
-            const { status, data } = error.response;
-
-            // Map common Google Calendar errors
-            if (status === 401) {
-                throw new Error("Google Calendar authentication failed. Please reconnect.");
-            }
-
-            if (status === 403) {
-                const errorData = data as GoogleCalendarErrorResponse;
-                throw new Error(
-                    `Permission denied: ${errorData?.error?.message || "You don't have permission to access this resource."}`
-                );
-            }
-
-            if (status === 404) {
-                throw new Error("Calendar or event not found.");
-            }
-
-            if (status === 429) {
-                const retryAfter = error.response.headers?.["retry-after"];
-                throw new Error(
-                    `Google Calendar rate limit exceeded. Retry after ${retryAfter || "60"} seconds.`
-                );
-            }
-
-            if (status === 400) {
-                const errorData = data as GoogleCalendarErrorResponse;
-                throw new Error(`Invalid request: ${errorData?.error?.message || "Bad request"}`);
-            }
-
-            // Handle structured error response
-            if ((data as GoogleCalendarErrorResponse)?.error) {
-                const errorData = data as GoogleCalendarErrorResponse;
-                throw new Error(`Google Calendar API error: ${errorData.error.message}`);
-            }
-        }
-
-        throw error;
+    protected getNotFoundMessage(): string {
+        return "Calendar or event not found.";
     }
 
     /**

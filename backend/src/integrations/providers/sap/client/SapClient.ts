@@ -1,5 +1,6 @@
 import { isFetchError } from "../../../../core/utils/fetch-client";
 import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
+import { SapODataErrorResponse, parseSapODataError } from "../../../core/sap";
 import type { RequestConfig } from "../../../core/types";
 import type {
     SapBusinessPartner,
@@ -16,25 +17,6 @@ export interface SapClientConfig {
     host: string;
     accessToken: string;
     connectionId?: string;
-}
-
-/**
- * SAP API error response format
- */
-interface SapErrorResponse {
-    error?: {
-        code?: string;
-        message?: {
-            value?: string;
-        };
-        innererror?: {
-            errordetails?: Array<{
-                code?: string;
-                message?: string;
-                severity?: string;
-            }>;
-        };
-    };
 }
 
 /**
@@ -91,7 +73,7 @@ export class SapClient extends BaseAPIClient {
      */
     protected async handleError(error: unknown): Promise<never> {
         if (isFetchError(error) && error.response) {
-            const data = error.response.data as SapErrorResponse;
+            const data = error.response.data as SapODataErrorResponse;
 
             if (error.response.status === 401) {
                 throw new Error("SAP authentication failed. Please check your credentials.");
@@ -111,16 +93,9 @@ export class SapClient extends BaseAPIClient {
                 throw new Error("SAP rate limit exceeded. Please try again later.");
             }
 
-            if (data.error?.message?.value) {
-                throw new Error(`SAP API error: ${data.error.message.value}`);
-            }
-
-            if (data.error?.innererror?.errordetails?.length) {
-                const messages = data.error.innererror.errordetails
-                    .map((d) => d.message)
-                    .filter(Boolean)
-                    .join("; ");
-                throw new Error(`SAP API error: ${messages}`);
+            const errorMessage = parseSapODataError(data);
+            if (errorMessage) {
+                throw new Error(`SAP API error: ${errorMessage}`);
             }
         }
 
