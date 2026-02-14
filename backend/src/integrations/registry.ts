@@ -2135,5 +2135,19 @@ const sapSuccessFactorsEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(sapSuccessFactorsEntry);
 
+// Register Crisp provider
+const crispEntry: ProviderRegistryEntry = {
+    name: "crisp",
+    displayName: "Crisp",
+    authMethod: "api_key",
+    category: "customer_support",
+    loader: async () => {
+        const { CrispProvider } = await import("./providers/crisp/CrispProvider");
+        return new CrispProvider();
+    }
+};
+
+providerRegistry.register(crispEntry);
+
 // Export for use in application
 export { providerRegistry };

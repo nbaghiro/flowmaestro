@@ -51,6 +51,7 @@ export async function loadAllFixtures(): Promise<void> {
         "contentful",
         "coda",
         "copper",
+        "crisp",
         "databricks",
         "datadog",
         "deel",

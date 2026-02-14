@@ -184,7 +184,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     supabase: "supabase.com",
     gitbook: "gitbook.com",
     "bill-com": "bill.com",
-    deel: "letsdeel.com"
+    deel: "letsdeel.com",
+    crisp: "crisp.chat"
 };
 
 /**
@@ -1130,7 +1131,25 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("crisp.chat"),
         category: "Customer Support",
         methods: ["api_key"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "website_id",
+                label: "Website ID",
+                placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+                helpText: "Your Crisp website ID (found in Settings > Website Settings)",
+                required: true,
+                type: "text",
+                pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+                patternError: "Must be a valid UUID format"
+            }
+        ],
+        apiKeySettings: {
+            keyLabel: "API Token",
+            keyPlaceholder: "identifier:key",
+            helpText:
+                "Enter your Crisp API token in format: identifier:key (from Crisp Marketplace)",
+            helpUrl: "https://docs.crisp.chat/guides/rest-api/authentication/"
+        }
     },
     {
         provider: "gorgias",

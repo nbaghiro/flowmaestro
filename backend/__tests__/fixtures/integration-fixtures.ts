@@ -35,6 +35,7 @@ import { codaFixtures } from "../../src/integrations/providers/coda/__tests__/fi
 import { confluenceFixtures } from "../../src/integrations/providers/confluence/__tests__/fixtures";
 import { contentfulFixtures } from "../../src/integrations/providers/contentful/__tests__/fixtures";
 import { copperFixtures } from "../../src/integrations/providers/copper/__tests__/fixtures";
+import { crispFixtures } from "../../src/integrations/providers/crisp/__tests__/fixtures";
 import { databricksFixtures } from "../../src/integrations/providers/databricks/__tests__/fixtures";
 import { datadogFixtures } from "../../src/integrations/providers/datadog/__tests__/fixtures";
 import { deelFixtures } from "../../src/integrations/providers/deel/__tests__/fixtures";
@@ -189,6 +190,7 @@ fixtureRegistry.registerAll(codaFixtures);
 fixtureRegistry.registerAll(confluenceFixtures);
 fixtureRegistry.registerAll(copperFixtures);
 fixtureRegistry.registerAll(contentfulFixtures);
+fixtureRegistry.registerAll(crispFixtures);
 fixtureRegistry.registerAll(databricksFixtures);
 fixtureRegistry.registerAll(datadogFixtures);
 fixtureRegistry.registerAll(deelFixtures);
