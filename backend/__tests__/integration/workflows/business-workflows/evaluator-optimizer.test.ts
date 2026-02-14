@@ -711,7 +711,7 @@ describe("Evaluator-Optimizer Integration Tests", () => {
             connection: testEnv.nativeConnection,
             taskQueue: "test-workflow-queue",
             workflowsPath: require.resolve(
-                "../../../../../src/temporal/workflows/workflow-orchestrator"
+                "../../../../src/temporal/workflows/workflow-orchestrator"
             ),
             activities: mockActivities
         });
