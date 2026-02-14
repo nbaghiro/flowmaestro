@@ -272,9 +272,13 @@ describe("Workflow Queries", () => {
             const summary = await queryExecutionSummary(handle);
 
             expect(summary.completedNodes.length).toBeGreaterThanOrEqual(2);
-            expect(summary.pendingNodes.length + summary.completedNodes.length +
-                   summary.executingNodes.length + summary.skippedNodes.length +
-                   summary.failedNodes.length).toBe(5);
+            expect(
+                summary.pendingNodes.length +
+                    summary.completedNodes.length +
+                    summary.executingNodes.length +
+                    summary.skippedNodes.length +
+                    summary.failedNodes.length
+            ).toBe(5);
 
             // Cancel to cleanup
             await sendCancelSignal(handle, "Cleanup");
@@ -371,10 +375,10 @@ describe("Workflow Queries", () => {
             expect(progress.completedNodes).toBe(summary.completedNodes.length);
             expect(progress.totalNodes).toBe(
                 summary.completedNodes.length +
-                summary.pendingNodes.length +
-                summary.executingNodes.length +
-                summary.failedNodes.length +
-                summary.skippedNodes.length
+                    summary.pendingNodes.length +
+                    summary.executingNodes.length +
+                    summary.failedNodes.length +
+                    summary.skippedNodes.length
             );
 
             // Cancel to cleanup

@@ -87,7 +87,7 @@ describe("Workflow Signals", () => {
             await sendResumeSignal(handle);
 
             // Wait for completion
-            const result = await waitForResult(handle, 15000) as OrchestratorResult;
+            const result = (await waitForResult(handle, 15000)) as OrchestratorResult;
             expect(result.success).toBe(true);
         }, 30000);
 

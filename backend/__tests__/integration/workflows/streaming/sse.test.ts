@@ -18,11 +18,7 @@ jest.mock("../../../src/api/routes/workflows/chat-stream", () => {
     const actual = jest.requireActual("../../../src/api/routes/workflows/chat-stream");
     return {
         ...actual,
-        emitChatEvent: (
-            executionId: string,
-            event: string,
-            data: unknown
-        ): void => {
+        emitChatEvent: (executionId: string, event: string, data: unknown): void => {
             const emitter = mockChatExecutionStreams.get(executionId);
             if (emitter) {
                 emitter.emit(event, data);
@@ -38,11 +34,7 @@ jest.mock("../../../src/api/routes/workflows/generation-chat-stream", () => {
     const actual = jest.requireActual("../../../src/api/routes/workflows/generation-chat-stream");
     return {
         ...actual,
-        emitGenerationEvent: (
-            executionId: string,
-            event: string,
-            data: unknown
-        ): void => {
+        emitGenerationEvent: (executionId: string, event: string, data: unknown): void => {
             const emitter = mockGenerationExecutionStreams.get(executionId);
             if (emitter) {
                 emitter.emit(event, data);
@@ -65,7 +57,10 @@ interface StreamEvent {
     timestamp: number;
 }
 
-function createTestEmitter(executionId: string, streamMap: Map<string, EventEmitter>): {
+function createTestEmitter(
+    executionId: string,
+    streamMap: Map<string, EventEmitter>
+): {
     emitter: EventEmitter;
     receivedEvents: StreamEvent[];
     cleanup: () => void;
@@ -410,14 +405,7 @@ describe("Workflow Generation Chat SSE Streaming", () => {
                 mockGenerationExecutionStreams
             );
 
-            const tokens = [
-                "I'll ",
-                "create ",
-                "a ",
-                "workflow ",
-                "for ",
-                "you."
-            ];
+            const tokens = ["I'll ", "create ", "a ", "workflow ", "for ", "you."];
             tokens.forEach((token) => {
                 emitGenerationEvent(executionId, "token", token);
             });
@@ -487,11 +475,7 @@ describe("Workflow Generation Chat SSE Streaming", () => {
             await delay(5);
             emitGenerationEvent(executionId, "thinking_token", "Planning workflow structure...");
             await delay(5);
-            emitGenerationEvent(
-                executionId,
-                "thinking_complete",
-                "Planning workflow structure..."
-            );
+            emitGenerationEvent(executionId, "thinking_complete", "Planning workflow structure...");
             await delay(5);
             emitGenerationEvent(executionId, "token", "I've designed a workflow ");
             emitGenerationEvent(executionId, "token", "with 3 nodes.");

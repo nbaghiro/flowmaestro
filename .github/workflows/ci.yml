@@ -236,6 +236,127 @@ jobs:
         run: npm run typecheck --workspace=@flowmaestro/widget
 
   # ============================================================================
+  # MIGRATION VALIDATION - Catch migration ordering issues before runtime
+  # ============================================================================
+
+  validate-migrations:
+    name: Validate Migrations
+    runs-on: ubuntu-latest
+    needs: [setup]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_DB: flowmaestro
+          POSTGRES_USER: flowmaestro
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://flowmaestro:test_password@localhost:5432/flowmaestro
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore cached dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules
+            frontend/node_modules
+            backend/node_modules
+            shared/node_modules
+            cli/node_modules
+            marketing/node_modules
+            documentation/node_modules
+            sdks/javascript/node_modules
+            sdks/widget/node_modules
+            extensions/chrome/node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
+
+      - name: Validate migration file ordering
+        run: |
+          echo "Validating migration file naming and ordering..."
+          MIGRATIONS_DIR="backend/migrations"
+
+          # Check directory exists
+          if [ ! -d "$MIGRATIONS_DIR" ]; then
+            echo "Error: Migrations directory not found: $MIGRATIONS_DIR"
+            exit 1
+          fi
+
+          # Get all migration files sorted by name
+          mapfile -t FILES < <(find "$MIGRATIONS_DIR" -maxdepth 1 -name "*.sql" -type f | sort)
+
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "Warning: No migration files found"
+            exit 0
+          fi
+
+          echo "Found ${#FILES[@]} migration files"
+
+          PREV_TIMESTAMP=""
+          PREV_FILE=""
+          ERRORS=0
+
+          for FILE in "${FILES[@]}"; do
+            BASENAME=$(basename "$FILE")
+
+            # Validate naming convention: {timestamp}_{description}.sql
+            if ! [[ "$BASENAME" =~ ^[0-9]+_.+\.sql$ ]]; then
+              echo "Error: Invalid migration filename format: $BASENAME"
+              echo "  Expected format: {timestamp}_{description}.sql"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Extract timestamp
+            TIMESTAMP=$(echo "$BASENAME" | cut -d'_' -f1)
+
+            # Check for duplicate timestamps
+            if [ "$TIMESTAMP" = "$PREV_TIMESTAMP" ]; then
+              echo "Error: Duplicate timestamp found:"
+              echo "  $PREV_FILE"
+              echo "  $BASENAME"
+              ERRORS=$((ERRORS + 1))
+            fi
+
+            # Check ordering (timestamps should be ascending)
+            if [ -n "$PREV_TIMESTAMP" ] && [ "$TIMESTAMP" -lt "$PREV_TIMESTAMP" ]; then
+              echo "Error: Migration ordering issue detected:"
+              echo "  $BASENAME (timestamp: $TIMESTAMP)"
+              echo "  comes after"
+              echo "  $PREV_FILE (timestamp: $PREV_TIMESTAMP)"
+              echo "  but has a lower timestamp"
+              ERRORS=$((ERRORS + 1))
+            fi
+
+            PREV_TIMESTAMP="$TIMESTAMP"
+            PREV_FILE="$BASENAME"
+          done
+
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "Migration validation failed with $ERRORS error(s)"
+            exit 1
+          fi
+
+          echo "All migration files are properly ordered"
+
+      - name: Run all migrations on fresh database
+        run: npm run db:migrate --workspace=backend
+
+  # ============================================================================
   # TEST JOBS - Run in parallel with lint (no dependency on lint)
   # ============================================================================
 
@@ -400,7 +521,7 @@ jobs:
   tests-complete:
     name: Tests Complete
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests]
+    needs: [unit-tests, integration-tests, validate-migrations]
     if: always()
     steps:
       - name: Check test results
@@ -411,6 +532,10 @@ jobs:
           fi
           if [ "${{ needs.integration-tests.result }}" != "success" ]; then
             echo "Integration tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.validate-migrations.result }}" != "success" ]; then
+            echo "Migration validation failed"
             exit 1
           fi
           echo "All tests passed!"
