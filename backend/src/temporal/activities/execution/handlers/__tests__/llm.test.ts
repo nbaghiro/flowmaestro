@@ -345,7 +345,7 @@ describe("LLMNodeHandler", () => {
     // don't work well with nock HTTP interception.
     describe("Google provider", () => {
         beforeEach(() => {
-            process.env.GOOGLE_AI_API_KEY = "test-google-key";
+            process.env.GOOGLE_API_KEY = "test-google-key";
             resetAIClient();
             mockGoogleGenerateContent.mockReset();
         });
