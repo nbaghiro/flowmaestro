@@ -10,7 +10,7 @@ const logger = getLogger();
 /**
  * GCS bucket types for different use cases
  */
-export type GCSBucketType = "uploads" | "knowledgeDocs" | "artifacts";
+export type GCSBucketType = "uploads" | "knowledgeDocs" | "artifacts" | "interfaceDocs";
 
 export interface UploadOptions {
     userId: string;
@@ -66,6 +66,8 @@ export class GCSStorageService {
                 return config.gcs.knowledgeDocsBucket;
             case "artifacts":
                 return config.gcs.artifactsBucket;
+            case "interfaceDocs":
+                return config.gcs.interfaceDocsBucket;
         }
     }
 
@@ -80,6 +82,12 @@ export class GCSStorageService {
                 return "GCS_KNOWLEDGE_DOCS_BUCKET";
             case "artifacts":
                 return "GCS_ARTIFACTS_BUCKET";
+            case "interfaceDocs":
+                return "GCS_INTERFACE_DOCS_BUCKET";
+            default: {
+                const _exhaustive: never = bucketType;
+                throw new Error(`Unknown bucket type: ${_exhaustive}`);
+            }
         }
     }
 
@@ -376,4 +384,11 @@ export function getKnowledgeDocsStorageService(): GCSStorageService {
  */
 export function getArtifactsStorageService(): GCSStorageService {
     return getGCSStorageService("artifacts");
+}
+
+/**
+ * Get GCS storage service for interface documents (form submissions and chat attachments)
+ */
+export function getInterfaceDocsStorageService(): GCSStorageService {
+    return getGCSStorageService("interfaceDocs");
 }

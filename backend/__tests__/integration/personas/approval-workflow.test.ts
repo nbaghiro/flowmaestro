@@ -87,14 +87,14 @@ describe("Approval Workflow", () => {
 
             const result = await testEnv.repositories.personaApproval.create({
                 instance_id: instance.id,
-                action_type: "cost_increase",
+                action_type: "cost_threshold",
                 action_description: "Increase cost limit to continue execution",
                 action_arguments: { requested_increase: 200 },
                 risk_level: "low",
                 estimated_cost_credits: 200
             });
 
-            expect(result.action_type).toBe("cost_increase");
+            expect(result.action_type).toBe("cost_threshold");
             expect(result.tool_name).toBeNull();
         });
 
