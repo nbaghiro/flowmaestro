@@ -3960,17 +3960,24 @@ export async function getPublicFormInterface(
 
 /**
  * Submit to a public form interface
+ * Phase 2: Now returns executionId for real-time streaming
  */
 export async function submitPublicFormInterface(
     slug: string,
     data: {
         message: string;
-        files?: Array<{ fileName: string; fileSize: number; mimeType: string; gcsUri: string }>;
-        urls?: string[];
+        files?: Array<{
+            fileName: string;
+            fileSize: number;
+            mimeType: string;
+            gcsUri: string;
+            downloadUrl?: string;
+        }>;
+        urls?: Array<{ url: string; title?: string }>;
     }
 ): Promise<{
     success: boolean;
-    data: { submissionId: string; message: string };
+    data: { submissionId: string; executionId: string };
     error?: string;
 }> {
     const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/submit`, {
@@ -3980,6 +3987,254 @@ export async function submitPublicFormInterface(
         },
         body: JSON.stringify(data)
     });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Upload a file to a public form interface
+ * Returns a signed URL for download and GCS URI for submission
+ */
+export async function uploadPublicFormFile(
+    slug: string,
+    file: File,
+    sessionId?: string
+): Promise<{
+    success: boolean;
+    data: {
+        fileName: string;
+        fileSize: number;
+        mimeType: string;
+        gcsUri: string;
+        downloadUrl: string;
+    };
+    error?: string;
+}> {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (sessionId) {
+        formData.append("sessionId", sessionId);
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/upload`, {
+        method: "POST",
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get form submission execution status
+ */
+export async function getPublicFormSubmissionStatus(
+    slug: string,
+    submissionId: string
+): Promise<{
+    success: boolean;
+    data: {
+        status: "pending" | "running" | "completed" | "failed";
+        output?: string;
+        error?: string;
+    };
+    error?: string;
+}> {
+    const response = await apiFetch(
+        `${API_BASE_URL}/public/form-interfaces/${slug}/submissions/${submissionId}/status`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Create an SSE connection for streaming form execution results
+ * Returns a cleanup function to close the connection
+ */
+export function subscribeToFormExecutionStream(
+    slug: string,
+    submissionId: string,
+    executionId: string,
+    handlers: {
+        onMessage?: (content: string) => void;
+        onComplete?: (output: string) => void;
+        onError?: (error: string) => void;
+    }
+): () => void {
+    const url = `${API_BASE_URL}/public/form-interfaces/${slug}/submissions/${submissionId}/stream?executionId=${executionId}`;
+    const eventSource = new EventSource(url);
+
+    // Track whether stream has finished (complete or error)
+    // to avoid triggering error on normal connection close
+    let hasFinished = false;
+
+    // Helper to parse event data
+    const parseEventData = (event: MessageEvent): unknown => {
+        try {
+            return JSON.parse(event.data);
+        } catch {
+            return null;
+        }
+    };
+
+    // Handle completion (agent or workflow)
+    const handleComplete = (data: { output?: string; finalMessage?: string }) => {
+        hasFinished = true;
+        if (handlers.onComplete) {
+            const output = data.output || data.finalMessage || "";
+            handlers.onComplete(output);
+        }
+        eventSource.close();
+    };
+
+    // Handle errors
+    const handleError = (data: { error?: string }) => {
+        hasFinished = true;
+        if (handlers.onError) {
+            handlers.onError(data.error || "Execution failed");
+        }
+        eventSource.close();
+    };
+
+    // Backend sends NAMED SSE events, so we need addEventListener for each event type
+    // (onmessage only fires for unnamed events or "message" events)
+
+    // Agent completion events
+    eventSource.addEventListener("agent:execution:completed", (event) => {
+        const data = parseEventData(event as MessageEvent);
+        if (data) handleComplete(data as { output?: string; finalMessage?: string });
+    });
+
+    eventSource.addEventListener("agent:execution:failed", (event) => {
+        const data = parseEventData(event as MessageEvent);
+        if (data) handleError(data as { error?: string });
+    });
+
+    // Agent token streaming
+    eventSource.addEventListener("agent:execution:token", (event) => {
+        const data = parseEventData(event as MessageEvent) as { token?: string } | null;
+        if (data?.token && handlers.onMessage) {
+            handlers.onMessage(data.token);
+        }
+    });
+
+    // Workflow completion events
+    eventSource.addEventListener("execution:completed", (event) => {
+        const data = parseEventData(event as MessageEvent);
+        if (data) handleComplete(data as { output?: string; finalMessage?: string });
+    });
+
+    eventSource.addEventListener("execution:failed", (event) => {
+        const data = parseEventData(event as MessageEvent);
+        if (data) handleError(data as { error?: string });
+    });
+
+    // Status events (when execution is already complete on connect)
+    eventSource.addEventListener("agent:execution:status", (event) => {
+        const data = parseEventData(event as MessageEvent) as {
+            type?: string;
+            finalMessage?: string;
+            error?: string;
+        } | null;
+        if (data?.type === "agent:execution:completed") {
+            handleComplete({ finalMessage: data.finalMessage });
+        } else if (data?.type === "agent:execution:failed") {
+            handleError({ error: data.error });
+        }
+    });
+
+    eventSource.addEventListener("execution:status", (event) => {
+        const data = parseEventData(event as MessageEvent) as {
+            type?: string;
+            output?: string;
+            error?: string;
+        } | null;
+        if (data?.type === "execution:completed") {
+            handleComplete({ output: data.output });
+        } else if (data?.type === "execution:failed") {
+            handleError({ error: data.error });
+        }
+    });
+
+    // Ignore connected and ping events (no action needed)
+    eventSource.addEventListener("connected", () => {
+        // Connection established
+    });
+
+    eventSource.addEventListener("ping", () => {
+        // Keep-alive ping
+    });
+
+    eventSource.onerror = () => {
+        // Only trigger error if we haven't already completed
+        // (onerror fires when connection closes, even on success)
+        if (!hasFinished && handlers.onError) {
+            handlers.onError("Connection error");
+        }
+        eventSource.close();
+    };
+
+    return () => {
+        hasFinished = true;
+        eventSource.close();
+    };
+}
+
+/**
+ * Query form submission attachments (RAG)
+ */
+export async function queryFormSubmissionAttachments(
+    slug: string,
+    submissionId: string,
+    query: string,
+    options?: { topK?: number; similarityThreshold?: number }
+): Promise<{
+    success: boolean;
+    data: {
+        results: Array<{
+            content: string;
+            similarity: number;
+            sourceName: string;
+            sourceType: string;
+            chunkIndex: number;
+        }>;
+    };
+    error?: string;
+}> {
+    const response = await apiFetch(
+        `${API_BASE_URL}/public/form-interfaces/${slug}/submissions/${submissionId}/query`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                query,
+                topK: options?.topK || 5,
+                similarityThreshold: options?.similarityThreshold || 0.7
+            })
+        }
+    );
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

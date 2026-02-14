@@ -104,9 +104,16 @@ export function CreateFormInterfaceDialog({
 
     const loadOptions = async () => {
         setIsLoadingOptions(true);
-        try {
-            const [workflowsRes, agentsRes] = await Promise.all([getWorkflows(), getAgents()]);
 
+        // Load workflows and agents independently so one failure doesn't affect the other
+        const [workflowsResult, agentsResult] = await Promise.allSettled([
+            getWorkflows(),
+            getAgents()
+        ]);
+
+        // Process workflows
+        if (workflowsResult.status === "fulfilled") {
+            const workflowsRes = workflowsResult.value;
             if (workflowsRes.success && workflowsRes.data) {
                 setWorkflows(
                     workflowsRes.data.items.map((w: { id: string; name: string }) => ({
@@ -115,7 +122,13 @@ export function CreateFormInterfaceDialog({
                     }))
                 );
             }
+        } else {
+            logger.error("Failed to load workflows", workflowsResult.reason);
+        }
 
+        // Process agents
+        if (agentsResult.status === "fulfilled") {
+            const agentsRes = agentsResult.value;
             if (agentsRes.success && agentsRes.data) {
                 setAgents(
                     agentsRes.data.agents.map((a: { id: string; name: string }) => ({
@@ -124,11 +137,11 @@ export function CreateFormInterfaceDialog({
                     }))
                 );
             }
-        } catch (err) {
-            logger.error("Failed to load workflows/agents", err);
-        } finally {
-            setIsLoadingOptions(false);
+        } else {
+            logger.error("Failed to load agents", agentsResult.reason);
         }
+
+        setIsLoadingOptions(false);
     };
 
     const handleNext = () => {

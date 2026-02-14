@@ -41,6 +41,9 @@ import { publicChatInterfaceFileRoutes } from "./routes/public/chat-interface-fi
 import { publicChatInterfaceQueryRoutes } from "./routes/public/chat-interface-query";
 import { publicChatInterfaceStreamRoutes } from "./routes/public/chat-interface-stream";
 import { publicChatInterfaceRoutes } from "./routes/public/chat-interfaces";
+import { publicFormInterfaceFilesRoutes } from "./routes/public/form-interface-files";
+import { publicFormInterfaceQueryRoutes } from "./routes/public/form-interface-query";
+import { publicFormInterfaceStreamRoutes } from "./routes/public/form-interface-stream";
 import { publicFormInterfaceRoutes } from "./routes/public/form-interfaces";
 import { sandboxRoutes } from "./routes/sandbox";
 import { templateRoutes } from "./routes/templates";
@@ -215,6 +218,9 @@ export async function buildServer() {
 
     // Public routes (widgets and public API - CORS allows any origin via dynamic origin check)
     await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });
+    await fastify.register(publicFormInterfaceFilesRoutes, { prefix: "/public/form-interfaces" });
+    await fastify.register(publicFormInterfaceStreamRoutes, { prefix: "/public/form-interfaces" });
+    await fastify.register(publicFormInterfaceQueryRoutes, { prefix: "/public/form-interfaces" });
     await fastify.register(publicChatInterfaceRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicChatInterfaceStreamRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicChatInterfaceFileRoutes, { prefix: "/public/chat-interfaces" });

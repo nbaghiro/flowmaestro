@@ -9,9 +9,7 @@ import {
     Settings,
     Loader2,
     Paperclip,
-    Link,
-    Plus,
-    X
+    Link
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
@@ -208,16 +206,23 @@ export function FormInterfaceEditor() {
 
                     <div className="flex items-center gap-3">
                         <ThemeToggle />
-                        {formInterface.status === "published" && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => window.open(`/i/${formInterface.slug}`, "_blank")}
-                            >
-                                <Eye className="w-4 h-4 mr-2" />
-                                Preview
-                            </Button>
-                        )}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => window.open(`/i/${formInterface.slug}`, "_blank")}
+                            disabled={formInterface.status !== "published"}
+                            title={
+                                formInterface.status !== "published"
+                                    ? "Publish the form first to preview"
+                                    : "Open form in new tab"
+                            }
+                        >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Preview
+                            {formInterface.status !== "published" && (
+                                <span className="ml-1 text-xs opacity-60">(publish first)</span>
+                            )}
+                        </Button>
 
                         <Button
                             variant="ghost"
@@ -439,10 +444,14 @@ export function FormInterfaceEditor() {
                                     />
                                 </div>
 
-                                {/* File Upload Preview */}
+                                {/* File Upload Section */}
                                 {formInterface.allowFileUpload && (
-                                    <div className="space-y-2">
-                                        {/* File Upload Label */}
+                                    <div className="space-y-2 p-3 border border-dashed border-border rounded-lg bg-muted/30">
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                                            <Paperclip className="w-3 h-3" />
+                                            <span>File Upload (enabled)</span>
+                                        </div>
+                                        {/* File Upload Label - Editable */}
                                         <input
                                             type="text"
                                             value={formInterface.fileUploadLabel || ""}
@@ -451,32 +460,24 @@ export function FormInterfaceEditor() {
                                                     fileUploadLabel: e.target.value
                                                 })
                                             }
-                                            placeholder="Attachments"
+                                            placeholder="Enter label for file upload section..."
                                             className="text-sm font-medium text-foreground bg-transparent border-0 focus:outline-none focus:ring-0 w-full placeholder:text-muted-foreground"
                                         />
-                                        <div className="flex items-center gap-2 px-3 py-2 bg-muted border border-dashed border-border rounded-lg cursor-pointer hover:border-muted-foreground/50 transition-colors">
-                                            <Paperclip className="w-4 h-4 text-muted-foreground" />
-                                            <span className="text-sm text-muted-foreground">
-                                                Attach files...
-                                            </span>
-                                        </div>
-                                        {/* Example attached file preview */}
-                                        <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm">
-                                            <Paperclip className="w-3 h-3 text-muted-foreground" />
-                                            <span className="text-muted-foreground flex-1 truncate">
-                                                example-document.pdf
-                                            </span>
-                                            <button className="p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground">
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Max {formInterface.maxFiles || 5} files,{" "}
+                                            {formInterface.maxFileSizeMb || 25}MB each
+                                        </p>
                                     </div>
                                 )}
 
-                                {/* URL Input Preview */}
+                                {/* URL Input Section */}
                                 {formInterface.allowUrlInput && (
-                                    <div className="space-y-2">
-                                        {/* URL Input Label */}
+                                    <div className="space-y-2 p-3 border border-dashed border-border rounded-lg bg-muted/30">
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                                            <Link className="w-3 h-3" />
+                                            <span>URL Input (enabled)</span>
+                                        </div>
+                                        {/* URL Input Label - Editable */}
                                         <input
                                             type="text"
                                             value={formInterface.urlInputLabel || ""}
@@ -485,46 +486,33 @@ export function FormInterfaceEditor() {
                                                     urlInputLabel: e.target.value
                                                 })
                                             }
-                                            placeholder="Web URLs"
+                                            placeholder="Enter label for URL input section..."
                                             className="text-sm font-medium text-foreground bg-transparent border-0 focus:outline-none focus:ring-0 w-full placeholder:text-muted-foreground"
                                         />
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-muted border border-border rounded-lg">
-                                                <Link className="w-4 h-4 text-muted-foreground" />
-                                                <span className="text-sm text-muted-foreground">
-                                                    Paste URL...
-                                                </span>
-                                            </div>
-                                            <button className="p-2 bg-muted border border-border rounded-lg hover:bg-muted/80 transition-colors">
-                                                <Plus className="w-4 h-4 text-muted-foreground" />
-                                            </button>
-                                        </div>
-                                        {/* Example URL preview */}
-                                        <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm">
-                                            <Link className="w-3 h-3 text-muted-foreground" />
-                                            <span className="text-primary flex-1 truncate">
-                                                https://example.com/article
-                                            </span>
-                                            <button className="p-0.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground">
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Users can add web URLs as context
+                                        </p>
                                     </div>
                                 )}
 
                                 {/* Submit Button Preview */}
                                 <div className="pt-2">
-                                    <input
-                                        type="text"
-                                        value={formInterface.submitButtonText || ""}
-                                        onChange={(e) =>
-                                            updateFormInterface({
-                                                submitButtonText: e.target.value
-                                            })
-                                        }
-                                        placeholder="Submit"
-                                        className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-medium text-center focus:outline-none focus:ring-0"
-                                    />
+                                    <div className="relative group">
+                                        <input
+                                            type="text"
+                                            value={formInterface.submitButtonText || ""}
+                                            onChange={(e) =>
+                                                updateFormInterface({
+                                                    submitButtonText: e.target.value
+                                                })
+                                            }
+                                            placeholder="Submit"
+                                            className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-medium text-center focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-text"
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-primary-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                            Click to edit
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -559,7 +547,8 @@ export function FormInterfaceEditor() {
 
                     {/* Hint */}
                     <p className="text-center text-xs text-muted-foreground mt-4">
-                        Click on any field to edit. Changes are auto-saved when you click Save.
+                        Click on title, description, labels, or button text to edit. Grayed-out
+                        elements are previews. Use the Preview button to test your form.
                     </p>
                 </div>
 

@@ -166,3 +166,16 @@ export {
     type EmitPersonaCompletedInput,
     type EmitPersonaFailedInput
 } from "./personas";
+
+// Form submission attachment activities
+export {
+    extractSubmissionAttachmentText,
+    chunkSubmissionAttachmentText,
+    generateAndStoreSubmissionChunks,
+    completeSubmissionAttachmentProcessing,
+    type ExtractSubmissionAttachmentInput,
+    type ChunkSubmissionAttachmentInput,
+    type ChunkResult,
+    type StoreSubmissionChunksInput,
+    type CompleteSubmissionProcessingInput
+} from "./form-submission-attachments";
