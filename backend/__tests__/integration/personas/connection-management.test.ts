@@ -7,7 +7,6 @@
  * - Connection validation and workspace isolation
  */
 
-import { createPersonaTestEnvironment } from "./helpers/persona-test-env";
 import {
     createResearchAssistantPersona,
     createRunningInstance,
@@ -18,6 +17,7 @@ import {
     createConnectionWithDetails,
     generateId
 } from "./helpers/persona-fixtures";
+import { createPersonaTestEnvironment } from "./helpers/persona-test-env";
 import type { PersonaTestEnvironment } from "./helpers/persona-test-env";
 
 describe("Connection Management", () => {
@@ -128,7 +128,9 @@ describe("Connection Management", () => {
                 ...connection,
                 granted_scopes: ["chat:write", "channels:read", "files:write"]
             };
-            testEnv.repositories.personaConnection.updateScopes.mockResolvedValue(updatedConnection);
+            testEnv.repositories.personaConnection.updateScopes.mockResolvedValue(
+                updatedConnection
+            );
 
             const result = await testEnv.repositories.personaConnection.updateScopes(
                 instance.id,
@@ -153,9 +155,10 @@ describe("Connection Management", () => {
                 githubConn
             ]);
 
-            const connections = await testEnv.repositories.personaConnection.findByInstanceIdWithDetails(
-                instance.id
-            );
+            const connections =
+                await testEnv.repositories.personaConnection.findByInstanceIdWithDetails(
+                    instance.id
+                );
 
             expect(connections).toHaveLength(2);
             expect(connections[0].connection.provider).toBe("slack");
@@ -376,7 +379,9 @@ describe("Connection Management", () => {
             testEnv.repositories.personaConnection.findByInstanceAndConnection.mockResolvedValue(
                 originalConnection
             );
-            testEnv.repositories.personaConnection.updateScopes.mockResolvedValue(updatedConnection);
+            testEnv.repositories.personaConnection.updateScopes.mockResolvedValue(
+                updatedConnection
+            );
 
             const result = await testEnv.repositories.personaConnection.updateScopes(
                 instance.id,
@@ -409,7 +414,9 @@ describe("Connection Management", () => {
             );
 
             expect(result).toHaveLength(3);
-            expect(result.map((c) => c.connection.provider)).toEqual(["slack", "github", "notion"]);
+            expect(
+                result.map((c: { connection: { provider: string } }) => c.connection.provider)
+            ).toEqual(["slack", "github", "notion"]);
         });
 
         it("creates many connections in batch", async () => {

@@ -719,7 +719,7 @@ function hello(): string {
             it("should handle multiple simultaneous PDF generations", async () => {
                 const contents = ["# Doc 1", "# Doc 2", "# Doc 3"];
 
-                contents.forEach((content, i) => {
+                contents.forEach((_content, i) => {
                     mockExecute.mockResolvedValueOnce({
                         success: true,
                         data: {

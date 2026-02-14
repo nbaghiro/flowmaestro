@@ -19,8 +19,8 @@ import {
     storeNodeOutput,
     setVariable,
     getVariable
-} from "../../../../../src/temporal/core/services/context";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
+} from "../../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../../src/temporal/core/types";
 
 // ============================================================================
 // HELPER TYPES

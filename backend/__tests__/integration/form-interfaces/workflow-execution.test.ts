@@ -4,6 +4,7 @@
  * Tests the complete flow: submit form -> stream events -> receive output
  */
 
+import type { PublicFormSubmitInput } from "@flowmaestro/shared";
 import {
     createSimpleFormInterfaceTestEnvironment,
     createWorkflowTargetFormInterface,
@@ -18,7 +19,6 @@ import {
     assertWorkflowStarted
 } from "./setup";
 import type { SimpleFormInterfaceTestEnvironment } from "./helpers/form-interface-test-env";
-import type { PublicFormSubmitInput } from "@flowmaestro/shared";
 
 describe("Form Interface E2E: Workflow Execution", () => {
     let testEnv: SimpleFormInterfaceTestEnvironment;
@@ -104,11 +104,13 @@ describe("Form Interface E2E: Workflow Execution", () => {
                 {
                     taskQueue: "orchestrator",
                     workflowId: `workflow-execution-${createdSubmission.id}`,
-                    args: [{
-                        executionId: createdSubmission.executionId,
-                        workflowId: form!.workflowId,
-                        input: { message: submitInput.message }
-                    }]
+                    args: [
+                        {
+                            executionId: createdSubmission.executionId,
+                            workflowId: form!.workflowId,
+                            input: { message: submitInput.message }
+                        }
+                    ]
                 }
             );
 
@@ -297,12 +299,14 @@ describe("Form Interface E2E: Workflow Execution", () => {
                 {
                     taskQueue: "orchestrator",
                     workflowId: `agent-execution-${execution.id}`,
-                    args: [{
-                        executionId: execution.id,
-                        agentId: form!.agentId,
-                        threadId: thread.id,
-                        message: submitInput.message
-                    }]
+                    args: [
+                        {
+                            executionId: execution.id,
+                            agentId: form!.agentId,
+                            threadId: thread.id,
+                            message: submitInput.message
+                        }
+                    ]
                 }
             );
 
@@ -420,19 +424,21 @@ describe("Form Interface E2E: Workflow Execution", () => {
 
             // Start attachment processing workflow
             await testEnv.services.temporal.workflow.start(
-                { name: "processFormSubmissionAttachmentsWorkflow" },
+                { name: "processDocumentWorkflow" },
                 {
                     taskQueue: "attachments",
                     workflowId: `attachment-processing-${createdSubmission.id}`,
-                    args: [{
-                        submissionId: createdSubmission.id,
-                        files: createdSubmission.files
-                    }]
+                    args: [
+                        {
+                            submissionId: createdSubmission.id,
+                            files: createdSubmission.files
+                        }
+                    ]
                 }
             );
 
             expect(testEnv.services.temporal.workflow.start).toHaveBeenCalledWith(
-                { name: "processFormSubmissionAttachmentsWorkflow" },
+                { name: "processDocumentWorkflow" },
                 expect.objectContaining({
                     taskQueue: "attachments"
                 })
@@ -450,10 +456,7 @@ describe("Form Interface E2E: Workflow Execution", () => {
                 processedSubmission
             );
 
-            await testEnv.repositories.submission.updateAttachmentsStatus(
-                "sub-rag-e2e",
-                "ready"
-            );
+            await testEnv.repositories.submission.updateAttachmentsStatus("sub-rag-e2e", "ready");
 
             // ============================================================
             // STEP 3: Verify chunks were created
@@ -546,15 +549,12 @@ describe("Form Interface E2E: Workflow Execution", () => {
             );
 
             // Simulate failure
-            testEnv.services.eventBus.simulateEvent(
-                "workflow:events:execution:failed",
-                {
-                    type: "execution:failed",
-                    executionId: "exec-error-e2e",
-                    error: "Node 'process' failed: API rate limit exceeded",
-                    timestamp: Date.now()
-                }
-            );
+            testEnv.services.eventBus.simulateEvent("workflow:events:execution:failed", {
+                type: "execution:failed",
+                executionId: "exec-error-e2e",
+                error: "Node 'process' failed: API rate limit exceeded",
+                timestamp: Date.now()
+            });
 
             // Update DB
             const failedSubmission = {

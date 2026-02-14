@@ -14,7 +14,6 @@ jest.mock("../../database", () => ({
 import { ChatInterfaceMessageChunkRepository } from "../ChatInterfaceMessageChunkRepository";
 import {
     mockRows,
-    mockEmptyResult,
     mockAffectedRows,
     mockCountResult,
     mockInsertReturning,
@@ -27,19 +26,21 @@ function generateMockEmbedding(dimensions: number = 1536): number[] {
 }
 
 // Generate a mock chunk row
-function generateChunkRow(overrides: Partial<{
-    id: string;
-    session_id: string;
-    thread_id: string | null;
-    source_type: "file" | "url";
-    source_name: string | null;
-    source_index: number | null;
-    content: string;
-    chunk_index: number;
-    embedding: string | null;
-    metadata: Record<string, unknown> | string;
-    created_at: string;
-}> = {}) {
+function generateChunkRow(
+    overrides: Partial<{
+        id: string;
+        session_id: string;
+        thread_id: string | null;
+        source_type: "file" | "url";
+        source_name: string | null;
+        source_index: number | null;
+        content: string;
+        chunk_index: number;
+        embedding: string | null;
+        metadata: Record<string, unknown> | string;
+        created_at: string;
+    }> = {}
+) {
     const now = new Date().toISOString();
     return {
         id: generateId(),
@@ -92,7 +93,7 @@ describe("ChatInterfaceMessageChunkRepository", () => {
                 }
             ];
 
-            const mockChunks = chunks.map((c, i) =>
+            const mockChunks = chunks.map((c) =>
                 generateChunkRow({
                     session_id: c.sessionId,
                     source_type: c.sourceType,
@@ -138,9 +139,11 @@ describe("ChatInterfaceMessageChunkRepository", () => {
                 }
             ];
 
-            mockQuery.mockResolvedValueOnce(mockInsertReturning([
-                generateChunkRow({ session_id: sessionId, thread_id: threadId })
-            ]));
+            mockQuery.mockResolvedValueOnce(
+                mockInsertReturning([
+                    generateChunkRow({ session_id: sessionId, thread_id: threadId })
+                ])
+            );
 
             await repository.createChunks(chunks);
 
@@ -164,9 +167,11 @@ describe("ChatInterfaceMessageChunkRepository", () => {
                 }
             ];
 
-            mockQuery.mockResolvedValueOnce(mockInsertReturning([
-                generateChunkRow({ session_id: sessionId, metadata: JSON.stringify(metadata) })
-            ]));
+            mockQuery.mockResolvedValueOnce(
+                mockInsertReturning([
+                    generateChunkRow({ session_id: sessionId, metadata: JSON.stringify(metadata) })
+                ])
+            );
 
             await repository.createChunks(chunks);
 
@@ -187,9 +192,14 @@ describe("ChatInterfaceMessageChunkRepository", () => {
                 }
             ];
 
-            mockQuery.mockResolvedValueOnce(mockInsertReturning([
-                generateChunkRow({ source_type: "url", source_name: "https://example.com/page" })
-            ]));
+            mockQuery.mockResolvedValueOnce(
+                mockInsertReturning([
+                    generateChunkRow({
+                        source_type: "url",
+                        source_name: "https://example.com/page"
+                    })
+                ])
+            );
 
             await repository.createChunks(chunks);
 
@@ -208,9 +218,9 @@ describe("ChatInterfaceMessageChunkRepository", () => {
                 }
             ];
 
-            mockQuery.mockResolvedValueOnce(mockInsertReturning([
-                generateChunkRow({ source_name: null, source_index: null })
-            ]));
+            mockQuery.mockResolvedValueOnce(
+                mockInsertReturning([generateChunkRow({ source_name: null, source_index: null })])
+            );
 
             await repository.createChunks(chunks);
 
@@ -441,10 +451,9 @@ describe("ChatInterfaceMessageChunkRepository", () => {
 
             const result = await repository.countBySessionId(sessionId);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SELECT COUNT(*)"),
-                [sessionId]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("SELECT COUNT(*)"), [
+                sessionId
+            ]);
             expect(result).toBe(25);
         });
 

@@ -68,7 +68,9 @@ const mockPersonaConnectionRepo = {
 };
 
 jest.mock("../../../../storage/repositories/PersonaInstanceConnectionRepository", () => ({
-    PersonaInstanceConnectionRepository: jest.fn().mockImplementation(() => mockPersonaConnectionRepo)
+    PersonaInstanceConnectionRepository: jest
+        .fn()
+        .mockImplementation(() => mockPersonaConnectionRepo)
 }));
 
 // Mock persona instance deliverable repository
@@ -80,7 +82,9 @@ const mockPersonaDeliverableRepo = {
 };
 
 jest.mock("../../../../storage/repositories/PersonaInstanceDeliverableRepository", () => ({
-    PersonaInstanceDeliverableRepository: jest.fn().mockImplementation(() => mockPersonaDeliverableRepo)
+    PersonaInstanceDeliverableRepository: jest
+        .fn()
+        .mockImplementation(() => mockPersonaDeliverableRepo)
 }));
 
 // Mock persona task template repository
@@ -125,7 +129,9 @@ const mockPersonaInstanceMessageRepo = {
 };
 
 jest.mock("../../../../storage/repositories/PersonaInstanceMessageRepository", () => ({
-    PersonaInstanceMessageRepository: jest.fn().mockImplementation(() => mockPersonaInstanceMessageRepo)
+    PersonaInstanceMessageRepository: jest
+        .fn()
+        .mockImplementation(() => mockPersonaInstanceMessageRepo)
 }));
 
 // Mock Temporal client
@@ -199,6 +205,7 @@ function createMockPersonaInstance(
         max_cost_credits: number;
         accumulated_cost_credits: number;
         iteration_count: number;
+        clarification_skipped: boolean;
     }> = {}
 ) {
     return {
@@ -348,7 +355,9 @@ function resetAllMocks() {
         Promise.resolve(createMockPersonaInstance({ id, status }))
     );
     mockPersonaInstanceRepo.skipClarification.mockImplementation((id) =>
-        Promise.resolve(createMockPersonaInstance({ id, status: "running", clarification_skipped: true }))
+        Promise.resolve(
+            createMockPersonaInstance({ id, status: "running", clarification_skipped: true })
+        )
     );
     mockPersonaInstanceRepo.getDashboard.mockResolvedValue({
         needs_attention: 0,
@@ -386,9 +395,7 @@ function resetAllMocks() {
     mockPersonaTaskTemplateRepo.incrementUsageCount.mockResolvedValue(undefined);
 
     // Reset thread repo
-    mockThreadRepo.create.mockImplementation((data) =>
-        Promise.resolve({ id: uuidv4(), ...data })
-    );
+    mockThreadRepo.create.mockImplementation((data) => Promise.resolve({ id: uuidv4(), ...data }));
 
     // Reset execution repo
     mockAgentExecutionRepo.create.mockImplementation((data) =>
@@ -581,7 +588,9 @@ describe("Persona Instance Routes", () => {
             expect(mockPersonaInstanceRepo.findByUserId).toHaveBeenCalledWith(
                 testUser.id,
                 DEFAULT_TEST_WORKSPACE_ID,
-                expect.objectContaining({ status: expect.arrayContaining(["running", "waiting_approval"]) })
+                expect.objectContaining({
+                    status: expect.arrayContaining(["running", "waiting_approval"])
+                })
             );
         });
 
@@ -864,7 +873,12 @@ describe("Persona Instance Routes", () => {
                     instance_id: instanceId,
                     connection_id: uuidv4(),
                     granted_scopes: ["read"],
-                    connection: { id: uuidv4(), name: "My Slack", provider: "slack", connection_method: "oauth2" },
+                    connection: {
+                        id: uuidv4(),
+                        name: "My Slack",
+                        provider: "slack",
+                        connection_method: "oauth2"
+                    },
                     created_at: new Date()
                 }
             ];
@@ -1020,7 +1034,8 @@ describe("Persona Instance Routes", () => {
             const instanceId = uuidv4();
             const deliverableId = uuidv4();
             const instance = createMockPersonaInstance({ id: instanceId, user_id: testUser.id });
-            const deliverable = createMockDeliverable({
+            // Create deliverable fixture for reference (used in mock setup)
+            createMockDeliverable({
                 id: deliverableId,
                 instance_id: instanceId
             });
@@ -1045,9 +1060,7 @@ describe("Persona Instance Routes", () => {
     describe("GET /persona-instances/approvals", () => {
         it("should list pending approvals for workspace", async () => {
             const testUser = createTestUser();
-            const approvals = [
-                createMockApprovalRequest({ status: "pending" })
-            ];
+            const approvals = [createMockApprovalRequest({ status: "pending" })];
 
             mockPersonaApprovalRepo.findPendingByWorkspaceId.mockResolvedValue(approvals);
 

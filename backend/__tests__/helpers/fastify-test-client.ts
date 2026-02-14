@@ -305,18 +305,16 @@ jest.mock("../../src/storage/repositories/WorkspaceRepository", () => ({
 
 // Mock WorkspaceMemberRepository for workspace context middleware and route tests
 export const mockWorkspaceMemberRepo = {
-    findByWorkspaceAndUser: jest
-        .fn()
-        .mockImplementation((_workspaceId: string, _userId: string) =>
-            Promise.resolve({
-                id: "test-member-id",
-                workspace_id: _workspaceId,
-                user_id: _userId,
-                role: "owner",
-                created_at: new Date(),
-                updated_at: new Date()
-            })
-        ),
+    findByWorkspaceAndUser: jest.fn().mockImplementation((_workspaceId: string, _userId: string) =>
+        Promise.resolve({
+            id: "test-member-id",
+            workspace_id: _workspaceId,
+            user_id: _userId,
+            role: "owner",
+            created_at: new Date(),
+            updated_at: new Date()
+        })
+    ),
     findByWorkspaceId: jest.fn().mockResolvedValue([]),
     findByWorkspaceIdWithUsers: jest.fn().mockResolvedValue([]),
     findByUserId: jest.fn().mockResolvedValue([]),
@@ -699,7 +697,7 @@ export async function unauthenticatedRequest(
  * Generate a valid workflow definition for testing
  * Matches the workflowDefinitionSchema with nodes having type, name, config, position
  */
-export function createTestWorkflowDefinition(name: string = "Test Workflow") {
+export function createSimpleWorkflowDefinition(name: string = "Test Workflow") {
     return {
         name,
         nodes: {

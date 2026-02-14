@@ -7,7 +7,6 @@
  * - Progress tracking and cost accumulation
  */
 
-import { createPersonaTestEnvironment } from "./helpers/persona-test-env";
 import {
     createResearchAssistantPersona,
     createPersonaInstanceFixture,
@@ -22,6 +21,7 @@ import {
     createTemplateFixture,
     createConnectionFixture
 } from "./helpers/persona-fixtures";
+import { createPersonaTestEnvironment } from "./helpers/persona-test-env";
 import type { PersonaTestEnvironment } from "./helpers/persona-test-env";
 
 describe("Persona Instance Lifecycle", () => {
@@ -39,7 +39,6 @@ describe("Persona Instance Lifecycle", () => {
         it("creates instance with minimal required fields", async () => {
             const persona = createResearchAssistantPersona();
             const instanceId = generateId("instance");
-            const now = new Date();
 
             const expectedInstance = createPersonaInstanceFixture({
                 id: instanceId,
@@ -188,18 +187,24 @@ describe("Persona Instance Lifecycle", () => {
 
         it("transitions from clarifying to running", async () => {
             const persona = createResearchAssistantPersona();
-            const clarifyingInstance = createClarifyingInstance(persona.id, testEnv.testWorkspace.id);
+            const clarifyingInstance = createClarifyingInstance(
+                persona.id,
+                testEnv.testWorkspace.id
+            );
             const runningInstance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
             runningInstance.id = clarifyingInstance.id;
 
             testEnv.repositories.personaInstance.findById.mockResolvedValue(clarifyingInstance);
             testEnv.repositories.personaInstance.update.mockResolvedValue(runningInstance);
 
-            const result = await testEnv.repositories.personaInstance.update(clarifyingInstance.id, {
-                status: "running",
-                clarification_complete: true,
-                started_at: new Date()
-            });
+            const result = await testEnv.repositories.personaInstance.update(
+                clarifyingInstance.id,
+                {
+                    status: "running",
+                    clarification_complete: true,
+                    started_at: new Date()
+                }
+            );
 
             expect(result?.status).toBe("running");
             expect(result?.started_at).not.toBeNull();
@@ -352,8 +357,8 @@ describe("Persona Instance Lifecycle", () => {
             const progress = {
                 current_step: 2,
                 total_steps: 5,
-                step_name: "Analyzing data",
-                percent_complete: 40
+                current_step_name: "Analyzing data",
+                percentage: 40
             };
 
             const updatedInstance = { ...instance, progress };
@@ -365,7 +370,7 @@ describe("Persona Instance Lifecycle", () => {
             });
 
             expect(result?.progress).toEqual(progress);
-            expect(result?.progress?.percent_complete).toBe(40);
+            expect(result?.progress?.percentage).toBe(40);
         });
 
         it("tracks duration in seconds on completion", async () => {
@@ -468,7 +473,9 @@ describe("Persona Instance Lifecycle", () => {
             const result = await testEnv.repositories.personaInstance.softDelete(instance.id);
 
             expect(result).toBe(true);
-            expect(testEnv.repositories.personaInstance.softDelete).toHaveBeenCalledWith(instance.id);
+            expect(testEnv.repositories.personaInstance.softDelete).toHaveBeenCalledWith(
+                instance.id
+            );
         });
 
         it("deletes associated connections on instance deletion", async () => {

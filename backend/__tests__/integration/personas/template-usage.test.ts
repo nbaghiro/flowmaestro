@@ -7,16 +7,15 @@
  * - Usage count tracking
  */
 
-import { createPersonaTestEnvironment } from "./helpers/persona-test-env";
 import {
     createResearchAssistantPersona,
     createContentWriterPersona,
     createTemplateFixture,
     createMarketResearchTemplate,
     createContentBriefTemplate,
-    createPersonaInstanceFixture,
-    generateId
+    createPersonaInstanceFixture
 } from "./helpers/persona-fixtures";
+import { createPersonaTestEnvironment } from "./helpers/persona-test-env";
 import type { PersonaTestEnvironment } from "./helpers/persona-test-env";
 
 describe("Template Usage", () => {
@@ -67,9 +66,10 @@ describe("Template Usage", () => {
         it("returns empty array when no templates", async () => {
             testEnv.repositories.personaTemplate.findByPersonaSlug.mockResolvedValue([]);
 
-            const templates = await testEnv.repositories.personaTemplate.findByPersonaSlug(
-                "no-templates-persona"
-            );
+            const templates =
+                await testEnv.repositories.personaTemplate.findByPersonaSlug(
+                    "no-templates-persona"
+                );
 
             expect(templates).toEqual([]);
         });

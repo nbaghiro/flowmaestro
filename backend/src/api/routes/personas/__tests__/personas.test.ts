@@ -56,8 +56,7 @@ import {
     expectErrorResponse,
     expectStatus,
     expectSuccessResponse,
-    unauthenticatedRequest,
-    DEFAULT_TEST_WORKSPACE_ID
+    unauthenticatedRequest
 } from "../../../../../__tests__/helpers/fastify-test-client";
 
 // ============================================================================
@@ -235,7 +234,10 @@ describe("Persona Routes", () => {
     describe("GET /personas", () => {
         it("should list all personas", async () => {
             const personas = [
-                createMockPersonaDefinition({ name: "Research Assistant", slug: "research-assistant" }),
+                createMockPersonaDefinition({
+                    name: "Research Assistant",
+                    slug: "research-assistant"
+                }),
                 createMockPersonaDefinition({ name: "Content Writer", slug: "content-writer" })
             ];
             mockPersonaDefinitionRepo.findAll.mockResolvedValue({
@@ -451,9 +453,15 @@ describe("Persona Routes", () => {
     describe("GET /personas/:slug/templates", () => {
         it("should return templates for a persona", async () => {
             const personaId = uuidv4();
-            const persona = createMockPersonaDefinition({ id: personaId, slug: "research-assistant" });
+            const persona = createMockPersonaDefinition({
+                id: personaId,
+                slug: "research-assistant"
+            });
             const templates = [
-                createMockPersonaTemplate({ persona_definition_id: personaId, name: "Quick Research" }),
+                createMockPersonaTemplate({
+                    persona_definition_id: personaId,
+                    name: "Quick Research"
+                }),
                 createMockPersonaTemplate({ persona_definition_id: personaId, name: "Deep Dive" })
             ];
 
@@ -505,7 +513,10 @@ describe("Persona Routes", () => {
         it("should generate task description from template", async () => {
             const personaId = uuidv4();
             const templateId = uuidv4();
-            const persona = createMockPersonaDefinition({ id: personaId, slug: "research-assistant" });
+            const persona = createMockPersonaDefinition({
+                id: personaId,
+                slug: "research-assistant"
+            });
             const template = createMockPersonaTemplate({
                 id: templateId,
                 persona_definition_id: personaId,
@@ -575,7 +586,10 @@ describe("Persona Routes", () => {
             const differentPersonaId = uuidv4();
             const templateId = uuidv4();
 
-            const persona = createMockPersonaDefinition({ id: personaId, slug: "research-assistant" });
+            const persona = createMockPersonaDefinition({
+                id: personaId,
+                slug: "research-assistant"
+            });
             const template = createMockPersonaTemplate({
                 id: templateId,
                 persona_definition_id: differentPersonaId // Different persona
@@ -596,7 +610,10 @@ describe("Persona Routes", () => {
         it("should return 400 when required variables are missing", async () => {
             const personaId = uuidv4();
             const templateId = uuidv4();
-            const persona = createMockPersonaDefinition({ id: personaId, slug: "research-assistant" });
+            const persona = createMockPersonaDefinition({
+                id: personaId,
+                slug: "research-assistant"
+            });
             const template = createMockPersonaTemplate({
                 id: templateId,
                 persona_definition_id: personaId,
@@ -627,7 +644,10 @@ describe("Persona Routes", () => {
         it("should handle conditional blocks in templates", async () => {
             const personaId = uuidv4();
             const templateId = uuidv4();
-            const persona = createMockPersonaDefinition({ id: personaId, slug: "research-assistant" });
+            const persona = createMockPersonaDefinition({
+                id: personaId,
+                slug: "research-assistant"
+            });
             const template = createMockPersonaTemplate({
                 id: templateId,
                 persona_definition_id: personaId,
@@ -635,7 +655,12 @@ describe("Persona Routes", () => {
                     "Research {{topic}}.{{#if include_competitors}} Include competitor analysis.{{/if}}",
                 variables: [
                     { name: "topic", label: "Topic", type: "text", required: true },
-                    { name: "include_competitors", label: "Include Competitors", type: "checkbox", required: false }
+                    {
+                        name: "include_competitors",
+                        label: "Include Competitors",
+                        type: "checkbox",
+                        required: false
+                    }
                 ]
             });
 
@@ -665,7 +690,9 @@ describe("Persona Routes", () => {
             });
 
             expectStatus(responseWithout, 200);
-            const bodyWithout = expectSuccessResponse<{ task_description: string }>(responseWithout);
+            const bodyWithout = expectSuccessResponse<{ task_description: string }>(
+                responseWithout
+            );
             expect(bodyWithout.data.task_description).not.toContain("competitor analysis");
         });
 
@@ -696,9 +723,7 @@ describe("Persona Routes", () => {
                     { provider: "slack", required: true, suggested_scopes: ["chat:write"] }
                 ]
             });
-            const connections = [
-                createMockConnection({ provider: "slack", name: "My Slack" })
-            ];
+            const connections = [createMockConnection({ provider: "slack", name: "My Slack" })];
 
             mockPersonaDefinitionRepo.findBySlug.mockResolvedValue(persona);
             mockConnectionRepo.findByWorkspaceId.mockResolvedValue({

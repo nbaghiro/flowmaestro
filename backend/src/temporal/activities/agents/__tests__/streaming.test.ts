@@ -565,8 +565,11 @@ describe("Streaming Activities", () => {
             const delays: number[] = [];
             const originalSetTimeout = global.setTimeout;
 
-            jest.spyOn(global, "setTimeout").mockImplementation(function (fn, delay) {
-                delays.push(delay as number);
+            jest.spyOn(global, "setTimeout").mockImplementation(function (
+                fn: () => void,
+                delay: number
+            ) {
+                delays.push(delay);
                 return originalSetTimeout(fn, 0); // Execute immediately for test
             } as typeof setTimeout);
 

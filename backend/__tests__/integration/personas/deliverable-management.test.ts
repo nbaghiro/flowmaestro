@@ -8,7 +8,6 @@
  * - File-based deliverables
  */
 
-import { createPersonaTestEnvironment } from "./helpers/persona-test-env";
 import {
     createResearchAssistantPersona,
     createDataAnalystPersona,
@@ -19,9 +18,9 @@ import {
     createJsonDeliverable,
     createCsvDeliverable,
     createPdfDeliverable,
-    createDeliverableFixture,
-    generateId
+    createDeliverableFixture
 } from "./helpers/persona-fixtures";
+import { createPersonaTestEnvironment } from "./helpers/persona-test-env";
 import type { PersonaTestEnvironment } from "./helpers/persona-test-env";
 
 describe("Deliverable Management", () => {
@@ -264,7 +263,9 @@ describe("Deliverable Management", () => {
                 createJsonDeliverable(instance.id)
             ];
 
-            testEnv.repositories.personaDeliverable.findByInstanceId.mockResolvedValue(deliverables);
+            testEnv.repositories.personaDeliverable.findByInstanceId.mockResolvedValue(
+                deliverables
+            );
 
             const result = await testEnv.repositories.personaDeliverable.findByInstanceId(
                 instance.id

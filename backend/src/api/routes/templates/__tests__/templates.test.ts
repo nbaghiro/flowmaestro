@@ -57,9 +57,9 @@ function createMockTemplate(overrides: Partial<TemplateModel> = {}): TemplateMod
         description: "A test template for workflow automation",
         definition: {
             name: "Test Workflow",
-            nodes: [
-                { id: "input-1", type: "input", position: { x: 0, y: 0 }, data: { label: "Input" } }
-            ],
+            nodes: {
+                "input-1": { type: "input", name: "Input", config: {}, position: { x: 0, y: 0 } }
+            },
             edges: [],
             entryPoint: "input-1"
         },
@@ -295,9 +295,10 @@ describe("Templates Routes", () => {
             });
 
             expectStatus(response, 200);
-            const body = expectSuccessResponse<
-                Array<{ category: string; count: number; name: string }>
-            >(response);
+            const body =
+                expectSuccessResponse<Array<{ category: string; count: number; name: string }>>(
+                    response
+                );
             expect(body.data.length).toBeGreaterThan(0);
 
             // Check that existing categories have correct counts
@@ -314,9 +315,8 @@ describe("Templates Routes", () => {
             });
 
             expectStatus(response, 200);
-            const body = expectSuccessResponse<Array<{ category: string; count: number }>>(
-                response
-            );
+            const body =
+                expectSuccessResponse<Array<{ category: string; count: number }>>(response);
             // Should have all categories from TEMPLATE_CATEGORY_META
             expect(body.data.length).toBeGreaterThan(0);
             expect(body.data.every((c) => c.count === 0)).toBe(true);
@@ -467,14 +467,14 @@ describe("Templates Routes", () => {
             const template = createMockTemplate({
                 definition: {
                     name: "Test",
-                    nodes: [
-                        {
-                            id: "node-1",
+                    nodes: {
+                        "node-1": {
                             type: "llm",
-                            position: { x: 100, y: 100 },
-                            data: { label: "Generate Text", provider: "openai", model: "gpt-4" }
+                            name: "Generate Text",
+                            config: { provider: "openai", model: "gpt-4" },
+                            position: { x: 100, y: 100 }
                         }
-                    ],
+                    },
                     edges: [],
                     entryPoint: "node-1"
                 }

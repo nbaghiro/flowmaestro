@@ -47,19 +47,18 @@ export {
     type TriggeredWorkflowResult
 } from "./trigger-handler";
 
-// Document processor workflow
+// Document processor workflow (unified for all storage targets)
 export {
     processDocumentWorkflow,
     type ProcessDocumentWorkflowInput,
-    type ProcessDocumentWorkflowResult
+    type ProcessDocumentWorkflowResult,
+    type StorageTarget,
+    type DocumentSource,
+    type DocumentProcessingResult
 } from "./document-processor";
 
-// Form submission attachment processor workflow
-export {
-    processFormSubmissionAttachmentsWorkflow,
-    type FormSubmissionAttachmentInput,
-    type FormSubmissionAttachmentResult
-} from "./form-submission-attachment-processor";
+// Form submission attachment processor workflow (DEPRECATED - use processDocumentWorkflow with storageTarget: "form-submission")
+// The processFormSubmissionAttachmentsWorkflow has been replaced by processDocumentWorkflow
 
 // Persona orchestrator workflow (background execution)
 export {

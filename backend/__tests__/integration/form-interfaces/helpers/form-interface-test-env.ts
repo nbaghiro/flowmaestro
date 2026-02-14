@@ -110,9 +110,26 @@ export interface MockFormInterfaceSubmissionRepository {
     findByExecutionId: jest.Mock<Promise<FormInterfaceSubmission | null>, [string]>;
 }
 
+/**
+ * Search result type that supports both ID-based and index-based chunk identification.
+ * Different test scenarios may use different field combinations.
+ */
+export interface SearchResult {
+    id?: string;
+    content: string;
+    sourceType: string;
+    sourceName: string;
+    similarity: number;
+    chunkIndex?: number;
+    sourceIndex?: number;
+    submissionId?: string;
+    embedding?: number[];
+    metadata?: Record<string, unknown>;
+}
+
 export interface MockFormInterfaceSubmissionChunkRepository {
     createChunks: jest.Mock<Promise<void>, [unknown[]]>;
-    searchSimilar: jest.Mock<Promise<unknown[]>, [unknown]>;
+    searchSimilar: jest.Mock<Promise<SearchResult[]>, [unknown]>;
 }
 
 export interface MockWorkflowRepository {

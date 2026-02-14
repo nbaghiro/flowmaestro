@@ -45,7 +45,6 @@ import {
     createTestUser,
     expectErrorResponse,
     expectStatus,
-    expectSuccessResponse,
     DEFAULT_TEST_WORKSPACE_ID
 } from "../../../../../__tests__/helpers/fastify-test-client";
 
@@ -336,9 +335,10 @@ describe("Agent Tool Routes", () => {
 
             const updateCall = mockAgentRepo.update.mock.calls[0][1];
             expect(updateCall.available_tools).toHaveLength(2);
-            expect(
-                updateCall.available_tools.map((t: { name: string }) => t.name)
-            ).toEqual(["tool_one", "tool_three"]);
+            expect(updateCall.available_tools.map((t: { name: string }) => t.name)).toEqual([
+                "tool_one",
+                "tool_three"
+            ]);
         });
     });
 

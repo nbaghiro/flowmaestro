@@ -8,6 +8,14 @@
 
 import { v4 as uuidv4 } from "uuid";
 import type {
+    PersonaApprovalActionType,
+    PersonaApprovalRequestRiskLevel,
+    PersonaApprovalRequestStatus,
+    DeliverableType,
+    JsonObject
+} from "@flowmaestro/shared";
+import type { PersonaApprovalRequestModel } from "../../../../src/storage/models/PersonaApprovalRequest";
+import type {
     PersonaDefinitionModel,
     PersonaCategory,
     PersonaAutonomyLevel,
@@ -19,20 +27,13 @@ import type {
     PersonaInstanceCompletionReason,
     PersonaInstanceSummary
 } from "../../../../src/storage/models/PersonaInstance";
-import type { PersonaApprovalRequestModel } from "../../../../src/storage/models/PersonaApprovalRequest";
-import type { PersonaInstanceMessageModel } from "../../../../src/storage/repositories/PersonaInstanceMessageRepository";
-import type { PersonaInstanceDeliverableModel } from "../../../../src/storage/models/PersonaInstanceDeliverable";
 import type {
     PersonaInstanceConnectionModel,
     PersonaInstanceConnectionWithDetails
 } from "../../../../src/storage/models/PersonaInstanceConnection";
+import type { PersonaInstanceDeliverableModel } from "../../../../src/storage/models/PersonaInstanceDeliverable";
 import type { PersonaTaskTemplateModel } from "../../../../src/storage/models/PersonaTaskTemplate";
-import type {
-    PersonaApprovalActionType,
-    PersonaApprovalRequestRiskLevel,
-    PersonaApprovalRequestStatus,
-    DeliverableType
-} from "@flowmaestro/shared";
+import type { PersonaInstanceMessageModel } from "../../../../src/storage/repositories/PersonaInstanceMessageRepository";
 
 // ============================================================================
 // ID GENERATORS
@@ -129,8 +130,7 @@ export function createPersonaDefinitionFixture(
         ],
         estimated_duration: {
             min_minutes: 5,
-            max_minutes: 30,
-            typical_minutes: 15
+            max_minutes: 30
         },
         estimated_cost_credits: 100,
         system_prompt: "You are a helpful test assistant.",
@@ -492,8 +492,8 @@ export function createHighRiskApproval(instanceId: string): PersonaApprovalReque
 export function createCostLimitApproval(instanceId: string): PersonaApprovalRequestModel {
     return createApprovalRequestFixture({
         instanceId,
-        actionType: "cost_increase",
-        toolName: null,
+        actionType: "cost_threshold",
+        toolName: undefined,
         actionDescription: "Increase cost limit to continue execution",
         riskLevel: "low",
         estimatedCostCredits: 200
@@ -536,7 +536,7 @@ export interface CreateMessageFixtureOptions {
     instanceId?: string;
     role?: "user" | "assistant" | "tool" | "system";
     content?: string;
-    toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
+    toolCalls?: Array<{ id: string; name: string; arguments: JsonObject }>;
     toolName?: string;
     toolCallId?: string;
 }
@@ -572,7 +572,10 @@ export function createMessageFixture(
 /**
  * Create a user message
  */
-export function createUserMessage(instanceId: string, content?: string): PersonaInstanceMessageModel {
+export function createUserMessage(
+    instanceId: string,
+    content?: string
+): PersonaInstanceMessageModel {
     return createMessageFixture({
         instanceId,
         role: "user",
@@ -957,9 +960,7 @@ Deliverable: {{report_format}} report with actionable insights.`,
 /**
  * Create a content brief template
  */
-export function createContentBriefTemplate(
-    personaDefinitionId: string
-): PersonaTaskTemplateModel {
+export function createContentBriefTemplate(personaDefinitionId: string): PersonaTaskTemplateModel {
     return createTemplateFixture({
         personaDefinitionId,
         name: "Content Brief Generator",

@@ -63,10 +63,9 @@ describe("FormInterfaceSubmissionRepository", () => {
             const interfaceId = generateId();
             const files = [
                 {
-                    filename: "test.pdf",
-                    originalName: "test.pdf",
+                    fileName: "test.pdf",
+                    fileSize: 1024,
                     mimeType: "application/pdf",
-                    size: 1024,
                     gcsUri: "gs://bucket/test.pdf"
                 }
             ];
@@ -174,10 +173,9 @@ describe("FormInterfaceSubmissionRepository", () => {
 
             const result = await repository.findById(submissionId);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("WHERE id = $1"),
-                [submissionId]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("WHERE id = $1"), [
+                submissionId
+            ]);
             expect(result?.id).toBe(submissionId);
         });
 
@@ -229,9 +227,7 @@ describe("FormInterfaceSubmissionRepository", () => {
         it("should order by submitted_at DESC", async () => {
             const interfaceId = generateId();
 
-            mockQuery
-                .mockResolvedValueOnce(mockCountResult(0))
-                .mockResolvedValueOnce(mockRows([]));
+            mockQuery.mockResolvedValueOnce(mockCountResult(0)).mockResolvedValueOnce(mockRows([]));
 
             await repository.findByInterfaceId(interfaceId);
 
@@ -250,10 +246,9 @@ describe("FormInterfaceSubmissionRepository", () => {
 
             const result = await repository.countByInterfaceId(interfaceId);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SELECT COUNT(*)"),
-                [interfaceId]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("SELECT COUNT(*)"), [
+                interfaceId
+            ]);
             expect(result).toBe(42);
         });
 
@@ -279,10 +274,10 @@ describe("FormInterfaceSubmissionRepository", () => {
 
             const result = await repository.updateOutput(submissionId, output);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SET output = $2"),
-                [submissionId, output]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("SET output = $2"), [
+                submissionId,
+                output
+            ]);
             expect(result?.output).toBe(output);
         });
 
@@ -299,7 +294,13 @@ describe("FormInterfaceSubmissionRepository", () => {
         it("should set output_edited_at timestamp", async () => {
             const submissionId = generateId();
 
-            mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 1, command: "UPDATE", oid: 0, fields: [] });
+            mockQuery.mockResolvedValueOnce({
+                rows: [],
+                rowCount: 1,
+                command: "UPDATE",
+                oid: 0,
+                fields: []
+            });
 
             await repository.markOutputEdited(submissionId);
 
@@ -348,7 +349,7 @@ describe("FormInterfaceSubmissionRepository", () => {
             const mockRow = generateFormInterfaceSubmissionRow({
                 id: submissionId
             });
-            (mockRow as Record<string, unknown>).execution_status = "running";
+            (mockRow as unknown as Record<string, unknown>).execution_status = "running";
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
 
@@ -365,17 +366,18 @@ describe("FormInterfaceSubmissionRepository", () => {
             const submissionId = generateId();
             const executionId = generateId();
             const mockRow = generateFormInterfaceSubmissionRow({ id: submissionId });
-            (mockRow as Record<string, unknown>).execution_status = "running";
-            (mockRow as Record<string, unknown>).execution_id = executionId;
+            (mockRow as unknown as Record<string, unknown>).execution_status = "running";
+            (mockRow as unknown as Record<string, unknown>).execution_id = executionId;
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
 
             await repository.updateExecutionStatus(submissionId, "running", executionId);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("execution_id = $3"),
-                [submissionId, "running", executionId]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("execution_id = $3"), [
+                submissionId,
+                "running",
+                executionId
+            ]);
         });
 
         it("should update status and output", async () => {
@@ -385,16 +387,17 @@ describe("FormInterfaceSubmissionRepository", () => {
                 id: submissionId,
                 output
             });
-            (mockRow as Record<string, unknown>).execution_status = "completed";
+            (mockRow as unknown as Record<string, unknown>).execution_status = "completed";
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
 
             await repository.updateExecutionStatus(submissionId, "completed", undefined, output);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("output = $3"),
-                [submissionId, "completed", output]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("output = $3"), [
+                submissionId,
+                "completed",
+                output
+            ]);
         });
 
         it("should update status, execution ID, and output together", async () => {
@@ -405,8 +408,8 @@ describe("FormInterfaceSubmissionRepository", () => {
                 id: submissionId,
                 output
             });
-            (mockRow as Record<string, unknown>).execution_status = "completed";
-            (mockRow as Record<string, unknown>).execution_id = executionId;
+            (mockRow as unknown as Record<string, unknown>).execution_status = "completed";
+            (mockRow as unknown as Record<string, unknown>).execution_id = executionId;
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
 
@@ -431,7 +434,7 @@ describe("FormInterfaceSubmissionRepository", () => {
         it("should update attachments status", async () => {
             const submissionId = generateId();
             const mockRow = generateFormInterfaceSubmissionRow({ id: submissionId });
-            (mockRow as Record<string, unknown>).attachments_status = "processing";
+            (mockRow as unknown as Record<string, unknown>).attachments_status = "processing";
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
 
@@ -447,7 +450,7 @@ describe("FormInterfaceSubmissionRepository", () => {
         it("should return null when submission not found", async () => {
             mockQuery.mockResolvedValueOnce(mockEmptyResult());
 
-            const result = await repository.updateAttachmentsStatus(generateId(), "completed");
+            const result = await repository.updateAttachmentsStatus(generateId(), "ready");
 
             expect(result).toBeNull();
         });
@@ -457,7 +460,7 @@ describe("FormInterfaceSubmissionRepository", () => {
         it("should return submission by execution ID", async () => {
             const executionId = generateId();
             const mockRow = generateFormInterfaceSubmissionRow();
-            (mockRow as Record<string, unknown>).execution_id = executionId;
+            (mockRow as unknown as Record<string, unknown>).execution_id = executionId;
 
             mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
 
@@ -535,7 +538,7 @@ describe("FormInterfaceSubmissionRepository", () => {
                 id: submissionId
             });
             // Simulate database returning array directly (postgres jsonb)
-            (mockRow as Record<string, unknown>).files = files;
+            (mockRow as unknown as Record<string, unknown>).files = files;
 
             mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
 
@@ -563,7 +566,7 @@ describe("FormInterfaceSubmissionRepository", () => {
         it("should default execution status to pending", async () => {
             const submissionId = generateId();
             const mockRow = generateFormInterfaceSubmissionRow({ id: submissionId });
-            (mockRow as Record<string, unknown>).execution_status = null;
+            (mockRow as unknown as Record<string, unknown>).execution_status = null;
 
             mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
 
@@ -575,7 +578,7 @@ describe("FormInterfaceSubmissionRepository", () => {
         it("should default attachments status to pending", async () => {
             const submissionId = generateId();
             const mockRow = generateFormInterfaceSubmissionRow({ id: submissionId });
-            (mockRow as Record<string, unknown>).attachments_status = null;
+            (mockRow as unknown as Record<string, unknown>).attachments_status = null;
 
             mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
 

@@ -5,9 +5,9 @@
  * Fastify middleware functions in isolation.
  */
 
-import type { FastifyRequest, FastifyReply } from "fastify";
 import type { WorkspaceRole } from "@flowmaestro/shared";
 import type { ApiKeyModel, ApiKeyScope } from "../../src/storage/models/ApiKey";
+import type { FastifyRequest, FastifyReply } from "fastify";
 
 /**
  * Workspace context for testing
@@ -54,15 +54,18 @@ interface ReplyTracking {
 }
 
 /**
- * Extended mock reply with tracking
+ * Mock reply interface for tracking assertions.
+ * Use _tracking to inspect what was sent.
  */
-interface MockReply extends Partial<FastifyReply> {
+export interface MockReplyTracking {
     _tracking: ReplyTracking;
-    code: (statusCode: number) => MockReply;
-    status: (statusCode: number) => MockReply;
-    send: (body?: unknown) => MockReply;
-    header: (key: string, value: string) => MockReply;
 }
+
+/**
+ * Mock reply type that can be passed to middleware (compatible with FastifyReply)
+ * and also allows tracking assertions via _tracking property.
+ */
+export type MockReply = FastifyReply & MockReplyTracking;
 
 /**
  * Create a mock Fastify request for middleware testing
@@ -70,7 +73,7 @@ interface MockReply extends Partial<FastifyReply> {
 export function createMockRequest(options: MockRequestOptions = {}): FastifyRequest {
     // Determine user value: explicit undefined, provided user, or default
     let user: { id: string; email?: string } | undefined;
-    if (options.noDefaultUser || options.user === undefined && "user" in options) {
+    if (options.noDefaultUser || (options.user === undefined && "user" in options)) {
         user = undefined;
     } else if (options.user !== undefined) {
         user = options.user;
@@ -124,7 +127,9 @@ export function createMockWorkspaceContext(
 }
 
 /**
- * Create a mock Fastify reply for middleware testing
+ * Create a mock Fastify reply for middleware testing.
+ * Returns a mock that is compatible with FastifyReply for passing to middleware,
+ * and also has a _tracking property for assertions.
  */
 export function createMockReply(): MockReply {
     const tracking: ReplyTracking = {
@@ -134,7 +139,7 @@ export function createMockReply(): MockReply {
         sent: false
     };
 
-    const reply: MockReply = {
+    const reply = {
         _tracking: tracking,
         code(statusCode: number) {
             tracking.statusCode = statusCode;
@@ -156,7 +161,7 @@ export function createMockReply(): MockReply {
         }
     };
 
-    return reply;
+    return reply as unknown as MockReply;
 }
 
 /**
@@ -247,11 +252,7 @@ export function assertNoResponse(reply: MockReply): void {
  * Create a mock API key for testing
  */
 export function createMockApiKey(overrides: Partial<ApiKeyModel> = {}): ApiKeyModel {
-    const defaultScopes: ApiKeyScope[] = [
-        "workflows:read",
-        "workflows:execute",
-        "executions:read"
-    ];
+    const defaultScopes: ApiKeyScope[] = ["workflows:read", "workflows:execute", "executions:read"];
 
     return {
         id: "api-key-123",

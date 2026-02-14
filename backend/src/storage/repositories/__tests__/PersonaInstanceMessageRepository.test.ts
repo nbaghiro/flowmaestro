@@ -96,7 +96,7 @@ describe("PersonaInstanceMessageRepository", () => {
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
 
-            const result = await repository.create(input);
+            await repository.create(input);
 
             // Verify the metadata includes tool_calls
             const queryCall = mockQuery.mock.calls[0];
@@ -196,10 +196,11 @@ describe("PersonaInstanceMessageRepository", () => {
 
             await repository.findByInstanceId(instanceId, { limit: 50, offset: 10 });
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("LIMIT $2 OFFSET $3"),
-                [instanceId, 50, 10]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("LIMIT $2 OFFSET $3"), [
+                instanceId,
+                50,
+                10
+            ]);
         });
 
         it("should return empty array when no messages exist", async () => {

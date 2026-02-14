@@ -53,9 +53,7 @@ jest.mock("../../../../storage/repositories", () => ({
 // TEST HELPERS
 // ============================================================================
 
-function createMockAgentTemplate(
-    overrides: Partial<AgentTemplateModel> = {}
-): AgentTemplateModel {
+function createMockAgentTemplate(overrides: Partial<AgentTemplateModel> = {}): AgentTemplateModel {
     return {
         id: uuidv4(),
         name: "Test Agent Template",
@@ -66,7 +64,11 @@ function createMockAgentTemplate(
         temperature: 0.7,
         max_tokens: 4096,
         available_tools: [
-            { name: "search_knowledge_base", description: "Search the knowledge base" }
+            {
+                name: "search_knowledge_base",
+                description: "Search the knowledge base",
+                type: "knowledge_base" as const
+            }
         ],
         category: "support",
         tags: ["customer-service", "chatbot"],
@@ -297,9 +299,10 @@ describe("Agent Templates Routes", () => {
             });
 
             expectStatus(response, 200);
-            const body = expectSuccessResponse<
-                Array<{ category: string; count: number; name: string }>
-            >(response);
+            const body =
+                expectSuccessResponse<Array<{ category: string; count: number; name: string }>>(
+                    response
+                );
             expect(body.data.length).toBeGreaterThan(0);
 
             // Check that existing categories have correct counts
@@ -316,9 +319,8 @@ describe("Agent Templates Routes", () => {
             });
 
             expectStatus(response, 200);
-            const body = expectSuccessResponse<Array<{ category: string; count: number }>>(
-                response
-            );
+            const body =
+                expectSuccessResponse<Array<{ category: string; count: number }>>(response);
             // Should have the 5 main agent categories
             const categories = body.data.map((c) => c.category);
             expect(categories).toContain("marketing");
@@ -373,8 +375,16 @@ describe("Agent Templates Routes", () => {
         it("should include available tools in response", async () => {
             const template = createMockAgentTemplate({
                 available_tools: [
-                    { name: "search_kb", description: "Search knowledge base" },
-                    { name: "create_ticket", description: "Create support ticket" }
+                    {
+                        name: "search_kb",
+                        description: "Search knowledge base",
+                        type: "knowledge_base" as const
+                    },
+                    {
+                        name: "create_ticket",
+                        description: "Create support ticket",
+                        type: "function" as const
+                    }
                 ]
             });
             mockAgentTemplateRepo.findById.mockResolvedValue(template);
@@ -488,8 +498,8 @@ describe("Agent Templates Routes", () => {
             const testUser = createTestUser();
             const template = createMockAgentTemplate({
                 available_tools: [
-                    { name: "search", description: "Search" },
-                    { name: "email", description: "Send email" }
+                    { name: "search", description: "Search", type: "knowledge_base" as const },
+                    { name: "email", description: "Send email", type: "function" as const }
                 ]
             });
             mockAgentTemplateRepo.findById.mockResolvedValue(template);

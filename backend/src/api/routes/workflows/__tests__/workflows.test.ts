@@ -89,16 +89,32 @@ jest.mock("../../../../services/GCSStorageService", () => ({
 
 // Mock workflow generator service
 const mockGeneratedWorkflow = {
-    name: "Generated Workflow",
-    description: "AI-generated workflow",
-    nodes: {},
+    nodes: [],
     edges: [],
-    entryPoint: "input"
+    metadata: {
+        name: "Generated Workflow",
+        entryNodeId: "input",
+        description: "AI-generated workflow"
+    }
 };
 
 jest.mock("../../../../services/WorkflowGenerator", () => ({
     generateWorkflow: jest.fn().mockResolvedValue(mockGeneratedWorkflow)
 }));
+
+// Import test helpers after mocks
+import {
+    authenticatedRequest,
+    closeTestServer,
+    createTestServer,
+    createTestUser,
+    createSimpleWorkflowDefinition,
+    expectErrorResponse,
+    expectStatus,
+    expectSuccessResponse,
+    unauthenticatedRequest,
+    DEFAULT_TEST_WORKSPACE_ID
+} from "../../../../../__tests__/helpers/fastify-test-client";
 
 // Import after mock for access
 import { generateWorkflow } from "../../../../services/WorkflowGenerator";
@@ -132,20 +148,6 @@ jest.mock("../../../../services/WorkflowChatService", () => ({
     WorkflowChatService: jest.fn().mockImplementation(() => mockChatService)
 }));
 
-// Import test helpers after mocks
-import {
-    authenticatedRequest,
-    closeTestServer,
-    createTestServer,
-    createTestUser,
-    createTestWorkflowDefinition,
-    expectErrorResponse,
-    expectStatus,
-    expectSuccessResponse,
-    unauthenticatedRequest,
-    DEFAULT_TEST_WORKSPACE_ID
-} from "../../../../../__tests__/helpers/fastify-test-client";
-
 // ============================================================================
 // TEST HELPERS
 // ============================================================================
@@ -169,7 +171,7 @@ function createMockWorkflow(
         workspace_id: overrides.workspace_id || DEFAULT_TEST_WORKSPACE_ID,
         name: overrides.name || "Test Workflow",
         description: overrides.description || "A test workflow",
-        definition: overrides.definition || createTestWorkflowDefinition(),
+        definition: overrides.definition || createSimpleWorkflowDefinition(),
         ai_generated: overrides.ai_generated ?? false,
         ai_prompt: overrides.ai_prompt ?? null,
         folder_id: overrides.folder_id ?? null,
@@ -390,7 +392,7 @@ describe("Workflow Routes", () => {
             const workflowData = {
                 name: "New Workflow",
                 description: "A brand new workflow",
-                definition: createTestWorkflowDefinition("New Workflow")
+                definition: createSimpleWorkflowDefinition("New Workflow")
             };
 
             const createdWorkflow = createMockWorkflow({
@@ -414,7 +416,7 @@ describe("Workflow Routes", () => {
             const testUser = createTestUser();
             const workflowData = {
                 name: "AI Workflow",
-                definition: createTestWorkflowDefinition("AI Workflow"),
+                definition: createSimpleWorkflowDefinition("AI Workflow"),
                 aiGenerated: true,
                 aiPrompt: "Create a workflow that processes user data"
             };
@@ -463,7 +465,7 @@ describe("Workflow Routes", () => {
                 url: "/workflows",
                 payload: {
                     name: "Test",
-                    definition: createTestWorkflowDefinition()
+                    definition: createSimpleWorkflowDefinition()
                 }
             });
 
@@ -573,7 +575,7 @@ describe("Workflow Routes", () => {
                 id: workflowId,
                 user_id: testUser.id
             });
-            const newDefinition = createTestWorkflowDefinition("Updated Workflow");
+            const newDefinition = createSimpleWorkflowDefinition("Updated Workflow");
 
             mockWorkflowRepo.findById.mockResolvedValue(existingWorkflow);
             mockWorkflowRepo.update.mockResolvedValue({
@@ -810,7 +812,7 @@ describe("Workflow Routes", () => {
                 url: "/workflows",
                 payload: {
                     name: "Test Workflow",
-                    definition: createTestWorkflowDefinition()
+                    definition: createSimpleWorkflowDefinition()
                 }
             });
 

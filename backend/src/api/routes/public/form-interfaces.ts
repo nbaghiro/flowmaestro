@@ -213,13 +213,14 @@ export async function publicFormInterfaceRoutes(fastify: FastifyInstance) {
                         await submissionRepo.updateAttachmentsStatus(submission.id, "processing");
 
                         const client = await getTemporalClient();
-                        await client.workflow.start("processFormSubmissionAttachmentsWorkflow", {
+                        // Use unified document processing workflow
+                        await client.workflow.start("processDocumentWorkflow", {
                             taskQueue: "flowmaestro-orchestrator",
                             workflowId: `form-attachment-${submission.id}`,
                             args: [
                                 {
+                                    storageTarget: "form-submission",
                                     submissionId: submission.id,
-                                    interfaceId: formInterface.id,
                                     files: (body.files || []).map((f) => ({
                                         filename: f.fileName,
                                         gcsPath: f.gcsUri || "",
@@ -229,7 +230,8 @@ export async function publicFormInterfaceRoutes(fastify: FastifyInstance) {
                                     urls: (body.urls || []).map((u) => ({
                                         url: u.url,
                                         title: u.title
-                                    }))
+                                    })),
+                                    userId: formInterface.userId
                                 }
                             ]
                         });

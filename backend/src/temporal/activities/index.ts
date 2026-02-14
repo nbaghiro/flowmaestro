@@ -182,15 +182,27 @@ export {
     type ClearPendingApprovalInput
 } from "./personas";
 
-// Form submission attachment activities
+// Form submission attachment activities have been replaced by unified document-processing activities
+// Use extractDocumentText, chunkDocumentText, generateAndStoreChunks, completeDocumentProcessing instead
+
+// Unified document processing activities (supports all storage targets)
 export {
-    extractSubmissionAttachmentText,
-    chunkSubmissionAttachmentText,
-    generateAndStoreSubmissionChunks,
-    completeSubmissionAttachmentProcessing,
-    type ExtractSubmissionAttachmentInput,
-    type ChunkSubmissionAttachmentInput,
-    type ChunkResult,
-    type StoreSubmissionChunksInput,
-    type CompleteSubmissionProcessingInput
-} from "./form-submission-attachments";
+    // Activities
+    extractDocumentText,
+    chunkDocumentText,
+    generateAndStoreChunks,
+    completeDocumentProcessing,
+    // Types
+    type DocumentSource,
+    type StorageTargetConfig,
+    type KnowledgeBaseTarget,
+    type FormSubmissionTarget,
+    type ChatInterfaceTarget,
+    type DocumentProcessingInput,
+    type ExtractTextInput,
+    type ChunkTextInput,
+    type ChunkResult as DocumentChunkResult,
+    type EmbedAndStoreInput,
+    type EmbedAndStoreResult,
+    type CompleteProcessingInput as CompleteDocumentProcessingInput
+} from "./document-processing";

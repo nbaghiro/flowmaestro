@@ -4,6 +4,7 @@
  * Tests for POST /api/public/form-interfaces/:slug/submit
  */
 
+import type { PublicFormSubmitInput } from "@flowmaestro/shared";
 import {
     createSimpleFormInterfaceTestEnvironment,
     createWorkflowTargetFormInterface,
@@ -14,7 +15,6 @@ import {
     assertWorkflowStarted
 } from "./setup";
 import type { SimpleFormInterfaceTestEnvironment } from "./helpers/form-interface-test-env";
-import type { PublicFormSubmitInput } from "@flowmaestro/shared";
 
 describe("POST /api/public/form-interfaces/:slug/submit", () => {
     let testEnv: SimpleFormInterfaceTestEnvironment;
@@ -226,7 +226,7 @@ describe("POST /api/public/form-interfaces/:slug/submit", () => {
             // Start attachment processing workflow
             if (createdSubmission.files.length > 0 || createdSubmission.urls.length > 0) {
                 await testEnv.services.temporal.workflow.start(
-                    { name: "processFormSubmissionAttachmentsWorkflow" },
+                    { name: "processDocumentWorkflow" },
                     {
                         taskQueue: "attachments",
                         workflowId: `attachment-processing-${createdSubmission.id}`
@@ -237,7 +237,7 @@ describe("POST /api/public/form-interfaces/:slug/submit", () => {
             // Assert
             expect(createdSubmission.attachmentsStatus).toBe("processing");
             expect(testEnv.services.temporal.workflow.start).toHaveBeenCalledWith(
-                { name: "processFormSubmissionAttachmentsWorkflow" },
+                { name: "processDocumentWorkflow" },
                 expect.objectContaining({
                     taskQueue: "attachments"
                 })

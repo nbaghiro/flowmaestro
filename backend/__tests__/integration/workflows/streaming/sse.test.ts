@@ -14,8 +14,8 @@ import { EventEmitter } from "events";
 // Mock the execution streams Map for chat-stream.ts
 const mockChatExecutionStreams = new Map<string, EventEmitter>();
 
-jest.mock("../../../src/api/routes/workflows/chat-stream", () => {
-    const actual = jest.requireActual("../../../src/api/routes/workflows/chat-stream");
+jest.mock("../../../../src/api/routes/workflows/chat-stream", () => {
+    const actual = jest.requireActual("../../../../src/api/routes/workflows/chat-stream");
     return {
         ...actual,
         emitChatEvent: (executionId: string, event: string, data: unknown): void => {
@@ -30,8 +30,10 @@ jest.mock("../../../src/api/routes/workflows/chat-stream", () => {
 // Mock the execution streams Map for generation-chat-stream.ts
 const mockGenerationExecutionStreams = new Map<string, EventEmitter>();
 
-jest.mock("../../../src/api/routes/workflows/generation-chat-stream", () => {
-    const actual = jest.requireActual("../../../src/api/routes/workflows/generation-chat-stream");
+jest.mock("../../../../src/api/routes/workflows/generation-chat-stream", () => {
+    const actual = jest.requireActual(
+        "../../../../src/api/routes/workflows/generation-chat-stream"
+    );
     return {
         ...actual,
         emitGenerationEvent: (executionId: string, event: string, data: unknown): void => {
@@ -44,8 +46,8 @@ jest.mock("../../../src/api/routes/workflows/generation-chat-stream", () => {
 });
 
 // Import after mocks
-import { emitChatEvent } from "../../../src/api/routes/workflows/chat-stream";
-import { emitGenerationEvent } from "../../../src/api/routes/workflows/generation-chat-stream";
+import { emitChatEvent } from "../../../../src/api/routes/workflows/chat-stream";
+import { emitGenerationEvent } from "../../../../src/api/routes/workflows/generation-chat-stream";
 
 // ============================================================================
 // TEST HELPERS

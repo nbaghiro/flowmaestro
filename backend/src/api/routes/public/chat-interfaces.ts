@@ -8,7 +8,6 @@ import type {
     SendChatMessageInput
 } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../core/logging";
-import { ChatInterfaceAttachmentProcessor } from "../../../services/ChatInterfaceAttachmentProcessor";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { ChatInterfaceRepository } from "../../../storage/repositories/ChatInterfaceRepository";
 import { ChatInterfaceSessionRepository } from "../../../storage/repositories/ChatInterfaceSessionRepository";
@@ -329,37 +328,47 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                     await sessionRepo.updateThreadId(session.id, threadId);
                 }
 
-                // 1.5. Process file attachments for RAG (if any)
+                // 1.5. Process file attachments for RAG (if any) via Temporal workflow
                 if (body.attachments && body.attachments.length > 0) {
                     try {
-                        const attachmentProcessor = new ChatInterfaceAttachmentProcessor();
-                        const processingResults = await attachmentProcessor.processAttachments({
-                            attachments: body.attachments,
-                            sessionId: session.id,
-                            threadId,
-                            userId: chatInterface.userId
-                        });
+                        const temporal = await getTemporalClient();
+                        // Convert attachments to document sources
+                        const documents = body.attachments.map((att) => ({
+                            type: att.type as "file" | "url",
+                            gcsPath: att.gcsUri,
+                            filePath: att.gcsUri,
+                            mimeType: att.mimeType,
+                            url: att.url,
+                            filename: att.fileName
+                        }));
 
-                        const successCount = processingResults.filter((r) => r.success).length;
-                        const totalChunks = processingResults.reduce(
-                            (sum, r) => sum + r.chunksCreated,
-                            0
-                        );
+                        // Start attachment processing workflow in background
+                        await temporal.workflow.start("processDocumentWorkflow", {
+                            taskQueue: TASK_QUEUES.ORCHESTRATOR,
+                            workflowId: `chat-attachment-${session.id}-${Date.now()}`,
+                            args: [
+                                {
+                                    storageTarget: "chat-interface",
+                                    sessionId: session.id,
+                                    threadId,
+                                    documents,
+                                    userId: chatInterface.userId
+                                }
+                            ]
+                        });
 
                         logger.info(
                             {
                                 sessionId: session.id,
-                                attachmentCount: body.attachments.length,
-                                successCount,
-                                totalChunks
+                                attachmentCount: body.attachments.length
                             },
-                            "Attachment processing completed"
+                            "Started attachment processing workflow"
                         );
                     } catch (error) {
                         // Log but don't fail the request - attachments are optional enhancement
                         logger.error(
                             { sessionId: session.id, error },
-                            "Failed to process attachments (continuing without RAG)"
+                            "Failed to start attachment processing workflow (continuing without RAG)"
                         );
                     }
                 }

@@ -12,13 +12,7 @@ jest.mock("../../database", () => ({
 }));
 
 import { FormInterfaceSubmissionChunkRepository } from "../FormInterfaceSubmissionChunkRepository";
-import {
-    mockRows,
-    mockEmptyResult,
-    mockAffectedRows,
-    mockCountResult,
-    generateId
-} from "./setup";
+import { mockRows, mockAffectedRows, mockCountResult, generateId } from "./setup";
 
 // Generate a mock embedding (1536 dimensions for OpenAI ada-002)
 function generateMockEmbedding(dimensions: number = 1536): number[] {
@@ -26,17 +20,19 @@ function generateMockEmbedding(dimensions: number = 1536): number[] {
 }
 
 // Generate a mock chunk row
-function generateChunkRow(overrides: Partial<{
-    id: string;
-    submission_id: string;
-    source_type: "file" | "url";
-    source_name: string;
-    source_index: number;
-    content: string;
-    chunk_index: number;
-    metadata: Record<string, unknown> | string;
-    created_at: string;
-}> = {}) {
+function generateChunkRow(
+    overrides: Partial<{
+        id: string;
+        submission_id: string;
+        source_type: "file" | "url";
+        source_name: string;
+        source_index: number;
+        content: string;
+        chunk_index: number;
+        metadata: Record<string, unknown> | string;
+        created_at: string;
+    }> = {}
+) {
     const now = new Date().toISOString();
     return {
         id: generateId(),
@@ -87,7 +83,13 @@ describe("FormInterfaceSubmissionChunkRepository", () => {
                 }
             ];
 
-            mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 2, command: "INSERT", oid: 0, fields: [] });
+            mockQuery.mockResolvedValueOnce({
+                rows: [],
+                rowCount: 2,
+                command: "INSERT",
+                oid: 0,
+                fields: []
+            });
 
             await repository.createChunks(chunks);
 
@@ -121,7 +123,13 @@ describe("FormInterfaceSubmissionChunkRepository", () => {
                 }
             ];
 
-            mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 1, command: "INSERT", oid: 0, fields: [] });
+            mockQuery.mockResolvedValueOnce({
+                rows: [],
+                rowCount: 1,
+                command: "INSERT",
+                oid: 0,
+                fields: []
+            });
 
             await repository.createChunks(chunks);
 
@@ -145,7 +153,13 @@ describe("FormInterfaceSubmissionChunkRepository", () => {
                 }
             ];
 
-            mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 1, command: "INSERT", oid: 0, fields: [] });
+            mockQuery.mockResolvedValueOnce({
+                rows: [],
+                rowCount: 1,
+                command: "INSERT",
+                oid: 0,
+                fields: []
+            });
 
             await repository.createChunks(chunks);
 
@@ -166,7 +180,13 @@ describe("FormInterfaceSubmissionChunkRepository", () => {
                 }
             ];
 
-            mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 1, command: "INSERT", oid: 0, fields: [] });
+            mockQuery.mockResolvedValueOnce({
+                rows: [],
+                rowCount: 1,
+                command: "INSERT",
+                oid: 0,
+                fields: []
+            });
 
             await repository.createChunks(chunks);
 
@@ -389,10 +409,9 @@ describe("FormInterfaceSubmissionChunkRepository", () => {
 
             const result = await repository.countBySubmissionId(submissionId);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SELECT COUNT(*)"),
-                [submissionId]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("SELECT COUNT(*)"), [
+                submissionId
+            ]);
             expect(result).toBe(25);
         });
 

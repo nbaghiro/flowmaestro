@@ -277,7 +277,9 @@ describe("FormInterfaceRepository", () => {
         it("should use default pagination values", async () => {
             const workspaceId = generateId();
 
-            mockQuery.mockResolvedValueOnce(mockCountResult(100)).mockResolvedValueOnce(mockRows([]));
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(100))
+                .mockResolvedValueOnce(mockRows([]));
 
             await repository.findByWorkspaceId(workspaceId);
 
@@ -447,11 +449,9 @@ describe("FormInterfaceRepository", () => {
         it("should return null when form not found", async () => {
             mockQuery.mockResolvedValueOnce(mockEmptyResult());
 
-            const result = await repository.updateByWorkspaceId(
-                generateId(),
-                generateId(),
-                { name: "New Name" }
-            );
+            const result = await repository.updateByWorkspaceId(generateId(), generateId(), {
+                name: "New Name"
+            });
 
             expect(result).toBeNull();
         });
@@ -571,10 +571,11 @@ describe("FormInterfaceRepository", () => {
 
             await repository.isSlugAvailableInWorkspace(slug, workspaceId, excludeId);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("AND id != $3"),
-                [slug, workspaceId, excludeId]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("AND id != $3"), [
+                slug,
+                workspaceId,
+                excludeId
+            ]);
         });
     });
 
@@ -676,32 +677,32 @@ describe("FormInterfaceRepository", () => {
                 id: formId
             });
             // Manually set trigger_id since the generator doesn't include it
-            (mockRow as Record<string, unknown>).trigger_id = triggerId;
+            (mockRow as unknown as Record<string, unknown>).trigger_id = triggerId;
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
 
             const result = await repository.setTriggerId(formId, triggerId);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SET trigger_id = $2"),
-                [formId, triggerId]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("SET trigger_id = $2"), [
+                formId,
+                triggerId
+            ]);
             expect(result).not.toBeNull();
         });
 
         it("should allow clearing trigger ID with null", async () => {
             const formId = generateId();
             const mockRow = generateFormInterfaceRow({ id: formId });
-            (mockRow as Record<string, unknown>).trigger_id = null;
+            (mockRow as unknown as Record<string, unknown>).trigger_id = null;
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
 
             await repository.setTriggerId(formId, null);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SET trigger_id = $2"),
-                [formId, null]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("SET trigger_id = $2"), [
+                formId,
+                null
+            ]);
         });
 
         it("should return null when form not found", async () => {

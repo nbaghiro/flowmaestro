@@ -103,6 +103,15 @@ import {
 // TEST HELPERS
 // ============================================================================
 
+interface MockTool {
+    id: string;
+    name: string;
+    type: string;
+    description: string;
+    schema: object;
+    config: object;
+}
+
 function createMockAgent(
     overrides: Partial<{
         id: string;
@@ -116,7 +125,7 @@ function createMockAgent(
         temperature: number;
         max_tokens: number;
         max_iterations: number;
-        available_tools: object[];
+        available_tools: MockTool[];
         memory_config: object;
         connection_id: string | null;
         folder_id: string | null;
@@ -998,8 +1007,22 @@ describe("Agent Routes", () => {
                 user_id: testUser.id,
                 workspace_id: DEFAULT_TEST_WORKSPACE_ID,
                 available_tools: [
-                    { id: toolId, name: "tool1", type: "function", description: "", schema: {}, config: {} },
-                    { id: "tool_keep", name: "tool2", type: "function", description: "", schema: {}, config: {} }
+                    {
+                        id: toolId,
+                        name: "tool1",
+                        type: "function",
+                        description: "",
+                        schema: {},
+                        config: {}
+                    },
+                    {
+                        id: "tool_keep",
+                        name: "tool2",
+                        type: "function",
+                        description: "",
+                        schema: {},
+                        config: {}
+                    }
                 ]
             });
 

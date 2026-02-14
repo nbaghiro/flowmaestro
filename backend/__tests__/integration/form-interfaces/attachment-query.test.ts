@@ -9,7 +9,6 @@ import {
     createSimpleFormInterfaceTestEnvironment,
     createPublishedFormInterface,
     createTestSubmission,
-    createRunningSubmission,
     createCompletedSubmission,
     createTestChunk,
     createTestChunks
@@ -127,7 +126,9 @@ describe("POST /api/public/form-interfaces/:slug/submissions/:submissionId/query
 
             testEnv.repositories.formInterface.findBySlug.mockResolvedValue(formInterface);
             testEnv.repositories.submission.findById.mockResolvedValue(submission);
-            testEnv.repositories.submissionChunk.searchSimilar.mockResolvedValue(highSimilarityChunks);
+            testEnv.repositories.submissionChunk.searchSimilar.mockResolvedValue(
+                highSimilarityChunks
+            );
 
             // Act
             const results = await testEnv.repositories.submissionChunk.searchSimilar({
