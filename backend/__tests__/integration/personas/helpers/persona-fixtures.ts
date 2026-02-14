@@ -426,7 +426,7 @@ export interface CreateApprovalRequestFixtureOptions {
     id?: string;
     instanceId?: string;
     actionType?: PersonaApprovalActionType;
-    toolName?: string;
+    toolName?: string | null;
     actionDescription?: string;
     riskLevel?: PersonaApprovalRequestRiskLevel;
     status?: PersonaApprovalRequestStatus;
@@ -443,7 +443,7 @@ export function createApprovalRequestFixture(
         id,
         instance_id: options.instanceId || generateInstanceId(),
         action_type: options.actionType || "tool_call",
-        tool_name: options.toolName !== undefined ? options.toolName : "web_search",
+        tool_name: "toolName" in options ? (options.toolName ?? null) : "web_search",
         action_description: options.actionDescription || "Search the web for information",
         action_arguments: { query: "test search query" },
         risk_level: options.riskLevel || "medium",
@@ -493,7 +493,7 @@ export function createCostLimitApproval(instanceId: string): PersonaApprovalRequ
     return createApprovalRequestFixture({
         instanceId,
         actionType: "cost_threshold",
-        toolName: undefined,
+        toolName: null,
         actionDescription: "Increase cost limit to continue execution",
         riskLevel: "low",
         estimatedCostCredits: 200
