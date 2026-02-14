@@ -2,14 +2,13 @@ import { Readable } from "stream";
 import { FastifyPluginAsync } from "fastify";
 import { nanoid } from "nanoid";
 import { ChatMessageAttachment } from "@flowmaestro/shared";
-import { getUploadsStorageService } from "../../../services/GCSStorageService";
+import { getInterfaceDocsStorageService } from "../../../services/GCSStorageService";
 import { ChatInterfaceRepository } from "../../../storage/repositories/ChatInterfaceRepository";
 import { ChatInterfaceSessionRepository } from "../../../storage/repositories/ChatInterfaceSessionRepository";
 import { checkChatRateLimit } from "../../middleware/chatInterfaceRateLimiter";
 
 const chatInterfaceSessionRepo = new ChatInterfaceSessionRepository();
 const chatInterfaceRepo = new ChatInterfaceRepository();
-const storageService = getUploadsStorageService();
 
 export const publicChatInterfaceFileRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.post<{
@@ -118,15 +117,16 @@ export const publicChatInterfaceFileRoutes: FastifyPluginAsync = async (fastify)
 
             // Convert buffer to readable stream for upload
             const fileStream = Readable.from(fileBuffer);
+            const gcsService = getInterfaceDocsStorageService();
 
-            const gcsUri = await storageService.upload(fileStream, {
+            const gcsUri = await gcsService.upload(fileStream, {
                 userId: session.id,
                 knowledgeBaseId: "attachments",
                 filename: filename
             });
 
             // 10. Generate signed URL for access
-            const signedUrl = await storageService.getSignedDownloadUrl(gcsUri, 24 * 60 * 60); // 24 hours
+            const signedUrl = await gcsService.getSignedDownloadUrl(gcsUri, 24 * 60 * 60); // 24 hours
 
             // 11. Create attachment object with known size
             const attachment: ChatMessageAttachment = {

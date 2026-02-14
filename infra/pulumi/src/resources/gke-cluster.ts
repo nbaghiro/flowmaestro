@@ -2,7 +2,12 @@ import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
 import { infrastructureConfig, resourceName, resourceLabels } from "../utils/config";
 import { network, subnet } from "./networking";
-import { knowledgeDocsBucket, uploadsBucket, artifactsBucket } from "./storage";
+import {
+    knowledgeDocsBucket,
+    uploadsBucket,
+    artifactsBucket,
+    interfaceDocsBucket
+} from "./storage";
 
 // Create GKE cluster (Autopilot or Standard mode based on config)
 export const cluster = new gcp.container.Cluster(
@@ -265,6 +270,17 @@ new gcp.storage.BucketIAMMember(
         member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
     },
     { dependsOn: [artifactsBucket] }
+);
+
+// Interface docs bucket - for form submissions and chat attachments
+new gcp.storage.BucketIAMMember(
+    resourceName("k8s-sa-interface-docs-storage"),
+    {
+        bucket: interfaceDocsBucket.name,
+        role: "roles/storage.objectAdmin",
+        member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
+    },
+    { dependsOn: [interfaceDocsBucket] }
 );
 
 // Allow Kubernetes service account to impersonate GCP service account

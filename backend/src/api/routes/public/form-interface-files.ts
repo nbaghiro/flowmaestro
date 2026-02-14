@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
-import { getArtifactsStorageService } from "../../../services/GCSStorageService";
+import { getInterfaceDocsStorageService } from "../../../services/GCSStorageService";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
 import { formInterfaceFileUploadRateLimiter } from "../../middleware/formInterfaceRateLimiter";
 
@@ -115,8 +115,8 @@ export async function publicFormInterfaceFilesRoutes(fastify: FastifyInstance) {
                 const sanitizedFilename = sanitizeFilename(data.filename);
                 const fileName = `form-submissions/${formInterface.id}/${sessionId}/${Date.now()}_${sanitizedFilename}`;
 
-                // Upload to GCS artifacts bucket (PRIVATE)
-                const gcsService = getArtifactsStorageService();
+                // Upload to GCS interface-docs bucket (PRIVATE)
+                const gcsService = getInterfaceDocsStorageService();
                 const gcsUri = await gcsService.uploadBuffer(fileBuffer, {
                     fileName,
                     contentType: data.mimetype

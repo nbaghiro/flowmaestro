@@ -8,3 +8,4 @@ data:
   GCS_UPLOADS_BUCKET: "flowmaestro-uploads-flowmaestro-prod"
   GCS_KNOWLEDGE_DOCS_BUCKET: "flowmaestro-knowledge-docs-flowmaestro-prod"
   GCS_ARTIFACTS_BUCKET: "flowmaestro-artifacts-flowmaestro-prod"
+  GCS_INTERFACE_DOCS_BUCKET: "flowmaestro-interface-docs-flowmaestro-prod"

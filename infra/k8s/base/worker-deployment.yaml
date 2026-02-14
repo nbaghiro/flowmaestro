@@ -133,6 +133,11 @@ spec:
                 configMapKeyRef:
                   name: gcs-config
                   key: GCS_ARTIFACTS_BUCKET
+            - name: GCS_INTERFACE_DOCS_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: gcs-config
+                  key: GCS_INTERFACE_DOCS_BUCKET
 
           # Mount Temporal certificates
           volumeMounts:

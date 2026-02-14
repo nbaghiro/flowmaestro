@@ -88,6 +88,59 @@ export const artifactsBucket = new gcp.storage.Bucket(resourceName("artifacts"),
     labels: resourceLabels()
 });
 
+// Create bucket for interface documents (form submissions and chat attachments)
+export const interfaceDocsBucket = new gcp.storage.Bucket(resourceName("interface-docs"), {
+    name: `${resourceName("interface-docs")}-${infrastructureConfig.project}`,
+    location: infrastructureConfig.region,
+    uniformBucketLevelAccess: true,
+    publicAccessPrevention: "enforced",
+    versioning: {
+        enabled: true // Enable versioning for document recovery
+    },
+    lifecycleRules: [
+        {
+            action: {
+                type: "Delete"
+            },
+            condition: {
+                // Keep last 5 versions of each file
+                numNewerVersions: 5
+            }
+        },
+        {
+            action: {
+                type: "Delete"
+            },
+            condition: {
+                // Delete temporary files after 7 days
+                age: 7,
+                matchesPrefixes: ["temp/"]
+            }
+        }
+    ],
+    cors: [
+        {
+            // Production origins
+            origins: [
+                `https://api.${infrastructureConfig.domain}`,
+                `https://app.${infrastructureConfig.domain}`,
+                `https://${infrastructureConfig.domain}`
+            ],
+            methods: ["GET", "POST", "PUT", "DELETE"],
+            responseHeaders: ["Content-Type", "Content-Length"],
+            maxAgeSeconds: 3600
+        },
+        {
+            // Development origins - allows local development to access GCS directly
+            origins: ["http://localhost:3000", "http://localhost:3001", "http://localhost:5173"],
+            methods: ["GET"],
+            responseHeaders: ["Content-Type", "Content-Length"],
+            maxAgeSeconds: 3600
+        }
+    ],
+    labels: resourceLabels()
+});
+
 // Create bucket for knowledge base documents
 export const knowledgeDocsBucket = new gcp.storage.Bucket(resourceName("knowledge-docs"), {
     name: `${resourceName("knowledge-docs")}-${infrastructureConfig.project}`,
@@ -176,6 +229,16 @@ new gcp.storage.BucketIAMMember(
     { dependsOn: [knowledgeDocsBucket, storageServiceAccount] }
 );
 
+new gcp.storage.BucketIAMMember(
+    resourceName("storage-sa-interface-docs"),
+    {
+        bucket: interfaceDocsBucket.name,
+        role: "roles/storage.objectAdmin",
+        member: pulumi.interpolate`serviceAccount:${storageServiceAccount.email}`
+    },
+    { dependsOn: [interfaceDocsBucket, storageServiceAccount] }
+);
+
 // Note: For GKE deployments, the k8s-sa (defined in gke-cluster.ts) already has
 // storage permissions via Workload Identity. This storage-sa is primarily for
 // local development where a key file is needed to avoid RAPT token expiration.
@@ -219,6 +282,8 @@ export const storageOutputs = {
     artifactsBucketUrl: artifactsBucket.url,
     knowledgeDocsBucketName: knowledgeDocsBucket.name,
     knowledgeDocsBucketUrl: knowledgeDocsBucket.url,
+    interfaceDocsBucketName: interfaceDocsBucket.name,
+    interfaceDocsBucketUrl: interfaceDocsBucket.url,
     storageServiceAccountEmail: storageServiceAccount.email,
     storageServiceAccountName: storageServiceAccount.name
 };

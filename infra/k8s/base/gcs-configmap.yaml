@@ -15,3 +15,7 @@ data:
   # GCS bucket for workflow execution artifacts
   # Value set via Kustomize overlay for each environment
   GCS_ARTIFACTS_BUCKET: "GCS_ARTIFACTS_BUCKET_PLACEHOLDER"
+
+  # GCS bucket for interface documents (form submissions and chat attachments)
+  # Value set via Kustomize overlay for each environment
+  GCS_INTERFACE_DOCS_BUCKET: "GCS_INTERFACE_DOCS_BUCKET_PLACEHOLDER"
