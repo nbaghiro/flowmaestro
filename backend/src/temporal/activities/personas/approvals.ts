@@ -9,10 +9,10 @@ import type {
     PersonaApprovalRequestRiskLevel,
     PersonaApprovalSignalPayload
 } from "@flowmaestro/shared";
+import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { PersonaApprovalRequestRepository } from "../../../storage/repositories/PersonaApprovalRequestRepository";
 import { PersonaInstanceRepository } from "../../../storage/repositories/PersonaInstanceRepository";
 import { activityLogger } from "../../core";
-import { redisEventBus } from "../../../services/events/RedisEventBus";
 import type { Tool } from "../../../storage/models/Agent";
 import type { PersonaAutonomyLevel } from "../../../storage/models/PersonaDefinition";
 
@@ -199,10 +199,7 @@ export function getToolRiskLevel(tool: Tool): PersonaApprovalRequestRiskLevel {
 /**
  * Generate a human-readable description of what a tool will do
  */
-export function generateToolDescription(
-    toolName: string,
-    args: Record<string, unknown>
-): string {
+export function generateToolDescription(toolName: string, args: Record<string, unknown>): string {
     const argsStr = Object.entries(args)
         .filter(([_, v]) => v !== undefined && v !== null)
         .map(([k, v]) => {

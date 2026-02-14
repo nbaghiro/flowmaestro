@@ -10,13 +10,6 @@ import { TestWorkflowEnvironment } from "@temporalio/testing";
 import { Worker, Runtime } from "@temporalio/worker";
 import { nanoid } from "nanoid";
 import type { WorkflowDefinition, JsonObject } from "@flowmaestro/shared";
-import type {
-    OrchestratorInput,
-    OrchestratorResult,
-    ExecutionProgressResult,
-    NodeStatusResult,
-    ExecutionSummaryResult
-} from "../../../../src/temporal/workflows/workflow-orchestrator";
 import {
     cancelWorkflowSignal,
     pauseWorkflowSignal,
@@ -28,6 +21,13 @@ import {
     type HumanReviewResponsePayload
 } from "../../../../src/temporal/workflows";
 import { createMockActivities, type MockActivityConfig } from "../../../fixtures/activities";
+import type {
+    OrchestratorInput,
+    OrchestratorResult,
+    ExecutionProgressResult,
+    NodeStatusResult,
+    ExecutionSummaryResult
+} from "../../../../src/temporal/workflows/workflow-orchestrator";
 
 // ============================================================================
 // TYPES
@@ -223,7 +223,10 @@ export async function runWorkflowToCompletion(
     const result = await Promise.race([
         handle.result(),
         new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`Workflow timed out after ${timeoutMs}ms`)), timeoutMs)
+            setTimeout(
+                () => reject(new Error(`Workflow timed out after ${timeoutMs}ms`)),
+                timeoutMs
+            )
         )
     ]);
 
@@ -237,20 +240,14 @@ export async function runWorkflowToCompletion(
 /**
  * Send a cancellation signal to a running workflow.
  */
-export async function sendCancelSignal(
-    handle: WorkflowHandle,
-    reason?: string
-): Promise<void> {
+export async function sendCancelSignal(handle: WorkflowHandle, reason?: string): Promise<void> {
     await handle.signal(cancelWorkflowSignal, { reason });
 }
 
 /**
  * Send a pause signal to a running workflow.
  */
-export async function sendPauseSignal(
-    handle: WorkflowHandle,
-    reason?: string
-): Promise<void> {
+export async function sendPauseSignal(handle: WorkflowHandle, reason?: string): Promise<void> {
     await handle.signal(pauseWorkflowSignal, { reason });
 }
 
@@ -385,9 +382,7 @@ export async function waitForWorkflowState(
         await delay(pollIntervalMs);
     }
 
-    throw new Error(
-        `Timeout waiting for workflow state "${expectedState}" after ${timeoutMs}ms`
-    );
+    throw new Error(`Timeout waiting for workflow state "${expectedState}" after ${timeoutMs}ms`);
 }
 
 /**
@@ -420,9 +415,7 @@ export async function waitForNodesComplete(
         await delay(pollIntervalMs);
     }
 
-    throw new Error(
-        `Timeout waiting for ${nodeCount} nodes to complete after ${timeoutMs}ms`
-    );
+    throw new Error(`Timeout waiting for ${nodeCount} nodes to complete after ${timeoutMs}ms`);
 }
 
 /**
@@ -469,11 +462,13 @@ export async function waitForNodeStatus(
  * Create a simple linear workflow for testing signals/queries.
  * A -> B -> C with configurable delays.
  */
-export function createLinearTestWorkflow(options: {
-    name?: string;
-    nodeCount?: number;
-    nodeDelayMs?: number;
-} = {}): WorkflowDefinition {
+export function createLinearTestWorkflow(
+    options: {
+        name?: string;
+        nodeCount?: number;
+        nodeDelayMs?: number;
+    } = {}
+): WorkflowDefinition {
     const { name = "Linear Test Workflow", nodeCount = 3, nodeDelayMs = 100 } = options;
 
     const nodes: WorkflowDefinition["nodes"] = {};
@@ -520,11 +515,13 @@ export function createLinearTestWorkflow(options: {
  * Create a workflow with parallel branches for testing concurrent execution.
  * A -> [B, C, D] -> E
  */
-export function createParallelTestWorkflow(options: {
-    name?: string;
-    branchCount?: number;
-    branchDelayMs?: number;
-} = {}): WorkflowDefinition {
+export function createParallelTestWorkflow(
+    options: {
+        name?: string;
+        branchCount?: number;
+        branchDelayMs?: number;
+    } = {}
+): WorkflowDefinition {
     const { name = "Parallel Test Workflow", branchCount = 3, branchDelayMs = 200 } = options;
 
     const nodes: WorkflowDefinition["nodes"] = {
@@ -588,11 +585,13 @@ export function createParallelTestWorkflow(options: {
 /**
  * Create a slow workflow that takes time to execute (for testing mid-execution signals).
  */
-export function createSlowTestWorkflow(options: {
-    name?: string;
-    totalDelayMs?: number;
-    nodeCount?: number;
-} = {}): WorkflowDefinition {
+export function createSlowTestWorkflow(
+    options: {
+        name?: string;
+        totalDelayMs?: number;
+        nodeCount?: number;
+    } = {}
+): WorkflowDefinition {
     const { name = "Slow Test Workflow", totalDelayMs = 2000, nodeCount = 5 } = options;
 
     const delayPerNode = Math.floor(totalDelayMs / nodeCount);
@@ -608,17 +607,19 @@ export function createSlowTestWorkflow(options: {
  * Create a workflow with a humanReview node for testing human-in-the-loop signals.
  * Input -> HumanReview -> Output
  */
-export function createHumanReviewTestWorkflow(options: {
-    name?: string;
-    variableName?: string;
-    inputType?: "text" | "number" | "boolean" | "json";
-    prompt?: string;
-    required?: boolean;
-    /** Add extra nodes before the human review */
-    preReviewNodeCount?: number;
-    /** Add extra nodes after the human review */
-    postReviewNodeCount?: number;
-} = {}): WorkflowDefinition {
+export function createHumanReviewTestWorkflow(
+    options: {
+        name?: string;
+        variableName?: string;
+        inputType?: "text" | "number" | "boolean" | "json";
+        prompt?: string;
+        required?: boolean;
+        /** Add extra nodes before the human review */
+        preReviewNodeCount?: number;
+        /** Add extra nodes after the human review */
+        postReviewNodeCount?: number;
+    } = {}
+): WorkflowDefinition {
     const {
         name = "Human Review Test Workflow",
         variableName = "userResponse",
@@ -733,10 +734,12 @@ export function createHumanReviewTestWorkflow(options: {
  * Create a workflow with multiple human review nodes in sequence.
  * Input -> HumanReview1 -> HumanReview2 -> Output
  */
-export function createMultipleHumanReviewTestWorkflow(options: {
-    name?: string;
-    reviewCount?: number;
-} = {}): WorkflowDefinition {
+export function createMultipleHumanReviewTestWorkflow(
+    options: {
+        name?: string;
+        reviewCount?: number;
+    } = {}
+): WorkflowDefinition {
     const { name = "Multiple Human Review Workflow", reviewCount = 2 } = options;
 
     const nodes: WorkflowDefinition["nodes"] = {
@@ -851,7 +854,10 @@ export async function waitForResult(
     const result = await Promise.race([
         handle.result(),
         new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`Workflow timed out after ${timeoutMs}ms`)), timeoutMs)
+            setTimeout(
+                () => reject(new Error(`Workflow timed out after ${timeoutMs}ms`)),
+                timeoutMs
+            )
         )
     ]);
 

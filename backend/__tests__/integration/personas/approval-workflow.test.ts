@@ -9,10 +9,6 @@
  */
 
 import {
-    createPersonaTestEnvironment,
-    expectEventPublished
-} from "./helpers/persona-test-env";
-import {
     createResearchAssistantPersona,
     createRunningInstance,
     createWaitingApprovalInstance,
@@ -23,6 +19,7 @@ import {
     createDeniedRequest,
     generateId
 } from "./helpers/persona-fixtures";
+import { createPersonaTestEnvironment, expectEventPublished } from "./helpers/persona-test-env";
 import type { PersonaTestEnvironment } from "./helpers/persona-test-env";
 
 describe("Approval Workflow", () => {
@@ -144,17 +141,13 @@ describe("Approval Workflow", () => {
             testEnv.repositories.personaApproval.create.mockResolvedValue(approval);
 
             // Simulate event emission
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "approval_needed",
-                {
-                    instanceId: instance.id,
-                    approvalId: approval.id,
-                    actionType: approval.action_type,
-                    toolName: approval.tool_name,
-                    riskLevel: approval.risk_level
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "approval_needed", {
+                instanceId: instance.id,
+                approvalId: approval.id,
+                actionType: approval.action_type,
+                toolName: approval.tool_name,
+                riskLevel: approval.risk_level
+            });
 
             expectEventPublished(testEnv.eventBus, "approval_needed", (data) => {
                 return data.instanceId === instance.id && data.approvalId === approval.id;
@@ -237,16 +230,12 @@ describe("Approval Workflow", () => {
             const approval = createToolCallApproval(instance.id);
 
             // Simulate event emission
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "approval_resolved",
-                {
-                    instanceId: instance.id,
-                    approvalId: approval.id,
-                    status: "approved",
-                    respondedBy: testEnv.testUser.id
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "approval_resolved", {
+                instanceId: instance.id,
+                approvalId: approval.id,
+                status: "approved",
+                respondedBy: testEnv.testUser.id
+            });
 
             expectEventPublished(testEnv.eventBus, "approval_resolved", (data) => {
                 return data.status === "approved" && data.approvalId === approval.id;
@@ -427,9 +416,8 @@ describe("Approval Workflow", () => {
 
             testEnv.repositories.personaApproval.expirePendingBefore.mockResolvedValue(5);
 
-            const expiredCount = await testEnv.repositories.personaApproval.expirePendingBefore(
-                expirationDate
-            );
+            const expiredCount =
+                await testEnv.repositories.personaApproval.expirePendingBefore(expirationDate);
 
             expect(expiredCount).toBe(5);
             expect(testEnv.repositories.personaApproval.expirePendingBefore).toHaveBeenCalledWith(
@@ -443,9 +431,8 @@ describe("Approval Workflow", () => {
 
             testEnv.repositories.personaApproval.cancelPendingByInstanceId.mockResolvedValue(1);
 
-            const cancelledCount = await testEnv.repositories.personaApproval.cancelPendingByInstanceId(
-                instance.id
-            );
+            const cancelledCount =
+                await testEnv.repositories.personaApproval.cancelPendingByInstanceId(instance.id);
 
             expect(cancelledCount).toBe(1);
         });

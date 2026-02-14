@@ -8,15 +8,15 @@ The Personas feature provides autonomous AI agents that work on complex, multi-h
 
 ### Key Capabilities
 
-| Capability | Description |
-|------------|-------------|
-| **Autonomous Execution** | Works independently for hours after initial goal-setting |
-| **Approval Workflow** | Pauses for user approval on risky actions |
-| **Deliverable Tracking** | Produces structured outputs (reports, code, data) |
-| **Real-time Progress** | WebSocket streaming of status and progress |
-| **Cost & Duration Limits** | Configurable safeguards for resource usage |
-| **Clarification Phase** | Optional Q&A before starting work |
-| **Connection Management** | Per-instance integration access grants |
+| Capability                 | Description                                              |
+| -------------------------- | -------------------------------------------------------- |
+| **Autonomous Execution**   | Works independently for hours after initial goal-setting |
+| **Approval Workflow**      | Pauses for user approval on risky actions                |
+| **Deliverable Tracking**   | Produces structured outputs (reports, code, data)        |
+| **Real-time Progress**     | WebSocket streaming of status and progress               |
+| **Cost & Duration Limits** | Configurable safeguards for resource usage               |
+| **Clarification Phase**    | Optional Q&A before starting work                        |
+| **Connection Management**  | Per-instance integration access grants                   |
 
 ---
 
@@ -49,15 +49,16 @@ The Personas feature provides autonomous AI agents that work on complex, multi-h
 
 The original specification proposed E2B sandboxes for isolated execution. After analysis, we implemented a **Temporal-only approach** using workflow signals:
 
-| Aspect | Original Plan (E2B) | Implemented (Temporal) |
-|--------|---------------------|------------------------|
-| **Execution** | Agent loop in E2B sandbox | Agent loop in Temporal workflow |
-| **Approval Wait** | Sandbox paused ($0/hour) | Workflow waits via `condition()` |
-| **Signals** | HTTP to sandbox → Temporal | Direct Temporal workflow signals |
-| **Isolation** | Firecracker microVM | Temporal worker isolation |
-| **Complexity** | High (sandbox management) | Low (standard Temporal patterns) |
+| Aspect            | Original Plan (E2B)        | Implemented (Temporal)           |
+| ----------------- | -------------------------- | -------------------------------- |
+| **Execution**     | Agent loop in E2B sandbox  | Agent loop in Temporal workflow  |
+| **Approval Wait** | Sandbox paused ($0/hour)   | Workflow waits via `condition()` |
+| **Signals**       | HTTP to sandbox → Temporal | Direct Temporal workflow signals |
+| **Isolation**     | Firecracker microVM        | Temporal worker isolation        |
+| **Complexity**    | High (sandbox management)  | Low (standard Temporal patterns) |
 
 **Rationale:**
+
 1. **No arbitrary code execution** - Personas execute controlled tool calls, not user-provided code
 2. **Simpler architecture** - No external sandbox service dependency
 3. **Faster iteration** - No 150ms sandbox startup per execution
@@ -69,16 +70,16 @@ The original specification proposed E2B sandboxes for isolated execution. After 
 
 ### Tables Overview
 
-| Table | Purpose | Key Fields |
-|-------|---------|------------|
-| `persona_definitions` | Pre-built AI persona configurations | name, slug, system_prompt, tools, autonomy_level |
-| `persona_instances` | User-initiated background tasks | status, task_description, execution_id, thread_id |
-| `persona_instance_messages` | Conversation history | role, content, metadata |
-| `persona_instance_deliverables` | Output artifacts | name, type, content, file_url |
-| `persona_instance_activity` | Activity/progress log | type, message, step_index |
-| `persona_task_templates` | Reusable task patterns | task_template, variables, usage_count |
-| `persona_instance_connections` | Integration grants | connection_id, granted_scopes |
-| `persona_approval_requests` | Approval workflow records | action_type, risk_level, status |
+| Table                           | Purpose                             | Key Fields                                        |
+| ------------------------------- | ----------------------------------- | ------------------------------------------------- |
+| `persona_definitions`           | Pre-built AI persona configurations | name, slug, system_prompt, tools, autonomy_level  |
+| `persona_instances`             | User-initiated background tasks     | status, task_description, execution_id, thread_id |
+| `persona_instance_messages`     | Conversation history                | role, content, metadata                           |
+| `persona_instance_deliverables` | Output artifacts                    | name, type, content, file_url                     |
+| `persona_instance_activity`     | Activity/progress log               | type, message, step_index                         |
+| `persona_task_templates`        | Reusable task patterns              | task_template, variables, usage_count             |
+| `persona_instance_connections`  | Integration grants                  | connection_id, granted_scopes                     |
+| `persona_approval_requests`     | Approval workflow records           | action_type, risk_level, status                   |
 
 ### Persona Definitions
 
@@ -281,62 +282,62 @@ CREATE TABLE persona_approval_requests (
 
 ### Persona Definitions
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/personas` | List all personas with filtering |
-| `GET` | `/api/personas/categories` | Gallery view grouped by category |
-| `GET` | `/api/personas/:slug` | Get single persona details |
-| `GET` | `/api/personas/:slug/templates` | List templates for persona |
-| `POST` | `/api/personas/:slug/templates/:templateId/generate` | Generate task from template |
-| `GET` | `/api/personas/:slug/available-connections` | Get grantable connections |
+| Method | Endpoint                                             | Description                      |
+| ------ | ---------------------------------------------------- | -------------------------------- |
+| `GET`  | `/api/personas`                                      | List all personas with filtering |
+| `GET`  | `/api/personas/categories`                           | Gallery view grouped by category |
+| `GET`  | `/api/personas/:slug`                                | Get single persona details       |
+| `GET`  | `/api/personas/:slug/templates`                      | List templates for persona       |
+| `POST` | `/api/personas/:slug/templates/:templateId/generate` | Generate task from template      |
+| `GET`  | `/api/personas/:slug/available-connections`          | Get grantable connections        |
 
 ### Persona Instances
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/persona-instances` | Create new instance |
-| `GET` | `/api/persona-instances` | List instances with filtering |
-| `GET` | `/api/persona-instances/dashboard` | Three-part dashboard view |
-| `GET` | `/api/persona-instances/count` | Badge count |
-| `GET` | `/api/persona-instances/:id` | Get instance details |
-| `DELETE` | `/api/persona-instances/:id` | Delete instance |
+| Method   | Endpoint                           | Description                   |
+| -------- | ---------------------------------- | ----------------------------- |
+| `POST`   | `/api/persona-instances`           | Create new instance           |
+| `GET`    | `/api/persona-instances`           | List instances with filtering |
+| `GET`    | `/api/persona-instances/dashboard` | Three-part dashboard view     |
+| `GET`    | `/api/persona-instances/count`     | Badge count                   |
+| `GET`    | `/api/persona-instances/:id`       | Get instance details          |
+| `DELETE` | `/api/persona-instances/:id`       | Delete instance               |
 
 ### Instance Actions
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/persona-instances/:id/message` | Send message to running instance |
-| `POST` | `/api/persona-instances/:id/cancel` | Cancel running instance |
-| `POST` | `/api/persona-instances/:id/complete` | User-initiated completion |
-| `POST` | `/api/persona-instances/:id/continue` | Continue work on completed instance |
-| `POST` | `/api/persona-instances/:id/skip-clarification` | Skip clarification phase |
+| Method | Endpoint                                        | Description                         |
+| ------ | ----------------------------------------------- | ----------------------------------- |
+| `POST` | `/api/persona-instances/:id/message`            | Send message to running instance    |
+| `POST` | `/api/persona-instances/:id/cancel`             | Cancel running instance             |
+| `POST` | `/api/persona-instances/:id/complete`           | User-initiated completion           |
+| `POST` | `/api/persona-instances/:id/continue`           | Continue work on completed instance |
+| `POST` | `/api/persona-instances/:id/skip-clarification` | Skip clarification phase            |
 
 ### Connections
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/persona-instances/:id/connections` | List granted connections |
-| `POST` | `/api/persona-instances/:id/connections` | Grant connection to instance |
-| `DELETE` | `/api/persona-instances/:id/connections/:connectionId` | Revoke connection |
+| Method   | Endpoint                                               | Description                  |
+| -------- | ------------------------------------------------------ | ---------------------------- |
+| `GET`    | `/api/persona-instances/:id/connections`               | List granted connections     |
+| `POST`   | `/api/persona-instances/:id/connections`               | Grant connection to instance |
+| `DELETE` | `/api/persona-instances/:id/connections/:connectionId` | Revoke connection            |
 
 ### Deliverables
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/persona-instances/:id/deliverables` | List deliverables |
-| `GET` | `/api/persona-instances/:id/deliverables/:deliverableId` | Get full deliverable |
-| `GET` | `/api/persona-instances/:id/deliverables/:deliverableId/download` | Download as file |
-| `DELETE` | `/api/persona-instances/:id/deliverables/:deliverableId` | Delete deliverable |
+| Method   | Endpoint                                                          | Description          |
+| -------- | ----------------------------------------------------------------- | -------------------- |
+| `GET`    | `/api/persona-instances/:id/deliverables`                         | List deliverables    |
+| `GET`    | `/api/persona-instances/:id/deliverables/:deliverableId`          | Get full deliverable |
+| `GET`    | `/api/persona-instances/:id/deliverables/:deliverableId/download` | Download as file     |
+| `DELETE` | `/api/persona-instances/:id/deliverables/:deliverableId`          | Delete deliverable   |
 
 ### Approvals
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/persona-instances/approvals` | List workspace approvals |
-| `GET` | `/api/persona-instances/approvals/count` | Pending approval count |
-| `GET` | `/api/persona-instances/:id/approvals` | Approvals for specific instance |
-| `POST` | `/api/persona-instances/:id/approvals/:approvalId/approve` | Approve action |
-| `POST` | `/api/persona-instances/:id/approvals/:approvalId/deny` | Deny action |
+| Method | Endpoint                                                   | Description                     |
+| ------ | ---------------------------------------------------------- | ------------------------------- |
+| `GET`  | `/api/persona-instances/approvals`                         | List workspace approvals        |
+| `GET`  | `/api/persona-instances/approvals/count`                   | Pending approval count          |
+| `GET`  | `/api/persona-instances/:id/approvals`                     | Approvals for specific instance |
+| `POST` | `/api/persona-instances/:id/approvals/:approvalId/approve` | Approve action                  |
+| `POST` | `/api/persona-instances/:id/approvals/:approvalId/deny`    | Deny action                     |
 
 ---
 
@@ -366,20 +367,19 @@ interface PersonaOrchestratorInput {
 
 ### Workflow Signals
 
-| Signal | Purpose | Payload |
-|--------|---------|---------|
-| `personaUserMessageSignal` | User messages during execution | `string` (message content) |
-| `skipClarificationSignal` | Skip clarification phase | none |
-| `cancelPersonaSignal` | Graceful cancellation | none |
-| `personaApprovalResponseSignal` | Approval decisions | `PersonaApprovalResponsePayload` |
+| Signal                          | Purpose                        | Payload                          |
+| ------------------------------- | ------------------------------ | -------------------------------- |
+| `personaUserMessageSignal`      | User messages during execution | `string` (message content)       |
+| `skipClarificationSignal`       | Skip clarification phase       | none                             |
+| `cancelPersonaSignal`           | Graceful cancellation          | none                             |
+| `personaApprovalResponseSignal` | Approval decisions             | `PersonaApprovalResponsePayload` |
 
 ### Signal Handlers
 
 ```typescript
 // Approval response signal
-export const personaApprovalResponseSignal = defineSignal<[PersonaApprovalResponsePayload]>(
-    "personaApprovalResponse"
-);
+export const personaApprovalResponseSignal =
+    defineSignal<[PersonaApprovalResponsePayload]>("personaApprovalResponse");
 
 interface PersonaApprovalResponsePayload {
     approval_id: string;
@@ -398,7 +398,7 @@ setHandler(personaApprovalResponseSignal, (payload) => {
 
 Personas communicate progress and completion via JSON blocks in their responses:
 
-```markdown
+````markdown
 ```workflow-signal
 {
     "type": "progress",
@@ -409,6 +409,8 @@ Personas communicate progress and completion via JSON blocks in their responses:
     "message": "Halfway through the analysis"
 }
 ```
+````
+
 ```
 
 **Signal Types:**
@@ -458,19 +460,21 @@ Tools are classified by risk level:
 ### Approval Flow
 
 ```
-+-------------+    +-------------+    +-------------+    +-------------+
-| Tool Call   |--->| Check Risk  |--->|   Create    |--->|  Wait for   |
-| Requested   |    | & Autonomy  |    |  Approval   |    |   Signal    |
-+-------------+    +------+------+    |   Request   |    | (up to 7d)  |
-                          |           +-------------+    +------+------+
-                          |                                     |
-                   (no approval needed)                         |
-                          |                              +------+------+
-                          v                              |             |
-                   +-------------+              +----------+   +----------+
-                   |   Execute   |              | Approved |   |  Denied  |
-                   |    Tool     |              |  Execute |   |   Skip   |
-                   +-------------+              +----------+   +----------+
+
++-------------+ +-------------+ +-------------+ +-------------+
+| Tool Call |--->| Check Risk |--->| Create |--->| Wait for |
+| Requested | | & Autonomy | | Approval | | Signal |
++-------------+ +------+------+ | Request | | (up to 7d) |
+| +-------------+ +------+------+
+| |
+(no approval needed) |
+| +------+------+
+v | |
++-------------+ +----------+ +----------+
+| Execute | | Approved | | Denied |
+| Tool | | Execute | | Skip |
++-------------+ +----------+ +----------+
+
 ```
 
 ---
@@ -482,6 +486,7 @@ The core of persona execution is an autonomous reasoning loop that iteratively w
 ### Loop Architecture
 
 ```
+
                          PERSONA REASONING LOOP
 
     +-------------------+
@@ -526,7 +531,8 @@ The core of persona execution is an autonomous reasoning loop that iteratively w
               +--------+--------+            +-----------------+
                        |
                        +---> (loop back to Check Limits)
-```
+
+````
 
 ### Iteration Steps
 
@@ -549,7 +555,7 @@ if (pendingUserMessages.length > 0) {
     // Add user messages to conversation context
     messageState.messages.push(...pendingUserMessages);
 }
-```
+````
 
 **2. Continue-as-New (Every 50 Iterations)**
 
@@ -582,8 +588,8 @@ The LLM receives the full conversation history and available tools:
 const llmResponse = await callLLM({
     model: persona.model,
     provider: persona.provider,
-    messages: messageState.messages,  // Full context
-    tools: availableTools,            // Filtered by failure count
+    messages: messageState.messages, // Full context
+    tools: availableTools, // Filtered by failure count
     temperature: persona.temperature,
     maxTokens: persona.max_tokens
 });
@@ -649,7 +655,7 @@ for (const toolCall of llmResponse.tool_calls) {
     try {
         const result = await executeToolCall(toolCall);
         messageState.messages.push({ role: "tool", content: result });
-        toolFailureCounts.delete(toolCall.name);  // Reset on success
+        toolFailureCounts.delete(toolCall.name); // Reset on success
     } catch (error) {
         // Track failures, blacklist after 3 consecutive failures
         const failures = toolFailureCounts.get(toolCall.name) + 1;
@@ -660,9 +666,7 @@ for (const toolCall of llmResponse.tool_calls) {
             content: {
                 error: error.message,
                 is_blacklisted: failures >= 3,
-                suggestion: failures >= 3
-                    ? "Tool disabled, use alternative"
-                    : "You may retry"
+                suggestion: failures >= 3 ? "Tool disabled, use alternative" : "You may retry"
             }
         });
     }
@@ -685,7 +689,8 @@ if (!hasToolCalls && !hasSignals) {
     // Inject reminder
     messageState.messages.push({
         role: "system",
-        content: "You responded without tools or signals. If done, include a completion signal. Otherwise, continue working."
+        content:
+            "You responded without tools or signals. If done, include a completion signal. Otherwise, continue working."
     });
 }
 ```
@@ -694,7 +699,7 @@ if (!hasToolCalls && !hasSignals) {
 
 The persona system prompt guides autonomous behavior:
 
-```
+````
 ## Persona Identity
 {persona.system_prompt}  // Role, expertise, personality
 
@@ -722,9 +727,10 @@ You communicate workflow state via JSON signal blocks:
     "remaining_steps": ["Create report"],
     "percentage": 40
 }
-```
+````
 
 ### Creating Deliverables
+
 ```workflow-signal
 {
     "type": "deliverable",
@@ -736,6 +742,7 @@ You communicate workflow state via JSON signal blocks:
 ```
 
 ### Task Completion
+
 ```workflow-signal
 {
     "type": "complete",
@@ -746,12 +753,14 @@ You communicate workflow state via JSON signal blocks:
 ```
 
 **Rules:**
+
 1. Include multiple signals in one response if needed
 2. Always include explanatory text alongside signals
 3. Continue using tools for actual work
 4. Only signal complete when ALL work is done
 5. Every response should include tool calls OR a completion signal
-```
+
+````
 
 ### Tool Failure Handling
 
@@ -772,7 +781,7 @@ The LLM receives informative error messages to adapt:
     "max_failures": 3,
     "suggestion": "Tool failed (attempt 2/3). You may retry or try a different approach."
 }
-```
+````
 
 ### Memory Management
 
@@ -788,6 +797,7 @@ async function summarizeThreadContext(messages, maxMessages) {
 ```
 
 This preserves:
+
 - Original task context
 - Recent conversation
 - Key decisions and findings
@@ -841,44 +851,44 @@ if (requiresApproval) {
 
 ### Core Execution Activities
 
-| Activity | Purpose | Timeout |
-|----------|---------|---------|
-| `getPersonaConfig` | Load persona definition with tools | 30 min |
-| `callLLM` | LLM inference | 30 min |
-| `executeToolCall` | Tool execution | 30 min |
-| `saveThreadIncremental` | Persist conversation | 30 min |
-| `validateInput` | Safety validation | 30 min |
-| `validateOutput` | Output validation | 30 min |
+| Activity                | Purpose                            | Timeout |
+| ----------------------- | ---------------------------------- | ------- |
+| `getPersonaConfig`      | Load persona definition with tools | 30 min  |
+| `callLLM`               | LLM inference                      | 30 min  |
+| `executeToolCall`       | Tool execution                     | 30 min  |
+| `saveThreadIncremental` | Persist conversation               | 30 min  |
+| `validateInput`         | Safety validation                  | 30 min  |
+| `validateOutput`        | Output validation                  | 30 min  |
 
 ### Persona-Specific Activities
 
-| Activity | Purpose | Timeout |
-|----------|---------|---------|
-| `updatePersonaInstanceProgress` | Track iterations/credits | 2 min |
-| `updatePersonaInstanceStatus` | Status transitions | 2 min |
-| `updatePersonaClarificationState` | Clarification tracking | 2 min |
-| `addPersonaMessage` | Store conversation message | 2 min |
-| `createPersonaDeliverable` | Save output artifact | 2 min |
-| `summarizeThreadContext` | Compress long conversations | 2 min |
+| Activity                          | Purpose                     | Timeout |
+| --------------------------------- | --------------------------- | ------- |
+| `updatePersonaInstanceProgress`   | Track iterations/credits    | 2 min   |
+| `updatePersonaInstanceStatus`     | Status transitions          | 2 min   |
+| `updatePersonaClarificationState` | Clarification tracking      | 2 min   |
+| `addPersonaMessage`               | Store conversation message  | 2 min   |
+| `createPersonaDeliverable`        | Save output artifact        | 2 min   |
+| `summarizeThreadContext`          | Compress long conversations | 2 min   |
 
 ### Approval Activities
 
-| Activity | Purpose | Timeout |
-|----------|---------|---------|
-| `createPersonaApprovalRequest` | Create approval record | 30 sec |
-| `emitApprovalNeeded` | WebSocket notification | 10 sec |
-| `emitApprovalResolved` | Completion notification | 10 sec |
-| `clearPendingApproval` | Cleanup after resolution | 30 sec |
+| Activity                       | Purpose                  | Timeout |
+| ------------------------------ | ------------------------ | ------- |
+| `createPersonaApprovalRequest` | Create approval record   | 30 sec  |
+| `emitApprovalNeeded`           | WebSocket notification   | 10 sec  |
+| `emitApprovalResolved`         | Completion notification  | 10 sec  |
+| `clearPendingApproval`         | Cleanup after resolution | 30 sec  |
 
 ### Event Emission Activities
 
-| Activity | Purpose | Timeout |
-|----------|---------|---------|
-| `emitPersonaStarted` | Instance started | 10 sec |
-| `emitPersonaProgress` | Progress update | 10 sec |
-| `emitPersonaDeliverable` | Deliverable created | 10 sec |
-| `emitPersonaCompleted` | Instance completed | 10 sec |
-| `emitPersonaFailed` | Instance failed | 10 sec |
+| Activity                 | Purpose             | Timeout |
+| ------------------------ | ------------------- | ------- |
+| `emitPersonaStarted`     | Instance started    | 10 sec  |
+| `emitPersonaProgress`    | Progress update     | 10 sec  |
+| `emitPersonaDeliverable` | Deliverable created | 10 sec  |
+| `emitPersonaCompleted`   | Instance completed  | 10 sec  |
+| `emitPersonaFailed`      | Instance failed     | 10 sec  |
 
 ---
 
@@ -886,16 +896,16 @@ if (requiresApproval) {
 
 Real-time events published to `persona:${instanceId}:events`:
 
-| Event Type | When | Key Data |
-|------------|------|----------|
-| `persona:instance:started` | Execution begins | instanceId |
-| `persona:instance:progress` | Progress update | progress object |
-| `persona:instance:approval_needed` | Approval required | approval details |
-| `persona:instance:approval_resolved` | User responded | decision |
-| `persona:instance:deliverable` | Output created | deliverable info |
-| `persona:instance:completed` | Task finished | summary |
-| `persona:instance:failed` | Error occurred | error message |
-| `persona:instance:message` | New message | role, content |
+| Event Type                           | When              | Key Data         |
+| ------------------------------------ | ----------------- | ---------------- |
+| `persona:instance:started`           | Execution begins  | instanceId       |
+| `persona:instance:progress`          | Progress update   | progress object  |
+| `persona:instance:approval_needed`   | Approval required | approval details |
+| `persona:instance:approval_resolved` | User responded    | decision         |
+| `persona:instance:deliverable`       | Output created    | deliverable info |
+| `persona:instance:completed`         | Task finished     | summary          |
+| `persona:instance:failed`            | Error occurred    | error message    |
+| `persona:instance:message`           | New message       | role, content    |
 
 ---
 
@@ -909,24 +919,43 @@ export type PersonaAutonomyLevel = "full_auto" | "approve_high_risk" | "approve_
 export type PersonaApprovalRequestRiskLevel = "low" | "medium" | "high";
 export type PersonaApprovalRequestStatus = "pending" | "approved" | "denied" | "expired";
 export type PersonaApprovalActionType =
-    | "tool_call" | "file_write" | "external_api" | "send_message" | "cost_threshold";
+    | "tool_call"
+    | "file_write"
+    | "external_api"
+    | "send_message"
+    | "cost_threshold";
 
 // Instance states
 export type PersonaInstanceStatus =
-    | "initializing" | "clarifying" | "running" | "waiting_approval"
-    | "completed" | "cancelled" | "failed" | "timeout";
+    | "initializing"
+    | "clarifying"
+    | "running"
+    | "waiting_approval"
+    | "completed"
+    | "cancelled"
+    | "failed"
+    | "timeout";
 
 export type PersonaInstanceCompletionReason =
-    | "success" | "max_duration" | "max_cost" | "cancelled" | "failed" | "user_completed";
+    | "success"
+    | "max_duration"
+    | "max_cost"
+    | "cancelled"
+    | "failed"
+    | "user_completed";
 
 // Categories
 export type PersonaCategory =
-    | "research" | "content" | "development" | "data"
-    | "operations" | "business" | "proposals";
+    | "research"
+    | "content"
+    | "development"
+    | "data"
+    | "operations"
+    | "business"
+    | "proposals";
 
 // Deliverable types
-export type DeliverableType =
-    | "markdown" | "csv" | "json" | "pdf" | "code" | "image" | "html";
+export type DeliverableType = "markdown" | "csv" | "json" | "pdf" | "code" | "image" | "html";
 ```
 
 ---
@@ -937,13 +966,13 @@ export type DeliverableType =
 
 ```typescript
 class PersonaDefinitionRepository {
-    create(data): Promise<PersonaDefinitionModel>
-    findById(id): Promise<PersonaDefinitionModel | null>
-    findBySlug(slug): Promise<PersonaDefinitionModel | null>
-    findAll(options): Promise<PersonaDefinitionModel[]>
-    findGroupedByCategory(): Promise<Map<string, PersonaDefinitionModel[]>>
-    update(id, data): Promise<PersonaDefinitionModel>
-    upsertBySlug(slug, data): Promise<PersonaDefinitionModel>
+    create(data): Promise<PersonaDefinitionModel>;
+    findById(id): Promise<PersonaDefinitionModel | null>;
+    findBySlug(slug): Promise<PersonaDefinitionModel | null>;
+    findAll(options): Promise<PersonaDefinitionModel[]>;
+    findGroupedByCategory(): Promise<Map<string, PersonaDefinitionModel[]>>;
+    update(id, data): Promise<PersonaDefinitionModel>;
+    upsertBySlug(slug, data): Promise<PersonaDefinitionModel>;
 }
 ```
 
@@ -951,18 +980,18 @@ class PersonaDefinitionRepository {
 
 ```typescript
 class PersonaInstanceRepository {
-    create(data): Promise<PersonaInstanceModel>
-    findById(id): Promise<PersonaInstanceModel | null>
-    findByIdAndWorkspaceId(id, workspaceId): Promise<PersonaInstanceModel | null>
-    findByUserId(userId, options): Promise<PersonaInstanceModel[]>
-    getDashboard(workspaceId): Promise<PersonaInstanceDashboard>
-    countNeedsAttention(workspaceId): Promise<number>
-    update(id, data): Promise<PersonaInstanceModel>
-    updateStatus(id, status, completionReason?): Promise<PersonaInstanceModel>
-    incrementProgress(id, credits, iterations): Promise<void>
-    incrementClarificationExchange(id): Promise<void>
-    skipClarification(id): Promise<void>
-    delete(id): Promise<void>
+    create(data): Promise<PersonaInstanceModel>;
+    findById(id): Promise<PersonaInstanceModel | null>;
+    findByIdAndWorkspaceId(id, workspaceId): Promise<PersonaInstanceModel | null>;
+    findByUserId(userId, options): Promise<PersonaInstanceModel[]>;
+    getDashboard(workspaceId): Promise<PersonaInstanceDashboard>;
+    countNeedsAttention(workspaceId): Promise<number>;
+    update(id, data): Promise<PersonaInstanceModel>;
+    updateStatus(id, status, completionReason?): Promise<PersonaInstanceModel>;
+    incrementProgress(id, credits, iterations): Promise<void>;
+    incrementClarificationExchange(id): Promise<void>;
+    skipClarification(id): Promise<void>;
+    delete(id): Promise<void>;
 }
 ```
 
@@ -970,15 +999,15 @@ class PersonaInstanceRepository {
 
 ```typescript
 class PersonaApprovalRequestRepository {
-    create(data): Promise<PersonaApprovalRequestModel>
-    findById(id): Promise<PersonaApprovalRequestModel | null>
-    findPendingByInstanceId(instanceId): Promise<PersonaApprovalRequestModel[]>
-    findByInstanceId(instanceId): Promise<PersonaApprovalRequestModel[]>
-    findPendingByWorkspaceId(workspaceId, options): Promise<PersonaApprovalRequestSummary[]>
-    countPendingByWorkspaceId(workspaceId): Promise<number>
-    update(id, data): Promise<PersonaApprovalRequestModel>
-    expirePendingBefore(date): Promise<number>
-    cancelPendingByInstanceId(instanceId): Promise<void>
+    create(data): Promise<PersonaApprovalRequestModel>;
+    findById(id): Promise<PersonaApprovalRequestModel | null>;
+    findPendingByInstanceId(instanceId): Promise<PersonaApprovalRequestModel[]>;
+    findByInstanceId(instanceId): Promise<PersonaApprovalRequestModel[]>;
+    findPendingByWorkspaceId(workspaceId, options): Promise<PersonaApprovalRequestSummary[]>;
+    countPendingByWorkspaceId(workspaceId): Promise<number>;
+    update(id, data): Promise<PersonaApprovalRequestModel>;
+    expirePendingBefore(date): Promise<number>;
+    cancelPendingByInstanceId(instanceId): Promise<void>;
 }
 ```
 
@@ -990,8 +1019,8 @@ The dashboard API returns a three-part view optimized for the UI:
 
 ```typescript
 interface PersonaInstanceDashboard {
-    needs_attention: PersonaInstanceSummary[];  // Pending approvals + recent completions (24h)
-    running: PersonaInstanceSummary[];          // Currently executing
+    needs_attention: PersonaInstanceSummary[]; // Pending approvals + recent completions (24h)
+    running: PersonaInstanceSummary[]; // Currently executing
     recent_completed: PersonaInstanceSummary[]; // Completed outside 24h window
 }
 ```
@@ -1067,9 +1096,9 @@ POST /api/persona-instances/:id/continue
 
 ```typescript
 interface PersonaLimits {
-    max_cost_credits: number;      // Stop if accumulated cost exceeds
-    max_duration_hours: number;    // Stop if elapsed time exceeds
-    max_iterations: number;        // Stop after N reasoning cycles
+    max_cost_credits: number; // Stop if accumulated cost exceeds
+    max_duration_hours: number; // Stop if elapsed time exceeds
+    max_iterations: number; // Stop after N reasoning cycles
 }
 ```
 
@@ -1078,9 +1107,9 @@ interface PersonaLimits {
 - Credits are tracked per iteration via `incrementProgress` activity
 - Duration is checked against `started_at` timestamp
 - When limits are reached:
-  - Save current deliverables
-  - Mark completion_reason as `max_cost` or `max_duration`
-  - Transition to `completed` status
+    - Save current deliverables
+    - Mark completion_reason as `max_cost` or `max_duration`
+    - Transition to `completed` status
 
 ---
 
@@ -1095,6 +1124,7 @@ Optional Q&A before starting autonomous work:
 5. Transitions to `running` status
 
 **Configuration:**
+
 - `clarification_max_exchanges`: Limit before auto-proceeding (default: 3)
 - `clarification_skipped`: User can skip via `/skip-clarification` endpoint
 

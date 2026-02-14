@@ -7,19 +7,16 @@
  * Continue-as-new is triggered every 50 iterations (CONTINUE_AS_NEW_THRESHOLD).
  */
 
+import { createToolCallResponse, createCompletionResponse } from "../../../helpers/llm-mock-client";
 import {
     createAgentTestEnvironment,
     runAgentExecution,
     createTestAgent
 } from "../../agents/helpers/agent-test-env";
-import {
-    createToolCallResponse,
-    createCompletionResponse
-} from "../../../helpers/llm-mock-client";
-import type { AgentTestEnvironment } from "../../agents/helpers/agent-test-env";
+import type { SerializedThread } from "../../../../src/services/agents/ThreadManager";
 import type { Tool } from "../../../../src/storage/models/Agent";
 import type { ThreadMessage } from "../../../../src/storage/models/AgentExecution";
-import type { SerializedThread } from "../../../../src/services/agents/ThreadManager";
+import type { AgentTestEnvironment } from "../../agents/helpers/agent-test-env";
 
 // Increase test timeout for Temporal workflows with many iterations
 jest.setTimeout(120000);
@@ -126,9 +123,7 @@ describe("Continue-As-New Integration Tests", () => {
             };
 
             testEnv = await createAgentTestEnvironment({
-                mockLLMResponses: [
-                    createCompletionResponse("Continuing from previous context!")
-                ]
+                mockLLMResponses: [createCompletionResponse("Continuing from previous context!")]
             });
 
             const agent = createTestAgent({
@@ -408,9 +403,7 @@ describe("Continue-As-New Integration Tests", () => {
             expect(result.result.iterations).toBeGreaterThan(10);
 
             // Verify all tool calls were made
-            const toolEvents = result.events.filter(
-                (e) => e.type === "agent:tool:call:completed"
-            );
+            const toolEvents = result.events.filter((e) => e.type === "agent:tool:call:completed");
             expect(toolEvents.length).toBe(5);
         });
 
@@ -450,9 +443,7 @@ describe("Continue-As-New Integration Tests", () => {
             const responses = [];
 
             for (let i = 0; i < toolCallCount; i++) {
-                responses.push(
-                    createToolCallResponse("test_action", { action: `action_${i}` })
-                );
+                responses.push(createToolCallResponse("test_action", { action: `action_${i}` }));
             }
             responses.push(createCompletionResponse("All actions done"));
 
@@ -549,8 +540,7 @@ describe("Continue-As-New Integration Tests", () => {
             // Tool error should have been captured
             const toolEvents = result.events.filter(
                 (e) =>
-                    e.type === "agent:tool:call:started" ||
-                    e.type === "agent:tool:call:completed"
+                    e.type === "agent:tool:call:started" || e.type === "agent:tool:call:completed"
             );
             expect(toolEvents.length).toBeGreaterThanOrEqual(1);
         });

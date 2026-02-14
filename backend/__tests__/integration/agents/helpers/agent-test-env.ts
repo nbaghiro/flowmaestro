@@ -13,7 +13,6 @@ import { Worker, Runtime } from "@temporalio/worker";
 import { nanoid } from "nanoid";
 import type { JsonObject } from "@flowmaestro/shared";
 import { createLLMMockClient, createCompletionResponse } from "../../../helpers/llm-mock-client";
-import type { LLMMockConfig } from "../../../helpers/llm-mock-client";
 import type { SafetyContext, SafetyConfig } from "../../../../src/core/safety/types";
 import type { Tool, MemoryConfig } from "../../../../src/storage/models/Agent";
 import type { ThreadMessage, ToolCall } from "../../../../src/storage/models/AgentExecution";
@@ -23,6 +22,7 @@ import type {
     AgentConfig,
     LLMResponse
 } from "../../../../src/temporal/workflows/agent-orchestrator";
+import type { LLMMockConfig } from "../../../helpers/llm-mock-client";
 
 // ============================================================================
 // TYPES

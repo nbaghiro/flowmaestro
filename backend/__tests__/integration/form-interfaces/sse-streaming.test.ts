@@ -90,8 +90,11 @@ describe("GET /api/public/form-interfaces/:slug/submissions/:submissionId/stream
 
             // Act
             testEnv.services.eventBus.simulateEvent(
-                `workflow:events:execution:progress`,
-                progressEvent as Record<string, unknown> as import("./helpers/form-interface-test-env").FormStreamingEvent
+                "workflow:events:execution:progress",
+                progressEvent as Record<
+                    string,
+                    unknown
+                > as import("./helpers/form-interface-test-env").FormStreamingEvent
             );
 
             // Assert
@@ -108,8 +111,11 @@ describe("GET /api/public/form-interfaces/:slug/submissions/:submissionId/stream
 
             // Act
             testEnv.services.eventBus.simulateEvent(
-                `workflow:events:node:completed`,
-                nodeEvent as Record<string, unknown> as import("./helpers/form-interface-test-env").FormStreamingEvent
+                "workflow:events:node:completed",
+                nodeEvent as Record<
+                    string,
+                    unknown
+                > as import("./helpers/form-interface-test-env").FormStreamingEvent
             );
 
             // Assert
@@ -143,8 +149,11 @@ describe("GET /api/public/form-interfaces/:slug/submissions/:submissionId/stream
 
             // Act - simulate completion event
             testEnv.services.eventBus.simulateEvent(
-                `workflow:events:execution:completed`,
-                completedEvent as Record<string, unknown> as import("./helpers/form-interface-test-env").FormStreamingEvent
+                "workflow:events:execution:completed",
+                completedEvent as Record<
+                    string,
+                    unknown
+                > as import("./helpers/form-interface-test-env").FormStreamingEvent
             );
 
             // Update DB on completion
@@ -178,8 +187,11 @@ describe("GET /api/public/form-interfaces/:slug/submissions/:submissionId/stream
 
             // Act
             testEnv.services.eventBus.simulateEvent(
-                `workflow:events:execution:failed`,
-                failedEvent as Record<string, unknown> as import("./helpers/form-interface-test-env").FormStreamingEvent
+                "workflow:events:execution:failed",
+                failedEvent as Record<
+                    string,
+                    unknown
+                > as import("./helpers/form-interface-test-env").FormStreamingEvent
             );
 
             await testEnv.repositories.submission.updateExecutionStatus(
@@ -206,8 +218,11 @@ describe("GET /api/public/form-interfaces/:slug/submissions/:submissionId/stream
 
             // Act
             testEnv.services.eventBus.simulateEvent(
-                `agent:events:agent:execution:token`,
-                tokenEvent as Record<string, unknown> as import("./helpers/form-interface-test-env").FormStreamingEvent
+                "agent:events:agent:execution:token",
+                tokenEvent as Record<
+                    string,
+                    unknown
+                > as import("./helpers/form-interface-test-env").FormStreamingEvent
             );
 
             // Assert
@@ -229,8 +244,11 @@ describe("GET /api/public/form-interfaces/:slug/submissions/:submissionId/stream
 
             // Act
             testEnv.services.eventBus.simulateEvent(
-                `agent:events:agent:execution:completed`,
-                completedEvent as Record<string, unknown> as import("./helpers/form-interface-test-env").FormStreamingEvent
+                "agent:events:agent:execution:completed",
+                completedEvent as Record<
+                    string,
+                    unknown
+                > as import("./helpers/form-interface-test-env").FormStreamingEvent
             );
 
             await testEnv.repositories.submission.updateExecutionStatus(
@@ -251,8 +269,11 @@ describe("GET /api/public/form-interfaces/:slug/submissions/:submissionId/stream
 
             // Act
             testEnv.services.eventBus.simulateEvent(
-                `agent:events:agent:execution:failed`,
-                failedEvent as Record<string, unknown> as import("./helpers/form-interface-test-env").FormStreamingEvent
+                "agent:events:agent:execution:failed",
+                failedEvent as Record<
+                    string,
+                    unknown
+                > as import("./helpers/form-interface-test-env").FormStreamingEvent
             );
 
             // Assert

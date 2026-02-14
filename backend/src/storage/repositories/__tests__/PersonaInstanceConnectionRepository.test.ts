@@ -77,10 +77,11 @@ describe("PersonaInstanceConnectionRepository", () => {
 
             const result = await repository.create(input);
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.any(String),
-                [instanceId, connectionId, "[]"]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.any(String), [
+                instanceId,
+                connectionId,
+                "[]"
+            ]);
             expect(result.granted_scopes).toEqual([]);
         });
 
@@ -195,7 +196,9 @@ describe("PersonaInstanceConnectionRepository", () => {
             const result = await repository.findByInstanceIdWithDetails(instanceId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("JOIN flowmaestro.connections c ON pic.connection_id = c.id"),
+                expect.stringContaining(
+                    "JOIN flowmaestro.connections c ON pic.connection_id = c.id"
+                ),
                 [instanceId]
             );
             expect(result).toHaveLength(1);
@@ -253,7 +256,9 @@ describe("PersonaInstanceConnectionRepository", () => {
             const result = await repository.hasProviderAccess("instance-id", "slack");
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("JOIN flowmaestro.connections c ON pic.connection_id = c.id"),
+                expect.stringContaining(
+                    "JOIN flowmaestro.connections c ON pic.connection_id = c.id"
+                ),
                 ["instance-id", "slack"]
             );
             expect(mockQuery).toHaveBeenCalledWith(

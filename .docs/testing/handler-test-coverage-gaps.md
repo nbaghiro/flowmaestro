@@ -20,15 +20,16 @@ This document provides a detailed analysis of test coverage gaps in the workflow
 
 ## Executive Summary
 
-| Metric | Current | Target | Progress |
-|--------|---------|--------|----------|
-| Handlers with tests | 36/38 (95%) | 38/38 (100%) | ⚪ |
-| Avg tests per handler | 42 | 40+ | 🟢 Achieved! |
-| Concurrency tests | ~50% of handlers | 70% | 🟢 +35% |
-| Timeout tests | ~35% of handlers | 60% | 🟢 +25% |
-| Error depth coverage | ~50% | 50% | 🟢 Achieved! |
+| Metric                | Current          | Target       | Progress     |
+| --------------------- | ---------------- | ------------ | ------------ |
+| Handlers with tests   | 36/38 (95%)      | 38/38 (100%) | ⚪           |
+| Avg tests per handler | 42               | 40+          | 🟢 Achieved! |
+| Concurrency tests     | ~50% of handlers | 70%          | 🟢 +35%      |
+| Timeout tests         | ~35% of handlers | 60%          | 🟢 +25%      |
+| Error depth coverage  | ~50%             | 50%          | 🟢 Achieved! |
 
 **Completed (Phase 1, 2 & 3):**
+
 - ✅ File Operations - Added 21 tests (URL timeout, PDF/CSV edge cases, concurrency)
 - ✅ Audio Input - Added 15 tests (concurrency, formats, rate limiting, error handling)
 - ✅ Shared Memory - Added 12 tests (concurrency, search, large values, validation)
@@ -42,6 +43,7 @@ This document provides a detailed analysis of test coverage gaps in the workflow
 - ✅ PDF Generation - Added 4 tests (concurrency, error isolation, cleanup)
 
 **Remaining (Phase 4 - Future):**
+
 - Integration tests for handler chaining (LLM → Transform → Output)
 
 ---
@@ -50,22 +52,22 @@ This document provides a detailed analysis of test coverage gaps in the workflow
 
 ### Handlers by Test Count
 
-| Category | Handler | Tests | Status |
-|----------|---------|-------|--------|
-| **High** | Code | 84 | ✅ Excellent |
-| **High** | Conditional | 56 | ✅ Excellent |
-| **High** | Transform | 54 | ✅ Excellent |
-| **High** | Loop | 46 | ✅ Excellent |
-| **High** | LLM | 45 | ✅ Excellent |
-| **Good** | Human Review | 36 | ✅ Good |
-| **Good** | Integration Node | 35 | ✅ Good |
-| **Good** | Vision | 35 | ✅ Good |
-| **Good** | File Operations | 57 | ✅ Excellent |
-| **Good** | Input | 40 | ✅ Good |
-| **Good** | PDF Extract | 34 | ✅ Good |
-| **Good** | Audio Input | 33 | ✅ Good |
-| **Good** | Shared Memory | 32 | ✅ Good |
-| **Good** | Switch | 30 | ✅ Good |
+| Category | Handler          | Tests | Status       |
+| -------- | ---------------- | ----- | ------------ |
+| **High** | Code             | 84    | ✅ Excellent |
+| **High** | Conditional      | 56    | ✅ Excellent |
+| **High** | Transform        | 54    | ✅ Excellent |
+| **High** | Loop             | 46    | ✅ Excellent |
+| **High** | LLM              | 45    | ✅ Excellent |
+| **Good** | Human Review     | 36    | ✅ Good      |
+| **Good** | Integration Node | 35    | ✅ Good      |
+| **Good** | Vision           | 35    | ✅ Good      |
+| **Good** | File Operations  | 57    | ✅ Excellent |
+| **Good** | Input            | 40    | ✅ Good      |
+| **Good** | PDF Extract      | 34    | ✅ Good      |
+| **Good** | Audio Input      | 33    | ✅ Good      |
+| **Good** | Shared Memory    | 32    | ✅ Good      |
+| **Good** | Switch           | 30    | ✅ Good      |
 
 ### Test File Mapping
 
@@ -127,6 +129,7 @@ handlers/
 ### Implementation Details
 
 The `FileOperationsNodeHandler` supports:
+
 - `read` - Read file from path or URL
 - `write` - Write content to file path
 - `parsePDF` - Parse PDF from URL, path, or base64
@@ -136,6 +139,7 @@ The `FileOperationsNodeHandler` supports:
 ### Missing Test Scenarios
 
 #### 1. Path Security Tests (Critical)
+
 ```typescript
 describe("path security", () => {
     it("prevents path traversal attacks", async () => {
@@ -181,6 +185,7 @@ describe("path security", () => {
 ```
 
 #### 2. URL Download Security Tests
+
 ```typescript
 describe("URL security", () => {
     it("prevents SSRF attacks to internal networks", async () => {
@@ -214,9 +219,7 @@ describe("URL security", () => {
             .get("/file")
             .reply(302, "", { Location: "https://cdn.example.com/file.pdf" });
 
-        nock("https://cdn.example.com")
-            .get("/file.pdf")
-            .reply(200, "content");
+        nock("https://cdn.example.com").get("/file.pdf").reply(200, "content");
 
         const input = createHandlerInput({
             nodeType: "file",
@@ -234,6 +237,7 @@ describe("URL security", () => {
 ```
 
 #### 3. Timeout and Resource Limits
+
 ```typescript
 describe("resource limits", () => {
     it("times out on slow URL downloads", async () => {
@@ -272,6 +276,7 @@ describe("resource limits", () => {
 ```
 
 #### 4. PDF Parsing Edge Cases
+
 ```typescript
 describe("PDF parsing edge cases", () => {
     it("handles encrypted PDFs", async () => {
@@ -319,6 +324,7 @@ describe("PDF parsing edge cases", () => {
 ```
 
 #### 5. CSV Parsing Edge Cases
+
 ```typescript
 describe("CSV parsing edge cases", () => {
     it("handles CSV with quoted fields containing commas", async () => {
@@ -353,6 +359,7 @@ describe("CSV parsing edge cases", () => {
 ```
 
 #### 6. Concurrent File Operations
+
 ```typescript
 describe("concurrent operations", () => {
     it("handles multiple concurrent reads", async () => {
@@ -367,12 +374,10 @@ describe("concurrent operations", () => {
             })
         );
 
-        const outputs = await Promise.all(
-            inputs.map(input => handler.execute(input))
-        );
+        const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
 
         expect(outputs).toHaveLength(5);
-        outputs.forEach(output => {
+        outputs.forEach((output) => {
             expect(output.result.content).toBeDefined();
         });
     });
@@ -397,7 +402,7 @@ describe("concurrent operations", () => {
             })
         ];
 
-        await Promise.all(inputs.map(input => handler.execute(input)));
+        await Promise.all(inputs.map((input) => handler.execute(input)));
 
         // Verify last write state
     });
@@ -414,6 +419,7 @@ describe("concurrent operations", () => {
 **Current Tests:** 18 (in `audio-input.test.ts`)
 
 ### Existing Coverage
+
 - ✅ Handler properties (4 tests)
 - ✅ OpenAI Whisper provider (3 tests)
 - ✅ Deepgram provider (4 tests)
@@ -424,6 +430,7 @@ describe("concurrent operations", () => {
 ### Missing Test Scenarios
 
 #### 1. Concurrent Transcription
+
 ```typescript
 describe("concurrent transcription", () => {
     it("handles multiple simultaneous transcriptions", async () => {
@@ -442,7 +449,9 @@ describe("concurrent transcription", () => {
                     outputVariable: "result1"
                 },
                 context: createTestContext({
-                    inputs: { audio1: { fileName: "a1.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/a1" } }
+                    inputs: {
+                        audio1: { fileName: "a1.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/a1" }
+                    }
                 })
             }),
             createHandlerInput({
@@ -454,7 +463,9 @@ describe("concurrent transcription", () => {
                     outputVariable: "result2"
                 },
                 context: createTestContext({
-                    inputs: { audio2: { fileName: "a2.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/a2" } }
+                    inputs: {
+                        audio2: { fileName: "a2.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/a2" }
+                    }
                 })
             }),
             createHandlerInput({
@@ -466,12 +477,14 @@ describe("concurrent transcription", () => {
                     outputVariable: "result3"
                 },
                 context: createTestContext({
-                    inputs: { audio3: { fileName: "a3.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/a3" } }
+                    inputs: {
+                        audio3: { fileName: "a3.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/a3" }
+                    }
                 })
             })
         ];
 
-        const outputs = await Promise.all(inputs.map(input => handler.execute(input)));
+        const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
 
         expect(outputs).toHaveLength(3);
         expect(outputs[0].result.result1.text).toBe("First audio");
@@ -482,11 +495,12 @@ describe("concurrent transcription", () => {
 ```
 
 #### 2. Provider Timeout Handling
+
 ```typescript
 describe("timeout handling", () => {
     it("times out on slow OpenAI transcription", async () => {
-        mockOpenAICreate.mockImplementation(() =>
-            new Promise(resolve => setTimeout(resolve, 120000)) // Never resolves in time
+        mockOpenAICreate.mockImplementation(
+            () => new Promise((resolve) => setTimeout(resolve, 120000)) // Never resolves in time
         );
 
         const input = createHandlerInput({
@@ -498,7 +512,9 @@ describe("timeout handling", () => {
                 outputVariable: "result"
             },
             context: createTestContext({
-                inputs: { audio: { fileName: "slow.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/slow" } }
+                inputs: {
+                    audio: { fileName: "slow.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/slow" }
+                }
             })
         });
 
@@ -521,7 +537,9 @@ describe("timeout handling", () => {
                 outputVariable: "result"
             },
             context: createTestContext({
-                inputs: { audio: { fileName: "slow.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/slow" } }
+                inputs: {
+                    audio: { fileName: "slow.mp3", mimeType: "audio/mpeg", gcsUri: "gs://b/slow" }
+                }
             })
         });
 
@@ -531,6 +549,7 @@ describe("timeout handling", () => {
 ```
 
 #### 3. Large Audio File Handling
+
 ```typescript
 describe("large file handling", () => {
     it("handles audio files near size limit", async () => {
@@ -552,7 +571,9 @@ describe("large file handling", () => {
                 outputVariable: "result"
             },
             context: createTestContext({
-                inputs: { audio: { fileName: "large.mp3", mimeType: "audio/mpeg", base64: largeBase64 } }
+                inputs: {
+                    audio: { fileName: "large.mp3", mimeType: "audio/mpeg", base64: largeBase64 }
+                }
             })
         });
 
@@ -587,6 +608,7 @@ describe("large file handling", () => {
 ```
 
 #### 4. Audio Format Edge Cases
+
 ```typescript
 describe("audio format handling", () => {
     it("handles unsupported audio format gracefully", async () => {
@@ -641,6 +663,7 @@ describe("audio format handling", () => {
 ```
 
 #### 5. Provider Rate Limiting
+
 ```typescript
 describe("rate limiting", () => {
     it("handles OpenAI rate limit response", async () => {
@@ -699,6 +722,7 @@ describe("rate limiting", () => {
 **Current Tests:** 20 (in `shared-memory.test.ts`)
 
 ### Existing Coverage
+
 - ✅ Handler properties (4 tests)
 - ✅ Store operation (7 tests)
 - ✅ Search operation (3 tests - limited by embedding mock)
@@ -708,6 +732,7 @@ describe("rate limiting", () => {
 ### Missing Test Scenarios
 
 #### 1. Concurrent Store Operations
+
 ```typescript
 describe("concurrent store operations", () => {
     it("handles multiple concurrent stores to different keys", async () => {
@@ -723,7 +748,7 @@ describe("concurrent store operations", () => {
             })
         );
 
-        const outputs = await Promise.all(inputs.map(input => handler.execute(input)));
+        const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
 
         expect(outputs).toHaveLength(10);
         outputs.forEach((output, i) => {
@@ -748,7 +773,7 @@ describe("concurrent store operations", () => {
             })
         ];
 
-        await Promise.all(inputs.map(input => handler.execute(input)));
+        await Promise.all(inputs.map((input) => handler.execute(input)));
 
         // Verify behavior is deterministic or documented
     });
@@ -756,6 +781,7 @@ describe("concurrent store operations", () => {
 ```
 
 #### 2. Search with Results
+
 ```typescript
 describe("search with results", () => {
     it("returns matching entries sorted by relevance", async () => {
@@ -849,6 +875,7 @@ describe("search with results", () => {
 ```
 
 #### 3. Memory Limits
+
 ```typescript
 describe("memory limits", () => {
     it("handles very large values", async () => {
@@ -909,6 +936,7 @@ describe("memory limits", () => {
 ```
 
 #### 4. Embedding Generator Errors
+
 ```typescript
 describe("embedding generator errors", () => {
     it("handles embedding generation failure gracefully", async () => {
@@ -933,7 +961,7 @@ describe("embedding generator errors", () => {
     it("handles embedding generation timeout", async () => {
         const handlerWithEmbeddings = createSharedMemoryNodeHandler();
         handlerWithEmbeddings.setEmbeddingGenerator(async () => {
-            await new Promise(resolve => setTimeout(resolve, 60000));
+            await new Promise((resolve) => setTimeout(resolve, 60000));
             return [0.1, 0.2, 0.3];
         });
 
@@ -960,6 +988,7 @@ describe("embedding generator errors", () => {
 **Current Tests:** 22 (in `input.test.ts`)
 
 ### Existing Coverage
+
 - ✅ Handler properties (4 tests)
 - ✅ Text input (4 tests)
 - ✅ JSON input (7 tests)
@@ -971,6 +1000,7 @@ describe("embedding generator errors", () => {
 ### Missing Test Scenarios
 
 #### 1. Concurrent Input Processing
+
 ```typescript
 describe("concurrent input processing", () => {
     it("handles multiple simultaneous inputs", async () => {
@@ -984,7 +1014,7 @@ describe("concurrent input processing", () => {
             })
         );
 
-        const outputs = await Promise.all(inputs.map(input => handler.execute(input)));
+        const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
 
         expect(outputs).toHaveLength(5);
         outputs.forEach((output, i) => {
@@ -995,6 +1025,7 @@ describe("concurrent input processing", () => {
 ```
 
 #### 2. Additional Input Types
+
 ```typescript
 describe("additional input types", () => {
     it("handles number input type", async () => {
@@ -1039,6 +1070,7 @@ describe("additional input types", () => {
 ```
 
 #### 3. Validation Depth
+
 ```typescript
 describe("validation depth", () => {
     it("validates JSON against provided schema", async () => {
@@ -1117,6 +1149,7 @@ describe("validation depth", () => {
 ```
 
 #### 4. Security Considerations
+
 ```typescript
 describe("security", () => {
     it("sanitizes HTML in text input when configured", async () => {
@@ -1161,6 +1194,7 @@ These gaps apply across multiple handlers and should be addressed systematically
 ### 1. Timeout Tests (All Async Handlers)
 
 Handlers that need timeout tests:
+
 - `web-browse.ts`
 - `web-search.ts`
 - `file-download.ts`
@@ -1172,10 +1206,7 @@ Handlers that need timeout tests:
 describe("timeout handling", () => {
     it("times out after configured duration", async () => {
         // Mock slow response
-        nock("https://example.com")
-            .get("/slow")
-            .delay(60000)
-            .reply(200, "late response");
+        nock("https://example.com").get("/slow").delay(60000).reply(200, "late response");
 
         const input = createHandlerInput({
             nodeType: "handler-type",
@@ -1197,6 +1228,7 @@ describe("timeout handling", () => {
 ### 2. Concurrent Execution Tests (Stateless Handlers)
 
 Handlers that should have concurrency tests:
+
 - `transform.ts` - Already has good coverage
 - `code.ts` - Needs concurrent process execution tests
 - `conditional.ts` - Already has concurrent branching tests
@@ -1209,11 +1241,13 @@ describe("concurrent execution", () => {
         const inputs = Array.from({ length: 10 }, (_, i) =>
             createHandlerInput({
                 nodeType: "handler-type",
-                nodeConfig: { /* ... */ }
+                nodeConfig: {
+                    /* ... */
+                }
             })
         );
 
-        const outputs = await Promise.all(inputs.map(i => handler.execute(i)));
+        const outputs = await Promise.all(inputs.map((i) => handler.execute(i)));
 
         expect(outputs).toHaveLength(10);
         // Verify all outputs are correct
@@ -1224,6 +1258,7 @@ describe("concurrent execution", () => {
 ### 3. Resource Cleanup Tests
 
 Handlers with resource concerns:
+
 - `code.ts` - Process cleanup, temp file cleanup
 - `screenshot-capture.ts` - Browser instance cleanup
 - `file-write.ts` - Temp file cleanup on error
@@ -1233,7 +1268,9 @@ Handlers with resource concerns:
 // Template for cleanup tests
 describe("resource cleanup", () => {
     it("cleans up temp files on success", async () => {
-        const input = createHandlerInput({ /* ... */ });
+        const input = createHandlerInput({
+            /* ... */
+        });
         await handler.execute(input);
 
         // Verify temp directory is clean
@@ -1242,7 +1279,9 @@ describe("resource cleanup", () => {
     });
 
     it("cleans up temp files on error", async () => {
-        const input = createHandlerInput({ /* ... */ });
+        const input = createHandlerInput({
+            /* ... */
+        });
 
         await expect(handler.execute(input)).rejects.toThrow();
 
@@ -1269,37 +1308,43 @@ describe("handler chaining", () => {
     describe("LLM → Transform → Output chain", () => {
         it("passes LLM output through transform to output", async () => {
             // 1. Execute LLM handler
-            const llmOutput = await llmHandler.execute(createHandlerInput({
-                nodeType: "llm",
-                nodeConfig: { provider: "openai", model: "gpt-4", prompt: "List 3 colors" }
-            }));
+            const llmOutput = await llmHandler.execute(
+                createHandlerInput({
+                    nodeType: "llm",
+                    nodeConfig: { provider: "openai", model: "gpt-4", prompt: "List 3 colors" }
+                })
+            );
 
             // 2. Execute Transform with LLM output in context
-            const transformOutput = await transformHandler.execute(createHandlerInput({
-                nodeType: "transform",
-                nodeConfig: {
-                    operation: "split",
-                    input: "{{llm.text}}",
-                    delimiter: ","
-                },
-                context: createTestContext({
-                    nodeOutputs: { llm: llmOutput.result }
+            const transformOutput = await transformHandler.execute(
+                createHandlerInput({
+                    nodeType: "transform",
+                    nodeConfig: {
+                        operation: "split",
+                        input: "{{llm.text}}",
+                        delimiter: ","
+                    },
+                    context: createTestContext({
+                        nodeOutputs: { llm: llmOutput.result }
+                    })
                 })
-            }));
+            );
 
             // 3. Execute Output with Transform result
-            const outputResult = await outputHandler.execute(createHandlerInput({
-                nodeType: "output",
-                nodeConfig: {
-                    template: "Colors: {{transform.items}}"
-                },
-                context: createTestContext({
-                    nodeOutputs: {
-                        llm: llmOutput.result,
-                        transform: transformOutput.result
-                    }
+            const outputResult = await outputHandler.execute(
+                createHandlerInput({
+                    nodeType: "output",
+                    nodeConfig: {
+                        template: "Colors: {{transform.items}}"
+                    },
+                    context: createTestContext({
+                        nodeOutputs: {
+                            llm: llmOutput.result,
+                            transform: transformOutput.result
+                        }
+                    })
                 })
-            }));
+            );
 
             expect(outputResult.result).toBeDefined();
         });
@@ -1429,7 +1474,9 @@ From `handler-test-utils.ts`:
 const input = createHandlerInput({
     nodeType: "llm",
     nodeConfig: { provider: "openai", model: "gpt-4", prompt: "Hello" },
-    context: createTestContext({ /* ... */ })
+    context: createTestContext({
+        /* ... */
+    })
 });
 
 // Create test context with various state
@@ -1460,69 +1507,70 @@ assertBranchSelection(output, "trueBranch"); // For conditional handlers
 ### Phase 1: Critical ✅ COMPLETED
 
 - [x] **File Operations Handler** (57 tests total, +21 new tests)
-  - [x] Add URL timeout/error tests (3 tests)
-  - [x] Add PDF edge case tests (5 tests)
-  - [x] Add CSV edge case tests (5 tests)
-  - [x] Add concurrent operation tests (3 tests)
-  - [x] Add edge case tests (5 tests)
+    - [x] Add URL timeout/error tests (3 tests)
+    - [x] Add PDF edge case tests (5 tests)
+    - [x] Add CSV edge case tests (5 tests)
+    - [x] Add concurrent operation tests (3 tests)
+    - [x] Add edge case tests (5 tests)
 
 - [x] **Audio Input Handler** (33 tests total, +15 new tests)
-  - [x] Add concurrent transcription tests (2 tests)
-  - [x] Add large file tests (2 tests)
-  - [x] Add format edge case tests (3 tests)
-  - [x] Add rate limiting tests (2 tests)
-  - [x] Add provider error handling tests (3 tests)
-  - [x] Add edge case tests (3 tests)
+    - [x] Add concurrent transcription tests (2 tests)
+    - [x] Add large file tests (2 tests)
+    - [x] Add format edge case tests (3 tests)
+    - [x] Add rate limiting tests (2 tests)
+    - [x] Add provider error handling tests (3 tests)
+    - [x] Add edge case tests (3 tests)
 
 ### Phase 2: Important ✅ COMPLETED
 
 - [x] **Shared Memory Handler** (32 tests total, +12 new tests)
-  - [x] Add concurrent store tests (2 tests)
-  - [x] Add search edge case tests (3 tests)
-  - [x] Add memory/large value tests (3 tests)
-  - [x] Add embedding edge case tests (2 tests)
-  - [x] Add config validation tests (2 tests)
+    - [x] Add concurrent store tests (2 tests)
+    - [x] Add search edge case tests (3 tests)
+    - [x] Add memory/large value tests (3 tests)
+    - [x] Add embedding edge case tests (2 tests)
+    - [x] Add config validation tests (2 tests)
 
 - [x] **Input Handler** (40 tests total, +18 new tests)
-  - [x] Add concurrent processing tests (3 tests)
-  - [x] Add additional JSON edge case tests (6 tests)
-  - [x] Add text input edge case tests (4 tests)
-  - [x] Add validation/error handling tests (3 tests)
-  - [x] Add output structure tests (2 tests)
+    - [x] Add concurrent processing tests (3 tests)
+    - [x] Add additional JSON edge case tests (6 tests)
+    - [x] Add text input edge case tests (4 tests)
+    - [x] Add validation/error handling tests (3 tests)
+    - [x] Add output structure tests (2 tests)
 
 ### Phase 3: Enhancement ✅ COMPLETED
 
 - [x] **Cross-Handler Timeout Tests** (+8 tests)
-  - [x] web-browse.ts (2 tests: slow response handling, connection timeout)
-  - [x] web-search.ts (2 tests: API timeout, slow search handling)
-  - [x] file-download.ts (2 tests: download timeout, slow download handling)
-  - [x] screenshot-capture.ts (2 tests: navigation timeout, slow page render)
+    - [x] web-browse.ts (2 tests: slow response handling, connection timeout)
+    - [x] web-search.ts (2 tests: API timeout, slow search handling)
+    - [x] file-download.ts (2 tests: download timeout, slow download handling)
+    - [x] screenshot-capture.ts (2 tests: navigation timeout, slow page render)
 
 - [x] **Cross-Handler Concurrency Tests** (+9 tests)
-  - [x] web-browse.ts (2 tests: simultaneous requests, error isolation)
-  - [x] web-search.ts (2 tests: simultaneous searches, rate limit isolation)
-  - [x] file-download.ts (2 tests: simultaneous downloads, error isolation)
-  - [x] screenshot-capture.ts (2 tests: simultaneous captures, error isolation)
-  - [x] code.ts (2 tests: simultaneous JS executions, error isolation)
-  - [x] switch.ts (3 tests: simultaneous evaluations, different configs, state isolation)
-  - [x] pdf-generation.ts (2 tests: simultaneous generations, error isolation)
+    - [x] web-browse.ts (2 tests: simultaneous requests, error isolation)
+    - [x] web-search.ts (2 tests: simultaneous searches, rate limit isolation)
+    - [x] file-download.ts (2 tests: simultaneous downloads, error isolation)
+    - [x] screenshot-capture.ts (2 tests: simultaneous captures, error isolation)
+    - [x] code.ts (2 tests: simultaneous JS executions, error isolation)
+    - [x] switch.ts (3 tests: simultaneous evaluations, different configs, state isolation)
+    - [x] pdf-generation.ts (2 tests: simultaneous generations, error isolation)
 
 - [x] **Resource Cleanup Tests** (+6 tests)
-  - [x] code.ts (2 tests: Python temp file cleanup on success/failure)
-  - [x] screenshot-capture.ts (2 tests: cleanup on success/failure)
-  - [x] pdf-generation.ts (2 tests: cleanup on success/failure)
+    - [x] code.ts (2 tests: Python temp file cleanup on success/failure)
+    - [x] screenshot-capture.ts (2 tests: cleanup on success/failure)
+    - [x] pdf-generation.ts (2 tests: cleanup on success/failure)
 
 ### Phase 4: Integration (Future)
 
 - [ ] **Integration Tests**
-  - [ ] Create handler-chain.test.ts
-  - [ ] Add LLM → Transform → Output chain test
-  - [ ] Add error propagation test
-  - [ ] Add context preservation test
+    - [ ] Create handler-chain.test.ts
+    - [ ] Add LLM → Transform → Output chain test
+    - [ ] Add error propagation test
+    - [ ] Add context preservation test
 
 ### Verification
 
 After each phase:
+
 1. Run `npm test -- --testPathPattern="handlers"` to verify all tests pass
 2. Run `npx tsc --noEmit` to verify no type errors
 3. Review test coverage metrics

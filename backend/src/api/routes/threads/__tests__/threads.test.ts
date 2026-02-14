@@ -190,10 +190,7 @@ describe("Thread Routes", () => {
     // =========================================================================
     describe("GET /threads", () => {
         it("should list threads", async () => {
-            const threads = [
-                mockThread,
-                { ...mockThread, id: "thread-2", title: "Second Thread" }
-            ];
+            const threads = [mockThread, { ...mockThread, id: "thread-2", title: "Second Thread" }];
             mockThreadRepo.list.mockResolvedValueOnce({
                 threads,
                 total: 2
@@ -205,7 +202,10 @@ describe("Thread Routes", () => {
             });
 
             expect(response.statusCode).toBe(200);
-            const body = response.json<{ success: boolean; data: { threads: unknown[]; total: number } }>();
+            const body = response.json<{
+                success: boolean;
+                data: { threads: unknown[]; total: number };
+            }>();
             expect(body.success).toBe(true);
             expect(body.data.threads).toHaveLength(2);
             expect(body.data.total).toBe(2);
@@ -336,7 +336,10 @@ describe("Thread Routes", () => {
             });
 
             expect(response.statusCode).toBe(200);
-            const body = response.json<{ success: boolean; data: { stats: { messageCount: number } } }>();
+            const body = response.json<{
+                success: boolean;
+                data: { stats: { messageCount: number } };
+            }>();
             expect(body.data.stats).toBeDefined();
             expect(body.data.stats.messageCount).toBe(10);
         });

@@ -57,9 +57,8 @@ export const pauseWorkflowSignal = defineSignal<[{ reason?: string }?]>("pauseWo
  * Signal to resume a paused workflow.
  * Can optionally inject context updates when resuming.
  */
-export const resumeWorkflowSignal = defineSignal<[{ contextUpdates?: JsonObject }?]>(
-    "resumeWorkflow"
-);
+export const resumeWorkflowSignal =
+    defineSignal<[{ contextUpdates?: JsonObject }?]>("resumeWorkflow");
 
 /**
  * Signal to submit a human review response.
@@ -71,9 +70,8 @@ export interface HumanReviewResponsePayload {
     submittedAt: number;
 }
 
-export const humanReviewResponseSignal = defineSignal<[HumanReviewResponsePayload]>(
-    "humanReviewResponse"
-);
+export const humanReviewResponseSignal =
+    defineSignal<[HumanReviewResponsePayload]>("humanReviewResponse");
 
 // ============================================================================
 // WORKFLOW QUERIES
@@ -537,10 +535,10 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
         let queueState = initializeQueue(builtWorkflow);
         currentQueueState = queueState; // Set reference for queries
         let contextSnapshot = createContext(inputs);
-        
+
         if (userId) {
             contextSnapshot = setVariable(contextSnapshot, "userId", userId);
-                    }
+        }
 
         const errors: Record<string, string> = {};
 
@@ -561,7 +559,10 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                 logger.info("Workflow cancelled", { reason: cancelReason });
 
                 // Build partial outputs from completed nodes
-                const partialOutputs = buildFinalOutputs(contextSnapshot, builtWorkflow.outputNodeIds);
+                const partialOutputs = buildFinalOutputs(
+                    contextSnapshot,
+                    builtWorkflow.outputNodeIds
+                );
 
                 await emitExecutionFailed({
                     executionId,
@@ -627,7 +628,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                     for (const [key, value] of Object.entries(resumeContextUpdates)) {
                         contextSnapshot = setVariable(contextSnapshot, key, value);
                     }
-                                        resumeContextUpdates = undefined;
+                    resumeContextUpdates = undefined;
                     logger.info("Workflow resumed with context updates");
                 } else if (!cancellationRequested) {
                     logger.info("Workflow resumed");
@@ -714,9 +715,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
                         // Wait for human review response or cancellation
                         // condition() blocks workflow execution until predicate returns true
-                        await condition(
-                            () => !humanReviewPending || cancellationRequested
-                        );
+                        await condition(() => !humanReviewPending || cancellationRequested);
 
                         // Check if cancelled while waiting
                         if (cancellationRequested) {
@@ -736,7 +735,10 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
                             return {
                                 success: false,
-                                outputs: buildFinalOutputs(contextSnapshot, builtWorkflow.outputNodeIds),
+                                outputs: buildFinalOutputs(
+                                    contextSnapshot,
+                                    builtWorkflow.outputNodeIds
+                                ),
                                 error: `Workflow cancelled: ${cancelReason}`
                             };
                         }
@@ -798,7 +800,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                         builtWorkflow
                     );
                     currentQueueState = queueState; // Update reference for queries
-                                    } else {
+                } else {
                     errors[result.nodeId] = result.error;
                     queueState = markFailed(queueState, result.nodeId, result.error, builtWorkflow);
                     currentQueueState = queueState; // Update reference for queries

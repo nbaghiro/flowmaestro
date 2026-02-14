@@ -10,6 +10,7 @@
  * - Different input types (text, number, boolean, json)
  */
 
+import { withHumanReviewPause, withMultipleHumanReviewPauses } from "../../../fixtures/activities";
 import {
     createTemporalTestEnv,
     startWorkflow,
@@ -25,10 +26,6 @@ import {
     delay,
     type TemporalTestEnv
 } from "./helpers";
-import {
-    withHumanReviewPause,
-    withMultipleHumanReviewPauses
-} from "../../../fixtures/activities";
 
 describe("Human Review Signal Integration", () => {
     let testEnv: TemporalTestEnv;

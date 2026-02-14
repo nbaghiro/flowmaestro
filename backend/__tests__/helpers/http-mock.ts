@@ -504,7 +504,9 @@ export function mockHuggingFaceCompletion(config: HuggingFaceCompletionConfig): 
 /**
  * Mock Hugging Face rate limit error
  */
-export function mockHuggingFaceRateLimit(model: string = "mistralai/Mistral-7B-Instruct-v0.2"): nock.Scope {
+export function mockHuggingFaceRateLimit(
+    model: string = "mistralai/Mistral-7B-Instruct-v0.2"
+): nock.Scope {
     return mockHttpEndpoint({
         baseUrl: HUGGINGFACE_BASE_URL,
         path: `/models/${model}`,
@@ -519,7 +521,9 @@ export function mockHuggingFaceRateLimit(model: string = "mistralai/Mistral-7B-I
 /**
  * Mock Hugging Face model loading error
  */
-export function mockHuggingFaceModelLoading(model: string = "mistralai/Mistral-7B-Instruct-v0.2"): nock.Scope {
+export function mockHuggingFaceModelLoading(
+    model: string = "mistralai/Mistral-7B-Instruct-v0.2"
+): nock.Scope {
     return mockHttpEndpoint({
         baseUrl: HUGGINGFACE_BASE_URL,
         path: `/models/${model}`,

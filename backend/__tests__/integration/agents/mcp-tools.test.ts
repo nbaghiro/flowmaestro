@@ -6,16 +6,16 @@
  */
 
 import {
+    createCompletionResponse,
+    createToolCallResponse,
+    createToolSequence
+} from "../../helpers/llm-mock-client";
+import {
     createAgentTestEnvironment,
     runAgentExecution,
     createTestAgent
 } from "./helpers/agent-test-env";
 import { mcpToolFixtures } from "./helpers/agent-test-fixtures";
-import {
-    createCompletionResponse,
-    createToolCallResponse,
-    createToolSequence
-} from "../../helpers/llm-mock-client";
 import type { AgentTestEnvironment } from "./helpers/agent-test-env";
 
 // Increase test timeout for Temporal workflows

@@ -9,15 +9,8 @@
 
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../core/config";
-import { getLLMRateLimiter, RateLimitExceededError } from "../../../core/utils/llm-rate-limiter";
 import { SafetyPipeline } from "../../../core/safety/safety-pipeline";
-import {
-    executeWithTimeout,
-    ToolTimeoutError,
-    validateToolInput,
-    coerceToolArguments,
-    createValidationErrorResponse
-} from "../../../tools";
+import { getLLMRateLimiter, RateLimitExceededError } from "../../../core/utils/llm-rate-limiter";
 import { ExecutionRouter } from "../../../integrations/core/ExecutionRouter";
 import { providerRegistry } from "../../../integrations/registry";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
@@ -25,7 +18,14 @@ import { AgentRepository } from "../../../storage/repositories/AgentRepository";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { SafetyLogRepository } from "../../../storage/repositories/SafetyLogRepository";
 import { WorkflowRepository } from "../../../storage/repositories/WorkflowRepository";
-import { executeTool } from "../../../tools";
+import {
+    executeWithTimeout,
+    ToolTimeoutError,
+    validateToolInput,
+    coerceToolArguments,
+    createValidationErrorResponse,
+    executeTool
+} from "../../../tools";
 import { activityLogger, createActivityLogger } from "../../core";
 import { emitAgentToken } from "./events";
 import { searchThreadMemory as searchThreadMemoryActivity, injectThreadMemoryTool } from "./memory";
@@ -324,7 +324,11 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
         // Record the call attempt (before making the actual call)
         // Estimate tokens based on message count - will be updated with actual usage
         const estimatedTokens = messages.reduce((acc, m) => acc + m.content.length / 4, 0);
-        await llmRateLimiter.recordCall(workspaceId, userId || "unknown", Math.ceil(estimatedTokens));
+        await llmRateLimiter.recordCall(
+            workspaceId,
+            userId || "unknown",
+            Math.ceil(estimatedTokens)
+        );
     }
 
     // Get API credentials from connection
@@ -492,7 +496,11 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
                 // Execute the appropriate tool type
                 switch (tool.type) {
                     case "workflow":
-                        return await executeWorkflowTool({ tool, arguments: validatedArgs, userId });
+                        return await executeWorkflowTool({
+                            tool,
+                            arguments: validatedArgs,
+                            userId
+                        });
                     case "function":
                         return await executeFunctionTool({
                             tool,
@@ -502,7 +510,11 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
                             executionId
                         });
                     case "knowledge_base":
-                        return await executeKnowledgeBaseTool({ tool, arguments: validatedArgs, userId });
+                        return await executeKnowledgeBaseTool({
+                            tool,
+                            arguments: validatedArgs,
+                            userId
+                        });
                     case "agent":
                         return await executeAgentTool({ tool, arguments: validatedArgs, userId });
                     case "mcp":
@@ -543,8 +555,8 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
             // Re-throw with more context for the orchestrator
             throw new Error(
                 `Tool "${tool.name}" timed out after ${error.timeoutMs}ms. ` +
-                `The tool may be experiencing issues with external dependencies. ` +
-                `Do NOT retry this tool immediately.`
+                    "The tool may be experiencing issues with external dependencies. " +
+                    "Do NOT retry this tool immediately."
             );
         }
 

@@ -49,10 +49,13 @@ describe("POST /api/public/form-interfaces/:slug/upload", () => {
             await testEnv.repositories.formInterface.findBySlug("upload-form");
 
             // Simulate file upload
-            const gcsUri = await testEnv.services.gcs.upload({} /* stream */, {
-                filename: `${Date.now()}_${fileName}`,
-                contentType: mimeType
-            });
+            const gcsUri = await testEnv.services.gcs.upload(
+                {} /* stream */,
+                {
+                    filename: `${Date.now()}_${fileName}`,
+                    contentType: mimeType
+                }
+            );
 
             const downloadUrl = await testEnv.services.gcs.getSignedDownloadUrl(gcsUri, 86400); // 24h
 
@@ -79,9 +82,12 @@ describe("POST /api/public/form-interfaces/:slug/upload", () => {
             );
 
             // Act
-            const gcsUri = await testEnv.services.gcs.upload({}, {
-                filename: `${Date.now()}_${fileName}`
-            });
+            const gcsUri = await testEnv.services.gcs.upload(
+                {},
+                {
+                    filename: `${Date.now()}_${fileName}`
+                }
+            );
 
             // Assert - path should include sessionId
             expect(gcsUri).toContain(sessionId);

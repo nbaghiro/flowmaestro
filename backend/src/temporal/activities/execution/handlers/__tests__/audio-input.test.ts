@@ -741,7 +741,9 @@ describe("AudioInputNodeHandler", () => {
                     results: {
                         channels: [
                             {
-                                alternatives: [{ transcript: "Deepgram transcription", confidence: 0.95 }]
+                                alternatives: [
+                                    { transcript: "Deepgram transcription", confidence: 0.95 }
+                                ]
                             }
                         ]
                     },
@@ -758,7 +760,11 @@ describe("AudioInputNodeHandler", () => {
                 },
                 context: createTestContext({
                     inputs: {
-                        audio: { fileName: "a.mp3", mimeType: "audio/mpeg", gcsUri: "gs://bucket/a.mp3" }
+                        audio: {
+                            fileName: "a.mp3",
+                            mimeType: "audio/mpeg",
+                            gcsUri: "gs://bucket/a.mp3"
+                        }
                     }
                 })
             });
@@ -773,7 +779,11 @@ describe("AudioInputNodeHandler", () => {
                 },
                 context: createTestContext({
                     inputs: {
-                        audio: { fileName: "b.mp3", mimeType: "audio/mpeg", gcsUri: "gs://bucket/b.mp3" }
+                        audio: {
+                            fileName: "b.mp3",
+                            mimeType: "audio/mpeg",
+                            gcsUri: "gs://bucket/b.mp3"
+                        }
                     }
                 })
             });
@@ -1224,7 +1234,9 @@ describe("AudioInputNodeHandler", () => {
 
             const output = await handler.execute(input);
 
-            expect((output.result.result as { text: string }).text).toBe("Special filename content");
+            expect((output.result.result as { text: string }).text).toBe(
+                "Special filename content"
+            );
         });
     });
 });

@@ -13,11 +13,10 @@ import {
 
 describe("executeWithTimeout", () => {
     it("should execute function successfully when within timeout", async () => {
-        const result = await executeWithTimeout(
-            "test_tool",
-            "function",
-            async () => ({ success: true, data: "test" })
-        );
+        const result = await executeWithTimeout("test_tool", "function", async () => ({
+            success: true,
+            data: "test"
+        }));
 
         expect(result).toEqual({ success: true, data: "test" });
     });
@@ -25,14 +24,10 @@ describe("executeWithTimeout", () => {
     it("should pass abort signal to function", async () => {
         let receivedSignal: AbortSignal | undefined;
 
-        await executeWithTimeout(
-            "test_tool",
-            "function",
-            async (signal) => {
-                receivedSignal = signal;
-                return { success: true };
-            }
-        );
+        await executeWithTimeout("test_tool", "function", async (signal) => {
+            receivedSignal = signal;
+            return { success: true };
+        });
 
         expect(receivedSignal).toBeDefined();
         expect(receivedSignal?.aborted).toBe(false);
@@ -45,12 +40,7 @@ describe("executeWithTimeout", () => {
         };
 
         await expect(
-            executeWithTimeout(
-                "slow_tool",
-                "function",
-                slowFunction,
-                { timeoutMs: 50 }
-            )
+            executeWithTimeout("slow_tool", "function", slowFunction, { timeoutMs: 50 })
         ).rejects.toThrow(ToolTimeoutError);
     });
 
@@ -66,12 +56,7 @@ describe("executeWithTimeout", () => {
         };
 
         try {
-            await executeWithTimeout(
-                "slow_tool",
-                "function",
-                slowFunction,
-                { timeoutMs: 50 }
-            );
+            await executeWithTimeout("slow_tool", "function", slowFunction, { timeoutMs: 50 });
         } catch {
             // Expected to throw
         }
@@ -102,12 +87,9 @@ describe("executeWithTimeout", () => {
         };
 
         // Should succeed with 200ms timeout
-        const result = await executeWithTimeout(
-            "slow_tool",
-            "function",
-            slowFunction,
-            { timeoutMs: 200 }
-        );
+        const result = await executeWithTimeout("slow_tool", "function", slowFunction, {
+            timeoutMs: 200
+        });
 
         expect(result).toEqual({ success: true });
     });
@@ -117,9 +99,9 @@ describe("executeWithTimeout", () => {
             throw new Error("Custom error");
         };
 
-        await expect(
-            executeWithTimeout("error_tool", "function", errorFunction)
-        ).rejects.toThrow("Custom error");
+        await expect(executeWithTimeout("error_tool", "function", errorFunction)).rejects.toThrow(
+            "Custom error"
+        );
     });
 
     it("should include tool info in ToolTimeoutError", async () => {
@@ -129,12 +111,7 @@ describe("executeWithTimeout", () => {
         };
 
         try {
-            await executeWithTimeout(
-                "my_tool",
-                "mcp",
-                slowFunction,
-                { timeoutMs: 50 }
-            );
+            await executeWithTimeout("my_tool", "mcp", slowFunction, { timeoutMs: 50 });
             fail("Should have thrown");
         } catch (error) {
             expect(error).toBeInstanceOf(ToolTimeoutError);
@@ -185,7 +162,7 @@ describe("getToolTimeout", () => {
 
     it("should use override for specific tool name", () => {
         const overrides = {
-            "special_tool": 5000
+            special_tool: 5000
         };
 
         expect(getToolTimeout("special_tool", "function", overrides)).toBe(5000);

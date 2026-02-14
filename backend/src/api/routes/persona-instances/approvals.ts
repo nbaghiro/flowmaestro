@@ -7,12 +7,12 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { PersonaApprovalSignalPayload } from "@flowmaestro/shared";
+import { createRequestLogger } from "../../../core/logging";
+import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { PersonaApprovalRequestRepository } from "../../../storage/repositories/PersonaApprovalRequestRepository";
 import { PersonaInstanceRepository } from "../../../storage/repositories/PersonaInstanceRepository";
 import { getTemporalClient } from "../../../temporal/client";
-import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { BadRequestError, NotFoundError } from "../../middleware";
-import { createRequestLogger } from "../../../core/logging";
 
 // =============================================================================
 // Types

@@ -732,12 +732,8 @@ describe("WebSearchNodeHandler", () => {
                 const handler3 = createWebSearchNodeHandler();
 
                 const results = await Promise.all([
-                    handler1.execute(
-                        createMockInput({ query: queries[0], outputVariable: "r1" })
-                    ),
-                    handler2.execute(
-                        createMockInput({ query: queries[1], outputVariable: "r2" })
-                    ),
+                    handler1.execute(createMockInput({ query: queries[0], outputVariable: "r1" })),
+                    handler2.execute(createMockInput({ query: queries[1], outputVariable: "r2" })),
                     handler3.execute(createMockInput({ query: queries[2], outputVariable: "r3" }))
                 ]);
 
@@ -753,9 +749,7 @@ describe("WebSearchNodeHandler", () => {
                         success: true,
                         data: {
                             query: "query1",
-                            results: [
-                                { title: "R1", url: "https://1.com", snippet: "1" }
-                            ]
+                            results: [{ title: "R1", url: "https://1.com", snippet: "1" }]
                         }
                     })
                     .mockResolvedValueOnce({
@@ -766,9 +760,7 @@ describe("WebSearchNodeHandler", () => {
                         success: true,
                         data: {
                             query: "query3",
-                            results: [
-                                { title: "R3", url: "https://3.com", snippet: "3" }
-                            ]
+                            results: [{ title: "R3", url: "https://3.com", snippet: "3" }]
                         }
                     });
 

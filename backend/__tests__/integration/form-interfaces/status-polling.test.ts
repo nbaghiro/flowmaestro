@@ -254,14 +254,10 @@ describe("GET /api/public/form-interfaces/:slug/submissions/:submissionId/status
                 slug: "test-form"
             });
 
-            const submission = createCompletedSubmission(
-                formInterface.id,
-                "Output content",
-                {
-                    id: "sub-001",
-                    executionId: "exec-001"
-                }
-            );
+            const submission = createCompletedSubmission(formInterface.id, "Output content", {
+                id: "sub-001",
+                executionId: "exec-001"
+            });
 
             testEnv.repositories.formInterface.findBySlug.mockResolvedValue(formInterface);
             testEnv.repositories.submission.findById.mockResolvedValue(submission);

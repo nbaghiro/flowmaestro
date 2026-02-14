@@ -10,6 +10,8 @@
  * Activities using heartbeat: llm, embeddings, audio, router, http, database, code
  */
 
+import { Context } from "@temporalio/activity";
+import { HEARTBEAT_INTERVALS } from "../../../../src/temporal/core/constants";
 import {
     HeartbeatManager,
     createHeartbeatManager,
@@ -21,8 +23,6 @@ import {
     type HeartbeatProgress,
     type HeartbeatOperations
 } from "../../../../src/temporal/core/services/heartbeat";
-import { HEARTBEAT_INTERVALS } from "../../../../src/temporal/core/constants";
-import { Context } from "@temporalio/activity";
 
 // Increase test timeout
 jest.setTimeout(30000);

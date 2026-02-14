@@ -112,7 +112,9 @@ describe("Folder Routes", () => {
             const body = response.json<{ success: boolean; data: unknown[] }>();
             expect(body.success).toBe(true);
             expect(body.data).toHaveLength(2);
-            expect(mockFolderRepo.findByWorkspaceIdWithCounts).toHaveBeenCalledWith(testWorkspaceId);
+            expect(mockFolderRepo.findByWorkspaceIdWithCounts).toHaveBeenCalledWith(
+                testWorkspaceId
+            );
         });
 
         it("should return empty array when no folders exist", async () => {
@@ -315,7 +317,10 @@ describe("Folder Routes", () => {
             });
 
             expect(response.statusCode).toBe(200);
-            const body = response.json<{ success: boolean; data: { id: string; itemCounts: unknown } }>();
+            const body = response.json<{
+                success: boolean;
+                data: { id: string; itemCounts: unknown };
+            }>();
             expect(body.success).toBe(true);
             expect(body.data.id).toBe("folder-1");
             expect(body.data.itemCounts).toEqual(mockItemCounts);

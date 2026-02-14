@@ -743,10 +743,7 @@ describe("FileOperationsNodeHandler", () => {
     describe("URL timeout handling", () => {
         it("handles slow URL downloads", async () => {
             // Mock a slow response (but within timeout)
-            nock("https://slow.example.com")
-                .get("/file.txt")
-                .delay(100)
-                .reply(200, "Slow content");
+            nock("https://slow.example.com").get("/file.txt").delay(100).reply(200, "Slow content");
 
             const input = createHandlerInput({
                 nodeConfig: {
@@ -781,7 +778,9 @@ describe("FileOperationsNodeHandler", () => {
                 .get("/file.txt")
                 .reply(302, "", { Location: "https://cdn.example.com/actual-file.txt" });
 
-            nock("https://cdn.example.com").get("/actual-file.txt").reply(200, "Redirected content");
+            nock("https://cdn.example.com")
+                .get("/actual-file.txt")
+                .reply(200, "Redirected content");
 
             const input = createHandlerInput({
                 nodeConfig: {
@@ -924,7 +923,9 @@ describe("FileOperationsNodeHandler", () => {
         });
 
         it("handles CSV with missing values", async () => {
-            mockReadFile.mockResolvedValue("name,email,phone\nAlice,alice@test.com,\nBob,,555-1234");
+            mockReadFile.mockResolvedValue(
+                "name,email,phone\nAlice,alice@test.com,\nBob,,555-1234"
+            );
             mockStat.mockResolvedValue({ size: 60 });
 
             const input = createHandlerInput({
@@ -1062,10 +1063,18 @@ describe("FileOperationsNodeHandler", () => {
                     nodeConfig: { operation: "read", fileSource: "path", filePath: "/tmp/read.txt" }
                 }),
                 createHandlerInput({
-                    nodeConfig: { operation: "write", content: "Write content", outputPath: "/tmp/write.txt" }
+                    nodeConfig: {
+                        operation: "write",
+                        content: "Write content",
+                        outputPath: "/tmp/write.txt"
+                    }
                 }),
                 createHandlerInput({
-                    nodeConfig: { operation: "parseCSV", fileSource: "path", filePath: "/tmp/data.csv" }
+                    nodeConfig: {
+                        operation: "parseCSV",
+                        fileSource: "path",
+                        filePath: "/tmp/data.csv"
+                    }
                 })
             ];
 

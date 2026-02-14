@@ -4,12 +4,9 @@
  * Tests for GET /api/public/form-interfaces/:slug
  */
 
-import {
-    createSimpleFormInterfaceTestEnvironment,
-    createPublishedFormInterface
-} from "./setup";
-import type { SimpleFormInterfaceTestEnvironment } from "./helpers/form-interface-test-env";
 import type { PublicFormInterface } from "@flowmaestro/shared";
+import { createSimpleFormInterfaceTestEnvironment, createPublishedFormInterface } from "./setup";
+import type { SimpleFormInterfaceTestEnvironment } from "./helpers/form-interface-test-env";
 
 describe("GET /api/public/form-interfaces/:slug", () => {
     let testEnv: SimpleFormInterfaceTestEnvironment;

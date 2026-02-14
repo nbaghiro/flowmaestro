@@ -8,12 +8,6 @@
  */
 
 import {
-    createPersonaTestEnvironment,
-    expectEventPublished,
-    getPublishedEvents,
-    clearPublishedEvents
-} from "./helpers/persona-test-env";
-import {
     createResearchAssistantPersona,
     createRunningInstance,
     createWaitingApprovalInstance,
@@ -22,6 +16,12 @@ import {
     createMarkdownDeliverable,
     generateId
 } from "./helpers/persona-fixtures";
+import {
+    createPersonaTestEnvironment,
+    expectEventPublished,
+    getPublishedEvents,
+    clearPublishedEvents
+} from "./helpers/persona-test-env";
 import type { PersonaTestEnvironment } from "./helpers/persona-test-env";
 
 describe("SSE Streaming", () => {
@@ -47,10 +47,7 @@ describe("SSE Streaming", () => {
 
             await testEnv.eventBus.subscribe(channel, () => {});
 
-            expect(testEnv.eventBus.subscribe).toHaveBeenCalledWith(
-                channel,
-                expect.any(Function)
-            );
+            expect(testEnv.eventBus.subscribe).toHaveBeenCalledWith(channel, expect.any(Function));
         });
 
         it("validates instance belongs to workspace", async () => {
@@ -83,15 +80,11 @@ describe("SSE Streaming", () => {
             const persona = createResearchAssistantPersona();
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "status_changed",
-                {
-                    instanceId: instance.id,
-                    previousStatus: "clarifying",
-                    newStatus: "running"
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "status_changed", {
+                instanceId: instance.id,
+                previousStatus: "clarifying",
+                newStatus: "running"
+            });
 
             expectEventPublished(testEnv.eventBus, "status_changed", (data) => {
                 return data.newStatus === "running" && data.previousStatus === "clarifying";
@@ -102,16 +95,12 @@ describe("SSE Streaming", () => {
             const persona = createResearchAssistantPersona();
             const instance = createCompletedInstance(persona.id, testEnv.testWorkspace.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "status_changed",
-                {
-                    instanceId: instance.id,
-                    previousStatus: "running",
-                    newStatus: "completed",
-                    completionReason: "success"
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "status_changed", {
+                instanceId: instance.id,
+                previousStatus: "running",
+                newStatus: "completed",
+                completionReason: "success"
+            });
 
             expectEventPublished(testEnv.eventBus, "status_changed", (data) => {
                 return data.newStatus === "completed" && data.completionReason === "success";
@@ -127,16 +116,12 @@ describe("SSE Streaming", () => {
                 approvalId
             );
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "status_changed",
-                {
-                    instanceId: instance.id,
-                    previousStatus: "running",
-                    newStatus: "waiting_approval",
-                    pendingApprovalId: approvalId
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "status_changed", {
+                instanceId: instance.id,
+                previousStatus: "running",
+                newStatus: "waiting_approval",
+                pendingApprovalId: approvalId
+            });
 
             expectEventPublished(testEnv.eventBus, "status_changed", (data) => {
                 return data.newStatus === "waiting_approval";
@@ -149,19 +134,15 @@ describe("SSE Streaming", () => {
             const persona = createResearchAssistantPersona();
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "progress_updated",
-                {
-                    instanceId: instance.id,
-                    progress: {
-                        current_step: 2,
-                        total_steps: 5,
-                        step_name: "Analyzing data",
-                        percent_complete: 40
-                    }
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "progress_updated", {
+                instanceId: instance.id,
+                progress: {
+                    current_step: 2,
+                    total_steps: 5,
+                    step_name: "Analyzing data",
+                    percent_complete: 40
                 }
-            );
+            });
 
             expectEventPublished(testEnv.eventBus, "progress_updated", (data) => {
                 const progress = data.progress as Record<string, unknown>;
@@ -173,15 +154,11 @@ describe("SSE Streaming", () => {
             const persona = createResearchAssistantPersona();
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "iteration_completed",
-                {
-                    instanceId: instance.id,
-                    iterationCount: 5,
-                    accumulatedCostCredits: 50
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "iteration_completed", {
+                instanceId: instance.id,
+                iterationCount: 5,
+                accumulatedCostCredits: 50
+            });
 
             expectEventPublished(testEnv.eventBus, "iteration_completed", (data) => {
                 return data.iterationCount === 5 && data.accumulatedCostCredits === 50;
@@ -195,19 +172,15 @@ describe("SSE Streaming", () => {
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
             const approval = createToolCallApproval(instance.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "approval_needed",
-                {
-                    instanceId: instance.id,
-                    approvalId: approval.id,
-                    actionType: approval.action_type,
-                    toolName: approval.tool_name,
-                    actionDescription: approval.action_description,
-                    riskLevel: approval.risk_level,
-                    estimatedCostCredits: approval.estimated_cost_credits
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "approval_needed", {
+                instanceId: instance.id,
+                approvalId: approval.id,
+                actionType: approval.action_type,
+                toolName: approval.tool_name,
+                actionDescription: approval.action_description,
+                riskLevel: approval.risk_level,
+                estimatedCostCredits: approval.estimated_cost_credits
+            });
 
             expectEventPublished(testEnv.eventBus, "approval_needed", (data) => {
                 return data.approvalId === approval.id && data.riskLevel === "medium";
@@ -219,16 +192,12 @@ describe("SSE Streaming", () => {
             const instance = createWaitingApprovalInstance(persona.id, testEnv.testWorkspace.id);
             const approval = createToolCallApproval(instance.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "approval_resolved",
-                {
-                    instanceId: instance.id,
-                    approvalId: approval.id,
-                    status: "approved",
-                    respondedBy: testEnv.testUser.id
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "approval_resolved", {
+                instanceId: instance.id,
+                approvalId: approval.id,
+                status: "approved",
+                respondedBy: testEnv.testUser.id
+            });
 
             expectEventPublished(testEnv.eventBus, "approval_resolved", (data) => {
                 return data.status === "approved" && data.respondedBy === testEnv.testUser.id;
@@ -240,17 +209,13 @@ describe("SSE Streaming", () => {
             const instance = createWaitingApprovalInstance(persona.id, testEnv.testWorkspace.id);
             const approval = createToolCallApproval(instance.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "approval_resolved",
-                {
-                    instanceId: instance.id,
-                    approvalId: approval.id,
-                    status: "denied",
-                    respondedBy: testEnv.testUser.id,
-                    responseNote: "Not allowed"
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "approval_resolved", {
+                instanceId: instance.id,
+                approvalId: approval.id,
+                status: "denied",
+                respondedBy: testEnv.testUser.id,
+                responseNote: "Not allowed"
+            });
 
             expectEventPublished(testEnv.eventBus, "approval_resolved", (data) => {
                 return data.status === "denied" && data.responseNote === "Not allowed";
@@ -264,23 +229,16 @@ describe("SSE Streaming", () => {
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
             const deliverable = createMarkdownDeliverable(instance.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "deliverable_created",
-                {
-                    instanceId: instance.id,
-                    deliverableId: deliverable.id,
-                    name: deliverable.name,
-                    type: deliverable.type,
-                    preview: deliverable.preview
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "deliverable_created", {
+                instanceId: instance.id,
+                deliverableId: deliverable.id,
+                name: deliverable.name,
+                type: deliverable.type,
+                preview: deliverable.preview
+            });
 
             expectEventPublished(testEnv.eventBus, "deliverable_created", (data) => {
-                return (
-                    data.deliverableId === deliverable.id &&
-                    data.type === "markdown"
-                );
+                return data.deliverableId === deliverable.id && data.type === "markdown";
             });
         });
     });
@@ -290,15 +248,11 @@ describe("SSE Streaming", () => {
             const persona = createResearchAssistantPersona();
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "message_received",
-                {
-                    instanceId: instance.id,
-                    role: "user",
-                    content: "Please analyze this data"
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "message_received", {
+                instanceId: instance.id,
+                role: "user",
+                content: "Please analyze this data"
+            });
 
             expectEventPublished(testEnv.eventBus, "message_received", (data) => {
                 return data.role === "user";
@@ -309,15 +263,11 @@ describe("SSE Streaming", () => {
             const persona = createResearchAssistantPersona();
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "message_received",
-                {
-                    instanceId: instance.id,
-                    role: "assistant",
-                    content: "I will analyze the data for you."
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "message_received", {
+                instanceId: instance.id,
+                role: "assistant",
+                content: "I will analyze the data for you."
+            });
 
             expectEventPublished(testEnv.eventBus, "message_received", (data) => {
                 return data.role === "assistant";
@@ -330,15 +280,11 @@ describe("SSE Streaming", () => {
             const persona = createResearchAssistantPersona();
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "tool_call_started",
-                {
-                    instanceId: instance.id,
-                    toolName: "web_search",
-                    arguments: { query: "AI market trends" }
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "tool_call_started", {
+                instanceId: instance.id,
+                toolName: "web_search",
+                arguments: { query: "AI market trends" }
+            });
 
             expectEventPublished(testEnv.eventBus, "tool_call_started", (data) => {
                 return data.toolName === "web_search";
@@ -349,16 +295,12 @@ describe("SSE Streaming", () => {
             const persona = createResearchAssistantPersona();
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "tool_call_completed",
-                {
-                    instanceId: instance.id,
-                    toolName: "web_search",
-                    success: true,
-                    resultPreview: "Found 10 results..."
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "tool_call_completed", {
+                instanceId: instance.id,
+                toolName: "web_search",
+                success: true,
+                resultPreview: "Found 10 results..."
+            });
 
             expectEventPublished(testEnv.eventBus, "tool_call_completed", (data) => {
                 return data.toolName === "web_search" && data.success === true;
@@ -369,15 +311,11 @@ describe("SSE Streaming", () => {
             const persona = createResearchAssistantPersona();
             const instance = createRunningInstance(persona.id, testEnv.testWorkspace.id);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "tool_call_failed",
-                {
-                    instanceId: instance.id,
-                    toolName: "web_search",
-                    error: "Rate limit exceeded"
-                }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "tool_call_failed", {
+                instanceId: instance.id,
+                toolName: "web_search",
+                error: "Rate limit exceeded"
+            });
 
             expectEventPublished(testEnv.eventBus, "tool_call_failed", (data) => {
                 return data.toolName === "web_search" && data.error === "Rate limit exceeded";
@@ -455,11 +393,10 @@ describe("SSE Streaming", () => {
 
             clearPublishedEvents(testEnv.eventBus);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "status_changed",
-                { instanceId: instance.id, newStatus: "running" }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "status_changed", {
+                instanceId: instance.id,
+                newStatus: "running"
+            });
 
             const events = getPublishedEvents(testEnv.eventBus, "status_changed");
             expect(events).toHaveLength(1);
@@ -473,11 +410,9 @@ describe("SSE Streaming", () => {
 
             clearPublishedEvents(testEnv.eventBus);
 
-            await testEnv.eventBus.publish(
-                `persona:${instance.id}`,
-                "progress_updated",
-                { instanceId: instance.id }
-            );
+            await testEnv.eventBus.publish(`persona:${instance.id}`, "progress_updated", {
+                instanceId: instance.id
+            });
 
             const events = getPublishedEvents(testEnv.eventBus, "progress_updated");
             expect(events[0].channel).toBe(`persona:${instance.id}`);

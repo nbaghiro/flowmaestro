@@ -5,6 +5,7 @@
  * and content moderation in agent executions.
  */
 
+import { createCompletionResponse, createToolSequence } from "../../helpers/llm-mock-client";
 import {
     createAgentTestEnvironment,
     runAgentExecution,
@@ -15,9 +16,8 @@ import {
     DEFAULT_SAFETY_CONFIG,
     STRICT_SAFETY_CONFIG
 } from "./helpers/agent-test-fixtures";
-import { createCompletionResponse, createToolSequence } from "../../helpers/llm-mock-client";
-import type { SafetyConfig } from "../../../src/core/safety/types";
 import type { AgentTestEnvironment } from "./helpers/agent-test-env";
+import type { SafetyConfig } from "../../../src/core/safety/types";
 
 // Increase test timeout for Temporal workflows
 jest.setTimeout(60000);

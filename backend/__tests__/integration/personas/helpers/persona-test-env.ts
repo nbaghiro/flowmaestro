@@ -5,18 +5,7 @@
  * and external services. Enables integration testing of persona orchestration.
  */
 
-import type { FastifyInstance } from "fastify";
 import { v4 as uuidv4 } from "uuid";
-import type { PersonaDefinitionModel } from "../../../../src/storage/models/PersonaDefinition";
-import type {
-    PersonaInstanceModel,
-    PersonaInstanceSummary
-} from "../../../../src/storage/models/PersonaInstance";
-import type { PersonaApprovalRequestModel } from "../../../../src/storage/models/PersonaApprovalRequest";
-import type { PersonaInstanceMessageModel } from "../../../../src/storage/repositories/PersonaInstanceMessageRepository";
-import type { PersonaInstanceDeliverableModel } from "../../../../src/storage/models/PersonaInstanceDeliverable";
-import type { PersonaInstanceConnectionModel } from "../../../../src/storage/models/PersonaInstanceConnection";
-import type { PersonaTaskTemplateModel } from "../../../../src/storage/models/PersonaTaskTemplate";
 import {
     createTestServer,
     closeTestServer,
@@ -29,6 +18,17 @@ import {
     type InjectOptions,
     type InjectResponse
 } from "../../../helpers/fastify-test-client";
+import type { PersonaApprovalRequestModel } from "../../../../src/storage/models/PersonaApprovalRequest";
+import type { PersonaDefinitionModel } from "../../../../src/storage/models/PersonaDefinition";
+import type {
+    PersonaInstanceModel,
+    PersonaInstanceSummary
+} from "../../../../src/storage/models/PersonaInstance";
+import type { PersonaInstanceConnectionModel } from "../../../../src/storage/models/PersonaInstanceConnection";
+import type { PersonaInstanceDeliverableModel } from "../../../../src/storage/models/PersonaInstanceDeliverable";
+import type { PersonaTaskTemplateModel } from "../../../../src/storage/models/PersonaTaskTemplate";
+import type { PersonaInstanceMessageModel } from "../../../../src/storage/repositories/PersonaInstanceMessageRepository";
+import type { FastifyInstance } from "fastify";
 
 // ============================================================================
 // TYPES
@@ -352,7 +352,9 @@ export async function createPersonaTestEnvironment(
     const eventBus = createMockEventBus();
 
     // Create test server (if not skipped)
-    const fastify = options.skipServer ? (null as unknown as FastifyInstance) : await createTestServer();
+    const fastify = options.skipServer
+        ? (null as unknown as FastifyInstance)
+        : await createTestServer();
     const authToken = fastify ? createAuthToken(fastify, testUser) : "";
 
     // Create request helper
@@ -433,10 +435,7 @@ export function expectEventPublished(
 /**
  * Get all events of a specific type
  */
-export function getPublishedEvents(
-    eventBus: EventBusMock,
-    eventName: string
-): PublishedEvent[] {
+export function getPublishedEvents(eventBus: EventBusMock, eventName: string): PublishedEvent[] {
     return eventBus.publishedEvents.filter((e) => e.event === eventName);
 }
 
@@ -475,7 +474,9 @@ export function setupEventBusMock(mockEventBus: EventBusMock): void {
  */
 export function installPersonaRepositoryMocks(repositories: PersonaRepositoryMocks): void {
     jest.mock("../../../../src/storage/repositories/PersonaDefinitionRepository", () => ({
-        PersonaDefinitionRepository: jest.fn().mockImplementation(() => repositories.personaDefinition)
+        PersonaDefinitionRepository: jest
+            .fn()
+            .mockImplementation(() => repositories.personaDefinition)
     }));
 
     jest.mock("../../../../src/storage/repositories/PersonaInstanceRepository", () => ({
@@ -494,17 +495,23 @@ export function installPersonaRepositoryMocks(repositories: PersonaRepositoryMoc
             .mockImplementation(() => repositories.personaMessage)
     }));
 
-    jest.mock("../../../../src/storage/repositories/PersonaInstanceDeliverableModelRepository", () => ({
-        PersonaInstanceDeliverableModelRepository: jest
-            .fn()
-            .mockImplementation(() => repositories.personaDeliverable)
-    }));
+    jest.mock(
+        "../../../../src/storage/repositories/PersonaInstanceDeliverableModelRepository",
+        () => ({
+            PersonaInstanceDeliverableModelRepository: jest
+                .fn()
+                .mockImplementation(() => repositories.personaDeliverable)
+        })
+    );
 
-    jest.mock("../../../../src/storage/repositories/PersonaInstanceConnectionModelRepository", () => ({
-        PersonaInstanceConnectionModelRepository: jest
-            .fn()
-            .mockImplementation(() => repositories.personaConnection)
-    }));
+    jest.mock(
+        "../../../../src/storage/repositories/PersonaInstanceConnectionModelRepository",
+        () => ({
+            PersonaInstanceConnectionModelRepository: jest
+                .fn()
+                .mockImplementation(() => repositories.personaConnection)
+        })
+    );
 
     jest.mock("../../../../src/storage/repositories/PersonaTaskTemplateModelRepository", () => ({
         PersonaTaskTemplateModelRepository: jest

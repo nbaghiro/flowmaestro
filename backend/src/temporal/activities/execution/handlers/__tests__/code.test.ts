@@ -1487,10 +1487,7 @@ result = "done"
 
     describe("concurrent execution", () => {
         it("handles multiple simultaneous JavaScript executions", async () => {
-            mockVmRun
-                .mockResolvedValueOnce(10)
-                .mockResolvedValueOnce(20)
-                .mockResolvedValueOnce(30);
+            mockVmRun.mockResolvedValueOnce(10).mockResolvedValueOnce(20).mockResolvedValueOnce(30);
 
             const handler1 = createCodeNodeHandler();
             const handler2 = createCodeNodeHandler();

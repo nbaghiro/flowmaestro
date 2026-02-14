@@ -210,7 +210,10 @@ describe("Workspace Routes", () => {
     // =========================================================================
     describe("GET /workspaces", () => {
         it("should list workspaces for user", async () => {
-            const workspaces = [mockWorkspace, { ...mockWorkspace, id: "workspace-2", name: "Second" }];
+            const workspaces = [
+                mockWorkspace,
+                { ...mockWorkspace, id: "workspace-2", name: "Second" }
+            ];
             mockWorkspaceService.getWorkspacesForUser.mockResolvedValueOnce(workspaces);
 
             const response = await authenticatedRequest(fastify, testUser, {
@@ -381,10 +384,17 @@ describe("Workspace Routes", () => {
     // =========================================================================
     describe("POST /workspaces/:workspaceId/upgrade", () => {
         it("should upgrade workspace to pro plan", async () => {
-            mockWorkspaceRepoInstance.findById.mockResolvedValueOnce({ ...mockWorkspace, type: "free" });
+            mockWorkspaceRepoInstance.findById.mockResolvedValueOnce({
+                ...mockWorkspace,
+                type: "free"
+            });
             const upgradedWorkspace = { ...mockWorkspace, type: "pro" };
             mockWorkspaceRepoInstance.update.mockResolvedValueOnce(upgradedWorkspace);
-            mockCreditRepo.getBalance.mockResolvedValueOnce({ subscription: 0, purchased: 0, bonus: 0 });
+            mockCreditRepo.getBalance.mockResolvedValueOnce({
+                subscription: 0,
+                purchased: 0,
+                bonus: 0
+            });
             mockCreditRepo.addBonusCredits.mockResolvedValueOnce(undefined);
             mockCreditRepo.createTransaction.mockResolvedValueOnce(undefined);
 
@@ -398,7 +408,11 @@ describe("Workspace Routes", () => {
             });
 
             expect(response.statusCode).toBe(200);
-            const body = response.json<{ success: boolean; data: { type: string }; message: string }>();
+            const body = response.json<{
+                success: boolean;
+                data: { type: string };
+                message: string;
+            }>();
             expect(body.success).toBe(true);
             expect(body.data.type).toBe("pro");
             expect(body.message).toContain("pro");
@@ -487,7 +501,10 @@ describe("Workspace Routes", () => {
     // =========================================================================
     describe("POST /workspaces/:workspaceId/members/invite", () => {
         it("should invite a member", async () => {
-            mockWorkspaceRepoInstance.findById.mockResolvedValueOnce({ ...mockWorkspace, max_members: 10 });
+            mockWorkspaceRepoInstance.findById.mockResolvedValueOnce({
+                ...mockWorkspace,
+                max_members: 10
+            });
             mockMemberRepoInstance.getMemberCount.mockResolvedValueOnce(2);
             mockUserRepo.findByEmail.mockResolvedValueOnce(null);
             mockInvitationRepo.findPendingByWorkspaceAndEmail.mockResolvedValueOnce(null);
@@ -499,7 +516,11 @@ describe("Workspace Routes", () => {
                 expires_at: new Date(Date.now() + 86400000),
                 created_at: new Date()
             });
-            mockUserRepo.findById.mockResolvedValueOnce({ id: testUser.id, name: "Test", email: testUser.email });
+            mockUserRepo.findById.mockResolvedValueOnce({
+                id: testUser.id,
+                name: "Test",
+                email: testUser.email
+            });
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "POST",
@@ -604,7 +625,9 @@ describe("Workspace Routes", () => {
                 .mockResolvedValueOnce(mockWorkspace);
             mockMemberRepoInstance.getMemberCount.mockResolvedValueOnce(2);
             mockUserRepo.findByEmail.mockResolvedValueOnce(null);
-            mockInvitationRepo.findPendingByWorkspaceAndEmail.mockResolvedValueOnce({ id: "existing-inv" });
+            mockInvitationRepo.findPendingByWorkspaceAndEmail.mockResolvedValueOnce({
+                id: "existing-inv"
+            });
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "POST",
@@ -760,7 +783,15 @@ describe("Workspace Routes", () => {
     describe("GET /workspaces/:workspaceId/invitations", () => {
         it("should list pending invitations by default", async () => {
             const invitations = [
-                { id: "inv-1", email: "a@test.com", role: "member", status: "pending", invited_by: "user-1", expires_at: new Date(), created_at: new Date() }
+                {
+                    id: "inv-1",
+                    email: "a@test.com",
+                    role: "member",
+                    status: "pending",
+                    invited_by: "user-1",
+                    expires_at: new Date(),
+                    created_at: new Date()
+                }
             ];
             mockInvitationRepo.findPendingByWorkspaceId.mockResolvedValueOnce(invitations);
 
@@ -777,8 +808,24 @@ describe("Workspace Routes", () => {
 
         it("should list all invitations with status=all", async () => {
             const invitations = [
-                { id: "inv-1", email: "a@test.com", role: "member", status: "pending", invited_by: "user-1", expires_at: new Date(), created_at: new Date() },
-                { id: "inv-2", email: "b@test.com", role: "viewer", status: "accepted", invited_by: "user-1", expires_at: new Date(), created_at: new Date() }
+                {
+                    id: "inv-1",
+                    email: "a@test.com",
+                    role: "member",
+                    status: "pending",
+                    invited_by: "user-1",
+                    expires_at: new Date(),
+                    created_at: new Date()
+                },
+                {
+                    id: "inv-2",
+                    email: "b@test.com",
+                    role: "viewer",
+                    status: "accepted",
+                    invited_by: "user-1",
+                    expires_at: new Date(),
+                    created_at: new Date()
+                }
             ];
             mockInvitationRepo.findByWorkspaceId.mockResolvedValueOnce(invitations);
 

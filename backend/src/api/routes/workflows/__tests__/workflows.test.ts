@@ -844,8 +844,8 @@ describe("Workflow Routes", () => {
             });
 
             expectStatus(response, 200);
-            const body = expectSuccessResponse<{ name: string }>(response);
-            expect(body.data.name).toBe("Generated Workflow");
+            const body = expectSuccessResponse<{ metadata: { name: string } }>(response);
+            expect(body.data.metadata.name).toBe("Generated Workflow");
             expect(mockGenerateWorkflow).toHaveBeenCalledWith({
                 userPrompt: "Create a workflow that sends an email when a form is submitted",
                 connectionId,

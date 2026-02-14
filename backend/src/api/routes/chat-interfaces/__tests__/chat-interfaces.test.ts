@@ -135,9 +135,7 @@ interface MockChatInterface {
     folderId: string | null;
 }
 
-function createMockChatInterface(
-    overrides: Partial<MockChatInterface> = {}
-): MockChatInterface {
+function createMockChatInterface(overrides: Partial<MockChatInterface> = {}): MockChatInterface {
     return {
         id: overrides.id || uuidv4(),
         userId: overrides.userId || uuidv4(),
@@ -180,15 +178,17 @@ function createMockChatInterface(
     };
 }
 
-function createMockSession(overrides: Partial<{
-    id: string;
-    interfaceId: string;
-    sessionToken: string;
-    threadId: string | null;
-    status: string;
-    messageCount: number;
-    createdAt: Date;
-}> = {}) {
+function createMockSession(
+    overrides: Partial<{
+        id: string;
+        interfaceId: string;
+        sessionToken: string;
+        threadId: string | null;
+        status: string;
+        messageCount: number;
+        createdAt: Date;
+    }> = {}
+) {
     return {
         id: overrides.id || uuidv4(),
         interfaceId: overrides.interfaceId || uuidv4(),
@@ -202,11 +202,13 @@ function createMockSession(overrides: Partial<{
     };
 }
 
-function createMockAgent(overrides: Partial<{
-    id: string;
-    name: string;
-    workspaceId: string;
-}> = {}) {
+function createMockAgent(
+    overrides: Partial<{
+        id: string;
+        name: string;
+        workspaceId: string;
+    }> = {}
+) {
     return {
         id: overrides.id || uuidv4(),
         name: overrides.name || "Test Agent",
@@ -233,7 +235,9 @@ function resetAllMocks() {
     );
     mockChatInterfaceRepo.softDeleteByWorkspaceId.mockResolvedValue(true);
     mockChatInterfaceRepo.publishByWorkspaceId.mockImplementation((id) =>
-        Promise.resolve(createMockChatInterface({ id, status: "published", publishedAt: new Date() }))
+        Promise.resolve(
+            createMockChatInterface({ id, status: "published", publishedAt: new Date() })
+        )
     );
     mockChatInterfaceRepo.unpublishByWorkspaceId.mockImplementation((id) =>
         Promise.resolve(createMockChatInterface({ id, status: "draft", publishedAt: null }))
@@ -255,8 +259,12 @@ function resetAllMocks() {
 
     mockGCSService.upload.mockResolvedValue("gs://test-bucket/test-file");
     mockGCSService.uploadBuffer.mockResolvedValue("gs://test-bucket/test-file");
-    mockGCSService.getPublicUrl.mockReturnValue("https://storage.googleapis.com/test-bucket/test-file");
-    mockGCSService.getSignedDownloadUrl.mockResolvedValue("https://storage.googleapis.com/signed/test-file?token=abc");
+    mockGCSService.getPublicUrl.mockReturnValue(
+        "https://storage.googleapis.com/test-bucket/test-file"
+    );
+    mockGCSService.getSignedDownloadUrl.mockResolvedValue(
+        "https://storage.googleapis.com/signed/test-file?token=abc"
+    );
 }
 
 // ============================================================================
@@ -335,9 +343,7 @@ describe("Chat Interface Routes", () => {
         it("should filter by agentId", async () => {
             const testUser = createTestUser();
             const agentId = uuidv4();
-            const chatInterfaces = [
-                createMockChatInterface({ userId: testUser.id, agentId })
-            ];
+            const chatInterfaces = [createMockChatInterface({ userId: testUser.id, agentId })];
             mockChatInterfaceRepo.findByAgentIdAndWorkspaceId.mockResolvedValue(chatInterfaces);
 
             const response = await authenticatedRequest(fastify, testUser, {
@@ -463,7 +469,9 @@ describe("Chat Interface Routes", () => {
         it("should return 400 for invalid slug format", async () => {
             const testUser = createTestUser();
             const agentId = uuidv4();
-            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(createMockAgent({ id: agentId }));
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockAgent({ id: agentId })
+            );
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "POST",
@@ -482,7 +490,9 @@ describe("Chat Interface Routes", () => {
         it("should return 400 for reserved slug", async () => {
             const testUser = createTestUser();
             const agentId = uuidv4();
-            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(createMockAgent({ id: agentId }));
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockAgent({ id: agentId })
+            );
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "POST",
@@ -501,7 +511,9 @@ describe("Chat Interface Routes", () => {
         it("should return 400 for duplicate slug", async () => {
             const testUser = createTestUser();
             const agentId = uuidv4();
-            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(createMockAgent({ id: agentId }));
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockAgent({ id: agentId })
+            );
             mockChatInterfaceRepo.isSlugAvailableInWorkspace.mockResolvedValue(false);
 
             const response = await authenticatedRequest(fastify, testUser, {
@@ -1149,7 +1161,9 @@ describe("Chat Interface Routes", () => {
         it.each(reservedSlugs)("should reject reserved slug: %s", async (slug) => {
             const testUser = createTestUser();
             const agentId = uuidv4();
-            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(createMockAgent({ id: agentId }));
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockAgent({ id: agentId })
+            );
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "POST",
@@ -1184,7 +1198,9 @@ describe("Chat Interface Routes", () => {
         it.each(invalidSlugs)("should reject invalid slug: $slug ($reason)", async ({ slug }) => {
             const testUser = createTestUser();
             const agentId = uuidv4();
-            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(createMockAgent({ id: agentId }));
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockAgent({ id: agentId })
+            );
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "POST",
@@ -1200,19 +1216,14 @@ describe("Chat Interface Routes", () => {
             expectErrorResponse(response, 400);
         });
 
-        const validSlugs = [
-            "ab",
-            "test-chat",
-            "my-chat-interface",
-            "chat123",
-            "123chat",
-            "a1b2c3"
-        ];
+        const validSlugs = ["ab", "test-chat", "my-chat-interface", "chat123", "123chat", "a1b2c3"];
 
         it.each(validSlugs)("should accept valid slug: %s", async (slug) => {
             const testUser = createTestUser();
             const agentId = uuidv4();
-            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(createMockAgent({ id: agentId }));
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockAgent({ id: agentId })
+            );
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "POST",

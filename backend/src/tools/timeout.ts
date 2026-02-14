@@ -51,7 +51,7 @@ export class ToolTimeoutError extends Error {
     constructor(toolName: string, toolType: string, timeoutMs: number, startTime: number) {
         super(
             `Tool "${toolName}" (type: ${toolType}) timed out after ${timeoutMs}ms. ` +
-                `Consider increasing the timeout or checking the tool's external dependencies.`
+                "Consider increasing the timeout or checking the tool's external dependencies."
         );
         this.name = "ToolTimeoutError";
         this.toolName = toolName;
@@ -113,10 +113,7 @@ export async function executeWithTimeout<T>(
         return result;
     } catch (error) {
         if (error instanceof ToolTimeoutError) {
-            logger.error(
-                { toolName, toolType, timeoutMs, startTime },
-                "Tool execution timed out"
-            );
+            logger.error({ toolName, toolType, timeoutMs, startTime }, "Tool execution timed out");
             throw error;
         }
 
@@ -137,15 +134,12 @@ export function withTimeout<TArgs extends unknown[], TResult>(
     toolName: string,
     toolType: string,
     config?: Partial<ToolTimeoutConfig>
-): (fn: (signal: AbortSignal, ...args: TArgs) => Promise<TResult>) => (...args: TArgs) => Promise<TResult> {
+): (
+    fn: (signal: AbortSignal, ...args: TArgs) => Promise<TResult>
+) => (...args: TArgs) => Promise<TResult> {
     return (fn) => {
         return (...args: TArgs) => {
-            return executeWithTimeout(
-                toolName,
-                toolType,
-                (signal) => fn(signal, ...args),
-                config
-            );
+            return executeWithTimeout(toolName, toolType, (signal) => fn(signal, ...args), config);
         };
     };
 }

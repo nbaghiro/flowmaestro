@@ -33,7 +33,11 @@ jest.mock("../../../services/redis", () => ({
     redis: mockRedis
 }));
 
-import { LLMRateLimiter, RateLimitExceededError, DEFAULT_LLM_RATE_LIMITS } from "../llm-rate-limiter";
+import {
+    LLMRateLimiter,
+    RateLimitExceededError,
+    DEFAULT_LLM_RATE_LIMITS
+} from "../llm-rate-limiter";
 
 describe("LLMRateLimiter", () => {
     let rateLimiter: LLMRateLimiter;
@@ -52,7 +56,7 @@ describe("LLMRateLimiter", () => {
                 [null, 0], // zremrangebyscore calls
                 [null, 0],
                 [null, 10], // callCount = 10
-                [null, 5],  // tokenEntries = 5
+                [null, 5], // tokenEntries = 5
                 [null, "2"] // concurrent = 2
             ]);
 
@@ -88,7 +92,8 @@ describe("LLMRateLimiter", () => {
 
         it("should reject request when concurrent execution limit exceeded", async () => {
             const maxConcurrent = Math.floor(
-                DEFAULT_LLM_RATE_LIMITS.maxConcurrentExecutions * DEFAULT_LLM_RATE_LIMITS.burstMultiplier
+                DEFAULT_LLM_RATE_LIMITS.maxConcurrentExecutions *
+                    DEFAULT_LLM_RATE_LIMITS.burstMultiplier
             );
 
             mockPipeline.exec.mockResolvedValue([
@@ -170,10 +175,7 @@ describe("LLMRateLimiter", () => {
 
             await rateLimiter.decrementConcurrent("workspace-1", "exec-1");
 
-            expect(mockRedis.set).toHaveBeenCalledWith(
-                expect.stringContaining("concurrent"),
-                "0"
-            );
+            expect(mockRedis.set).toHaveBeenCalledWith(expect.stringContaining("concurrent"), "0");
         });
     });
 

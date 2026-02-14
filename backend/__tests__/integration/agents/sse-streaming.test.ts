@@ -395,10 +395,7 @@ describe("Agent SSE Streaming", () => {
             await mockRedisEventBus.subscribeToThread(threadId, handler);
             await mockRedisEventBus.unsubscribeFromThread(threadId, handler);
 
-            expect(mockRedisEventBus.unsubscribeFromThread).toHaveBeenCalledWith(
-                threadId,
-                handler
-            );
+            expect(mockRedisEventBus.unsubscribeFromThread).toHaveBeenCalledWith(threadId, handler);
             expect(mockThreadSubscriptions.get(threadId)?.size).toBe(0);
         });
     });
@@ -590,7 +587,7 @@ describe("Agent SSE Streaming", () => {
             const sseFormat = `event: connected\ndata: ${JSON.stringify(connectedEvent)}\n\n`;
 
             expect(sseFormat).toBe(
-                `event: connected\ndata: {"executionId":"exec-format","status":"running"}\n\n`
+                'event: connected\ndata: {"executionId":"exec-format","status":"running"}\n\n'
             );
         });
 
@@ -603,7 +600,7 @@ describe("Agent SSE Streaming", () => {
             const sseFormat = `event: token\ndata: ${JSON.stringify(tokenEvent)}\n\n`;
 
             expect(sseFormat).toBe(
-                `event: token\ndata: {"token":"Hello","executionId":"exec-001"}\n\n`
+                'event: token\ndata: {"token":"Hello","executionId":"exec-001"}\n\n'
             );
         });
 

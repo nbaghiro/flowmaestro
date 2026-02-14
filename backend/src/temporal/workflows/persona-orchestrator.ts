@@ -91,13 +91,14 @@ const {
 });
 
 // Approval activities (only async activities that do I/O)
-const { createPersonaApprovalRequest, emitApprovalNeeded, clearPendingApproval } =
-    proxyActivities<typeof activities>({
-        startToCloseTimeout: "30 seconds",
-        retry: {
-            maximumAttempts: 3
-        }
-    });
+const { createPersonaApprovalRequest, emitApprovalNeeded, clearPendingApproval } = proxyActivities<
+    typeof activities
+>({
+    startToCloseTimeout: "30 seconds",
+    retry: {
+        maximumAttempts: 3
+    }
+});
 
 // =============================================================================
 // Pure Helper Functions (inline for workflow sandbox compatibility)
@@ -291,9 +292,8 @@ export interface PersonaApprovalResponsePayload {
     note?: string;
     responded_at: number;
 }
-export const personaApprovalResponseSignal = defineSignal<[PersonaApprovalResponsePayload]>(
-    "personaApprovalResponse"
-);
+export const personaApprovalResponseSignal =
+    defineSignal<[PersonaApprovalResponsePayload]>("personaApprovalResponse");
 
 // =============================================================================
 // Types and Interfaces
@@ -1802,7 +1802,8 @@ export async function personaOrchestratorWorkflow(
                         role: "tool",
                         content: JSON.stringify({
                             error: "Approval request timed out or was cancelled",
-                            suggestion: "The user did not respond to the approval request in time. Consider an alternative approach."
+                            suggestion:
+                                "The user did not respond to the approval request in time. Consider an alternative approach."
                         }),
                         tool_name: toolCall.name,
                         tool_call_id: toolCall.id,
@@ -1823,7 +1824,10 @@ export async function personaOrchestratorWorkflow(
 
                 // Handle denial
                 if (approvalResponse!.decision === "denied") {
-                    logger.info("Tool execution denied", { approvalId, note: approvalResponse!.note });
+                    logger.info("Tool execution denied", {
+                        approvalId,
+                        note: approvalResponse!.note
+                    });
 
                     const toolMessage: ThreadMessage = {
                         id: `tool-${Date.now()}-${toolCall.id}`,
@@ -1831,7 +1835,8 @@ export async function personaOrchestratorWorkflow(
                         content: JSON.stringify({
                             error: "Action denied by user",
                             note: approvalResponse!.note || "No reason provided",
-                            suggestion: "The user denied this action. Please try an alternative approach or ask the user for guidance."
+                            suggestion:
+                                "The user denied this action. Please try an alternative approach or ask the user for guidance."
                         }),
                         tool_name: toolCall.name,
                         tool_call_id: toolCall.id,

@@ -8,8 +8,8 @@
 
 import { z, ZodError, ZodSchema } from "zod";
 import type { JsonObject } from "@flowmaestro/shared";
-import type { Tool } from "../storage/models/Agent";
 import { createServiceLogger } from "../core/logging";
+import type { Tool } from "../storage/models/Agent";
 
 const logger = createServiceLogger("ToolValidation");
 
@@ -53,8 +53,16 @@ export interface ValidatedTool extends Tool {
 /**
  * Valid JSON Schema types
  */
-const VALID_JSON_SCHEMA_TYPES = ["string", "number", "integer", "boolean", "array", "object", "null"] as const;
-type ValidJsonSchemaType = typeof VALID_JSON_SCHEMA_TYPES[number];
+const VALID_JSON_SCHEMA_TYPES = [
+    "string",
+    "number",
+    "integer",
+    "boolean",
+    "array",
+    "object",
+    "null"
+] as const;
+type ValidJsonSchemaType = (typeof VALID_JSON_SCHEMA_TYPES)[number];
 
 /**
  * Validate that a JSON Schema is well-formed and safe
@@ -89,7 +97,7 @@ export function validateToolSchema(schema: unknown, depth: number = 0): SchemaVa
     // Check for required 'type' property
     if (!schemaObj.type) {
         // Allow schemas without type if they have $ref, oneOf, anyOf, allOf
-        const hasComposite = ["$ref", "oneOf", "anyOf", "allOf"].some(key => key in schemaObj);
+        const hasComposite = ["$ref", "oneOf", "anyOf", "allOf"].some((key) => key in schemaObj);
         if (!hasComposite) {
             errors.push("Schema must have a 'type' property or use $ref/oneOf/anyOf/allOf");
         }
@@ -98,8 +106,13 @@ export function validateToolSchema(schema: unknown, depth: number = 0): SchemaVa
         const schemaTypes = Array.isArray(schemaObj.type) ? schemaObj.type : [schemaObj.type];
 
         for (const t of schemaTypes) {
-            if (typeof t !== "string" || !VALID_JSON_SCHEMA_TYPES.includes(t as ValidJsonSchemaType)) {
-                errors.push(`Invalid schema type: "${t}". Must be one of: ${VALID_JSON_SCHEMA_TYPES.join(", ")}`);
+            if (
+                typeof t !== "string" ||
+                !VALID_JSON_SCHEMA_TYPES.includes(t as ValidJsonSchemaType)
+            ) {
+                errors.push(
+                    `Invalid schema type: "${t}". Must be one of: ${VALID_JSON_SCHEMA_TYPES.join(", ")}`
+                );
             }
         }
     }
@@ -112,14 +125,18 @@ export function validateToolSchema(schema: unknown, depth: number = 0): SchemaVa
             const props = schemaObj.properties as Record<string, unknown>;
             for (const [propName, propSchema] of Object.entries(props)) {
                 // Check for dangerous property names that could cause prototype pollution
-                if (propName === "__proto__" || propName === "constructor" || propName === "prototype") {
+                if (
+                    propName === "__proto__" ||
+                    propName === "constructor" ||
+                    propName === "prototype"
+                ) {
                     errors.push(`Potentially dangerous property name: "${propName}"`);
                 }
 
                 // Recursively validate nested schema
                 const nestedResult = validateToolSchema(propSchema, depth + 1);
                 if (!nestedResult.valid) {
-                    errors.push(...nestedResult.errors.map(e => `properties.${propName}: ${e}`));
+                    errors.push(...nestedResult.errors.map((e) => `properties.${propName}: ${e}`));
                 }
             }
         }
@@ -131,7 +148,9 @@ export function validateToolSchema(schema: unknown, depth: number = 0): SchemaVa
             } else {
                 for (const req of schemaObj.required) {
                     if (typeof req !== "string") {
-                        errors.push(`'required' array must contain only strings, got: ${typeof req}`);
+                        errors.push(
+                            `'required' array must contain only strings, got: ${typeof req}`
+                        );
                     }
                 }
             }
@@ -142,7 +161,7 @@ export function validateToolSchema(schema: unknown, depth: number = 0): SchemaVa
     if (schemaObj.type === "array" && schemaObj.items) {
         const itemsResult = validateToolSchema(schemaObj.items, depth + 1);
         if (!itemsResult.valid) {
-            errors.push(...itemsResult.errors.map(e => `items: ${e}`));
+            errors.push(...itemsResult.errors.map((e) => `items: ${e}`));
         }
     }
 
@@ -343,7 +362,7 @@ export function validateToolInput(tool: Tool, input: unknown): ValidationResult 
                 success: false,
                 error: {
                     message: `Tool "${tool.name}" has an invalid schema: ${schemaValidation.errors.join("; ")}`,
-                    errors: schemaValidation.errors.map(e => ({
+                    errors: schemaValidation.errors.map((e) => ({
                         path: "schema",
                         message: e,
                         code: "invalid_schema"
@@ -488,7 +507,11 @@ export function coerceToolArguments(tool: Tool, args: JsonObject): JsonObject {
                     if (propType === "number" || propType === "integer") {
                         const trimmed = value.trim();
                         // Only coerce if it's a valid numeric string
-                        if (trimmed !== "" && !isNaN(Number(trimmed)) && isFinite(Number(trimmed))) {
+                        if (
+                            trimmed !== "" &&
+                            !isNaN(Number(trimmed)) &&
+                            isFinite(Number(trimmed))
+                        ) {
                             const numValue = Number(trimmed);
                             // For integers, ensure it's a whole number
                             if (propType === "integer" && !Number.isInteger(numValue)) {
@@ -531,7 +554,11 @@ export function coerceToolArguments(tool: Tool, args: JsonObject): JsonObject {
                         if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
                             try {
                                 const parsed = JSON.parse(trimmed);
-                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                if (
+                                    parsed &&
+                                    typeof parsed === "object" &&
+                                    !Array.isArray(parsed)
+                                ) {
                                     coerced[key] = parsed;
                                 }
                             } catch {

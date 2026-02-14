@@ -123,7 +123,8 @@ export function createTestFormInterface(overrides: Partial<FormInterface> = {}):
 
         // Stats
         submissionCount: overrides.submissionCount ?? 0,
-        lastSubmissionAt: overrides.lastSubmissionAt !== undefined ? overrides.lastSubmissionAt : null,
+        lastSubmissionAt:
+            overrides.lastSubmissionAt !== undefined ? overrides.lastSubmissionAt : null,
 
         // Timestamps
         createdAt: overrides.createdAt || new Date(),
@@ -228,9 +229,7 @@ export function createAgentTargetFormInterface(
 /**
  * Create a form interface with file uploads disabled.
  */
-export function createNoUploadFormInterface(
-    overrides: Partial<FormInterface> = {}
-): FormInterface {
+export function createNoUploadFormInterface(overrides: Partial<FormInterface> = {}): FormInterface {
     return createTestFormInterface({
         ...overrides,
         allowFileUpload: false,
@@ -272,9 +271,7 @@ export function createTestSubmission(
         // Metadata
         ipAddress: overrides.ipAddress !== undefined ? overrides.ipAddress : "127.0.0.1",
         userAgent:
-            overrides.userAgent !== undefined
-                ? overrides.userAgent
-                : "Mozilla/5.0 (Test Browser)",
+            overrides.userAgent !== undefined ? overrides.userAgent : "Mozilla/5.0 (Test Browser)",
         submittedAt: overrides.submittedAt || new Date(),
         createdAt: overrides.createdAt || new Date()
     };
@@ -361,7 +358,9 @@ export function createTestFileAttachment(
         fileName,
         fileSize: overrides.fileSize ?? 1024 * 100, // 100KB
         mimeType: overrides.mimeType || "application/pdf",
-        gcsUri: overrides.gcsUri || `gs://test-bucket/form-submissions/fi-001/session-001/${id}_${fileName}`,
+        gcsUri:
+            overrides.gcsUri ||
+            `gs://test-bucket/form-submissions/fi-001/session-001/${id}_${fileName}`,
         downloadUrl:
             overrides.downloadUrl ||
             `https://storage.googleapis.com/test-bucket/form-submissions/fi-001/session-001/${id}_${fileName}?signed=true`
@@ -412,9 +411,7 @@ export function createFileTypeAttachments(): Record<string, FormInterfaceFileAtt
 /**
  * Create an oversized file attachment (for testing size limits).
  */
-export function createOversizedFileAttachment(
-    sizeMb: number = 30
-): FormInterfaceFileAttachment {
+export function createOversizedFileAttachment(sizeMb: number = 30): FormInterfaceFileAttachment {
     return createTestFileAttachment({
         fileName: "large-file.pdf",
         fileSize: sizeMb * 1024 * 1024
@@ -727,10 +724,7 @@ export function createWorkflowFailedEvent(
 /**
  * Create an agent token event.
  */
-export function createAgentTokenEvent(
-    executionId: string,
-    token: string
-): Record<string, unknown> {
+export function createAgentTokenEvent(executionId: string, token: string): Record<string, unknown> {
     return {
         type: "agent:execution:token",
         executionId,

@@ -2,6 +2,9 @@
 -- Created: 2024-10-27
 -- Description: Create base tables for FlowMaestro (users, workflows, executions)
 
+-- Create schema if it doesn't exist
+CREATE SCHEMA IF NOT EXISTS flowmaestro;
+
 -- Create extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";

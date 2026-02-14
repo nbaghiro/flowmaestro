@@ -6,10 +6,10 @@
 
 import type { JsonObject } from "@flowmaestro/shared";
 import { createServiceLogger } from "../core/logging";
-import { validateToolInput } from "./validation";
 import { providerRegistry } from "../integrations/core/ProviderRegistry";
 import { ConnectionRepository } from "../storage/repositories/ConnectionRepository";
 import { getBuiltInTool, getAllBuiltInTools } from "./builtin";
+import { validateToolInput } from "./validation";
 import type {
     AnyTool,
     IntegrationTool,

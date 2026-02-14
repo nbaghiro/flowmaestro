@@ -106,7 +106,18 @@ describe("PersonaApprovalRequestRepository", () => {
 
             expect(mockQuery).toHaveBeenCalledWith(
                 expect.stringContaining("INSERT INTO flowmaestro.persona_approval_requests"),
-                [instanceId, "tool_call", null, "Send a message", "{}", "low", null, null, null, null]
+                [
+                    instanceId,
+                    "tool_call",
+                    null,
+                    "Send a message",
+                    "{}",
+                    "low",
+                    null,
+                    null,
+                    null,
+                    null
+                ]
             );
 
             expect(result.tool_name).toBeNull();
@@ -124,7 +135,9 @@ describe("PersonaApprovalRequestRepository", () => {
             const result = await repository.findById(id);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SELECT * FROM flowmaestro.persona_approval_requests WHERE id = $1"),
+                expect.stringContaining(
+                    "SELECT * FROM flowmaestro.persona_approval_requests WHERE id = $1"
+                ),
                 [id]
             );
             expect(result).not.toBeNull();
@@ -395,7 +408,9 @@ describe("PersonaApprovalRequestRepository", () => {
             const result = await repository.deleteByInstanceId(instanceId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("DELETE FROM flowmaestro.persona_approval_requests WHERE instance_id = $1"),
+                expect.stringContaining(
+                    "DELETE FROM flowmaestro.persona_approval_requests WHERE instance_id = $1"
+                ),
                 [instanceId]
             );
             expect(result).toBe(5);
@@ -418,7 +433,9 @@ describe("PersonaApprovalRequestRepository", () => {
             const result = await repository.hardDelete(id);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("DELETE FROM flowmaestro.persona_approval_requests WHERE id = $1"),
+                expect.stringContaining(
+                    "DELETE FROM flowmaestro.persona_approval_requests WHERE id = $1"
+                ),
                 [id]
             );
             expect(result).toBe(true);

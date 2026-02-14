@@ -217,7 +217,9 @@ describe("PersonaInstanceDeliverableRepository", () => {
             const result = await repository.findById(id);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SELECT * FROM flowmaestro.persona_instance_deliverables WHERE id = $1"),
+                expect.stringContaining(
+                    "SELECT * FROM flowmaestro.persona_instance_deliverables WHERE id = $1"
+                ),
                 [id]
             );
             expect(result).not.toBeNull();
@@ -289,7 +291,9 @@ describe("PersonaInstanceDeliverableRepository", () => {
             const result = await repository.getSummariesByInstanceId(instanceId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SELECT id, name, description, type, file_size_bytes, file_extension, preview, created_at"),
+                expect.stringContaining(
+                    "SELECT id, name, description, type, file_size_bytes, file_extension, preview, created_at"
+                ),
                 [instanceId]
             );
             expect(result).toHaveLength(1);
@@ -364,10 +368,10 @@ describe("PersonaInstanceDeliverableRepository", () => {
 
             const result = await repository.update(id, { name: "Updated Name" });
 
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SET name = $1"),
-                ["Updated Name", id]
-            );
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("SET name = $1"), [
+                "Updated Name",
+                id
+            ]);
             expect(result?.name).toBe("Updated Name");
         });
 
@@ -402,7 +406,9 @@ describe("PersonaInstanceDeliverableRepository", () => {
 
             // Should call findById instead of update
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("SELECT * FROM flowmaestro.persona_instance_deliverables WHERE id"),
+                expect.stringContaining(
+                    "SELECT * FROM flowmaestro.persona_instance_deliverables WHERE id"
+                ),
                 [id]
             );
             expect(result).not.toBeNull();
@@ -425,7 +431,9 @@ describe("PersonaInstanceDeliverableRepository", () => {
             const result = await repository.delete(id);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("DELETE FROM flowmaestro.persona_instance_deliverables WHERE id = $1"),
+                expect.stringContaining(
+                    "DELETE FROM flowmaestro.persona_instance_deliverables WHERE id = $1"
+                ),
                 [id]
             );
             expect(result).toBe(true);
@@ -448,7 +456,9 @@ describe("PersonaInstanceDeliverableRepository", () => {
             const result = await repository.deleteByInstanceId(instanceId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("DELETE FROM flowmaestro.persona_instance_deliverables WHERE instance_id = $1"),
+                expect.stringContaining(
+                    "DELETE FROM flowmaestro.persona_instance_deliverables WHERE instance_id = $1"
+                ),
                 [instanceId]
             );
             expect(result).toBe(5);

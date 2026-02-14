@@ -5,8 +5,8 @@
  * Configures mocking, extends Jest with custom matchers, and manages test environment.
  */
 
-import { extendJestWithWorkflowMatchers } from "./workflows/helpers/assertion-helpers";
 import { setupHttpMocking, teardownHttpMocking } from "../helpers/http-mock";
+import { extendJestWithWorkflowMatchers } from "./workflows/helpers/assertion-helpers";
 import { saveAndClearHandlers, restoreHandlers } from "./workflows/helpers/mock-registry";
 
 // ============================================================================

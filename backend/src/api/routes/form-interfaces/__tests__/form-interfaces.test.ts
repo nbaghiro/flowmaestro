@@ -135,9 +135,7 @@ interface MockFormInterface {
     deletedAt: Date | null;
 }
 
-function createMockFormInterface(
-    overrides: Partial<MockFormInterface> = {}
-): MockFormInterface {
+function createMockFormInterface(overrides: Partial<MockFormInterface> = {}): MockFormInterface {
     return {
         id: overrides.id || uuidv4(),
         userId: overrides.userId || uuidv4(),
@@ -177,15 +175,17 @@ function createMockFormInterface(
     };
 }
 
-function createMockSubmission(overrides: Partial<{
-    id: string;
-    interfaceId: string;
-    message: string;
-    executionStatus: string;
-    executionId: string | null;
-    output: string | null;
-    createdAt: Date;
-}> = {}) {
+function createMockSubmission(
+    overrides: Partial<{
+        id: string;
+        interfaceId: string;
+        message: string;
+        executionStatus: string;
+        executionId: string | null;
+        output: string | null;
+        createdAt: Date;
+    }> = {}
+) {
     return {
         id: overrides.id || uuidv4(),
         interfaceId: overrides.interfaceId || uuidv4(),
@@ -218,7 +218,9 @@ function resetAllMocks() {
     );
     mockFormInterfaceRepo.softDeleteByWorkspaceId.mockResolvedValue(true);
     mockFormInterfaceRepo.publishByWorkspaceId.mockImplementation((id) =>
-        Promise.resolve(createMockFormInterface({ id, status: "published", publishedAt: new Date() }))
+        Promise.resolve(
+            createMockFormInterface({ id, status: "published", publishedAt: new Date() })
+        )
     );
     mockFormInterfaceRepo.unpublishByWorkspaceId.mockImplementation((id) =>
         Promise.resolve(createMockFormInterface({ id, status: "draft", publishedAt: null }))
@@ -233,8 +235,12 @@ function resetAllMocks() {
 
     mockGCSService.upload.mockResolvedValue("gs://test-bucket/test-file");
     mockGCSService.uploadBuffer.mockResolvedValue("gs://test-bucket/test-file");
-    mockGCSService.getPublicUrl.mockReturnValue("https://storage.googleapis.com/test-bucket/test-file");
-    mockGCSService.getSignedDownloadUrl.mockResolvedValue("https://storage.googleapis.com/signed/test-file?token=abc");
+    mockGCSService.getPublicUrl.mockReturnValue(
+        "https://storage.googleapis.com/test-bucket/test-file"
+    );
+    mockGCSService.getSignedDownloadUrl.mockResolvedValue(
+        "https://storage.googleapis.com/signed/test-file?token=abc"
+    );
 
     mockTriggerRepo.findById.mockResolvedValue(null);
     mockTriggerRepo.create.mockImplementation(() =>
