@@ -6,7 +6,7 @@
  */
 
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import type { ExecutionQueueState, ContextSnapshot } from "../../src/temporal/core/types";
+import type { ExecutionQueueState, ContextSnapshot } from "../../../../src/temporal/core/types";
 import type { ExecutionLogEntry } from "../fixtures/activities";
 
 // ============================================================================

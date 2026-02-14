@@ -150,6 +150,15 @@ export {
     emitPersonaDeliverable,
     emitPersonaCompleted,
     emitPersonaFailed,
+    // Approval activities
+    checkToolRequiresApproval,
+    getToolRiskLevel,
+    generateToolDescription,
+    createPersonaApprovalRequest,
+    emitApprovalNeeded,
+    emitApprovalResolved,
+    clearPendingApproval,
+    parseApprovalSignal,
     type GetPersonaConfigInput,
     type UpdatePersonaInstanceProgressInput,
     type UpdatePersonaInstanceStatusInput,
@@ -164,7 +173,13 @@ export {
     type EmitPersonaProgressInput,
     type EmitPersonaDeliverableInput,
     type EmitPersonaCompletedInput,
-    type EmitPersonaFailedInput
+    type EmitPersonaFailedInput,
+    type CreatePersonaApprovalRequestInput,
+    type CreatePersonaApprovalRequestResult,
+    type CheckToolRequiresApprovalInput,
+    type EmitApprovalNeededInput,
+    type EmitApprovalResolvedInput,
+    type ClearPendingApprovalInput
 } from "./personas";
 
 // Form submission attachment activities

@@ -19,3 +19,4 @@ export * from "./WorkspaceCreditRepository";
 export * from "./PersonaDefinitionRepository";
 export * from "./PersonaInstanceRepository";
 export * from "./PersonaTaskTemplateRepository";
+export * from "./PersonaApprovalRequestRepository";

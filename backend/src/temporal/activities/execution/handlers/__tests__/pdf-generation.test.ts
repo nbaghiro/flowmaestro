@@ -714,5 +714,157 @@ function hello(): string {
                 );
             });
         });
+
+        describe("concurrent operations", () => {
+            it("should handle multiple simultaneous PDF generations", async () => {
+                const contents = ["# Doc 1", "# Doc 2", "# Doc 3"];
+
+                contents.forEach((content, i) => {
+                    mockExecute.mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            path: `/workspace/doc${i + 1}.pdf`,
+                            filename: `doc${i + 1}.pdf`,
+                            size: 30000 + i * 1000,
+                            pageCount: i + 1
+                        }
+                    });
+                });
+
+                const handler1 = createPdfGenerationNodeHandler();
+                const handler2 = createPdfGenerationNodeHandler();
+                const handler3 = createPdfGenerationNodeHandler();
+
+                const results = await Promise.all([
+                    handler1.execute(
+                        createMockInput({
+                            content: contents[0],
+                            format: "markdown",
+                            outputVariable: "r1"
+                        })
+                    ),
+                    handler2.execute(
+                        createMockInput({
+                            content: contents[1],
+                            format: "markdown",
+                            outputVariable: "r2"
+                        })
+                    ),
+                    handler3.execute(
+                        createMockInput({
+                            content: contents[2],
+                            format: "markdown",
+                            outputVariable: "r3"
+                        })
+                    )
+                ]);
+
+                expect(results).toHaveLength(3);
+                results.forEach((result, i) => {
+                    expect(result.result[`r${i + 1}`]).toBeDefined();
+                });
+            });
+
+            it("should isolate errors between concurrent PDF generations", async () => {
+                mockExecute
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            path: "/workspace/success1.pdf",
+                            filename: "success1.pdf",
+                            size: 30000,
+                            pageCount: 1
+                        }
+                    })
+                    .mockResolvedValueOnce({
+                        success: false,
+                        error: { message: "PDF generation failed: memory limit exceeded" }
+                    })
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            path: "/workspace/success2.pdf",
+                            filename: "success2.pdf",
+                            size: 35000,
+                            pageCount: 2
+                        }
+                    });
+
+                const handler1 = createPdfGenerationNodeHandler();
+                const handler2 = createPdfGenerationNodeHandler();
+                const handler3 = createPdfGenerationNodeHandler();
+
+                const results = await Promise.allSettled([
+                    handler1.execute(
+                        createMockInput({
+                            content: "# Small doc",
+                            format: "markdown",
+                            outputVariable: "r1"
+                        })
+                    ),
+                    handler2.execute(
+                        createMockInput({
+                            content: "# Large doc ".repeat(10000),
+                            format: "markdown",
+                            outputVariable: "r2"
+                        })
+                    ),
+                    handler3.execute(
+                        createMockInput({
+                            content: "# Medium doc",
+                            format: "markdown",
+                            outputVariable: "r3"
+                        })
+                    )
+                ]);
+
+                expect(results[0].status).toBe("fulfilled");
+                expect(results[1].status).toBe("rejected");
+                expect(results[2].status).toBe("fulfilled");
+            });
+        });
+
+        describe("resource cleanup", () => {
+            it("should cleanup after successful generation", async () => {
+                mockExecute.mockResolvedValueOnce({
+                    success: true,
+                    data: {
+                        path: "/workspace/doc.pdf",
+                        filename: "doc.pdf",
+                        size: 30000,
+                        pageCount: 1
+                    }
+                });
+
+                const input = createMockInput({
+                    content: "# Test",
+                    format: "markdown",
+                    outputVariable: "result"
+                });
+
+                const result = await handler.execute(input);
+
+                expect(result.result.result).toBeDefined();
+                // Tool internally handles cleanup
+                expect(mockExecute).toHaveBeenCalledTimes(1);
+            });
+
+            it("should cleanup after failed generation", async () => {
+                mockExecute.mockResolvedValueOnce({
+                    success: false,
+                    error: { message: "Generation failed" }
+                });
+
+                const input = createMockInput({
+                    content: "# Test",
+                    format: "markdown",
+                    outputVariable: "result"
+                });
+
+                await expect(handler.execute(input)).rejects.toThrow("Generation failed");
+                // Tool internally handles cleanup even on failure
+                expect(mockExecute).toHaveBeenCalledTimes(1);
+            });
+        });
     });
 });

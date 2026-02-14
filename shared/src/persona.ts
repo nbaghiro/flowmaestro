@@ -568,6 +568,7 @@ export type PersonaWebSocketEventType =
     | "persona:instance:status_changed"
     | "persona:instance:progress"
     | "persona:instance:approval_needed"
+    | "persona:instance:approval_resolved"
     | "persona:instance:completed"
     | "persona:instance:failed"
     | "persona:instance:message";
@@ -655,6 +656,7 @@ export type PersonaWebSocketEvent =
     | PersonaInstanceStatusChangedEvent
     | PersonaInstanceProgressEvent
     | PersonaInstanceApprovalNeededEvent
+    | PersonaInstanceApprovalResolvedEvent
     | PersonaInstanceCompletedEvent
     | PersonaInstanceFailedEvent
     | PersonaInstanceMessageEvent;
@@ -739,4 +741,121 @@ export interface GenerateFromTemplateResponse {
  */
 export interface PersonaTaskTemplateListResponse {
     templates: PersonaTaskTemplateSummary[];
+}
+
+// ============================================================================
+// PERSONA APPROVAL REQUEST TYPES
+// ============================================================================
+
+/**
+ * Status of an approval request
+ */
+export type PersonaApprovalRequestStatus = "pending" | "approved" | "denied" | "expired";
+
+/**
+ * Risk level for an action requiring approval
+ */
+export type PersonaApprovalRequestRiskLevel = "low" | "medium" | "high";
+
+/**
+ * Action type that triggered the approval request
+ */
+export type PersonaApprovalActionType =
+    | "tool_call"
+    | "file_write"
+    | "external_api"
+    | "send_message"
+    | "cost_threshold";
+
+/**
+ * Full approval request record
+ */
+export interface PersonaApprovalRequest {
+    id: string;
+    instance_id: string;
+
+    // Action details
+    action_type: PersonaApprovalActionType;
+    tool_name: string | null;
+    action_description: string;
+    action_arguments: Record<string, unknown>;
+
+    // Risk assessment
+    risk_level: PersonaApprovalRequestRiskLevel;
+    estimated_cost_credits: number | null;
+
+    // Context for user decision
+    agent_context: string | null;
+    alternatives: string | null;
+
+    // Status
+    status: PersonaApprovalRequestStatus;
+
+    // Response tracking
+    responded_by: string | null;
+    responded_at: string | null;
+    response_note: string | null;
+
+    // Timestamps
+    created_at: string;
+    expires_at: string | null;
+}
+
+/**
+ * Summary for approval requests in list views
+ */
+export interface PersonaApprovalRequestSummary {
+    id: string;
+    instance_id: string;
+    action_type: PersonaApprovalActionType;
+    tool_name: string | null;
+    action_description: string;
+    risk_level: PersonaApprovalRequestRiskLevel;
+    estimated_cost_credits: number | null;
+    status: PersonaApprovalRequestStatus;
+    created_at: string;
+    // Computed field
+    waiting_seconds: number;
+}
+
+/**
+ * Request to approve a pending approval
+ */
+export interface ApprovePersonaActionRequest {
+    note?: string;
+}
+
+/**
+ * Request to deny a pending approval
+ */
+export interface DenyPersonaActionRequest {
+    note?: string;
+}
+
+/**
+ * Response after approving/denying
+ */
+export interface PersonaApprovalActionResponse {
+    id: string;
+    status: PersonaApprovalRequestStatus;
+    responded_at: string;
+}
+
+/**
+ * Payload sent via Temporal signal when approval is resolved
+ */
+export interface PersonaApprovalSignalPayload {
+    approval_id: string;
+    decision: "approved" | "denied";
+    note?: string;
+    responded_at: number;
+}
+
+/**
+ * WebSocket event when approval is resolved
+ */
+export interface PersonaInstanceApprovalResolvedEvent extends PersonaWebSocketEventBase {
+    type: "persona:instance:approval_resolved";
+    approval_id: string;
+    decision: "approved" | "denied";
 }

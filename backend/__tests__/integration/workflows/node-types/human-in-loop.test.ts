@@ -352,8 +352,9 @@ describe("Human-in-the-Loop Integration Tests", () => {
                 }
             );
 
-            const _result = await worker.runUntil(
-                testEnv.client.workflow.execute("orchestratorWorkflow", {
+            // Execute the workflow inside runUntil with all operations
+            const result = await worker.runUntil(async () => {
+                const handle = await testEnv.client.workflow.start("orchestratorWorkflow", {
                     workflowId: "test-human-pause-" + Date.now(),
                     taskQueue: "test-workflow-queue",
                     args: [
@@ -364,12 +365,31 @@ describe("Human-in-the-Loop Integration Tests", () => {
                             skipCreditCheck: true
                         }
                     ]
-                })
-            );
-            expect(_result).toBeDefined();
+                });
 
-            // The workflow should pause and emit the paused event
-            expect(mockEmitExecutionPaused).toHaveBeenCalled();
+                // Wait for the pause event to be emitted
+                for (let i = 0; i < 50; i++) {
+                    if (mockEmitExecutionPaused.mock.calls.length > 0) {
+                        break;
+                    }
+                    await new Promise((r) => setTimeout(r, 100));
+                }
+
+                // The workflow should pause and emit the paused event
+                expect(mockEmitExecutionPaused).toHaveBeenCalled();
+
+                // Send human review response to complete the workflow
+                await handle.signal("humanReviewResponse", {
+                    variableName: "userConfirmation",
+                    response: true,
+                    submittedAt: Date.now()
+                });
+
+                // Wait for completion
+                return handle.result();
+            });
+
+            expect(result).toBeDefined();
         });
 
         it("should include pause context with input requirements", async () => {
@@ -378,7 +398,8 @@ describe("Human-in-the-Loop Integration Tests", () => {
             configureMockNodeOutputsWithSignals(
                 {
                     input: { data: "test" },
-                    wait_for_user: { waitingFor: "approvalDecision", inputType: "string" }
+                    wait_for_user: { waitingFor: "approvalDecision", inputType: "string" },
+                    output: { result: "Completed" }
                 },
                 {
                     wait_for_user: {
@@ -400,8 +421,9 @@ describe("Human-in-the-Loop Integration Tests", () => {
                 }
             );
 
-            const _result = await worker.runUntil(
-                testEnv.client.workflow.execute("orchestratorWorkflow", {
+            // Execute the workflow inside runUntil with all operations
+            const result = await worker.runUntil(async () => {
+                const handle = await testEnv.client.workflow.start("orchestratorWorkflow", {
                     workflowId: "test-pause-context-" + Date.now(),
                     taskQueue: "test-workflow-queue",
                     args: [
@@ -412,9 +434,27 @@ describe("Human-in-the-Loop Integration Tests", () => {
                             skipCreditCheck: true
                         }
                     ]
-                })
-            );
-            expect(_result).toBeDefined();
+                });
+
+                // Wait for the pause event to be emitted
+                for (let i = 0; i < 50; i++) {
+                    if (mockEmitExecutionPaused.mock.calls.length > 0) {
+                        break;
+                    }
+                    await new Promise((r) => setTimeout(r, 100));
+                }
+
+                // Send human review response to complete the workflow
+                await handle.signal("humanReviewResponse", {
+                    variableName: "approvalDecision",
+                    response: "approved",
+                    submittedAt: Date.now()
+                });
+
+                return handle.result();
+            });
+
+            expect(result).toBeDefined();
 
             const nodeIds = mockExecuteNode.mock.calls.map(
                 (call) => (call[0] as ExecuteNodeParams).executionContext?.nodeId
@@ -677,8 +717,9 @@ describe("Human-in-the-Loop Integration Tests", () => {
                 }
             );
 
-            await worker.runUntil(
-                testEnv.client.workflow.execute("orchestratorWorkflow", {
+            // Execute the workflow inside runUntil with all operations
+            await worker.runUntil(async () => {
+                const handle = await testEnv.client.workflow.start("orchestratorWorkflow", {
                     workflowId: "test-timeout-config-" + Date.now(),
                     taskQueue: "test-workflow-queue",
                     args: [
@@ -689,11 +730,28 @@ describe("Human-in-the-Loop Integration Tests", () => {
                             skipCreditCheck: true
                         }
                     ]
-                })
-            );
+                });
 
-            // Verify the pause signal was sent with timeout info
-            expect(mockEmitExecutionPaused).toHaveBeenCalled();
+                // Wait for the pause event to be emitted
+                for (let i = 0; i < 50; i++) {
+                    if (mockEmitExecutionPaused.mock.calls.length > 0) {
+                        break;
+                    }
+                    await new Promise((r) => setTimeout(r, 100));
+                }
+
+                // Verify the pause signal was sent with timeout info
+                expect(mockEmitExecutionPaused).toHaveBeenCalled();
+
+                // Send response to complete the workflow
+                await handle.signal("humanReviewResponse", {
+                    variableName: "urgentApproval",
+                    response: "approved",
+                    submittedAt: Date.now()
+                });
+
+                return handle.result();
+            });
         });
     });
 

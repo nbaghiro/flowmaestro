@@ -1,6 +1,13 @@
 import { FastifyInstance } from "fastify";
 import { authMiddleware } from "../../middleware/auth";
 import { workspaceContextMiddleware } from "../../middleware/workspace-context";
+import {
+    getInstanceApprovalsHandler,
+    approveActionHandler,
+    denyActionHandler,
+    getPendingApprovalCountHandler,
+    listPendingApprovalsHandler
+} from "./approvals";
 import { cancelPersonaInstanceHandler } from "./cancel";
 import { completePersonaInstanceHandler } from "./complete";
 import {
@@ -58,6 +65,13 @@ export async function personaInstanceRoutes(fastify: FastifyInstance) {
     fastify.get("/:id/deliverables/:deliverableId", getDeliverable);
     fastify.get("/:id/deliverables/:deliverableId/download", downloadDeliverable);
     fastify.delete("/:id/deliverables/:deliverableId", deleteDeliverable);
+
+    // Approval management
+    fastify.get("/approvals", listPendingApprovalsHandler);
+    fastify.get("/approvals/count", getPendingApprovalCountHandler);
+    fastify.get("/:id/approvals", getInstanceApprovalsHandler);
+    fastify.post("/:id/approvals/:approvalId/approve", approveActionHandler);
+    fastify.post("/:id/approvals/:approvalId/deny", denyActionHandler);
 
     // Real-time streaming
     await fastify.register(streamPersonaInstanceRoute);

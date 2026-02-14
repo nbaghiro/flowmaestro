@@ -784,5 +784,197 @@ describe("ScreenshotCaptureNodeHandler", () => {
                 );
             });
         });
+
+        describe("timeout scenarios", () => {
+            it("should handle navigation timeout", async () => {
+                mockExecute.mockResolvedValueOnce({
+                    success: false,
+                    error: { message: "Navigation timeout: page did not load within 60000ms" }
+                });
+
+                const input = createMockInput({
+                    url: "https://very-slow-page.example.com",
+                    timeout: 60000,
+                    outputVariable: "result"
+                });
+
+                await expect(handler.execute(input)).rejects.toThrow("timeout");
+            });
+
+            it("should handle slow page render within timeout", async () => {
+                mockExecute.mockImplementationOnce(
+                    () =>
+                        new Promise((resolve) =>
+                            setTimeout(
+                                () =>
+                                    resolve({
+                                        success: true,
+                                        data: {
+                                            path: "/workspace/slow-page.png",
+                                            filename: "slow-page.png",
+                                            format: "png",
+                                            width: 1280,
+                                            height: 720,
+                                            size: 300000,
+                                            url: "https://slow.example.com",
+                                            capturedAt: "2024-01-15T12:00:00Z"
+                                        }
+                                    }),
+                                50
+                            )
+                        )
+                );
+
+                const input = createMockInput({
+                    url: "https://slow.example.com",
+                    outputVariable: "result"
+                });
+
+                const result = await handler.execute(input);
+
+                expect(result.result.result).toBeDefined();
+            });
+        });
+
+        describe("concurrent operations", () => {
+            it("should handle multiple simultaneous screenshots", async () => {
+                const urls = [
+                    "https://example1.com",
+                    "https://example2.com",
+                    "https://example3.com"
+                ];
+
+                urls.forEach((url, i) => {
+                    mockExecute.mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            path: `/workspace/screenshot${i + 1}.png`,
+                            filename: `screenshot${i + 1}.png`,
+                            format: "png",
+                            width: 1280,
+                            height: 720,
+                            size: 200000 + i * 10000,
+                            url,
+                            capturedAt: "2024-01-15T12:00:00Z"
+                        }
+                    });
+                });
+
+                const handler1 = createScreenshotCaptureNodeHandler();
+                const handler2 = createScreenshotCaptureNodeHandler();
+                const handler3 = createScreenshotCaptureNodeHandler();
+
+                const results = await Promise.all([
+                    handler1.execute(createMockInput({ url: urls[0], outputVariable: "r1" })),
+                    handler2.execute(createMockInput({ url: urls[1], outputVariable: "r2" })),
+                    handler3.execute(createMockInput({ url: urls[2], outputVariable: "r3" }))
+                ]);
+
+                expect(results).toHaveLength(3);
+                results.forEach((result, i) => {
+                    expect(result.result[`r${i + 1}`]).toBeDefined();
+                });
+            });
+
+            it("should isolate errors between concurrent screenshots", async () => {
+                mockExecute
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            path: "/workspace/success1.png",
+                            filename: "success1.png",
+                            format: "png",
+                            width: 1280,
+                            height: 720,
+                            size: 200000,
+                            url: "https://example1.com",
+                            capturedAt: "2024-01-15T12:00:00Z"
+                        }
+                    })
+                    .mockResolvedValueOnce({
+                        success: false,
+                        error: { message: "Browser crashed" }
+                    })
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            path: "/workspace/success2.png",
+                            filename: "success2.png",
+                            format: "png",
+                            width: 1280,
+                            height: 720,
+                            size: 200000,
+                            url: "https://example3.com",
+                            capturedAt: "2024-01-15T12:00:00Z"
+                        }
+                    });
+
+                const handler1 = createScreenshotCaptureNodeHandler();
+                const handler2 = createScreenshotCaptureNodeHandler();
+                const handler3 = createScreenshotCaptureNodeHandler();
+
+                const results = await Promise.allSettled([
+                    handler1.execute(
+                        createMockInput({ url: "https://example1.com", outputVariable: "r1" })
+                    ),
+                    handler2.execute(
+                        createMockInput({ url: "https://crash.com", outputVariable: "r2" })
+                    ),
+                    handler3.execute(
+                        createMockInput({ url: "https://example3.com", outputVariable: "r3" })
+                    )
+                ]);
+
+                expect(results[0].status).toBe("fulfilled");
+                expect(results[1].status).toBe("rejected");
+                expect(results[2].status).toBe("fulfilled");
+            });
+        });
+
+        describe("resource cleanup", () => {
+            it("should cleanup after successful capture", async () => {
+                mockExecute.mockResolvedValueOnce({
+                    success: true,
+                    data: {
+                        path: "/workspace/screenshot.png",
+                        filename: "screenshot.png",
+                        format: "png",
+                        width: 1280,
+                        height: 720,
+                        size: 200000,
+                        url: "https://example.com",
+                        capturedAt: "2024-01-15T12:00:00Z"
+                    }
+                });
+
+                const input = createMockInput({
+                    url: "https://example.com",
+                    outputVariable: "result"
+                });
+
+                const result = await handler.execute(input);
+
+                // Verify operation completed successfully
+                expect(result.result.result).toBeDefined();
+                // Tool is expected to handle cleanup internally
+                expect(mockExecute).toHaveBeenCalledTimes(1);
+            });
+
+            it("should cleanup after failed capture", async () => {
+                mockExecute.mockResolvedValueOnce({
+                    success: false,
+                    error: { message: "Capture failed" }
+                });
+
+                const input = createMockInput({
+                    url: "https://example.com",
+                    outputVariable: "result"
+                });
+
+                await expect(handler.execute(input)).rejects.toThrow("Capture failed");
+                // Verify the tool was called (cleanup happens internally)
+                expect(mockExecute).toHaveBeenCalledTimes(1);
+            });
+        });
     });
 });

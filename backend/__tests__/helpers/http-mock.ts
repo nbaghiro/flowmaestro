@@ -477,6 +477,135 @@ export function mockGoogleRateLimit(): nock.Scope {
 }
 
 // ============================================================================
+// HUGGING FACE API MOCKS
+// ============================================================================
+
+const HUGGINGFACE_BASE_URL = "https://api-inference.huggingface.co";
+
+export interface HuggingFaceCompletionConfig {
+    text: string;
+    model?: string;
+}
+
+/**
+ * Mock Hugging Face inference endpoint
+ */
+export function mockHuggingFaceCompletion(config: HuggingFaceCompletionConfig): nock.Scope {
+    const { text, model = "mistralai/Mistral-7B-Instruct-v0.2" } = config;
+
+    return mockHttpEndpoint({
+        baseUrl: HUGGINGFACE_BASE_URL,
+        path: `/models/${model}`,
+        method: "post",
+        response: [{ generated_text: text }]
+    });
+}
+
+/**
+ * Mock Hugging Face rate limit error
+ */
+export function mockHuggingFaceRateLimit(model: string = "mistralai/Mistral-7B-Instruct-v0.2"): nock.Scope {
+    return mockHttpEndpoint({
+        baseUrl: HUGGINGFACE_BASE_URL,
+        path: `/models/${model}`,
+        method: "post",
+        status: 429,
+        response: {
+            error: "Rate limit exceeded"
+        }
+    });
+}
+
+/**
+ * Mock Hugging Face model loading error
+ */
+export function mockHuggingFaceModelLoading(model: string = "mistralai/Mistral-7B-Instruct-v0.2"): nock.Scope {
+    return mockHttpEndpoint({
+        baseUrl: HUGGINGFACE_BASE_URL,
+        path: `/models/${model}`,
+        method: "post",
+        status: 503,
+        response: {
+            error: "Model is currently loading",
+            estimated_time: 30
+        }
+    });
+}
+
+// ============================================================================
+// X.AI (GROK) API MOCKS
+// ============================================================================
+
+const XAI_BASE_URL = "https://api.x.ai";
+
+export interface XAIChatCompletionConfig {
+    content: string;
+    model?: string;
+    finishReason?: string;
+    promptTokens?: number;
+    completionTokens?: number;
+}
+
+/**
+ * Mock x.ai (Grok) chat completion endpoint (OpenAI-compatible format)
+ */
+export function mockXAIChatCompletion(config: XAIChatCompletionConfig): nock.Scope {
+    const {
+        content,
+        model = "grok-2",
+        finishReason = "stop",
+        promptTokens = 10,
+        completionTokens = 20
+    } = config;
+
+    return mockHttpEndpoint({
+        baseUrl: XAI_BASE_URL,
+        path: "/v1/chat/completions",
+        method: "post",
+        response: {
+            id: `chatcmpl-${Date.now()}`,
+            object: "chat.completion",
+            created: Math.floor(Date.now() / 1000),
+            model,
+            choices: [
+                {
+                    index: 0,
+                    message: {
+                        role: "assistant",
+                        content
+                    },
+                    finish_reason: finishReason
+                }
+            ],
+            usage: {
+                prompt_tokens: promptTokens,
+                completion_tokens: completionTokens,
+                total_tokens: promptTokens + completionTokens
+            }
+        }
+    });
+}
+
+/**
+ * Mock x.ai rate limit error
+ */
+export function mockXAIRateLimit(): nock.Scope {
+    return mockHttpEndpoint({
+        baseUrl: XAI_BASE_URL,
+        path: "/v1/chat/completions",
+        method: "post",
+        status: 429,
+        response: {
+            error: {
+                message: "Rate limit exceeded",
+                type: "rate_limit_error",
+                code: "rate_limit_exceeded"
+            }
+        }
+    });
+}
+
+// ============================================================================
 // COHERE API MOCKS
 // ============================================================================
 

@@ -113,6 +113,9 @@ export interface PersonaInstanceModel {
     clarification_max_exchanges: number;
     clarification_skipped: boolean;
 
+    // Approval Tracking
+    pending_approval_id: string | null;
+
     // Timestamps
     created_at: Date;
     updated_at: Date;
@@ -214,6 +217,8 @@ export interface UpdatePersonaInstanceInput {
     clarification_exchange_count?: number;
     clarification_max_exchanges?: number;
     clarification_skipped?: boolean;
+    // Approval tracking
+    pending_approval_id?: string | null;
 }
 
 /**

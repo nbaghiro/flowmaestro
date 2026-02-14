@@ -53,6 +53,7 @@ interface PersonaInstanceRow {
     clarification_exchange_count: number | string;
     clarification_max_exchanges: number | string;
     clarification_skipped: boolean;
+    pending_approval_id: string | null;
     created_at: string | Date;
     updated_at: string | Date;
     deleted_at: string | Date | null;
@@ -459,6 +460,11 @@ export class PersonaInstanceRepository {
             values.push(input.clarification_skipped);
         }
 
+        if (input.pending_approval_id !== undefined) {
+            updates.push(`pending_approval_id = $${paramIndex++}`);
+            values.push(input.pending_approval_id);
+        }
+
         if (updates.length === 0) {
             return this.findById(id);
         }
@@ -699,6 +705,7 @@ export class PersonaInstanceRepository {
                     ? parseInt(row.clarification_max_exchanges)
                     : row.clarification_max_exchanges,
             clarification_skipped: row.clarification_skipped,
+            pending_approval_id: row.pending_approval_id,
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at),
             deleted_at: row.deleted_at ? new Date(row.deleted_at) : null

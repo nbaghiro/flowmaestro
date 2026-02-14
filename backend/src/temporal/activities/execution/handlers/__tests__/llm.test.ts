@@ -42,6 +42,8 @@ import {
 import {
     mockOpenAIChatCompletion,
     mockAnthropicMessage,
+    mockHuggingFaceCompletion,
+    mockXAIChatCompletion,
     setupHttpMocking,
     teardownHttpMocking,
     clearHttpMocks
@@ -469,6 +471,154 @@ describe("LLMNodeHandler", () => {
             expect(output.metrics?.tokenUsage?.promptTokens).toBe(20);
             expect(output.metrics?.tokenUsage?.completionTokens).toBe(30);
             expect(output.metrics?.tokenUsage?.totalTokens).toBe(50);
+        });
+    });
+
+    // Hugging Face provider tests use nock HTTP mocking
+    describe("Hugging Face provider", () => {
+        beforeEach(() => {
+            process.env.HUGGINGFACE_API_KEY = "test-huggingface-key";
+            resetAIClient();
+        });
+
+        it("calls Hugging Face API and returns response", async () => {
+            mockHuggingFaceCompletion({
+                text: "Hello from Hugging Face!",
+                model: "mistralai/Mistral-7B-Instruct-v0.2"
+            });
+
+            const input = createHandlerInput({
+                nodeType: "llm",
+                nodeConfig: {
+                    provider: "huggingface",
+                    model: "mistralai/Mistral-7B-Instruct-v0.2",
+                    prompt: "Say hello"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.text).toBe("Hello from Hugging Face!");
+            expect(output.result.provider).toBe("huggingface");
+            expect(output.result.model).toBe("mistralai/Mistral-7B-Instruct-v0.2");
+        });
+
+        it("handles response without token usage", async () => {
+            mockHuggingFaceCompletion({
+                text: "Response without token info",
+                model: "mistralai/Mistral-7B-Instruct-v0.2"
+            });
+
+            const input = createHandlerInput({
+                nodeType: "llm",
+                nodeConfig: {
+                    provider: "huggingface",
+                    model: "mistralai/Mistral-7B-Instruct-v0.2",
+                    prompt: "Test"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.text).toBe("Response without token info");
+            // Hugging Face doesn't return token usage in standard response
+            // Token usage may be undefined or zeros
+        });
+    });
+
+    // x.ai (Grok) provider tests use nock HTTP mocking
+    describe("x.ai provider", () => {
+        beforeEach(() => {
+            process.env.XAI_API_KEY = "test-xai-key";
+            resetAIClient();
+        });
+
+        it("calls x.ai API and returns response", async () => {
+            mockXAIChatCompletion({
+                content: "Hello from Grok!",
+                model: "grok-2",
+                promptTokens: 8,
+                completionTokens: 12
+            });
+
+            const input = createHandlerInput({
+                nodeType: "llm",
+                nodeConfig: {
+                    provider: "xai",
+                    model: "grok-2",
+                    prompt: "Say hello"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.text).toBe("Hello from Grok!");
+            expect(output.result.provider).toBe("xai");
+            expect(output.result.model).toBe("grok-2");
+        });
+
+        it("includes token usage from x.ai response", async () => {
+            mockXAIChatCompletion({
+                content: "Response",
+                promptTokens: 15,
+                completionTokens: 25
+            });
+
+            const input = createHandlerInput({
+                nodeType: "llm",
+                nodeConfig: {
+                    provider: "xai",
+                    model: "grok-2",
+                    prompt: "Test"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.metrics?.tokenUsage?.promptTokens).toBe(15);
+            expect(output.metrics?.tokenUsage?.completionTokens).toBe(25);
+            expect(output.metrics?.tokenUsage?.totalTokens).toBe(40);
+        });
+
+        it("passes system prompt when provided", async () => {
+            let capturedBody: Record<string, unknown> | null = null;
+
+            nock("https://api.x.ai")
+                .post("/v1/chat/completions", (body) => {
+                    capturedBody = body as Record<string, unknown>;
+                    return true;
+                })
+                .reply(200, {
+                    id: "chatcmpl-test",
+                    object: "chat.completion",
+                    created: Date.now(),
+                    model: "grok-2",
+                    choices: [
+                        {
+                            index: 0,
+                            message: { role: "assistant", content: "I am Grok." },
+                            finish_reason: "stop"
+                        }
+                    ],
+                    usage: { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 }
+                });
+
+            const input = createHandlerInput({
+                nodeType: "llm",
+                nodeConfig: {
+                    provider: "xai",
+                    model: "grok-2",
+                    systemPrompt: "You are Grok, a helpful assistant.",
+                    prompt: "Who are you?"
+                }
+            });
+
+            await handler.execute(input);
+
+            expect(capturedBody).not.toBeNull();
+            const messages = capturedBody!.messages as Array<{ role: string; content: string }>;
+            expect(messages[0].role).toBe("system");
+            expect(messages[0].content).toBe("You are Grok, a helpful assistant.");
         });
     });
 

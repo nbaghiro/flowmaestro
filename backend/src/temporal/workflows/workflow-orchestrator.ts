@@ -1,4 +1,10 @@
-import { proxyActivities } from "@temporalio/workflow";
+import {
+    proxyActivities,
+    defineSignal,
+    defineQuery,
+    setHandler,
+    condition
+} from "@temporalio/workflow";
 import type { WorkflowDefinition, WorkflowNode, JsonObject, JsonValue } from "@flowmaestro/shared";
 
 // Direct imports from specific files (avoids barrel file dependency issues)
@@ -30,6 +36,91 @@ import type { ContextSnapshot } from "../core/types";
 
 // Re-export WorkflowDefinition for use by other workflow files
 export type { WorkflowDefinition, WorkflowNode };
+
+// ============================================================================
+// WORKFLOW SIGNALS
+// ============================================================================
+
+/**
+ * Signal to cancel a running workflow.
+ * The workflow will complete current node executions and then terminate gracefully.
+ */
+export const cancelWorkflowSignal = defineSignal<[{ reason?: string }?]>("cancelWorkflow");
+
+/**
+ * Signal to pause a running workflow.
+ * The workflow will complete current node executions and then wait for resumeWorkflowSignal.
+ */
+export const pauseWorkflowSignal = defineSignal<[{ reason?: string }?]>("pauseWorkflow");
+
+/**
+ * Signal to resume a paused workflow.
+ * Can optionally inject context updates when resuming.
+ */
+export const resumeWorkflowSignal = defineSignal<[{ contextUpdates?: JsonObject }?]>(
+    "resumeWorkflow"
+);
+
+/**
+ * Signal to submit a human review response.
+ * Used when a humanReview node is waiting for user input.
+ */
+export interface HumanReviewResponsePayload {
+    variableName: string;
+    response: JsonValue;
+    submittedAt: number;
+}
+
+export const humanReviewResponseSignal = defineSignal<[HumanReviewResponsePayload]>(
+    "humanReviewResponse"
+);
+
+// ============================================================================
+// WORKFLOW QUERIES
+// ============================================================================
+
+/**
+ * Query to get execution progress (percentage complete, current nodes, etc.)
+ */
+export interface ExecutionProgressResult {
+    completedNodes: number;
+    totalNodes: number;
+    percentComplete: number;
+    currentNodes: string[];
+    failedNodes: number;
+    skippedNodes: number;
+}
+
+export const executionProgressQuery = defineQuery<ExecutionProgressResult>("executionProgress");
+
+/**
+ * Query to get status of a specific node
+ */
+export interface NodeStatusResult {
+    nodeId: string;
+    status: "pending" | "executing" | "completed" | "failed" | "skipped" | "unknown";
+    output?: JsonObject;
+    error?: string;
+}
+
+export const nodeStatusQuery = defineQuery<NodeStatusResult, [string]>("nodeStatus");
+
+/**
+ * Query to get execution summary (overall workflow status)
+ */
+export interface ExecutionSummaryResult {
+    status: "running" | "paused" | "completed" | "failed" | "cancelled";
+    startedAt: number;
+    completedNodes: string[];
+    failedNodes: string[];
+    pendingNodes: string[];
+    executingNodes: string[];
+    skippedNodes: string[];
+    pauseReason?: string;
+    cancelReason?: string;
+}
+
+export const executionSummaryQuery = defineQuery<ExecutionSummaryResult>("executionSummary");
 
 // Node execution and span activities (long-running, with retries)
 const { executeNode, createSpan, endSpan } = proxyActivities<typeof activities>({
@@ -118,6 +209,181 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
     });
 
     const workflowStartTime = Date.now();
+
+    // =========================================================================
+    // SIGNAL & QUERY STATE
+    // =========================================================================
+
+    // Cancellation state
+    let cancellationRequested = false;
+    let cancelReason: string | undefined;
+
+    // Pause/Resume state
+    let isPaused = false;
+    let pauseReason: string | undefined;
+    let resumeContextUpdates: JsonObject | undefined;
+
+    // Queue state reference for queries (will be set during execution)
+    let currentQueueState: ReturnType<typeof initializeQueue> | null = null;
+    let currentWorkflow: BuiltWorkflow | null = null;
+
+    // Human review state
+    let humanReviewPending = false;
+    let humanReviewNodeId: string | undefined;
+    let humanReviewResponse: HumanReviewResponsePayload | undefined;
+
+    // =========================================================================
+    // SIGNAL HANDLERS
+    // =========================================================================
+
+    setHandler(cancelWorkflowSignal, (args) => {
+        // Only set cancelReason on first cancellation request
+        if (!cancellationRequested) {
+            cancelReason = args?.reason || "Cancelled by user";
+            logger.info("Cancellation requested", { reason: cancelReason });
+        }
+        cancellationRequested = true;
+    });
+
+    setHandler(pauseWorkflowSignal, (args) => {
+        if (!cancellationRequested) {
+            isPaused = true;
+            pauseReason = args?.reason || "Paused by user";
+            logger.info("Pause requested", { reason: pauseReason });
+        }
+    });
+
+    setHandler(resumeWorkflowSignal, (args) => {
+        if (isPaused) {
+            isPaused = false;
+            pauseReason = undefined;
+            resumeContextUpdates = args?.contextUpdates;
+            logger.info("Resume requested", {
+                hasContextUpdates: !!args?.contextUpdates
+            });
+        }
+    });
+
+    setHandler(humanReviewResponseSignal, (payload: HumanReviewResponsePayload) => {
+        if (humanReviewPending) {
+            humanReviewResponse = payload;
+            humanReviewPending = false;
+            isPaused = false;
+            pauseReason = undefined;
+            logger.info("Human review response received", {
+                variableName: payload.variableName,
+                nodeId: humanReviewNodeId
+            });
+        }
+    });
+
+    // =========================================================================
+    // QUERY HANDLERS
+    // =========================================================================
+
+    setHandler(executionProgressQuery, (): ExecutionProgressResult => {
+        if (!currentQueueState || !currentWorkflow) {
+            return {
+                completedNodes: 0,
+                totalNodes: 0,
+                percentComplete: 0,
+                currentNodes: [],
+                failedNodes: 0,
+                skippedNodes: 0
+            };
+        }
+
+        const totalNodes = currentWorkflow.nodes.size;
+        const completedNodes = currentQueueState.completed.size;
+        const failedNodes = currentQueueState.failed.size;
+        const skippedNodes = currentQueueState.skipped.size;
+        const percentComplete = totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0;
+
+        return {
+            completedNodes,
+            totalNodes,
+            percentComplete,
+            currentNodes: Array.from(currentQueueState.executing),
+            failedNodes,
+            skippedNodes
+        };
+    });
+
+    setHandler(nodeStatusQuery, (nodeId: string): NodeStatusResult => {
+        if (!currentQueueState) {
+            return { nodeId, status: "unknown" };
+        }
+
+        const nodeState = currentQueueState.nodeStates.get(nodeId);
+        if (!nodeState) {
+            return { nodeId, status: "unknown" };
+        }
+
+        let status: NodeStatusResult["status"];
+        if (currentQueueState.completed.has(nodeId)) {
+            status = "completed";
+        } else if (currentQueueState.failed.has(nodeId)) {
+            status = "failed";
+        } else if (currentQueueState.skipped.has(nodeId)) {
+            status = "skipped";
+        } else if (currentQueueState.executing.has(nodeId)) {
+            status = "executing";
+        } else if (currentQueueState.pending.has(nodeId) || currentQueueState.ready.has(nodeId)) {
+            status = "pending";
+        } else {
+            status = "unknown";
+        }
+
+        return {
+            nodeId,
+            status,
+            output: nodeState.output,
+            error: nodeState.error
+        };
+    });
+
+    setHandler(executionSummaryQuery, (): ExecutionSummaryResult => {
+        let status: ExecutionSummaryResult["status"];
+        if (cancellationRequested) {
+            status = "cancelled";
+        } else if (isPaused) {
+            status = "paused";
+        } else {
+            status = "running";
+        }
+
+        if (!currentQueueState) {
+            return {
+                status,
+                startedAt: workflowStartTime,
+                completedNodes: [],
+                failedNodes: [],
+                pendingNodes: [],
+                executingNodes: [],
+                skippedNodes: [],
+                pauseReason,
+                cancelReason
+            };
+        }
+
+        // Combine pending and ready nodes as "pendingNodes" for API consumers
+        const pendingNodes = [
+            ...Array.from(currentQueueState.pending),
+            ...Array.from(currentQueueState.ready)
+        ];
+
+        return {
+            status,
+            startedAt: workflowStartTime,
+            completedNodes: Array.from(currentQueueState.completed),
+            failedNodes: Array.from(currentQueueState.failed),
+            pendingNodes,
+            executingNodes: Array.from(currentQueueState.executing),
+            skippedNodes: Array.from(currentQueueState.skipped),
+            pauseReason,
+            cancelReason
+        };
+    });
 
     // Credit tracking state
     let reservedCredits = 0;
@@ -226,6 +492,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
         }
 
         const builtWorkflow = buildResult.workflow;
+        currentWorkflow = builtWorkflow; // Set reference for queries
         const summary = getWorkflowSummary(builtWorkflow);
         logger.info("Workflow built", summary);
 
@@ -268,11 +535,12 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
         });
 
         let queueState = initializeQueue(builtWorkflow);
+        currentQueueState = queueState; // Set reference for queries
         let contextSnapshot = createContext(inputs);
-
+        
         if (userId) {
             contextSnapshot = setVariable(contextSnapshot, "userId", userId);
-        }
+                    }
 
         const errors: Record<string, string> = {};
 
@@ -285,6 +553,90 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
         });
 
         while (!isExecutionComplete(queueState)) {
+            // Update queue state reference for queries
+            currentQueueState = queueState;
+
+            // Check for cancellation
+            if (cancellationRequested) {
+                logger.info("Workflow cancelled", { reason: cancelReason });
+
+                // Build partial outputs from completed nodes
+                const partialOutputs = buildFinalOutputs(contextSnapshot, builtWorkflow.outputNodeIds);
+
+                await emitExecutionFailed({
+                    executionId,
+                    error: `Workflow cancelled: ${cancelReason}`
+                });
+                await endSpan({
+                    spanId: workflowRunSpanId,
+                    error: new Error(`Cancelled: ${cancelReason}`),
+                    attributes: {
+                        failureReason: "workflow_cancelled",
+                        cancelReason: cancelReason || "Unknown reason",
+                        completedNodes: queueState.completed.size,
+                        totalNodes: builtWorkflow.nodes.size
+                    }
+                });
+
+                // Release reserved credits if cancellation happens before completion
+                if (!skipCreditCheck && workspaceId && reservedCredits > 0) {
+                    if (accumulatedCredits > 0) {
+                        await finalizeCredits({
+                            workspaceId,
+                            userId: userId || null,
+                            reservedAmount: reservedCredits,
+                            actualAmount: accumulatedCredits,
+                            operationType: "workflow_execution",
+                            operationId: executionId,
+                            description: `Workflow (cancelled): ${workflowDefinition.name || "Unnamed"}`
+                        });
+                    } else {
+                        await releaseCredits({ workspaceId, amount: reservedCredits });
+                    }
+                }
+
+                return {
+                    success: false,
+                    outputs: partialOutputs,
+                    error: `Workflow cancelled: ${cancelReason}`
+                };
+            }
+
+            // Check for pause and wait for resume
+            if (isPaused) {
+                logger.info("Workflow paused, waiting for resume signal", { reason: pauseReason });
+
+                await emitExecutionPaused({
+                    executionId,
+                    reason: pauseReason || "Paused by user",
+                    pausedAtNodeId: "workflow",
+                    pausedAtNodeName: "Workflow",
+                    pauseContext: {
+                        variableName: "resumeSignal",
+                        inputType: "json",
+                        description: "Workflow paused via signal",
+                        required: false
+                    }
+                });
+
+                // Wait for resume signal (or cancellation)
+                await condition(() => !isPaused || cancellationRequested);
+
+                // Apply context updates from resume if provided
+                if (resumeContextUpdates && !cancellationRequested) {
+                    for (const [key, value] of Object.entries(resumeContextUpdates)) {
+                        contextSnapshot = setVariable(contextSnapshot, key, value);
+                    }
+                                        resumeContextUpdates = undefined;
+                    logger.info("Workflow resumed with context updates");
+                } else if (!cancellationRequested) {
+                    logger.info("Workflow resumed");
+                }
+
+                // Continue to next iteration (will check cancellation again)
+                continue;
+            }
+
             // Get nodes ready for execution
             const readyNodeIds = getReadyNodes(queueState, builtWorkflow.maxConcurrentNodes);
 
@@ -329,17 +681,25 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                     // Handle pause signal from human review node
                     if (result.pause && result.pauseContext) {
                         const node = builtWorkflow.nodes.get(result.nodeId);
+                        const variableName = result.pauseContext.variableName || "userResponse";
+
+                        // Set human review state
+                        humanReviewPending = true;
+                        humanReviewNodeId = result.nodeId;
+                        humanReviewResponse = undefined;
+                        isPaused = true;
+                        pauseReason = result.pauseContext.reason || "Waiting for user response";
 
                         // Emit execution paused event
                         await emitExecutionPaused({
                             executionId,
-                            reason: result.pauseContext.reason || "Waiting for user response",
+                            reason: pauseReason,
                             pausedAtNodeId: result.nodeId,
                             pausedAtNodeName: node?.name || result.nodeId,
                             pauseContext: {
                                 prompt: result.pauseContext.prompt,
                                 description: result.pauseContext.description,
-                                variableName: result.pauseContext.variableName || "userResponse",
+                                variableName,
                                 inputType: result.pauseContext.inputType || "text",
                                 placeholder: result.pauseContext.placeholder,
                                 validation: result.pauseContext.validation,
@@ -347,27 +707,61 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                             }
                         });
 
-                        // End workflow span with paused status
-                        await endSpan({
-                            spanId: workflowRunSpanId,
-                            output: { paused: true, pausedAtNodeId: result.nodeId },
-                            attributes: {
-                                status: "paused",
-                                pausedAtNodeId: result.nodeId
-                            }
-                        });
-
-                        logger.info("Workflow paused for human review", {
+                        logger.info("Workflow paused for human review, waiting for response", {
                             nodeId: result.nodeId,
-                            variableName: result.pauseContext.variableName
+                            variableName
                         });
 
-                        // Return paused state - Temporal workflow will wait for signal to resume
-                        return {
-                            success: true,
-                            outputs: { _paused: true, _pausedAtNodeId: result.nodeId },
-                            error: undefined
-                        };
+                        // Wait for human review response or cancellation
+                        // condition() blocks workflow execution until predicate returns true
+                        await condition(
+                            () => !humanReviewPending || cancellationRequested
+                        );
+
+                        // Check if cancelled while waiting
+                        if (cancellationRequested) {
+                            logger.info("Workflow cancelled while waiting for human review", {
+                                nodeId: result.nodeId,
+                                reason: cancelReason
+                            });
+
+                            await endSpan({
+                                spanId: workflowRunSpanId,
+                                output: { cancelled: true, reason: cancelReason },
+                                attributes: {
+                                    status: "cancelled",
+                                    cancelReason: cancelReason || "Unknown reason"
+                                }
+                            });
+
+                            return {
+                                success: false,
+                                outputs: buildFinalOutputs(contextSnapshot, builtWorkflow.outputNodeIds),
+                                error: `Workflow cancelled: ${cancelReason}`
+                            };
+                        }
+
+                        // Human review response received - inject into context
+                        if (humanReviewResponse) {
+                            // Capture response locally with explicit type to preserve narrowing
+                            const reviewResponse: HumanReviewResponsePayload = humanReviewResponse;
+                            contextSnapshot = setVariable(
+                                contextSnapshot,
+                                reviewResponse.variableName,
+                                reviewResponse.response
+                            );
+
+                            logger.info("Human review response injected into context", {
+                                nodeId: result.nodeId,
+                                variableName: reviewResponse.variableName
+                            });
+
+                            // Clear human review state
+                            humanReviewNodeId = undefined;
+                            humanReviewResponse = undefined;
+                        }
+
+                        // Continue execution - node is already marked as completed
                     }
 
                     // Handle special node types
@@ -403,9 +797,11 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                         result.output,
                         builtWorkflow
                     );
-                } else {
+                    currentQueueState = queueState; // Update reference for queries
+                                    } else {
                     errors[result.nodeId] = result.error;
                     queueState = markFailed(queueState, result.nodeId, result.error, builtWorkflow);
+                    currentQueueState = queueState; // Update reference for queries
                 }
             }
 

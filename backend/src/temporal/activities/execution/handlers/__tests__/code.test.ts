@@ -1484,4 +1484,137 @@ result = "done"
             );
         });
     });
+
+    describe("concurrent execution", () => {
+        it("handles multiple simultaneous JavaScript executions", async () => {
+            mockVmRun
+                .mockResolvedValueOnce(10)
+                .mockResolvedValueOnce(20)
+                .mockResolvedValueOnce(30);
+
+            const handler1 = createCodeNodeHandler();
+            const handler2 = createCodeNodeHandler();
+            const handler3 = createCodeNodeHandler();
+
+            const results = await Promise.all([
+                handler1.execute(
+                    createHandlerInput({
+                        nodeType: "code",
+                        nodeConfig: {
+                            language: "javascript",
+                            code: "return 10;"
+                        }
+                    })
+                ),
+                handler2.execute(
+                    createHandlerInput({
+                        nodeType: "code",
+                        nodeConfig: {
+                            language: "javascript",
+                            code: "return 20;"
+                        }
+                    })
+                ),
+                handler3.execute(
+                    createHandlerInput({
+                        nodeType: "code",
+                        nodeConfig: {
+                            language: "javascript",
+                            code: "return 30;"
+                        }
+                    })
+                )
+            ]);
+
+            expect(results).toHaveLength(3);
+            expect(results[0].result.output).toBe(10);
+            expect(results[1].result.output).toBe(20);
+            expect(results[2].result.output).toBe(30);
+        });
+
+        it("isolates errors between concurrent JavaScript executions", async () => {
+            mockVmRun
+                .mockResolvedValueOnce(10)
+                .mockRejectedValueOnce(new Error("Syntax error"))
+                .mockResolvedValueOnce(30);
+
+            const handler1 = createCodeNodeHandler();
+            const handler2 = createCodeNodeHandler();
+            const handler3 = createCodeNodeHandler();
+
+            const results = await Promise.allSettled([
+                handler1.execute(
+                    createHandlerInput({
+                        nodeType: "code",
+                        nodeConfig: {
+                            language: "javascript",
+                            code: "return 10;"
+                        }
+                    })
+                ),
+                handler2.execute(
+                    createHandlerInput({
+                        nodeType: "code",
+                        nodeConfig: {
+                            language: "javascript",
+                            code: "invalid syntax"
+                        }
+                    })
+                ),
+                handler3.execute(
+                    createHandlerInput({
+                        nodeType: "code",
+                        nodeConfig: {
+                            language: "javascript",
+                            code: "return 30;"
+                        }
+                    })
+                )
+            ]);
+
+            expect(results[0].status).toBe("fulfilled");
+            expect(results[1].status).toBe("rejected");
+            expect(results[2].status).toBe("fulfilled");
+        });
+    });
+
+    describe("resource cleanup", () => {
+        it("cleans up temp files after Python execution success", async () => {
+            const mockProcess = createMockChildProcess(0, '{"result": 42}', "");
+            mockSpawn.mockReturnValueOnce(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: "print({'result': 42})"
+                }
+            });
+
+            await handler.execute(input);
+
+            // Verify temp file was written and then cleaned up
+            expect(mockWriteFile).toHaveBeenCalled();
+            expect(mockUnlink).toHaveBeenCalled();
+        });
+
+        it("cleans up temp files after Python execution failure", async () => {
+            const mockProcess = createMockChildProcess(1, "", "SyntaxError: invalid syntax");
+            mockSpawn.mockReturnValueOnce(mockProcess);
+
+            const input = createHandlerInput({
+                nodeType: "code",
+                nodeConfig: {
+                    language: "python",
+                    code: "invalid python syntax ++++"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow();
+
+            // Verify cleanup still happens after failure
+            expect(mockWriteFile).toHaveBeenCalled();
+            expect(mockUnlink).toHaveBeenCalled();
+        });
+    });
 });

@@ -90,6 +90,179 @@ const {
     }
 });
 
+// Approval activities (only async activities that do I/O)
+const { createPersonaApprovalRequest, emitApprovalNeeded, clearPendingApproval } =
+    proxyActivities<typeof activities>({
+        startToCloseTimeout: "30 seconds",
+        retry: {
+            maximumAttempts: 3
+        }
+    });
+
+// =============================================================================
+// Pure Helper Functions (inline for workflow sandbox compatibility)
+// =============================================================================
+
+/**
+ * Default risk levels for tool categories
+ */
+const DEFAULT_TOOL_RISKS: Record<string, "low" | "medium" | "high"> = {
+    // Safe operations - read-only, internal
+    web_search: "low",
+    web_browse: "low",
+    web_scrape: "low",
+    knowledge_base_query: "low",
+    read_file: "low",
+    list_files: "low",
+    search_memory: "low",
+    thread_memory: "low",
+    data_analysis: "low",
+
+    // Medium risk - external but reversible
+    screenshot_capture: "medium",
+
+    // High risk - external write operations
+    write_file: "high",
+    delete_file: "high",
+    send_email: "high",
+    send_message: "high",
+    create_task: "high",
+    update_task: "high",
+    create_issue: "high",
+    create_pr: "high",
+    post_comment: "high"
+};
+
+/**
+ * Integration providers that are high-risk by default
+ */
+const HIGH_RISK_PROVIDERS = new Set([
+    "slack",
+    "discord",
+    "telegram",
+    "email",
+    "github",
+    "gitlab",
+    "jira",
+    "linear",
+    "notion",
+    "asana",
+    "trello"
+]);
+
+// Minimal tool interface for pure approval functions
+// Compatible with the full Tool type from Agent model
+interface ToolForApproval {
+    name: string;
+    type?: string;
+    config?: {
+        provider?: string;
+        workflowId?: string;
+        functionName?: string;
+        knowledgeBaseId?: string;
+        agentId?: string;
+        connectionId?: string;
+        category?: string;
+    };
+}
+
+/**
+ * Get the risk level for a tool (pure function, safe for workflow)
+ */
+function getToolRiskLevel(tool: ToolForApproval): "low" | "medium" | "high" {
+    const toolName = tool.name.toLowerCase();
+
+    // Check direct tool name mapping
+    if (DEFAULT_TOOL_RISKS[toolName]) {
+        return DEFAULT_TOOL_RISKS[toolName];
+    }
+
+    // Check if it's an integration tool with a high-risk provider
+    if (tool.type === "mcp" && tool.config?.provider) {
+        const provider = String(tool.config.provider).toLowerCase();
+        if (HIGH_RISK_PROVIDERS.has(provider)) {
+            return "high";
+        }
+    }
+
+    // Check tool name patterns
+    if (
+        toolName.includes("write") ||
+        toolName.includes("create") ||
+        toolName.includes("delete") ||
+        toolName.includes("send") ||
+        toolName.includes("post") ||
+        toolName.includes("update") ||
+        toolName.includes("modify")
+    ) {
+        return "high";
+    }
+
+    if (
+        toolName.includes("read") ||
+        toolName.includes("get") ||
+        toolName.includes("list") ||
+        toolName.includes("search") ||
+        toolName.includes("query")
+    ) {
+        return "low";
+    }
+
+    // Default to medium for unknown tools
+    return "medium";
+}
+
+/**
+ * Determine if a tool requires approval based on autonomy level and risk (pure function)
+ */
+function checkToolRequiresApproval(
+    tool: ToolForApproval,
+    autonomyLevel: string,
+    toolRiskOverrides: Record<string, string>
+): boolean {
+    // Full autonomy - never require approval
+    if (autonomyLevel === "full_auto") {
+        return false;
+    }
+
+    // Approve all - always require approval
+    if (autonomyLevel === "approve_all") {
+        return true;
+    }
+
+    // Check user override first
+    const overrideKey = tool.name.toLowerCase();
+    if (toolRiskOverrides[overrideKey]) {
+        const override = toolRiskOverrides[overrideKey];
+        if (override === "safe" || override === "low") {
+            return false;
+        }
+        if (override === "approval_required" || override === "high") {
+            return true;
+        }
+    }
+
+    // Check default risk level
+    const defaultRisk = getToolRiskLevel(tool);
+    return defaultRisk === "high" || defaultRisk === "medium";
+}
+
+/**
+ * Generate a human-readable description of what a tool will do (pure function)
+ */
+function generateToolDescription(toolName: string, args: Record<string, unknown>): string {
+    const argsStr = Object.entries(args)
+        .filter(([_, v]) => v !== undefined && v !== null)
+        .map(([k, v]) => {
+            const value = typeof v === "string" ? v : JSON.stringify(v);
+            const truncated = value.length > 50 ? value.substring(0, 50) + "..." : value;
+            return `${k}="${truncated}"`;
+        })
+        .join(", ");
+
+    return `Execute ${toolName}(${argsStr})`;
+}
+
 // =============================================================================
 // Signals
 // =============================================================================
@@ -108,6 +281,19 @@ export const skipClarificationSignal = defineSignal("skipClarification");
  * Signal for gracefully cancelling the persona workflow
  */
 export const cancelPersonaSignal = defineSignal("cancelPersona");
+
+/**
+ * Signal for approval response (approve/deny a tool execution)
+ */
+export interface PersonaApprovalResponsePayload {
+    approval_id: string;
+    decision: "approved" | "denied";
+    note?: string;
+    responded_at: number;
+}
+export const personaApprovalResponseSignal = defineSignal<[PersonaApprovalResponsePayload]>(
+    "personaApprovalResponse"
+);
 
 // =============================================================================
 // Types and Interfaces
@@ -261,6 +447,10 @@ export async function personaOrchestratorWorkflow(
     // Cancellation state
     let cancellationRequested = false;
 
+    // Approval state
+    let pendingApprovalId: string | null = null;
+    let approvalResponse: PersonaApprovalResponsePayload | null = null;
+
     const logger = createWorkflowLogger({
         executionId,
         workflowName: "PersonaOrchestrator",
@@ -289,6 +479,16 @@ export async function personaOrchestratorWorkflow(
     setHandler(cancelPersonaSignal, () => {
         logger.info("Received cancellation signal");
         cancellationRequested = true;
+    });
+
+    setHandler(personaApprovalResponseSignal, (payload: PersonaApprovalResponsePayload) => {
+        logger.info("Received approval response signal", {
+            approvalId: payload.approval_id,
+            decision: payload.decision
+        });
+        if (payload.approval_id === pendingApprovalId) {
+            approvalResponse = payload;
+        }
     });
 
     // Load persona configuration (includes all tools)
@@ -578,7 +778,10 @@ export async function personaOrchestratorWorkflow(
                     temperature: persona.temperature,
                     maxTokens: 1024, // Shorter for clarification
                     executionId,
-                    threadId
+                    threadId,
+                    // Pass workspaceId and userId for rate limiting
+                    workspaceId,
+                    userId
                 });
 
                 // Track credit usage
@@ -1051,7 +1254,10 @@ export async function personaOrchestratorWorkflow(
                 temperature: persona.temperature,
                 maxTokens: persona.max_tokens,
                 executionId,
-                threadId
+                threadId,
+                // Pass workspaceId and userId for rate limiting
+                workspaceId,
+                userId
             });
 
             // Track credit usage
@@ -1528,6 +1734,122 @@ export async function personaOrchestratorWorkflow(
                 attributes: { toolName: toolCall.name, toolCallId: toolCall.id }
             });
             const toolSpanId = toolContext.spanId;
+
+            // Find the tool definition
+            const toolDef = persona.available_tools.find((t) => t.name === toolCall.name);
+
+            // Check if this tool requires approval
+            const requiresApproval =
+                toolDef &&
+                checkToolRequiresApproval(
+                    toolDef,
+                    persona.autonomy_level || "full_auto",
+                    persona.tool_risk_overrides || {}
+                );
+
+            // Handle approval flow if required
+            if (requiresApproval) {
+                logger.info("Tool requires approval", { toolName: toolCall.name });
+
+                const riskLevel = toolDef ? getToolRiskLevel(toolDef) : "medium";
+                const actionDescription = generateToolDescription(
+                    toolCall.name,
+                    toolCall.arguments as Record<string, unknown>
+                );
+
+                // Create approval request
+                const { approvalId } = await createPersonaApprovalRequest({
+                    instanceId: personaInstanceId,
+                    workspaceId,
+                    actionType: "tool_call",
+                    toolName: toolCall.name,
+                    actionDescription,
+                    actionArguments: toolCall.arguments as Record<string, unknown>,
+                    riskLevel,
+                    agentContext: `Iteration ${currentIterations} of ${maxIterations}`
+                });
+
+                // Emit approval needed event
+                await emitApprovalNeeded({
+                    instanceId: personaInstanceId,
+                    approvalId,
+                    actionDescription,
+                    toolName: toolCall.name,
+                    riskLevel,
+                    estimatedCostCredits: null
+                });
+
+                // Set pending approval state and wait for response
+                pendingApprovalId = approvalId;
+                approvalResponse = null;
+
+                logger.info("Waiting for approval", { approvalId });
+
+                // Wait for approval signal (up to 7 days) or cancellation
+                const gotApproval = await condition(
+                    () => approvalResponse !== null || cancellationRequested,
+                    "7 days"
+                );
+
+                if (!gotApproval || cancellationRequested) {
+                    // Timeout or cancellation - skip this tool
+                    logger.info("Approval timeout or cancellation", { approvalId });
+                    await clearPendingApproval({ instanceId: personaInstanceId });
+                    pendingApprovalId = null;
+
+                    const toolMessage: ThreadMessage = {
+                        id: `tool-${Date.now()}-${toolCall.id}`,
+                        role: "tool",
+                        content: JSON.stringify({
+                            error: "Approval request timed out or was cancelled",
+                            suggestion: "The user did not respond to the approval request in time. Consider an alternative approach."
+                        }),
+                        tool_name: toolCall.name,
+                        tool_call_id: toolCall.id,
+                        timestamp: new Date()
+                    };
+                    messageState.messages.push(toolMessage);
+
+                    await endSpan({
+                        spanId: toolSpanId,
+                        error: new Error("Approval timeout or cancellation")
+                    });
+                    continue;
+                }
+
+                // Clear pending approval
+                await clearPendingApproval({ instanceId: personaInstanceId });
+                pendingApprovalId = null;
+
+                // Handle denial
+                if (approvalResponse!.decision === "denied") {
+                    logger.info("Tool execution denied", { approvalId, note: approvalResponse!.note });
+
+                    const toolMessage: ThreadMessage = {
+                        id: `tool-${Date.now()}-${toolCall.id}`,
+                        role: "tool",
+                        content: JSON.stringify({
+                            error: "Action denied by user",
+                            note: approvalResponse!.note || "No reason provided",
+                            suggestion: "The user denied this action. Please try an alternative approach or ask the user for guidance."
+                        }),
+                        tool_name: toolCall.name,
+                        tool_call_id: toolCall.id,
+                        timestamp: new Date()
+                    };
+                    messageState.messages.push(toolMessage);
+
+                    await endSpan({
+                        spanId: toolSpanId,
+                        output: { denied: true, note: approvalResponse!.note }
+                    });
+                    approvalResponse = null;
+                    continue;
+                }
+
+                logger.info("Tool execution approved", { approvalId });
+                approvalResponse = null;
+            }
 
             try {
                 // Execute tool via activity

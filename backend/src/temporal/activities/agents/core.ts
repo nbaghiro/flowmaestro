@@ -1,15 +1,23 @@
 /**
  * Agent Activities - Core LLM calls, tool execution, safety validation, and multi-agent orchestration
+ *
+ * Critical Gap Fixes:
+ * - Rate limiting for LLM calls to prevent cost runaway
+ * - Tool execution timeout to prevent hanging executions
+ * - Enhanced schema validation before coercion
  */
 
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../core/config";
+import { getLLMRateLimiter, RateLimitExceededError } from "../../../core/utils/llm-rate-limiter";
 import { SafetyPipeline } from "../../../core/safety/safety-pipeline";
 import {
+    executeWithTimeout,
+    ToolTimeoutError,
     validateToolInput,
     coerceToolArguments,
     createValidationErrorResponse
-} from "../../../core/validation/tool-validation";
+} from "../../../tools";
 import { ExecutionRouter } from "../../../integrations/core/ExecutionRouter";
 import { providerRegistry } from "../../../integrations/registry";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
@@ -39,6 +47,9 @@ const connectionRepo = new ConnectionRepository();
 const executionRouter = new ExecutionRouter(providerRegistry);
 const safetyLogger = createActivityLogger({ component: "SafetyActivity" });
 
+// Rate limiter for LLM calls - prevents cost runaway
+const llmRateLimiter = getLLMRateLimiter();
+
 // =============================================================================
 // Types and Interfaces - Core Activities
 // =============================================================================
@@ -65,6 +76,10 @@ export interface CallLLMInput {
     maxTokens: number;
     executionId?: string; // For streaming token emission
     threadId: string; // Required for thread-scoped streaming events
+    /** Workspace ID for rate limiting (optional for backwards compatibility) */
+    workspaceId?: string;
+    /** User ID for rate limiting attribution */
+    userId?: string;
 }
 
 /**
@@ -279,8 +294,38 @@ export async function getAgentConfig(input: GetAgentConfigInput): Promise<AgentC
 // =============================================================================
 
 export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
-    const { model, provider, connectionId, messages, tools, temperature, maxTokens, threadId } =
-        input;
+    const {
+        model,
+        provider,
+        connectionId,
+        messages,
+        tools,
+        temperature,
+        maxTokens,
+        threadId,
+        workspaceId,
+        userId
+    } = input;
+
+    // CRITICAL: Rate limit check before making LLM call
+    // This prevents runaway costs from agents making excessive API calls
+    if (workspaceId) {
+        const rateLimitResult = await llmRateLimiter.checkLimit(workspaceId, userId || "unknown");
+        if (!rateLimitResult.allowed) {
+            activityLogger.warn("LLM rate limit exceeded", {
+                workspaceId,
+                userId,
+                reason: rateLimitResult.reason,
+                currentUsage: rateLimitResult.currentUsage
+            });
+            throw new RateLimitExceededError(rateLimitResult);
+        }
+
+        // Record the call attempt (before making the actual call)
+        // Estimate tokens based on message count - will be updated with actual usage
+        const estimatedTokens = messages.reduce((acc, m) => acc + m.content.length / 4, 0);
+        await llmRateLimiter.recordCall(workspaceId, userId || "unknown", Math.ceil(estimatedTokens));
+    }
 
     // Get API credentials from connection
     // Also update provider if connection is overridden (connection determines provider)
@@ -435,34 +480,76 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
     // Use validated and coerced data
     const validatedArgs = validation.data as JsonObject;
 
-    switch (tool.type) {
-        case "workflow":
-            return await executeWorkflowTool({ tool, arguments: validatedArgs, userId });
-        case "function":
-            return await executeFunctionTool({
-                tool,
-                arguments: validatedArgs,
-                userId,
-                agentId,
-                executionId
+    // CRITICAL: Wrap tool execution with timeout to prevent hanging
+    // This ensures slow/hanging tools don't block agent execution indefinitely
+    const startTime = Date.now();
+
+    try {
+        const result = await executeWithTimeout(
+            tool.name,
+            tool.type,
+            async (_signal: AbortSignal) => {
+                // Execute the appropriate tool type
+                switch (tool.type) {
+                    case "workflow":
+                        return await executeWorkflowTool({ tool, arguments: validatedArgs, userId });
+                    case "function":
+                        return await executeFunctionTool({
+                            tool,
+                            arguments: validatedArgs,
+                            userId,
+                            agentId,
+                            executionId
+                        });
+                    case "knowledge_base":
+                        return await executeKnowledgeBaseTool({ tool, arguments: validatedArgs, userId });
+                    case "agent":
+                        return await executeAgentTool({ tool, arguments: validatedArgs, userId });
+                    case "mcp":
+                        return await executeMCPToolCall({ tool, arguments: validatedArgs, userId });
+                    case "builtin":
+                        return await executeBuiltInTool({
+                            tool,
+                            arguments: validatedArgs,
+                            userId,
+                            workspaceId,
+                            executionId,
+                            metadata
+                        });
+                    default:
+                        throw new Error(`Unknown tool type: ${tool.type}`);
+                }
+            }
+        );
+
+        const duration = Date.now() - startTime;
+        activityLogger.debug("Tool execution completed", {
+            toolName: tool.name,
+            toolType: tool.type,
+            durationMs: duration
+        });
+
+        return result;
+    } catch (error) {
+        const duration = Date.now() - startTime;
+
+        if (error instanceof ToolTimeoutError) {
+            activityLogger.error("Tool execution timed out", error, {
+                toolName: tool.name,
+                toolType: tool.type,
+                timeoutMs: error.timeoutMs,
+                durationMs: duration
             });
-        case "knowledge_base":
-            return await executeKnowledgeBaseTool({ tool, arguments: validatedArgs, userId });
-        case "agent":
-            return await executeAgentTool({ tool, arguments: validatedArgs, userId });
-        case "mcp":
-            return await executeMCPToolCall({ tool, arguments: validatedArgs, userId });
-        case "builtin":
-            return await executeBuiltInTool({
-                tool,
-                arguments: validatedArgs,
-                userId,
-                workspaceId,
-                executionId,
-                metadata
-            });
-        default:
-            throw new Error(`Unknown tool type: ${tool.type}`);
+            // Re-throw with more context for the orchestrator
+            throw new Error(
+                `Tool "${tool.name}" timed out after ${error.timeoutMs}ms. ` +
+                `The tool may be experiencing issues with external dependencies. ` +
+                `Do NOT retry this tool immediately.`
+            );
+        }
+
+        // Re-throw other errors
+        throw error;
     }
 }
 

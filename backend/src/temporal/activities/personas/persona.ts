@@ -349,7 +349,16 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
         max_cost_credits:
             instance.max_cost_credits ?? persona.default_max_cost_credits ?? undefined,
         max_duration_hours:
-            instance.max_duration_hours ?? persona.default_max_duration_hours ?? undefined
+            instance.max_duration_hours ?? persona.default_max_duration_hours ?? undefined,
+        // Autonomy settings for approval flow
+        autonomy_level: persona.autonomy_level,
+        tool_risk_overrides: persona.tool_risk_overrides
+            ? Object.fromEntries(
+                  Object.entries(persona.tool_risk_overrides)
+                      .filter(([_, v]) => typeof v === "string")
+                      .map(([k, v]) => [k, v as string])
+              )
+            : undefined
     };
 
     activityLogger.info("Persona config built successfully", {

@@ -183,7 +183,8 @@ describe("workspaceContextMiddleware", () => {
         it("should throw ForbiddenError when user is not authenticated", async () => {
             const request = createMockRequest({
                 headers: { "x-workspace-id": "ws-123" },
-                user: undefined
+                user: undefined,
+                noDefaultUser: true
             });
 
             await assertThrowsError(
@@ -421,7 +422,8 @@ describe("optionalWorkspaceContextMiddleware", () => {
     it("should not fail when user is not authenticated", async () => {
         const request = createMockRequest({
             headers: { "x-workspace-id": "ws-123" },
-            user: undefined
+            user: undefined,
+            noDefaultUser: true
         });
         const reply = createMockReply();
 

@@ -20,17 +20,26 @@ const mockWorkflowRepo = {
     findByWorkspaceId: jest.fn(),
     findByIdAndWorkspaceId: jest.fn(),
     findById: jest.fn(),
+    findBySystemKey: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn()
 };
 
+// Mock UserRepository for admin middleware
+const mockUserRepo = {
+    findById: jest.fn(),
+    findByEmail: jest.fn()
+};
+
 jest.mock("../../../../storage/repositories", () => ({
     WorkflowRepository: jest.fn().mockImplementation(() => mockWorkflowRepo),
-    UserRepository: jest.fn().mockImplementation(() => ({
-        findById: jest.fn(),
-        findByEmail: jest.fn()
-    }))
+    UserRepository: jest.fn().mockImplementation(() => mockUserRepo)
+}));
+
+// Also mock the UserRepository import used by admin middleware
+jest.mock("../../../../storage/repositories/UserRepository", () => ({
+    UserRepository: jest.fn().mockImplementation(() => mockUserRepo)
 }));
 
 jest.mock("../../../../storage/repositories/WorkflowRepository", () => ({
@@ -65,6 +74,62 @@ jest.mock("../../../../core/utils/workflow-converter", () => ({
     stripNonExecutableNodes: jest.fn().mockImplementation((def) => def),
     validateWorkflowForExecution: jest.fn().mockReturnValue({ isValid: true, errors: [] }),
     FrontendWorkflowDefinition: {}
+}));
+
+// Mock GCS storage service for file uploads
+const mockGCSService = {
+    upload: jest.fn().mockResolvedValue("gs://test-bucket/workflow-files/test.pdf"),
+    getMetadata: jest.fn().mockResolvedValue({ size: 1024 }),
+    getPublicUrl: jest.fn().mockReturnValue("https://storage.googleapis.com/test-bucket/test.pdf")
+};
+
+jest.mock("../../../../services/GCSStorageService", () => ({
+    getUploadsStorageService: jest.fn().mockImplementation(() => mockGCSService)
+}));
+
+// Mock workflow generator service
+const mockGeneratedWorkflow = {
+    name: "Generated Workflow",
+    description: "AI-generated workflow",
+    nodes: {},
+    edges: [],
+    entryPoint: "input"
+};
+
+jest.mock("../../../../services/WorkflowGenerator", () => ({
+    generateWorkflow: jest.fn().mockResolvedValue(mockGeneratedWorkflow)
+}));
+
+// Import after mock for access
+import { generateWorkflow } from "../../../../services/WorkflowGenerator";
+const mockGenerateWorkflow = generateWorkflow as jest.MockedFunction<typeof generateWorkflow>;
+
+// Mock WorkflowGenerationChatService
+const mockGenerationChatService = {
+    processMessage: jest.fn().mockResolvedValue({
+        content: "Generated response",
+        workflowPlan: null
+    }),
+    createWorkflowFromPlan: jest.fn().mockResolvedValue({
+        id: "new-workflow-id",
+        name: "Created Workflow"
+    })
+};
+
+jest.mock("../../../../services/WorkflowGenerationChatService", () => ({
+    WorkflowGenerationChatService: jest.fn().mockImplementation(() => mockGenerationChatService)
+}));
+
+// Mock WorkflowChatService
+const mockChatService = {
+    processChat: jest.fn().mockResolvedValue({
+        response: "Chat response",
+        changes: []
+    })
+};
+
+jest.mock("../../../../services/WorkflowChatService", () => ({
+    WorkflowChatService: jest.fn().mockImplementation(() => mockChatService)
 }));
 
 // Import test helpers after mocks
@@ -128,6 +193,51 @@ function resetAllMocks() {
         Promise.resolve(createMockWorkflow({ id, ...data }))
     );
     mockWorkflowRepo.delete.mockResolvedValue(true);
+
+    // Reset GCS mock
+    mockGCSService.upload.mockResolvedValue("gs://test-bucket/workflow-files/test.pdf");
+    mockGCSService.getMetadata.mockResolvedValue({ size: 1024 });
+
+    // Reset AI service mocks
+    mockGenerateWorkflow.mockResolvedValue(mockGeneratedWorkflow);
+    mockGenerationChatService.processMessage.mockResolvedValue({
+        content: "Generated response",
+        workflowPlan: null
+    });
+    mockGenerationChatService.createWorkflowFromPlan.mockResolvedValue({
+        id: "new-workflow-id",
+        name: "Created Workflow"
+    });
+    mockChatService.processChat.mockResolvedValue({
+        response: "Chat response",
+        changes: []
+    });
+
+    // Reset user repo mock (for admin middleware)
+    mockUserRepo.findById.mockResolvedValue(null);
+    mockWorkflowRepo.findBySystemKey.mockResolvedValue(null);
+}
+
+/**
+ * Helper to make an admin user request.
+ * Sets up the UserRepository mock to return an admin user.
+ */
+async function authenticatedAdminRequest(
+    fastify: FastifyInstance,
+    user: ReturnType<typeof createTestUser>,
+    options: Parameters<typeof authenticatedRequest>[2]
+) {
+    // Set up admin user in mock repo
+    mockUserRepo.findById.mockResolvedValue({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        is_admin: true,
+        created_at: new Date(),
+        updated_at: new Date()
+    });
+
+    return authenticatedRequest(fastify, user, options);
 }
 
 // ============================================================================
@@ -632,6 +742,42 @@ describe("Workflow Routes", () => {
     });
 
     // ========================================================================
+    // FILE UPLOAD
+    // ========================================================================
+
+    describe("POST /workflows/files/upload", () => {
+        it("should reject non-multipart requests", async () => {
+            const testUser = createTestUser();
+
+            // Send non-multipart request - endpoint expects multipart/form-data
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/files/upload",
+                payload: {}
+            });
+
+            // Without multipart data, returns 406 Not Acceptable
+            expectStatus(response, 406);
+        });
+
+        it("should return 401 without authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "POST",
+                url: "/workflows/files/upload",
+                payload: {}
+            });
+
+            expectErrorResponse(response, 401);
+        });
+
+        // Note: Full multipart file upload tests require integration testing
+        // with actual file streams. The handler validates:
+        // - File extension against SupportedFileTypes (pdf, docx, xlsx, csv, txt, json, md, html)
+        // - Uploads to GCS via getUploadsStorageService
+        // - Returns array of { fileName, fileType, gcsUri, fileSize }
+    });
+
+    // ========================================================================
     // MULTI-TENANT ISOLATION TESTS
     // ========================================================================
 
@@ -674,6 +820,419 @@ describe("Workflow Routes", () => {
                     workspace_id: DEFAULT_TEST_WORKSPACE_ID
                 })
             );
+        });
+    });
+
+    // ========================================================================
+    // AI FEATURES - PHASE 4
+    // ========================================================================
+
+    describe("POST /workflows/generate", () => {
+        it("should generate workflow from prompt", async () => {
+            const testUser = createTestUser();
+            const connectionId = uuidv4();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generate",
+                payload: {
+                    prompt: "Create a workflow that sends an email when a form is submitted",
+                    connectionId
+                }
+            });
+
+            expectStatus(response, 200);
+            const body = expectSuccessResponse<{ name: string }>(response);
+            expect(body.data.name).toBe("Generated Workflow");
+            expect(mockGenerateWorkflow).toHaveBeenCalledWith({
+                userPrompt: "Create a workflow that sends an email when a form is submitted",
+                connectionId,
+                userId: testUser.id
+            });
+        });
+
+        it("should return 400 for prompt too short", async () => {
+            const testUser = createTestUser();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generate",
+                payload: {
+                    prompt: "short", // Less than 10 characters
+                    connectionId: uuidv4()
+                }
+            });
+
+            expectStatus(response, 400);
+        });
+
+        it("should return 400 for invalid connectionId", async () => {
+            const testUser = createTestUser();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generate",
+                payload: {
+                    prompt: "Create a workflow that processes data",
+                    connectionId: "not-a-uuid"
+                }
+            });
+
+            expectStatus(response, 400);
+        });
+
+        it("should return 500 when generation fails", async () => {
+            const testUser = createTestUser();
+            mockGenerateWorkflow.mockRejectedValueOnce(new Error("AI service unavailable"));
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generate",
+                payload: {
+                    prompt: "Create a workflow that processes user data",
+                    connectionId: uuidv4()
+                }
+            });
+
+            expectStatus(response, 500);
+            const body = response.json<{ success: boolean; error: { code: string } }>();
+            expect(body.error.code).toBe("WORKFLOW_GENERATION_FAILED");
+        });
+
+        it("should return 401 without authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "POST",
+                url: "/workflows/generate",
+                payload: {
+                    prompt: "Create a workflow",
+                    connectionId: uuidv4()
+                }
+            });
+
+            expectErrorResponse(response, 401);
+        });
+    });
+
+    describe("POST /workflows/generation/chat", () => {
+        it("should initiate generation chat and return execution ID", async () => {
+            const testUser = createTestUser();
+            const connectionId = uuidv4();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generation/chat",
+                payload: {
+                    message: "Help me create a workflow for invoice processing",
+                    conversationHistory: [],
+                    connectionId,
+                    model: "claude-3-sonnet",
+                    enableThinking: false
+                }
+            });
+
+            expectStatus(response, 200);
+            const body = expectSuccessResponse<{ executionId: string; messageId: string }>(
+                response
+            );
+            expect(body.data.executionId).toBeDefined();
+            expect(body.data.messageId).toBeDefined();
+        });
+
+        it("should return 400 for missing required fields", async () => {
+            const testUser = createTestUser();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generation/chat",
+                payload: {
+                    message: "Help me create a workflow"
+                    // Missing connectionId and model
+                }
+            });
+
+            expectStatus(response, 400);
+        });
+
+        it("should return 400 for invalid connectionId", async () => {
+            const testUser = createTestUser();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generation/chat",
+                payload: {
+                    message: "Help me create a workflow",
+                    connectionId: "not-a-uuid",
+                    model: "claude-3-sonnet"
+                }
+            });
+
+            expectStatus(response, 400);
+        });
+
+        it("should return 401 without authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "POST",
+                url: "/workflows/generation/chat",
+                payload: {
+                    message: "Help me create a workflow",
+                    connectionId: uuidv4(),
+                    model: "claude-3-sonnet"
+                }
+            });
+
+            expectErrorResponse(response, 401);
+        });
+    });
+
+    describe("POST /workflows/generation/create", () => {
+        it("should create workflow from approved plan", async () => {
+            const testUser = createTestUser();
+            const plan = {
+                name: "Invoice Processing Workflow",
+                description: "Processes incoming invoices",
+                summary: "A workflow that processes invoices",
+                entryNodeId: "start",
+                nodes: [{ id: "start", type: "input", position: { x: 0, y: 0 } }],
+                edges: []
+            };
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generation/create",
+                payload: { plan }
+            });
+
+            expectStatus(response, 201);
+            const body = expectSuccessResponse<{ id: string; name: string }>(response);
+            expect(body.data.id).toBe("new-workflow-id");
+            expect(mockGenerationChatService.createWorkflowFromPlan).toHaveBeenCalledWith(
+                plan,
+                testUser.id,
+                DEFAULT_TEST_WORKSPACE_ID,
+                undefined
+            );
+        });
+
+        it("should create workflow with folderId", async () => {
+            const testUser = createTestUser();
+            const folderId = uuidv4();
+            const plan = {
+                name: "Test Workflow",
+                description: "Test description",
+                summary: "Test summary",
+                entryNodeId: "start",
+                nodes: [],
+                edges: []
+            };
+
+            await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generation/create",
+                payload: { plan, folderId }
+            });
+
+            expect(mockGenerationChatService.createWorkflowFromPlan).toHaveBeenCalledWith(
+                plan,
+                testUser.id,
+                DEFAULT_TEST_WORKSPACE_ID,
+                folderId
+            );
+        });
+
+        it("should return 400 for missing plan name", async () => {
+            const testUser = createTestUser();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/generation/create",
+                payload: {
+                    plan: {
+                        description: "Missing name",
+                        summary: "Test",
+                        entryNodeId: "start",
+                        nodes: [],
+                        edges: []
+                    }
+                }
+            });
+
+            expectStatus(response, 400);
+        });
+
+        it("should return 401 without authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "POST",
+                url: "/workflows/generation/create",
+                payload: {
+                    plan: {
+                        name: "Test",
+                        description: "Test",
+                        summary: "Test",
+                        entryNodeId: "start",
+                        nodes: [],
+                        edges: []
+                    }
+                }
+            });
+
+            expectErrorResponse(response, 401);
+        });
+    });
+
+    describe("POST /workflows/chat", () => {
+        it("should initiate workflow chat and return execution ID", async () => {
+            const testUser = createTestUser();
+            const connectionId = uuidv4();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/chat",
+                payload: {
+                    message: "Add a condition node after the input",
+                    action: "add",
+                    context: {
+                        nodes: [{ id: "input", type: "input" }],
+                        edges: []
+                    },
+                    connectionId,
+                    model: "claude-3-sonnet"
+                }
+            });
+
+            expectStatus(response, 200);
+            const body = expectSuccessResponse<{ executionId: string }>(response);
+            expect(body.data.executionId).toBeDefined();
+        });
+
+        it("should work with null action for conversational mode", async () => {
+            const testUser = createTestUser();
+            const connectionId = uuidv4();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/chat",
+                payload: {
+                    message: "What does this workflow do?",
+                    action: null,
+                    context: {
+                        nodes: [{ id: "input", type: "input" }],
+                        edges: []
+                    },
+                    connectionId
+                }
+            });
+
+            expectStatus(response, 200);
+            const body = expectSuccessResponse<{ executionId: string }>(response);
+            expect(body.data.executionId).toBeDefined();
+        });
+
+        it("should return 400 for missing context", async () => {
+            const testUser = createTestUser();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/chat",
+                payload: {
+                    message: "Add a node",
+                    action: "add",
+                    connectionId: uuidv4()
+                    // Missing context
+                }
+            });
+
+            expectStatus(response, 400);
+        });
+
+        it("should return 400 for message too long", async () => {
+            const testUser = createTestUser();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/workflows/chat",
+                payload: {
+                    message: "x".repeat(5001), // Max 5000 characters
+                    action: null,
+                    context: { nodes: [], edges: [] },
+                    connectionId: uuidv4()
+                }
+            });
+
+            expectStatus(response, 400);
+        });
+
+        it("should return 401 without authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "POST",
+                url: "/workflows/chat",
+                payload: {
+                    message: "Add a node",
+                    context: { nodes: [], edges: [] },
+                    connectionId: uuidv4()
+                }
+            });
+
+            expectErrorResponse(response, 401);
+        });
+    });
+
+    describe("GET /workflows/system/:key", () => {
+        it("should return system workflow for admin user", async () => {
+            const testUser = createTestUser();
+            const systemWorkflow = createMockWorkflow({
+                name: "System Email Template"
+            });
+            mockWorkflowRepo.findBySystemKey.mockResolvedValue(systemWorkflow);
+
+            const response = await authenticatedAdminRequest(fastify, testUser, {
+                method: "GET",
+                url: "/workflows/system/email-template"
+            });
+
+            expectStatus(response, 200);
+            const body = expectSuccessResponse<{ name: string }>(response);
+            expect(body.data.name).toBe("System Email Template");
+            expect(mockWorkflowRepo.findBySystemKey).toHaveBeenCalledWith("email-template");
+        });
+
+        it("should return 404 for non-existent system key", async () => {
+            const testUser = createTestUser();
+            mockWorkflowRepo.findBySystemKey.mockResolvedValue(null);
+
+            const response = await authenticatedAdminRequest(fastify, testUser, {
+                method: "GET",
+                url: "/workflows/system/non-existent-key"
+            });
+
+            expectErrorResponse(response, 404);
+        });
+
+        it("should return 403 for non-admin user", async () => {
+            const testUser = createTestUser();
+            // Set up non-admin user
+            mockUserRepo.findById.mockResolvedValue({
+                id: testUser.id,
+                email: testUser.email,
+                is_admin: false,
+                created_at: new Date(),
+                updated_at: new Date()
+            });
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "GET",
+                url: "/workflows/system/email-template"
+            });
+
+            expectErrorResponse(response, 403);
+        });
+
+        it("should return 401 without authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "GET",
+                url: "/workflows/system/email-template"
+            });
+
+            expectErrorResponse(response, 401);
         });
     });
 });

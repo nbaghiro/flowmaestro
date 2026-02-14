@@ -126,6 +126,9 @@ export interface AgentConfig {
     // Optional limits for persona execution
     max_cost_credits?: number;
     max_duration_hours?: number;
+    // Autonomy settings for approval flow
+    autonomy_level?: "full_auto" | "approve_high_risk" | "approve_all";
+    tool_risk_overrides?: Record<string, string>;
 }
 
 export interface LLMResponse {
@@ -522,7 +525,10 @@ export async function agentOrchestratorWorkflow(
                 temperature: agent.temperature,
                 maxTokens: agent.max_tokens,
                 executionId: input.executionId,
-                threadId
+                threadId,
+                // Pass workspaceId and userId for rate limiting
+                workspaceId,
+                userId
             });
 
             // End MODEL_GENERATION span with success and token usage

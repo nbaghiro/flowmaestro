@@ -625,5 +625,138 @@ describe("WebBrowseNodeHandler", () => {
                 );
             });
         });
+
+        describe("timeout scenarios", () => {
+            it("should handle slow page response within timeout", async () => {
+                // Simulate a slow but successful response
+                mockExecute.mockImplementationOnce(
+                    () =>
+                        new Promise((resolve) =>
+                            setTimeout(
+                                () =>
+                                    resolve({
+                                        success: true,
+                                        data: {
+                                            url: "https://slow.example.com",
+                                            content: "Eventually loaded",
+                                            contentType: "text/html",
+                                            contentLength: 17
+                                        }
+                                    }),
+                                50
+                            )
+                        )
+                );
+
+                const input = createMockInput({
+                    url: "https://slow.example.com",
+                    outputVariable: "result"
+                });
+
+                const result = await handler.execute(input);
+
+                expect(result.result.result).toBeDefined();
+                expect((result.result.result as { content: string }).content).toBe(
+                    "Eventually loaded"
+                );
+            });
+
+            it("should handle connection timeout with retry suggestion", async () => {
+                mockExecute.mockResolvedValueOnce({
+                    success: false,
+                    error: { message: "ETIMEDOUT: Connection timed out" }
+                });
+
+                const input = createMockInput({
+                    url: "https://unresponsive.example.com",
+                    outputVariable: "result"
+                });
+
+                await expect(handler.execute(input)).rejects.toThrow("ETIMEDOUT");
+            });
+        });
+
+        describe("concurrent operations", () => {
+            it("should handle multiple simultaneous browse requests", async () => {
+                const urls = [
+                    "https://example1.com",
+                    "https://example2.com",
+                    "https://example3.com"
+                ];
+
+                urls.forEach((url, i) => {
+                    mockExecute.mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            url,
+                            content: `Content ${i}`,
+                            contentType: "text/html",
+                            contentLength: 9
+                        }
+                    });
+                });
+
+                const handler1 = createWebBrowseNodeHandler();
+                const handler2 = createWebBrowseNodeHandler();
+                const handler3 = createWebBrowseNodeHandler();
+
+                const results = await Promise.all([
+                    handler1.execute(createMockInput({ url: urls[0], outputVariable: "r1" })),
+                    handler2.execute(createMockInput({ url: urls[1], outputVariable: "r2" })),
+                    handler3.execute(createMockInput({ url: urls[2], outputVariable: "r3" }))
+                ]);
+
+                expect(results).toHaveLength(3);
+                results.forEach((result, i) => {
+                    expect(result.result[`r${i + 1}`]).toBeDefined();
+                });
+            });
+
+            it("should isolate errors between concurrent requests", async () => {
+                mockExecute
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            url: "https://example1.com",
+                            content: "Success",
+                            contentType: "text/html",
+                            contentLength: 7
+                        }
+                    })
+                    .mockResolvedValueOnce({
+                        success: false,
+                        error: { message: "HTTP 500: Server error" }
+                    })
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            url: "https://example3.com",
+                            content: "Also success",
+                            contentType: "text/html",
+                            contentLength: 12
+                        }
+                    });
+
+                const handler1 = createWebBrowseNodeHandler();
+                const handler2 = createWebBrowseNodeHandler();
+                const handler3 = createWebBrowseNodeHandler();
+
+                const results = await Promise.allSettled([
+                    handler1.execute(
+                        createMockInput({ url: "https://example1.com", outputVariable: "r1" })
+                    ),
+                    handler2.execute(
+                        createMockInput({ url: "https://failing.com", outputVariable: "r2" })
+                    ),
+                    handler3.execute(
+                        createMockInput({ url: "https://example3.com", outputVariable: "r3" })
+                    )
+                ]);
+
+                expect(results[0].status).toBe("fulfilled");
+                expect(results[1].status).toBe("rejected");
+                expect(results[2].status).toBe("fulfilled");
+            });
+        });
     });
 });

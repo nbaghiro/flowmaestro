@@ -10,13 +10,13 @@ import {
     registerHandler,
     clearHandlers,
     getAllHandlers
-} from "../../src/temporal/activities/execution/registry";
+} from "../../../../src/temporal/activities/execution/registry";
 import type {
     NodeHandler,
     NodeHandlerInput,
     NodeHandlerOutput,
     NodeHandlerCategory
-} from "../../src/temporal/activities/execution/types";
+} from "../../../../src/temporal/activities/execution/types";
 
 // ============================================================================
 // TYPES

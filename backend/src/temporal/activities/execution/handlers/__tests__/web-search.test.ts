@@ -656,5 +656,136 @@ describe("WebSearchNodeHandler", () => {
                 );
             });
         });
+
+        describe("timeout scenarios", () => {
+            it("should handle search API timeout", async () => {
+                mockExecute.mockResolvedValueOnce({
+                    success: false,
+                    error: { message: "Search request timeout after 30000ms" }
+                });
+
+                const input = createMockInput({
+                    query: "slow search query",
+                    outputVariable: "result"
+                });
+
+                await expect(handler.execute(input)).rejects.toThrow("timeout");
+            });
+
+            it("should handle slow search within timeout", async () => {
+                mockExecute.mockImplementationOnce(
+                    () =>
+                        new Promise((resolve) =>
+                            setTimeout(
+                                () =>
+                                    resolve({
+                                        success: true,
+                                        data: {
+                                            query: "slow query",
+                                            results: [
+                                                {
+                                                    title: "Result",
+                                                    url: "https://example.com",
+                                                    snippet: "Found"
+                                                }
+                                            ]
+                                        }
+                                    }),
+                                50
+                            )
+                        )
+                );
+
+                const input = createMockInput({
+                    query: "slow query",
+                    outputVariable: "result"
+                });
+
+                const result = await handler.execute(input);
+
+                expect(result.result.result).toBeDefined();
+            });
+        });
+
+        describe("concurrent operations", () => {
+            it("should handle multiple simultaneous searches", async () => {
+                const queries = ["query1", "query2", "query3"];
+
+                queries.forEach((query, i) => {
+                    mockExecute.mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            query,
+                            results: [
+                                {
+                                    title: `Result ${i}`,
+                                    url: `https://example${i}.com`,
+                                    snippet: `Snippet ${i}`
+                                }
+                            ]
+                        }
+                    });
+                });
+
+                const handler1 = createWebSearchNodeHandler();
+                const handler2 = createWebSearchNodeHandler();
+                const handler3 = createWebSearchNodeHandler();
+
+                const results = await Promise.all([
+                    handler1.execute(
+                        createMockInput({ query: queries[0], outputVariable: "r1" })
+                    ),
+                    handler2.execute(
+                        createMockInput({ query: queries[1], outputVariable: "r2" })
+                    ),
+                    handler3.execute(createMockInput({ query: queries[2], outputVariable: "r3" }))
+                ]);
+
+                expect(results).toHaveLength(3);
+                results.forEach((result, i) => {
+                    expect(result.result[`r${i + 1}`]).toBeDefined();
+                });
+            });
+
+            it("should isolate rate limit errors between concurrent searches", async () => {
+                mockExecute
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            query: "query1",
+                            results: [
+                                { title: "R1", url: "https://1.com", snippet: "1" }
+                            ]
+                        }
+                    })
+                    .mockResolvedValueOnce({
+                        success: false,
+                        error: { message: "Rate limit exceeded" }
+                    })
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            query: "query3",
+                            results: [
+                                { title: "R3", url: "https://3.com", snippet: "3" }
+                            ]
+                        }
+                    });
+
+                const handler1 = createWebSearchNodeHandler();
+                const handler2 = createWebSearchNodeHandler();
+                const handler3 = createWebSearchNodeHandler();
+
+                const results = await Promise.allSettled([
+                    handler1.execute(createMockInput({ query: "query1", outputVariable: "r1" })),
+                    handler2.execute(createMockInput({ query: "query2", outputVariable: "r2" })),
+                    handler3.execute(createMockInput({ query: "query3", outputVariable: "r3" }))
+                ]);
+
+                expect(results[0].status).toBe("fulfilled");
+                expect(results[1].status).toBe("rejected");
+                expect(results[2].status).toBe("fulfilled");
+            });
+        });
     });
 });

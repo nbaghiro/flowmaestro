@@ -6,7 +6,7 @@
 
 import type { JsonObject } from "@flowmaestro/shared";
 import { createServiceLogger } from "../core/logging";
-import { validateToolInput } from "../core/validation/tool-validation";
+import { validateToolInput } from "./validation";
 import { providerRegistry } from "../integrations/core/ProviderRegistry";
 import { ConnectionRepository } from "../storage/repositories/ConnectionRepository";
 import { getBuiltInTool, getAllBuiltInTools } from "./builtin";

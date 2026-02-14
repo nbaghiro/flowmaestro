@@ -25,7 +25,7 @@ jest.mock("../../../../storage/repositories/WorkflowRepository");
 jest.mock("../../../../storage/repositories/ConnectionRepository");
 jest.mock("../../../../storage/repositories/SafetyLogRepository");
 jest.mock("../../../../core/safety/safety-pipeline");
-jest.mock("../../../../core/validation/tool-validation");
+jest.mock("../../../../tools/validation");
 jest.mock("../../../../integrations/core/ExecutionRouter");
 jest.mock("../../../../integrations/registry");
 jest.mock("../../../../services/events/RedisEventBus");
@@ -45,12 +45,38 @@ jest.mock("../../../../core/config", () => ({
             cohere: { apiKey: "test-cohere-key" },
             huggingface: { apiKey: "test-hf-key" }
         },
-        temporal: { address: "localhost:7233" }
+        temporal: { address: "localhost:7233" },
+        redis: { host: "localhost", port: 6379 }
     }
 }));
 jest.mock("../../../../storage/database", () => ({
     db: {
         query: jest.fn()
+    }
+}));
+jest.mock("../../../../services/redis", () => ({
+    redis: {
+        zrangebyscore: jest.fn().mockResolvedValue([]),
+        zremrangebyscore: jest.fn().mockResolvedValue(0),
+        zadd: jest.fn().mockResolvedValue(1),
+        get: jest.fn().mockResolvedValue(null),
+        incr: jest.fn().mockResolvedValue(1),
+        decr: jest.fn().mockResolvedValue(0),
+        expire: jest.fn().mockResolvedValue(1)
+    }
+}));
+jest.mock("../../../../core/utils/llm-rate-limiter", () => ({
+    getLLMRateLimiter: jest.fn(() => ({
+        checkLimit: jest.fn().mockResolvedValue({ allowed: true }),
+        recordCall: jest.fn().mockResolvedValue(undefined),
+        incrementConcurrent: jest.fn().mockResolvedValue(undefined),
+        decrementConcurrent: jest.fn().mockResolvedValue(undefined)
+    })),
+    RateLimitExceededError: class RateLimitExceededError extends Error {
+        constructor(message: string) {
+            super(message);
+            this.name = "RateLimitExceededError";
+        }
     }
 }));
 
@@ -60,7 +86,7 @@ import {
     validateToolInput,
     coerceToolArguments,
     createValidationErrorResponse
-} from "../../../../core/validation/tool-validation";
+} from "../../../../tools/validation";
 import { SafetyLogRepository } from "../../../../storage/repositories/SafetyLogRepository";
 import {
     getAgentConfig,

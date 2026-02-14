@@ -9,15 +9,15 @@ import {
     createAgentTestEnvironment,
     runAgentExecution,
     createTestAgent
-} from "../../helpers/agent-test-env";
+} from "./helpers/agent-test-env";
 import {
     safetyEnabledAgent,
     DEFAULT_SAFETY_CONFIG,
     STRICT_SAFETY_CONFIG
-} from "../../helpers/agent-test-fixtures";
+} from "./helpers/agent-test-fixtures";
 import { createCompletionResponse, createToolSequence } from "../../helpers/llm-mock-client";
 import type { SafetyConfig } from "../../../src/core/safety/types";
-import type { AgentTestEnvironment } from "../../helpers/agent-test-env";
+import type { AgentTestEnvironment } from "./helpers/agent-test-env";
 
 // Increase test timeout for Temporal workflows
 jest.setTimeout(60000);

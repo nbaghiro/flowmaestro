@@ -561,4 +561,127 @@ describe("SwitchNodeHandler", () => {
             expect(output.result.matchedCase).toBe(longValue);
         });
     });
+
+    describe("concurrent execution", () => {
+        it("handles multiple simultaneous switch evaluations", async () => {
+            const expressions = ["pending", "active", "completed"];
+
+            const handler1 = createSwitchNodeHandler();
+            const handler2 = createSwitchNodeHandler();
+            const handler3 = createSwitchNodeHandler();
+
+            const results = await Promise.all([
+                handler1.execute(
+                    createHandlerInput({
+                        nodeType: "switch",
+                        nodeConfig: {
+                            expression: expressions[0],
+                            cases: [
+                                { value: "pending", label: "Pending" },
+                                { value: "active", label: "Active" },
+                                { value: "completed", label: "Completed" }
+                            ],
+                            defaultCase: "unknown"
+                        }
+                    })
+                ),
+                handler2.execute(
+                    createHandlerInput({
+                        nodeType: "switch",
+                        nodeConfig: {
+                            expression: expressions[1],
+                            cases: [
+                                { value: "pending", label: "Pending" },
+                                { value: "active", label: "Active" },
+                                { value: "completed", label: "Completed" }
+                            ],
+                            defaultCase: "unknown"
+                        }
+                    })
+                ),
+                handler3.execute(
+                    createHandlerInput({
+                        nodeType: "switch",
+                        nodeConfig: {
+                            expression: expressions[2],
+                            cases: [
+                                { value: "pending", label: "Pending" },
+                                { value: "active", label: "Active" },
+                                { value: "completed", label: "Completed" }
+                            ],
+                            defaultCase: "unknown"
+                        }
+                    })
+                )
+            ]);
+
+            expect(results).toHaveLength(3);
+            expect(results[0].result.matchedCase).toBe("pending");
+            expect(results[1].result.matchedCase).toBe("active");
+            expect(results[2].result.matchedCase).toBe("completed");
+        });
+
+        it("concurrent switches with different case configurations", async () => {
+            const handler1 = createSwitchNodeHandler();
+            const handler2 = createSwitchNodeHandler();
+
+            const results = await Promise.all([
+                handler1.execute(
+                    createHandlerInput({
+                        nodeType: "switch",
+                        nodeConfig: {
+                            expression: "error",
+                            cases: [
+                                { value: "success", label: "Success" },
+                                { value: "error", label: "Error" }
+                            ],
+                            defaultCase: "unknown"
+                        }
+                    })
+                ),
+                handler2.execute(
+                    createHandlerInput({
+                        nodeType: "switch",
+                        nodeConfig: {
+                            expression: "info",
+                            cases: [
+                                { value: "debug", label: "Debug" },
+                                { value: "info", label: "Info" },
+                                { value: "warn", label: "Warning" }
+                            ],
+                            defaultCase: "other"
+                        }
+                    })
+                )
+            ]);
+
+            expect(results[0].result.matchedCase).toBe("error");
+            expect(results[1].result.matchedCase).toBe("info");
+        });
+
+        it("isolates state between concurrent switch executions", async () => {
+            const handlers = Array.from({ length: 5 }, () => createSwitchNodeHandler());
+            const values = ["a", "b", "c", "d", "e"];
+
+            const results = await Promise.all(
+                handlers.map((h, i) =>
+                    h.execute(
+                        createHandlerInput({
+                            nodeType: "switch",
+                            nodeConfig: {
+                                expression: values[i],
+                                cases: values.map((v) => ({ value: v, label: v.toUpperCase() })),
+                                defaultCase: "unknown"
+                            }
+                        })
+                    )
+                )
+            );
+
+            results.forEach((result, i) => {
+                expect(result.result.matchedCase).toBe(values[i]);
+                expect(result.signals.selectedRoute).toBe(values[i]);
+            });
+        });
+    });
 });

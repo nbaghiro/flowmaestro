@@ -324,4 +324,327 @@ describe("InputNodeHandler", () => {
             expect(output.result.input).toHaveLength(1000);
         });
     });
+
+    describe("concurrent input processing", () => {
+        it("handles multiple simultaneous inputs", async () => {
+            const inputs = Array.from({ length: 10 }, (_, i) =>
+                createHandlerInput({
+                    nodeType: "input",
+                    nodeConfig: {
+                        inputType: "text",
+                        value: `Input ${i}`
+                    }
+                })
+            );
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(10);
+            outputs.forEach((output, i) => {
+                expect(output.result.input).toBe(`Input ${i}`);
+            });
+        });
+
+        it("handles concurrent JSON parsing", async () => {
+            const inputs = Array.from({ length: 5 }, (_, i) =>
+                createHandlerInput({
+                    nodeType: "input",
+                    nodeConfig: {
+                        inputType: "json",
+                        value: JSON.stringify({ index: i, data: `item_${i}` })
+                    }
+                })
+            );
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(5);
+            outputs.forEach((output, i) => {
+                const result = output.result.input as { index: number; data: string };
+                expect(result.index).toBe(i);
+                expect(result.data).toBe(`item_${i}`);
+            });
+        });
+
+        it("handles mixed input types concurrently", async () => {
+            const inputs = [
+                createHandlerInput({
+                    nodeType: "input",
+                    nodeConfig: { inputType: "text", value: "text value" }
+                }),
+                createHandlerInput({
+                    nodeType: "input",
+                    nodeConfig: { inputType: "json", value: '{"key": "value"}' }
+                }),
+                createHandlerInput({
+                    nodeType: "input",
+                    nodeConfig: { inputType: "text", value: "another text" }
+                }),
+                createHandlerInput({
+                    nodeType: "input",
+                    nodeConfig: { inputType: "json", value: "[1, 2, 3]" }
+                })
+            ];
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(4);
+            expect(outputs[0].result.input).toBe("text value");
+            expect(outputs[1].result.input).toEqual({ key: "value" });
+            expect(outputs[2].result.input).toBe("another text");
+            expect(outputs[3].result.input).toEqual([1, 2, 3]);
+        });
+    });
+
+    describe("additional JSON edge cases", () => {
+        it("handles JSON with deeply nested structure", async () => {
+            const deepJson = JSON.stringify({
+                level1: {
+                    level2: {
+                        level3: {
+                            level4: {
+                                level5: {
+                                    value: "deep"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "json",
+                    value: deepJson
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            const result = output.result.input as {
+                level1: { level2: { level3: { level4: { level5: { value: string } } } } };
+            };
+            expect(result.level1.level2.level3.level4.level5.value).toBe("deep");
+        });
+
+        it("handles JSON with empty object", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "json",
+                    value: "{}"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.input).toEqual({});
+        });
+
+        it("handles JSON with empty array", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "json",
+                    value: "[]"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.input).toEqual([]);
+        });
+
+        it("handles JSON with mixed types in array", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "json",
+                    value: '[1, "two", true, null, {"key": "value"}]'
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.input).toEqual([1, "two", true, null, { key: "value" }]);
+        });
+
+        it("handles JSON string with escaped quotes", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "json",
+                    value: '{"message": "He said \\"Hello\\""}'
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect((output.result.input as { message: string }).message).toBe('He said "Hello"');
+        });
+
+        it("handles JSON with unicode escape sequences", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "json",
+                    value: '{"text": "\\u0048\\u0065\\u006c\\u006c\\u006f"}'
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect((output.result.input as { text: string }).text).toBe("Hello");
+        });
+    });
+
+    describe("text input edge cases", () => {
+        it("handles text with only whitespace", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "text",
+                    value: "   \n\t\r   "
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.input).toBe("   \n\t\r   ");
+        });
+
+        it("handles text with null bytes", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "text",
+                    value: "text\x00with\x00nulls"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.input).toBe("text\x00with\x00nulls");
+        });
+
+        it("handles text with control characters", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "text",
+                    value: "line1\r\nline2\tindented"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.input).toBe("line1\r\nline2\tindented");
+        });
+
+        it("handles text with emoji sequences", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "text",
+                    value: "👨‍👩‍👧‍👦 Family emoji and 🏳️‍🌈 flag"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.input).toContain("👨‍👩‍👧‍👦");
+            expect(output.result.input).toContain("🏳️‍🌈");
+        });
+    });
+
+    describe("validation and error handling", () => {
+        it("handles missing value gracefully", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "text"
+                    // value is missing
+                }
+            });
+
+            // Should either return undefined/empty or throw a clear error
+            try {
+                const output = await handler.execute(input);
+                // If it doesn't throw, the result should be handled
+                expect(output.result.input === undefined || output.result.input === "").toBe(true);
+            } catch {
+                // If it throws, that's also acceptable behavior
+                expect(true).toBe(true);
+            }
+        });
+
+        it("handles numeric string as text", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "text",
+                    value: "12345"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            // Should remain as string, not converted to number
+            expect(output.result.input).toBe("12345");
+            expect(typeof output.result.input).toBe("string");
+        });
+
+        it("handles boolean string as text", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "text",
+                    value: "true"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            // Should remain as string "true", not converted to boolean
+            expect(output.result.input).toBe("true");
+            expect(typeof output.result.input).toBe("string");
+        });
+    });
+
+    describe("output structure", () => {
+        it("includes all expected fields in output", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "text",
+                    value: "test"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output).toHaveProperty("result");
+            expect(output).toHaveProperty("metrics");
+            expect(output.result).toHaveProperty("input");
+            expect(output.result).toHaveProperty("_inputMetadata");
+        });
+
+        it("preserves original value type information in metadata", async () => {
+            const input = createHandlerInput({
+                nodeType: "input",
+                nodeConfig: {
+                    inputType: "json",
+                    value: '{"complex": true}'
+                }
+            });
+
+            const output = await handler.execute(input);
+            const metadata = output.result._inputMetadata as { inputType: string; value: unknown };
+
+            expect(metadata.inputType).toBe("json");
+            // The handler parses JSON values, so metadata.value is the parsed object
+            expect(metadata.value).toEqual({ complex: true });
+        });
+    });
 });

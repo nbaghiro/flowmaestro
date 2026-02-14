@@ -654,4 +654,577 @@ describe("AudioInputNodeHandler", () => {
             expect(output.metrics?.durationMs).toBeGreaterThanOrEqual(0);
         });
     });
+
+    describe("concurrent transcription", () => {
+        it("handles multiple simultaneous transcriptions", async () => {
+            mockOpenAICreate
+                .mockResolvedValueOnce({ text: "First audio", language: "en", duration: 1.0 })
+                .mockResolvedValueOnce({ text: "Second audio", language: "en", duration: 2.0 })
+                .mockResolvedValueOnce({ text: "Third audio", language: "en", duration: 1.5 });
+
+            const inputs = [
+                createHandlerInput({
+                    nodeType: "audioInput",
+                    nodeConfig: {
+                        provider: "openai",
+                        model: "whisper-1",
+                        inputName: "audio1",
+                        outputVariable: "result1"
+                    },
+                    context: createTestContext({
+                        inputs: {
+                            audio1: {
+                                fileName: "a1.mp3",
+                                mimeType: "audio/mpeg",
+                                gcsUri: "gs://bucket/a1.mp3"
+                            }
+                        }
+                    })
+                }),
+                createHandlerInput({
+                    nodeType: "audioInput",
+                    nodeConfig: {
+                        provider: "openai",
+                        model: "whisper-1",
+                        inputName: "audio2",
+                        outputVariable: "result2"
+                    },
+                    context: createTestContext({
+                        inputs: {
+                            audio2: {
+                                fileName: "a2.mp3",
+                                mimeType: "audio/mpeg",
+                                gcsUri: "gs://bucket/a2.mp3"
+                            }
+                        }
+                    })
+                }),
+                createHandlerInput({
+                    nodeType: "audioInput",
+                    nodeConfig: {
+                        provider: "openai",
+                        model: "whisper-1",
+                        inputName: "audio3",
+                        outputVariable: "result3"
+                    },
+                    context: createTestContext({
+                        inputs: {
+                            audio3: {
+                                fileName: "a3.mp3",
+                                mimeType: "audio/mpeg",
+                                gcsUri: "gs://bucket/a3.mp3"
+                            }
+                        }
+                    })
+                })
+            ];
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(3);
+            expect((outputs[0].result.result1 as { text: string }).text).toBe("First audio");
+            expect((outputs[1].result.result2 as { text: string }).text).toBe("Second audio");
+            expect((outputs[2].result.result3 as { text: string }).text).toBe("Third audio");
+        });
+
+        it("handles concurrent transcriptions with mixed providers", async () => {
+            mockOpenAICreate.mockResolvedValue({
+                text: "OpenAI transcription",
+                language: "en",
+                duration: 1.0
+            });
+
+            nock("https://api.deepgram.com")
+                .post("/v1/listen")
+                .query(true)
+                .reply(200, {
+                    results: {
+                        channels: [
+                            {
+                                alternatives: [{ transcript: "Deepgram transcription", confidence: 0.95 }]
+                            }
+                        ]
+                    },
+                    metadata: { duration: 2.0 }
+                });
+
+            const openaiInput = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "openaiResult"
+                },
+                context: createTestContext({
+                    inputs: {
+                        audio: { fileName: "a.mp3", mimeType: "audio/mpeg", gcsUri: "gs://bucket/a.mp3" }
+                    }
+                })
+            });
+
+            const deepgramInput = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "deepgram",
+                    model: "nova-2",
+                    inputName: "audio",
+                    outputVariable: "deepgramResult"
+                },
+                context: createTestContext({
+                    inputs: {
+                        audio: { fileName: "b.mp3", mimeType: "audio/mpeg", gcsUri: "gs://bucket/b.mp3" }
+                    }
+                })
+            });
+
+            const [openaiOutput, deepgramOutput] = await Promise.all([
+                handler.execute(openaiInput),
+                handler.execute(deepgramInput)
+            ]);
+
+            expect((openaiOutput.result.openaiResult as { text: string }).text).toBe(
+                "OpenAI transcription"
+            );
+            expect((deepgramOutput.result.deepgramResult as { text: string }).text).toBe(
+                "Deepgram transcription"
+            );
+        });
+    });
+
+    describe("large audio file handling", () => {
+        it("handles audio files with long duration", async () => {
+            mockOpenAICreate.mockResolvedValue({
+                text: "Long transcription content...",
+                language: "en",
+                duration: 7200.0 // 2 hours
+            });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "long-podcast.mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/long-podcast.mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            const result = output.result.result as { duration: number };
+            expect(result.duration).toBe(7200.0);
+        });
+
+        it("handles audio with many words/timestamps", async () => {
+            const manyWords = Array.from({ length: 1000 }, (_, i) => ({
+                word: `word${i}`,
+                start: i * 0.1,
+                end: i * 0.1 + 0.09
+            }));
+
+            mockOpenAICreate.mockResolvedValue({
+                text: manyWords.map((w) => w.word).join(" "),
+                language: "en",
+                duration: 100.0,
+                words: manyWords
+            });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "many-words.mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/many-words.mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            const result = output.result.result as {
+                metadata?: { words?: Array<{ word: string }> };
+            };
+            expect(result.metadata?.words).toHaveLength(1000);
+        });
+    });
+
+    describe("audio format edge cases", () => {
+        it("handles webm audio format", async () => {
+            mockOpenAICreate.mockResolvedValue({
+                text: "WebM audio content",
+                language: "en",
+                duration: 1.0
+            });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "recording.webm",
+                        mimeType: "audio/webm",
+                        gcsUri: "gs://bucket/recording.webm"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect((output.result.result as { text: string }).text).toBe("WebM audio content");
+        });
+
+        it("handles m4a audio format", async () => {
+            mockOpenAICreate.mockResolvedValue({
+                text: "M4A audio content",
+                language: "en",
+                duration: 1.0
+            });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "voice-memo.m4a",
+                        mimeType: "audio/x-m4a",
+                        gcsUri: "gs://bucket/voice-memo.m4a"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect((output.result.result as { text: string }).text).toBe("M4A audio content");
+        });
+
+        it("handles ogg audio format", async () => {
+            mockOpenAICreate.mockResolvedValue({
+                text: "OGG audio content",
+                language: "en",
+                duration: 1.0
+            });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "podcast.ogg",
+                        mimeType: "audio/ogg",
+                        gcsUri: "gs://bucket/podcast.ogg"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect((output.result.result as { text: string }).text).toBe("OGG audio content");
+        });
+    });
+
+    describe("rate limiting", () => {
+        it("handles OpenAI rate limit error", async () => {
+            const rateLimitError = new Error("Rate limit exceeded");
+            (rateLimitError as Error & { status?: number }).status = 429;
+            mockOpenAICreate.mockRejectedValue(rateLimitError);
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "test.mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/test.mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/rate limit/i);
+        });
+
+        it("handles Deepgram rate limit error", async () => {
+            nock("https://api.deepgram.com")
+                .post("/v1/listen")
+                .query(true)
+                .reply(429, { error: "Rate limit exceeded. Please slow down." });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "test.mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/test.mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "deepgram",
+                    model: "nova-2",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/rate limit|429/i);
+        });
+    });
+
+    describe("provider error handling", () => {
+        it("handles OpenAI authentication error", async () => {
+            const authError = new Error("Invalid API key");
+            (authError as Error & { status?: number }).status = 401;
+            mockOpenAICreate.mockRejectedValue(authError);
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "test.mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/test.mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/Invalid API key|401/i);
+        });
+
+        it("handles Deepgram server error", async () => {
+            nock("https://api.deepgram.com")
+                .post("/v1/listen")
+                .query(true)
+                .reply(500, { error: "Internal server error" });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "test.mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/test.mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "deepgram",
+                    model: "nova-2",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/500|server error/i);
+        });
+
+        it("handles OpenAI model not found error", async () => {
+            const notFoundError = new Error("Model not found: whisper-invalid");
+            (notFoundError as Error & { status?: number }).status = 404;
+            mockOpenAICreate.mockRejectedValue(notFoundError);
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "test.mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/test.mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-invalid",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/not found|404/i);
+        });
+    });
+
+    describe("edge cases", () => {
+        it("handles audio with no speech detected", async () => {
+            mockOpenAICreate.mockResolvedValue({
+                text: "",
+                language: "en",
+                duration: 5.0
+            });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "silence.mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/silence.mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            const result = output.result.result as { text: string };
+            expect(result.text).toBe("");
+        });
+
+        it("handles audio with multiple languages", async () => {
+            mockOpenAICreate.mockResolvedValue({
+                text: "Hello Bonjour Hola",
+                language: "en", // Primary detected language
+                duration: 3.0
+            });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "multilingual.mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/multilingual.mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            const result = output.result.result as { text: string; language: string };
+            expect(result.text).toContain("Hello");
+            expect(result.text).toContain("Bonjour");
+            expect(result.text).toContain("Hola");
+        });
+
+        it("handles audio with special characters in filename", async () => {
+            mockOpenAICreate.mockResolvedValue({
+                text: "Special filename content",
+                language: "en",
+                duration: 1.0
+            });
+
+            const context = createTestContext({
+                inputs: {
+                    audio: {
+                        fileName: "audio file (copy) [2024].mp3",
+                        mimeType: "audio/mpeg",
+                        gcsUri: "gs://bucket/audio file (copy) [2024].mp3"
+                    }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audioInput",
+                nodeConfig: {
+                    provider: "openai",
+                    model: "whisper-1",
+                    inputName: "audio",
+                    outputVariable: "result"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect((output.result.result as { text: string }).text).toBe("Special filename content");
+        });
+    });
 });

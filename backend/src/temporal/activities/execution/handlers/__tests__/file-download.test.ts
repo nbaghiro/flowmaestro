@@ -689,5 +689,163 @@ describe("FileDownloadNodeHandler", () => {
                 );
             });
         });
+
+        describe("timeout scenarios", () => {
+            it("should handle download timeout for large files", async () => {
+                mockExecute.mockResolvedValueOnce({
+                    success: false,
+                    error: { message: "Download timeout: file transfer exceeded 60000ms" }
+                });
+
+                const input = createMockInput({
+                    url: "https://example.com/large-file.zip",
+                    timeout: 60000,
+                    outputVariable: "result"
+                });
+
+                await expect(handler.execute(input)).rejects.toThrow("timeout");
+            });
+
+            it("should handle slow download within timeout", async () => {
+                mockExecute.mockImplementationOnce(
+                    () =>
+                        new Promise((resolve) =>
+                            setTimeout(
+                                () =>
+                                    resolve({
+                                        success: true,
+                                        data: {
+                                            path: "/workspace/slow-file.pdf",
+                                            filename: "slow-file.pdf",
+                                            size: 5000000,
+                                            contentType: "application/pdf",
+                                            downloadTime: 15000,
+                                            url: "https://slow.example.com/file.pdf"
+                                        }
+                                    }),
+                                50
+                            )
+                        )
+                );
+
+                const input = createMockInput({
+                    url: "https://slow.example.com/file.pdf",
+                    outputVariable: "result"
+                });
+
+                const result = await handler.execute(input);
+
+                expect(result.result.result).toBeDefined();
+            });
+        });
+
+        describe("concurrent operations", () => {
+            it("should handle multiple simultaneous downloads", async () => {
+                const files = ["file1.pdf", "file2.pdf", "file3.pdf"];
+
+                files.forEach((filename, i) => {
+                    mockExecute.mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            path: `/workspace/${filename}`,
+                            filename,
+                            size: 1000 * (i + 1),
+                            contentType: "application/pdf",
+                            downloadTime: 100 * (i + 1),
+                            url: `https://example.com/${filename}`
+                        }
+                    });
+                });
+
+                const handler1 = createFileDownloadNodeHandler();
+                const handler2 = createFileDownloadNodeHandler();
+                const handler3 = createFileDownloadNodeHandler();
+
+                const results = await Promise.all([
+                    handler1.execute(
+                        createMockInput({
+                            url: `https://example.com/${files[0]}`,
+                            outputVariable: "r1"
+                        })
+                    ),
+                    handler2.execute(
+                        createMockInput({
+                            url: `https://example.com/${files[1]}`,
+                            outputVariable: "r2"
+                        })
+                    ),
+                    handler3.execute(
+                        createMockInput({
+                            url: `https://example.com/${files[2]}`,
+                            outputVariable: "r3"
+                        })
+                    )
+                ]);
+
+                expect(results).toHaveLength(3);
+                results.forEach((result, i) => {
+                    expect(result.result[`r${i + 1}`]).toBeDefined();
+                });
+            });
+
+            it("should isolate errors between concurrent downloads", async () => {
+                mockExecute
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            path: "/workspace/success1.pdf",
+                            filename: "success1.pdf",
+                            size: 1000,
+                            contentType: "application/pdf",
+                            downloadTime: 100,
+                            url: "https://example.com/success1.pdf"
+                        }
+                    })
+                    .mockResolvedValueOnce({
+                        success: false,
+                        error: { message: "HTTP 403: Access denied" }
+                    })
+                    .mockResolvedValueOnce({
+                        success: true,
+                        data: {
+                            path: "/workspace/success2.pdf",
+                            filename: "success2.pdf",
+                            size: 2000,
+                            contentType: "application/pdf",
+                            downloadTime: 200,
+                            url: "https://example.com/success2.pdf"
+                        }
+                    });
+
+                const handler1 = createFileDownloadNodeHandler();
+                const handler2 = createFileDownloadNodeHandler();
+                const handler3 = createFileDownloadNodeHandler();
+
+                const results = await Promise.allSettled([
+                    handler1.execute(
+                        createMockInput({
+                            url: "https://example.com/success1.pdf",
+                            outputVariable: "r1"
+                        })
+                    ),
+                    handler2.execute(
+                        createMockInput({
+                            url: "https://protected.com/file.pdf",
+                            outputVariable: "r2"
+                        })
+                    ),
+                    handler3.execute(
+                        createMockInput({
+                            url: "https://example.com/success2.pdf",
+                            outputVariable: "r3"
+                        })
+                    )
+                ]);
+
+                expect(results[0].status).toBe("fulfilled");
+                expect(results[1].status).toBe("rejected");
+                expect(results[2].status).toBe("fulfilled");
+            });
+        });
     });
 });

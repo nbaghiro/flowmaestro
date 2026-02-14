@@ -7,3 +7,4 @@ export * from "./KnowledgeDocument";
 export * from "./KnowledgeChunk";
 export * from "./Trigger";
 export * from "./Folder";
+export * from "./PersonaApprovalRequest";

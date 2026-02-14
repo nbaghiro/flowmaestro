@@ -91,6 +91,36 @@ export type {
 // Executor functions
 export { executeTool, getAllToolsForUser, getToolsForAgent } from "./executor";
 
+// Tool timeout utilities
+export {
+    executeWithTimeout,
+    withTimeout,
+    ToolTimeoutError,
+    DEFAULT_TOOL_TIMEOUTS,
+    getToolTimeout,
+    isAbortError,
+    fetchWithSignal
+} from "./timeout";
+export type { ToolTimeoutConfig } from "./timeout";
+
+// Tool validation utilities
+export {
+    validateToolSchema,
+    validateToolInput,
+    validateToolOutput,
+    jsonSchemaToZod,
+    formatZodErrors,
+    formatValidationMessage,
+    createValidationErrorResponse,
+    coerceToolArguments
+} from "./validation";
+export type {
+    ValidationResult,
+    ValidationError,
+    SchemaValidationResult,
+    ValidatedTool
+} from "./validation";
+
 // Testing utilities
 export {
     createTestContext,

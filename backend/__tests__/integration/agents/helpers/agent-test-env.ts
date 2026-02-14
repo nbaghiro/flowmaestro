@@ -12,17 +12,17 @@ import { TestWorkflowEnvironment } from "@temporalio/testing";
 import { Worker, Runtime } from "@temporalio/worker";
 import { nanoid } from "nanoid";
 import type { JsonObject } from "@flowmaestro/shared";
-import { createLLMMockClient, createCompletionResponse } from "./llm-mock-client";
-import type { LLMMockConfig } from "./llm-mock-client";
-import type { SafetyContext, SafetyConfig } from "../../src/core/safety/types";
-import type { Tool, MemoryConfig } from "../../src/storage/models/Agent";
-import type { ThreadMessage, ToolCall } from "../../src/storage/models/AgentExecution";
+import { createLLMMockClient, createCompletionResponse } from "../../../helpers/llm-mock-client";
+import type { LLMMockConfig } from "../../../helpers/llm-mock-client";
+import type { SafetyContext, SafetyConfig } from "../../../../src/core/safety/types";
+import type { Tool, MemoryConfig } from "../../../../src/storage/models/Agent";
+import type { ThreadMessage, ToolCall } from "../../../../src/storage/models/AgentExecution";
 import type {
     AgentOrchestratorInput,
     AgentOrchestratorResult,
     AgentConfig,
     LLMResponse
-} from "../../src/temporal/workflows/agent-orchestrator";
+} from "../../../../src/temporal/workflows/agent-orchestrator";
 
 // ============================================================================
 // TYPES
@@ -187,7 +187,7 @@ export async function createAgentTestEnvironment(
     const worker = await Worker.create({
         connection: env.nativeConnection,
         taskQueue: "test-agent-queue",
-        workflowsPath: require.resolve("../../src/temporal/workflows"),
+        workflowsPath: require.resolve("../../../../src/temporal/workflows"),
         activities
     });
 
@@ -332,7 +332,7 @@ function createAgentTestActivities(options: ActivityFactoryOptions) {
                     if (tool.type === "mcp") {
                         try {
                             const { sandboxDataService } = await import(
-                                "../../src/integrations/sandbox"
+                                "../../../../src/integrations/sandbox"
                             );
 
                             const provider = tool.config?.provider as string;
@@ -439,7 +439,7 @@ function createAgentTestActivities(options: ActivityFactoryOptions) {
                     ) {
                         // Import and use real safety pipeline
                         const { SafetyPipeline } = await import(
-                            "../../src/core/safety/safety-pipeline"
+                            "../../../../src/core/safety/safety-pipeline"
                         );
                         const pipeline = new SafetyPipeline(mergedConfig);
                         const result = await pipeline.process(input.content, input.context);
@@ -480,7 +480,7 @@ function createAgentTestActivities(options: ActivityFactoryOptions) {
                         mergedConfig.enableContentModeration
                     ) {
                         const { SafetyPipeline } = await import(
-                            "../../src/core/safety/safety-pipeline"
+                            "../../../../src/core/safety/safety-pipeline"
                         );
                         const pipeline = new SafetyPipeline(mergedConfig);
                         const result = await pipeline.process(input.content, input.context);

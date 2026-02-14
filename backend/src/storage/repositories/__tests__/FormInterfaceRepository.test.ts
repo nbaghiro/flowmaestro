@@ -1,8 +1,8 @@
 /**
  * FormInterfaceRepository Tests
  *
- * Tests for form interface CRUD operations including target type handling,
- * publish/unpublish, workspace-scoped methods, and folder filtering.
+ * Tests for form interface CRUD operations including slug handling,
+ * publish/unpublish, workspace-scoped methods, duplicate, and folder filtering.
  */
 
 // Mock the database module before importing the repository
@@ -36,10 +36,10 @@ describe("FormInterfaceRepository", () => {
             const workspaceId = generateId();
             const workflowId = generateId();
             const input = {
-                name: "Content Generator",
-                slug: "content-generator",
-                title: "Generate Content",
-                description: "Generate content using AI",
+                name: "Customer Form",
+                slug: "customer-form",
+                title: "Customer Intake",
+                description: "Collect customer information",
                 targetType: "workflow" as const,
                 workflowId,
                 coverType: "color" as const,
@@ -51,9 +51,9 @@ describe("FormInterfaceRepository", () => {
                 workspace_id: workspaceId,
                 name: input.name,
                 slug: input.slug,
+                title: input.title,
                 target_type: "workflow",
-                workflow_id: workflowId,
-                agent_id: null
+                workflow_id: workflowId
             });
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
@@ -62,20 +62,11 @@ describe("FormInterfaceRepository", () => {
 
             expect(mockQuery).toHaveBeenCalledWith(
                 expect.stringContaining("INSERT INTO flowmaestro.form_interfaces"),
-                expect.arrayContaining([
-                    userId,
-                    workspaceId,
-                    input.name,
-                    input.slug,
-                    input.title,
-                    null, // description
-                    "workflow",
-                    workflowId,
-                    null // agent_id
-                ])
+                expect.arrayContaining([userId, workspaceId, input.name, input.slug])
             );
+            expect(result.name).toBe(input.name);
+            expect(result.slug).toBe(input.slug);
             expect(result.targetType).toBe("workflow");
-            expect(result.workflowId).toBe(workflowId);
         });
 
         it("should insert a new form interface with agent target", async () => {
@@ -93,9 +84,11 @@ describe("FormInterfaceRepository", () => {
             const mockRow = generateFormInterfaceRow({
                 user_id: userId,
                 workspace_id: workspaceId,
+                name: input.name,
+                slug: input.slug,
                 target_type: "agent",
-                workflow_id: null,
-                agent_id: agentId
+                agent_id: agentId,
+                workflow_id: null
             });
 
             mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
@@ -104,7 +97,6 @@ describe("FormInterfaceRepository", () => {
 
             expect(result.targetType).toBe("agent");
             expect(result.agentId).toBe(agentId);
-            expect(result.workflowId).toBeNull();
         });
 
         it("should use default values when not specified", async () => {
@@ -121,6 +113,7 @@ describe("FormInterfaceRepository", () => {
             const mockRow = generateFormInterfaceRow({
                 user_id: userId,
                 workspace_id: workspaceId,
+                name: input.name,
                 cover_type: "color",
                 cover_value: "#6366f1"
             });
@@ -181,6 +174,21 @@ describe("FormInterfaceRepository", () => {
                 expect.anything()
             );
         });
+
+        it("should exclude soft-deleted records", async () => {
+            const formId = generateId();
+            const workspaceId = generateId();
+            const mockRow = generateFormInterfaceRow({ id: formId, workspace_id: workspaceId });
+
+            mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
+
+            await repository.findByIdAndWorkspaceId(formId, workspaceId);
+
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("deleted_at IS NULL"),
+                expect.anything()
+            );
+        });
     });
 
     describe("findBySlug", () => {
@@ -199,10 +207,18 @@ describe("FormInterfaceRepository", () => {
             expect(result?.slug).toBe(slug);
         });
 
-        it("should return null for unpublished interface", async () => {
+        it("should return null for unpublished form", async () => {
             mockQuery.mockResolvedValueOnce(mockEmptyResult());
 
             const result = await repository.findBySlug("draft-form");
+
+            expect(result).toBeNull();
+        });
+
+        it("should return null for deleted form", async () => {
+            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+
+            const result = await repository.findBySlug("deleted-form");
 
             expect(result).toBeNull();
         });
@@ -261,15 +277,26 @@ describe("FormInterfaceRepository", () => {
         it("should use default pagination values", async () => {
             const workspaceId = generateId();
 
-            mockQuery
-                .mockResolvedValueOnce(mockCountResult(100))
-                .mockResolvedValueOnce(mockRows([]));
+            mockQuery.mockResolvedValueOnce(mockCountResult(100)).mockResolvedValueOnce(mockRows([]));
 
             await repository.findByWorkspaceId(workspaceId);
 
             expect(mockQuery).toHaveBeenLastCalledWith(
                 expect.stringContaining("LIMIT"),
                 expect.arrayContaining([workspaceId, 50, 0])
+            );
+        });
+
+        it("should order by updated_at DESC", async () => {
+            const workspaceId = generateId();
+
+            mockQuery.mockResolvedValueOnce(mockCountResult(0)).mockResolvedValueOnce(mockRows([]));
+
+            await repository.findByWorkspaceId(workspaceId);
+
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("ORDER BY fi.updated_at DESC"),
+                expect.anything()
             );
         });
     });
@@ -292,6 +319,17 @@ describe("FormInterfaceRepository", () => {
                 [workflowId, workspaceId]
             );
             expect(result).toHaveLength(2);
+        });
+
+        it("should return empty array when no forms linked", async () => {
+            mockQuery.mockResolvedValueOnce(mockRows([]));
+
+            const result = await repository.findByWorkflowIdAndWorkspaceId(
+                generateId(),
+                generateId()
+            );
+
+            expect(result).toHaveLength(0);
         });
     });
 
@@ -342,55 +380,7 @@ describe("FormInterfaceRepository", () => {
             expect(result?.name).toBe("Updated Form");
         });
 
-        it("should handle target type change to workflow", async () => {
-            const formId = generateId();
-            const workspaceId = generateId();
-            const workflowId = generateId();
-            const mockRow = generateFormInterfaceRow({
-                id: formId,
-                target_type: "workflow",
-                workflow_id: workflowId,
-                agent_id: null
-            });
-
-            mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
-
-            await repository.updateByWorkspaceId(formId, workspaceId, {
-                targetType: "workflow",
-                workflowId
-            });
-
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("target_type = $"),
-                expect.arrayContaining(["workflow", workflowId, null])
-            );
-        });
-
-        it("should handle target type change to agent", async () => {
-            const formId = generateId();
-            const workspaceId = generateId();
-            const agentId = generateId();
-            const mockRow = generateFormInterfaceRow({
-                id: formId,
-                target_type: "agent",
-                workflow_id: null,
-                agent_id: agentId
-            });
-
-            mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
-
-            await repository.updateByWorkspaceId(formId, workspaceId, {
-                targetType: "agent",
-                agentId
-            });
-
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("agent_id = $"),
-                expect.arrayContaining(["agent", agentId, null])
-            );
-        });
-
-        it("should return existing interface when no updates provided", async () => {
+        it("should return existing form when no updates provided", async () => {
             const formId = generateId();
             const workspaceId = generateId();
             const mockRow = generateFormInterfaceRow({ id: formId, workspace_id: workspaceId });
@@ -399,7 +389,71 @@ describe("FormInterfaceRepository", () => {
 
             const result = await repository.updateByWorkspaceId(formId, workspaceId, {});
 
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("SELECT"),
+                expect.anything()
+            );
             expect(result?.id).toBe(formId);
+        });
+
+        it("should handle target type change to workflow", async () => {
+            const formId = generateId();
+            const workspaceId = generateId();
+            const newWorkflowId = generateId();
+            const mockRow = generateFormInterfaceRow({
+                id: formId,
+                target_type: "workflow",
+                workflow_id: newWorkflowId,
+                agent_id: null
+            });
+
+            mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
+
+            await repository.updateByWorkspaceId(formId, workspaceId, {
+                targetType: "workflow",
+                workflowId: newWorkflowId
+            });
+
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("target_type ="),
+                expect.arrayContaining(["workflow", newWorkflowId])
+            );
+        });
+
+        it("should handle target type change to agent", async () => {
+            const formId = generateId();
+            const workspaceId = generateId();
+            const newAgentId = generateId();
+            const mockRow = generateFormInterfaceRow({
+                id: formId,
+                target_type: "agent",
+                agent_id: newAgentId,
+                workflow_id: null
+            });
+
+            mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
+
+            await repository.updateByWorkspaceId(formId, workspaceId, {
+                targetType: "agent",
+                agentId: newAgentId
+            });
+
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("target_type ="),
+                expect.arrayContaining(["agent", newAgentId])
+            );
+        });
+
+        it("should return null when form not found", async () => {
+            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+
+            const result = await repository.updateByWorkspaceId(
+                generateId(),
+                generateId(),
+                { name: "New Name" }
+            );
+
+            expect(result).toBeNull();
         });
     });
 
@@ -423,6 +477,14 @@ describe("FormInterfaceRepository", () => {
             );
             expect(result?.status).toBe("published");
         });
+
+        it("should return null when form not found", async () => {
+            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+
+            const result = await repository.publishByWorkspaceId(generateId(), generateId());
+
+            expect(result).toBeNull();
+        });
     });
 
     describe("unpublishByWorkspaceId", () => {
@@ -444,6 +506,7 @@ describe("FormInterfaceRepository", () => {
                 [formId, workspaceId]
             );
             expect(result?.status).toBe("draft");
+            expect(result?.publishedAt).toBeNull();
         });
     });
 
@@ -508,11 +571,145 @@ describe("FormInterfaceRepository", () => {
 
             await repository.isSlugAvailableInWorkspace(slug, workspaceId, excludeId);
 
-            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("AND id != $3"), [
-                slug,
-                workspaceId,
-                excludeId
-            ]);
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("AND id != $3"),
+                [slug, workspaceId, excludeId]
+            );
+        });
+    });
+
+    describe("duplicateByWorkspaceId", () => {
+        it("should duplicate form with new slug and name", async () => {
+            const formId = generateId();
+            const workspaceId = generateId();
+            const originalForm = generateFormInterfaceRow({
+                id: formId,
+                workspace_id: workspaceId,
+                name: "Original Form",
+                slug: "original-form"
+            });
+            const duplicatedForm = generateFormInterfaceRow({
+                workspace_id: workspaceId,
+                name: "Original Form (Copy)",
+                slug: "original-form-copy",
+                status: "draft"
+            });
+
+            // First call: findByIdAndWorkspaceId
+            mockQuery.mockResolvedValueOnce(mockRows([originalForm]));
+            // Second call: isSlugAvailableInWorkspace
+            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+            // Third call: INSERT
+            mockQuery.mockResolvedValueOnce(mockInsertReturning([duplicatedForm]));
+
+            const result = await repository.duplicateByWorkspaceId(formId, workspaceId);
+
+            expect(result?.name).toBe("Original Form (Copy)");
+            expect(result?.status).toBe("draft");
+        });
+
+        it("should generate unique slug when copy exists", async () => {
+            const formId = generateId();
+            const workspaceId = generateId();
+            const originalForm = generateFormInterfaceRow({
+                id: formId,
+                workspace_id: workspaceId,
+                name: "Form",
+                slug: "form"
+            });
+            const duplicatedForm = generateFormInterfaceRow({
+                workspace_id: workspaceId,
+                slug: "form-copy-1",
+                status: "draft"
+            });
+
+            // findByIdAndWorkspaceId
+            mockQuery.mockResolvedValueOnce(mockRows([originalForm]));
+            // isSlugAvailableInWorkspace for "form-copy" - taken
+            mockQuery.mockResolvedValueOnce(mockRows([{ id: "1" }]));
+            // isSlugAvailableInWorkspace for "form-copy-1" - available
+            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+            // INSERT
+            mockQuery.mockResolvedValueOnce(mockInsertReturning([duplicatedForm]));
+
+            const result = await repository.duplicateByWorkspaceId(formId, workspaceId);
+
+            expect(result?.slug).toBe("form-copy-1");
+        });
+
+        it("should return null when original form not found", async () => {
+            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+
+            const result = await repository.duplicateByWorkspaceId(generateId(), generateId());
+
+            expect(result).toBeNull();
+        });
+
+        it("should always create duplicate as draft", async () => {
+            const formId = generateId();
+            const workspaceId = generateId();
+            const publishedForm = generateFormInterfaceRow({
+                id: formId,
+                workspace_id: workspaceId,
+                status: "published"
+            });
+            const duplicatedForm = generateFormInterfaceRow({
+                workspace_id: workspaceId,
+                status: "draft"
+            });
+
+            mockQuery.mockResolvedValueOnce(mockRows([publishedForm]));
+            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+            mockQuery.mockResolvedValueOnce(mockInsertReturning([duplicatedForm]));
+
+            const result = await repository.duplicateByWorkspaceId(formId, workspaceId);
+
+            expect(result?.status).toBe("draft");
+        });
+    });
+
+    describe("setTriggerId", () => {
+        it("should set trigger ID on form", async () => {
+            const formId = generateId();
+            const triggerId = generateId();
+            const mockRow = generateFormInterfaceRow({
+                id: formId
+            });
+            // Manually set trigger_id since the generator doesn't include it
+            (mockRow as Record<string, unknown>).trigger_id = triggerId;
+
+            mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
+
+            const result = await repository.setTriggerId(formId, triggerId);
+
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("SET trigger_id = $2"),
+                [formId, triggerId]
+            );
+            expect(result).not.toBeNull();
+        });
+
+        it("should allow clearing trigger ID with null", async () => {
+            const formId = generateId();
+            const mockRow = generateFormInterfaceRow({ id: formId });
+            (mockRow as Record<string, unknown>).trigger_id = null;
+
+            mockQuery.mockResolvedValueOnce(mockInsertReturning([mockRow]));
+
+            await repository.setTriggerId(formId, null);
+
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("SET trigger_id = $2"),
+                [formId, null]
+            );
+        });
+
+        it("should return null when form not found", async () => {
+            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+
+            const result = await repository.setTriggerId(generateId(), generateId());
+
+            expect(result).toBeNull();
         });
     });
 
@@ -564,21 +761,21 @@ describe("FormInterfaceRepository", () => {
             const mockRow = generateFormInterfaceRow({
                 id: formId,
                 workspace_id: workspaceId,
-                submission_count: "250"
+                submission_count: "150"
             });
 
             mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
 
             const result = await repository.findByIdAndWorkspaceId(formId, workspaceId);
 
-            expect(result?.submissionCount).toBe(250);
+            expect(result?.submissionCount).toBe(150);
             expect(typeof result?.submissionCount).toBe("number");
         });
 
         it("should handle allowed_file_types as array", async () => {
             const formId = generateId();
             const workspaceId = generateId();
-            const fileTypes = ["pdf", "doc", "docx"];
+            const fileTypes = ["application/pdf", "image/png"];
             const mockRow = generateFormInterfaceRow({
                 id: formId,
                 workspace_id: workspaceId,

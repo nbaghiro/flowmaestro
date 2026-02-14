@@ -387,6 +387,119 @@ export function mergeConfigs(...configs: MockActivityConfig[]): MockActivityConf
 }
 
 // ============================================================================
+// HUMAN REVIEW ACTIVITY MOCKS
+// ============================================================================
+
+export interface HumanReviewPauseConfig {
+    /** Variable name to store the response */
+    variableName?: string;
+    /** Type of input expected */
+    inputType?: "text" | "number" | "boolean" | "json";
+    /** Prompt to display to user */
+    prompt?: string;
+    /** Description of what's being requested */
+    description?: string;
+    /** Whether response is required */
+    required?: boolean;
+    /** Placeholder text */
+    placeholder?: string;
+}
+
+/**
+ * Create a mock config for a human review node that will trigger pause.
+ * Use this to simulate humanReview node behavior in tests.
+ */
+export function withHumanReviewPause(
+    nodeId: string,
+    config: HumanReviewPauseConfig = {}
+): MockActivityConfig {
+    const {
+        variableName = "userResponse",
+        inputType = "text",
+        prompt = "Please provide your input",
+        description = "Waiting for user response",
+        required = true,
+        placeholder
+    } = config;
+
+    const pauseContext: JsonObject = {
+        variableName,
+        inputType,
+        prompt,
+        description,
+        required,
+        reason: `Human review required: ${prompt}`
+    };
+
+    if (placeholder !== undefined) {
+        pauseContext.placeholder = placeholder;
+    }
+
+    return {
+        nodeConfigs: {
+            [nodeId]: {
+                customOutput: {
+                    _humanReviewRequested: true,
+                    variableName,
+                    inputType
+                } as JsonObject,
+                customSignals: {
+                    pause: true,
+                    pauseContext
+                } as JsonObject
+            }
+        }
+    };
+}
+
+/**
+ * Create mock configs for multiple human review nodes.
+ */
+export function withMultipleHumanReviewPauses(
+    configs: Array<{ nodeId: string } & HumanReviewPauseConfig>
+): MockActivityConfig {
+    const nodeConfigs: Record<string, MockNodeConfig> = {};
+
+    for (const { nodeId, ...reviewConfig } of configs) {
+        const {
+            variableName = "userResponse",
+            inputType = "text",
+            prompt = "Please provide your input",
+            description = "Waiting for user response",
+            required = true,
+            placeholder
+        } = reviewConfig;
+
+        const pauseContext: JsonObject = {
+            variableName,
+            inputType,
+            prompt,
+            description,
+            required,
+            reason: `Human review required: ${prompt}`
+        };
+
+        if (placeholder !== undefined) {
+            pauseContext.placeholder = placeholder;
+        }
+
+        nodeConfigs[nodeId] = {
+            customOutput: {
+                _humanReviewRequested: true,
+                variableName,
+                inputType
+            } as JsonObject,
+            customSignals: {
+                pause: true,
+                pauseContext
+            } as JsonObject
+        };
+    }
+
+    return { nodeConfigs };
+}
+
+// ============================================================================
 // CREDIT ACTIVITY MOCKS
 // ============================================================================
 

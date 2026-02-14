@@ -329,4 +329,273 @@ describe("SharedMemoryNodeHandler", () => {
             expect(entry?.value).toBe("10");
         });
     });
+
+    describe("concurrent store operations", () => {
+        it("handles multiple concurrent stores to different keys", async () => {
+            const inputs = Array.from({ length: 10 }, (_, i) =>
+                createHandlerInput({
+                    nodeType: "shared-memory",
+                    nodeConfig: {
+                        operation: "store",
+                        key: `key_${i}`,
+                        value: `value_${i}`,
+                        enableSemanticSearch: false
+                    }
+                })
+            );
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(10);
+            outputs.forEach((output, i) => {
+                expect(output.result.stored).toBe(true);
+                expect(output.result.key).toBe(`key_${i}`);
+            });
+        });
+
+        it("handles concurrent stores with interpolated values", async () => {
+            const inputs = Array.from({ length: 5 }, (_, i) => {
+                const context = createTestContext({
+                    nodeOutputs: {
+                        data: { value: `interpolated_${i}` }
+                    }
+                });
+
+                return createHandlerInput({
+                    nodeType: "shared-memory",
+                    nodeConfig: {
+                        operation: "store",
+                        key: `interpolated_key_${i}`,
+                        value: mustacheRef("data", "value"),
+                        enableSemanticSearch: false
+                    },
+                    context
+                });
+            });
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(5);
+            outputs.forEach((output, i) => {
+                expect(output.result.stored).toBe(true);
+                const updates = output.result._sharedMemoryUpdates as JsonObject;
+                const entries = updates.entries as Array<{ key: string; value: string }>;
+                const entry = entries.find((e) => e.key === `interpolated_key_${i}`);
+                expect(entry?.value).toBe(`interpolated_${i}`);
+            });
+        });
+    });
+
+    describe("search with embedding generator", () => {
+        it("returns empty results when no matching entries exist", async () => {
+            const handlerWithEmbeddings = createSharedMemoryNodeHandler();
+            handlerWithEmbeddings.setEmbeddingGenerator(async () => [0.1, 0.2, 0.3]);
+
+            const context = createTestContext({
+                sharedMemory: {} // No entries
+            });
+
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "search",
+                    searchQuery: "anything"
+                },
+                context
+            });
+
+            const output = await handlerWithEmbeddings.execute(input);
+
+            expect(output.result.results).toBeDefined();
+            expect(output.result.resultCount).toBe(0);
+        });
+
+        it("handles search with topK parameter", async () => {
+            const handlerWithEmbeddings = createSharedMemoryNodeHandler();
+            handlerWithEmbeddings.setEmbeddingGenerator(async () => [0.5, 0.5, 0.5]);
+
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "search",
+                    searchQuery: "test query",
+                    topK: 5
+                }
+            });
+
+            const output = await handlerWithEmbeddings.execute(input);
+
+            expect(output.result.query).toBe("test query");
+            expect(output.result.results).toBeDefined();
+        });
+
+        it("handles search with special characters in query", async () => {
+            const handlerWithEmbeddings = createSharedMemoryNodeHandler();
+            handlerWithEmbeddings.setEmbeddingGenerator(async () => [0.1, 0.2, 0.3]);
+
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "search",
+                    searchQuery: "test with émojis 🎉 and 日本語"
+                }
+            });
+
+            const output = await handlerWithEmbeddings.execute(input);
+
+            expect(output.result.query).toBe("test with émojis 🎉 and 日本語");
+        });
+    });
+
+    describe("memory and large values", () => {
+        it("handles very large string values", async () => {
+            // Use 50KB string (well under 100KB limit to account for overhead)
+            const largeValue = "x".repeat(50000);
+
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "store",
+                    key: "largeKey",
+                    value: largeValue,
+                    enableSemanticSearch: false
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.stored).toBe(true);
+
+            const updates = output.result._sharedMemoryUpdates as JsonObject;
+            const entries = updates.entries as Array<{ key: string; value: string }>;
+            const entry = entries.find((e) => e.key === "largeKey");
+            expect(entry?.value).toHaveLength(50000);
+        });
+
+        it("handles storing complex JSON as string", async () => {
+            const complexJson = JSON.stringify({
+                users: Array.from({ length: 100 }, (_, i) => ({
+                    id: i,
+                    name: `User ${i}`,
+                    metadata: { createdAt: new Date().toISOString(), tags: ["a", "b", "c"] }
+                }))
+            });
+
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "store",
+                    key: "complexData",
+                    value: complexJson,
+                    enableSemanticSearch: false
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.stored).toBe(true);
+
+            const updates = output.result._sharedMemoryUpdates as JsonObject;
+            const entries = updates.entries as Array<{ key: string; value: string }>;
+            const entry = entries.find((e) => e.key === "complexData");
+            expect(JSON.parse(entry?.value || "{}").users).toHaveLength(100);
+        });
+
+        it("handles unicode and multi-byte characters in values", async () => {
+            const unicodeValue = "Hello 你好 مرحبا שלום 🌍🌎🌏";
+
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "store",
+                    key: "unicodeKey",
+                    value: unicodeValue,
+                    enableSemanticSearch: false
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.stored).toBe(true);
+
+            const updates = output.result._sharedMemoryUpdates as JsonObject;
+            const entries = updates.entries as Array<{ key: string; value: string }>;
+            const entry = entries.find((e) => e.key === "unicodeKey");
+            expect(entry?.value).toBe(unicodeValue);
+        });
+    });
+
+    describe("embedding generator edge cases", () => {
+        it("handles embedding generator returning empty array", async () => {
+            const handlerWithEmbeddings = createSharedMemoryNodeHandler();
+            handlerWithEmbeddings.setEmbeddingGenerator(async () => []);
+
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "search",
+                    searchQuery: "test"
+                }
+            });
+
+            const output = await handlerWithEmbeddings.execute(input);
+
+            // Should handle empty embeddings gracefully
+            expect(output.result.query).toBe("test");
+        });
+
+        it("handles embedding generator returning high-dimensional vectors", async () => {
+            const handlerWithEmbeddings = createSharedMemoryNodeHandler();
+            // Simulate OpenAI ada-002 embedding (1536 dimensions)
+            handlerWithEmbeddings.setEmbeddingGenerator(async () =>
+                Array.from({ length: 1536 }, () => Math.random())
+            );
+
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "search",
+                    searchQuery: "high dimensional search"
+                }
+            });
+
+            const output = await handlerWithEmbeddings.execute(input);
+
+            expect(output.result.query).toBe("high dimensional search");
+            expect(output.result.results).toBeDefined();
+        });
+    });
+
+    describe("config validation", () => {
+        it("throws error for invalid operation", async () => {
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "invalid" as string,
+                    key: "test"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow();
+        });
+
+        it("stores empty string when value is missing", async () => {
+            const input = createHandlerInput({
+                nodeType: "shared-memory",
+                nodeConfig: {
+                    operation: "store",
+                    key: "testKey"
+                    // value is missing - handler treats as empty string
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.stored).toBe(true);
+            const updates = output.result._sharedMemoryUpdates as JsonObject;
+            const entries = updates.entries as Array<{ key: string; value: string }>;
+            const entry = entries.find((e) => e.key === "testKey");
+            expect(entry?.value).toBe("");
+        });
+    });
 });

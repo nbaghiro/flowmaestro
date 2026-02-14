@@ -150,11 +150,11 @@ export async function submitResponseRoute(fastify: FastifyInstance) {
                     response: validatedResponse
                 });
 
-                // Signal the Temporal workflow to resume (if it's still running)
+                // Signal the Temporal workflow to resume with the human review response
                 try {
                     const client = await getTemporalClient();
                     const handle = client.workflow.getHandle(id);
-                    await handle.signal("resumeExecution", {
+                    await handle.signal("humanReviewResponse", {
                         variableName,
                         response: validatedResponse,
                         submittedAt: Date.now()

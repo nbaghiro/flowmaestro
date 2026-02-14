@@ -112,6 +112,7 @@ jest.mock("../../src/services/EncryptionService", () => ({
 }));
 
 // Mock database to avoid config dependencies at module load time
+const mockDbQuery = jest.fn().mockResolvedValue({ rows: [], rowCount: 0 });
 jest.mock("../../src/storage/database", () => ({
     Database: {
         getInstance: jest.fn().mockReturnValue({
@@ -126,6 +127,17 @@ jest.mock("../../src/storage/database", () => ({
             close: jest.fn().mockResolvedValue(undefined)
         })
     },
+    db: {
+        query: (...args: unknown[]) => mockDbQuery(...args),
+        getClient: jest.fn().mockResolvedValue({
+            query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+            release: jest.fn()
+        }),
+        transaction: jest.fn(),
+        close: jest.fn().mockResolvedValue(undefined),
+        healthCheck: jest.fn().mockResolvedValue(true),
+        getPool: jest.fn()
+    },
     pool: {
         query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
         connect: jest.fn().mockResolvedValue({
@@ -136,13 +148,18 @@ jest.mock("../../src/storage/database", () => ({
     }
 }));
 
+// Export the mock db query function for test customization
+export { mockDbQuery };
+
 // Mock external services before importing routes
 jest.mock("../../src/services/events/RedisEventBus", () => ({
     redisEventBus: {
         connect: jest.fn().mockResolvedValue(undefined),
         disconnect: jest.fn().mockResolvedValue(undefined),
         publish: jest.fn().mockResolvedValue(undefined),
-        subscribe: jest.fn().mockResolvedValue(undefined)
+        publishJson: jest.fn().mockResolvedValue(undefined),
+        subscribe: jest.fn().mockResolvedValue(undefined),
+        unsubscribe: jest.fn().mockResolvedValue(undefined)
     }
 }));
 
@@ -254,54 +271,84 @@ jest.mock("../../src/services/oauth/OAuthService", () => ({
     }
 }));
 
-// Mock WorkspaceRepository for workspace context middleware
+// Mock WorkspaceRepository for workspace context middleware and route tests
+// Export the mock instance so tests can configure return values
+export const mockWorkspaceRepo = {
+    findById: jest.fn().mockImplementation((id: string) =>
+        Promise.resolve({
+            id,
+            name: "Test Workspace",
+            type: "personal",
+            owner_id: "test-owner-id",
+            max_workflows: 100,
+            max_agents: 50,
+            max_knowledge_bases: 20,
+            max_kb_chunks: 10000,
+            max_members: 10,
+            max_connections: 50,
+            execution_history_days: 30,
+            created_at: new Date(),
+            updated_at: new Date(),
+            deleted_at: null
+        })
+    ),
+    findByOwnerId: jest.fn().mockResolvedValue([]),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    isNameAvailableForOwner: jest.fn().mockResolvedValue(true)
+};
+
 jest.mock("../../src/storage/repositories/WorkspaceRepository", () => ({
-    WorkspaceRepository: jest.fn().mockImplementation(() => ({
-        findById: jest.fn().mockImplementation((id: string) =>
-            Promise.resolve({
-                id,
-                name: "Test Workspace",
-                type: "personal",
-                owner_id: "test-owner-id",
-                max_workflows: 100,
-                max_agents: 50,
-                max_knowledge_bases: 20,
-                max_kb_chunks: 10000,
-                max_members: 10,
-                max_connections: 50,
-                created_at: new Date(),
-                updated_at: new Date(),
-                deleted_at: null
-            })
-        ),
-        findByOwnerId: jest.fn().mockResolvedValue([]),
-        create: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn()
-    }))
+    WorkspaceRepository: jest.fn().mockImplementation(() => mockWorkspaceRepo)
 }));
 
-// Mock WorkspaceMemberRepository for workspace context middleware
+// Mock WorkspaceMemberRepository for workspace context middleware and route tests
+export const mockWorkspaceMemberRepo = {
+    findByWorkspaceAndUser: jest
+        .fn()
+        .mockImplementation((_workspaceId: string, _userId: string) =>
+            Promise.resolve({
+                id: "test-member-id",
+                workspace_id: _workspaceId,
+                user_id: _userId,
+                role: "owner",
+                created_at: new Date(),
+                updated_at: new Date()
+            })
+        ),
+    findByWorkspaceId: jest.fn().mockResolvedValue([]),
+    findByWorkspaceIdWithUsers: jest.fn().mockResolvedValue([]),
+    findByUserId: jest.fn().mockResolvedValue([]),
+    getMemberCount: jest.fn().mockResolvedValue(1),
+    create: jest.fn(),
+    update: jest.fn(),
+    updateRole: jest.fn(),
+    delete: jest.fn(),
+    deleteByWorkspaceAndUser: jest.fn().mockResolvedValue(true),
+    modelToShared: jest.fn((m) => m)
+};
+
 jest.mock("../../src/storage/repositories/WorkspaceMemberRepository", () => ({
-    WorkspaceMemberRepository: jest.fn().mockImplementation(() => ({
-        findByWorkspaceAndUser: jest
-            .fn()
-            .mockImplementation((_workspaceId: string, _userId: string) =>
-                Promise.resolve({
-                    id: "test-member-id",
-                    workspace_id: _workspaceId,
-                    user_id: _userId,
-                    role: "owner",
-                    created_at: new Date(),
-                    updated_at: new Date()
-                })
-            ),
-        findByWorkspaceId: jest.fn().mockResolvedValue([]),
-        findByUserId: jest.fn().mockResolvedValue([]),
-        create: jest.fn(),
-        update: jest.fn(),
-        delete: jest.fn()
-    }))
+    WorkspaceMemberRepository: jest.fn().mockImplementation(() => mockWorkspaceMemberRepo)
+}));
+
+// Mock ApiKeyRepository for public API v1 authentication
+export const mockApiKeyRepo = {
+    findByHash: jest.fn(),
+    updateLastUsed: jest.fn().mockResolvedValue(undefined),
+    isValid: jest.fn().mockReturnValue(true)
+};
+
+jest.mock("../../src/storage/repositories/ApiKeyRepository", () => ({
+    ApiKeyRepository: jest.fn().mockImplementation(() => mockApiKeyRepo)
+}));
+
+// Mock public API rate limiter middleware
+jest.mock("../../src/api/middleware/public-api-rate-limiter", () => ({
+    publicApiRateLimiterMiddleware: jest.fn().mockImplementation(async () => {
+        // No-op - allow all requests in tests
+    })
 }));
 
 // ============================================================================
@@ -370,6 +417,15 @@ export async function createTestServer(options: TestServerOptions = {}): Promise
         const { connectionRoutes } = await import("../../src/api/routes/connections");
         const { executionRoutes } = await import("../../src/api/routes/executions");
         const { triggerRoutes } = await import("../../src/api/routes/triggers");
+        const { formInterfaceRoutes } = await import("../../src/api/routes/form-interfaces");
+        const { templateRoutes } = await import("../../src/api/routes/templates");
+        const { agentTemplateRoutes } = await import("../../src/api/routes/agent-templates");
+        const { folderRoutes } = await import("../../src/api/routes/folders");
+        const { workspaceRoutes } = await import("../../src/api/routes/workspaces");
+        const { threadRoutes } = await import("../../src/api/routes/threads");
+        const { personaRoutes } = await import("../../src/api/routes/personas");
+        const { personaInstanceRoutes } = await import("../../src/api/routes/persona-instances");
+        const { publicApiV1Routes } = await import("../../src/api/routes/v1");
         const { errorHandler } = await import("../../src/api/middleware");
 
         // Set error handler BEFORE routes so it applies to all route contexts
@@ -382,6 +438,15 @@ export async function createTestServer(options: TestServerOptions = {}): Promise
         await fastify.register(connectionRoutes, { prefix: "/connections" });
         await fastify.register(executionRoutes, { prefix: "/executions" });
         await fastify.register(triggerRoutes);
+        await fastify.register(formInterfaceRoutes);
+        await fastify.register(templateRoutes, { prefix: "/templates" });
+        await fastify.register(agentTemplateRoutes, { prefix: "/agent-templates" });
+        await fastify.register(folderRoutes);
+        await fastify.register(workspaceRoutes);
+        await fastify.register(threadRoutes, { prefix: "/threads" });
+        await fastify.register(personaRoutes, { prefix: "/personas" });
+        await fastify.register(personaInstanceRoutes, { prefix: "/persona-instances" });
+        await fastify.register(publicApiV1Routes, { prefix: "/api/v1" });
     }
 
     return fastify;
@@ -451,6 +516,116 @@ export function createAuthHeaders(
     return {
         Authorization: `Bearer ${token}`,
         "X-Workspace-Id": workspaceId
+    };
+}
+
+// ============================================================================
+// API KEY AUTHENTICATION HELPERS (for Public API v1)
+// ============================================================================
+
+export interface TestApiKey {
+    id: string;
+    user_id: string;
+    workspace_id: string;
+    name: string;
+    key_hash: string;
+    scopes: string[];
+    is_active: boolean;
+    revoked_at: Date | null;
+    expires_at: Date | null;
+    created_at: Date;
+    updated_at: Date;
+    last_used_at: Date | null;
+    last_used_ip: string | null;
+}
+
+/** Default test API key value */
+export const TEST_API_KEY = "fm_live_test_api_key_12345";
+
+/** Default test API key user ID */
+export const TEST_API_KEY_USER_ID = "test-api-key-user-id";
+
+/** Default test API key workspace ID */
+export const TEST_API_KEY_WORKSPACE_ID = "test-api-key-workspace-id";
+
+/**
+ * Create a test API key model with default values
+ */
+export function createTestApiKey(overrides: Partial<TestApiKey> = {}): TestApiKey {
+    return {
+        id: overrides.id || uuidv4(),
+        user_id: overrides.user_id || TEST_API_KEY_USER_ID,
+        workspace_id: overrides.workspace_id || TEST_API_KEY_WORKSPACE_ID,
+        name: overrides.name || "Test API Key",
+        key_hash: overrides.key_hash || "test-hash",
+        scopes: overrides.scopes || [
+            "workflows:read",
+            "workflows:execute",
+            "executions:read",
+            "executions:cancel",
+            "agents:read",
+            "agents:execute",
+            "threads:read",
+            "threads:write",
+            "triggers:read",
+            "triggers:execute",
+            "knowledge-bases:read",
+            "knowledge-bases:query",
+            "webhooks:read",
+            "webhooks:write"
+        ],
+        is_active: overrides.is_active ?? true,
+        revoked_at: overrides.revoked_at || null,
+        expires_at: overrides.expires_at || null,
+        created_at: overrides.created_at || new Date(),
+        updated_at: overrides.updated_at || new Date(),
+        last_used_at: overrides.last_used_at || null,
+        last_used_ip: overrides.last_used_ip || null
+    };
+}
+
+/**
+ * Create API key headers for public API v1 requests
+ */
+export function createApiKeyHeaders(apiKey: string = TEST_API_KEY): Record<string, string> {
+    return {
+        "X-API-Key": apiKey
+    };
+}
+
+/**
+ * Setup mock API key repository for a test
+ * Call this before making API key authenticated requests
+ */
+export function setupMockApiKey(apiKey: TestApiKey = createTestApiKey()): void {
+    mockApiKeyRepo.findByHash.mockResolvedValue(apiKey);
+}
+
+/**
+ * Make an API key authenticated request to the test server
+ */
+export async function apiKeyRequest(
+    fastify: FastifyInstance,
+    options: InjectOptions & { apiKey?: string }
+): Promise<InjectResponse> {
+    const headers = {
+        ...createApiKeyHeaders(options.apiKey || TEST_API_KEY),
+        ...options.headers
+    };
+
+    const response = await fastify.inject({
+        method: options.method,
+        url: options.url,
+        payload: options.payload,
+        headers,
+        query: options.query
+    });
+
+    return {
+        statusCode: response.statusCode,
+        headers: response.headers as Record<string, string>,
+        payload: response.payload,
+        json: <T = Record<string, unknown>>() => JSON.parse(response.payload) as T
     };
 }
 

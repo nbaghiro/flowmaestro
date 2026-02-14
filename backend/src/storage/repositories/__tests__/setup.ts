@@ -1149,6 +1149,113 @@ export function generatePersonaTaskTemplateRow(
     };
 }
 
+/**
+ * Generate a mock persona approval request row
+ */
+export function generatePersonaApprovalRequestRow(
+    overrides: Partial<MockPersonaApprovalRequestRow> = {}
+): MockPersonaApprovalRequestRow {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+    return {
+        id: generateId(),
+        instance_id: generateId(),
+        action_type: "tool_call",
+        tool_name: "slack_send_message",
+        action_description: "Send a message to Slack channel #general",
+        action_arguments: JSON.stringify({ channel: "#general", message: "Hello!" }),
+        risk_level: "medium",
+        estimated_cost_credits: "5.00",
+        agent_context: "Agent is responding to user request",
+        alternatives: "Could also send via email",
+        status: "pending",
+        responded_by: null,
+        responded_at: null,
+        response_note: null,
+        created_at: now,
+        expires_at: expiresAt,
+        ...overrides
+    };
+}
+
+/**
+ * Generate a mock persona instance message row
+ */
+export function generatePersonaInstanceMessageRow(
+    overrides: Partial<MockPersonaInstanceMessageRow> = {}
+): MockPersonaInstanceMessageRow {
+    const now = new Date();
+    return {
+        id: generateId(),
+        instance_id: generateId(),
+        role: "user",
+        content: "Please research market trends for AI",
+        metadata: JSON.stringify({}),
+        created_at: now,
+        ...overrides
+    };
+}
+
+/**
+ * Generate a mock persona instance deliverable row
+ */
+export function generatePersonaInstanceDeliverableRow(
+    overrides: Partial<MockPersonaInstanceDeliverableRow> = {}
+): MockPersonaInstanceDeliverableRow {
+    const now = new Date();
+    return {
+        id: generateId(),
+        instance_id: generateId(),
+        name: "Research Report",
+        description: "A comprehensive research report",
+        type: "markdown",
+        content: "# Research Report\n\nThis is the report content.",
+        file_url: null,
+        file_size_bytes: 45,
+        file_extension: null,
+        preview: "# Research Report\n\nThis is the report content.",
+        created_at: now,
+        ...overrides
+    };
+}
+
+/**
+ * Generate a mock persona instance connection row
+ */
+export function generatePersonaInstanceConnectionRow(
+    overrides: Partial<MockPersonaInstanceConnectionRow> = {}
+): MockPersonaInstanceConnectionRow {
+    const now = new Date();
+    return {
+        id: generateId(),
+        instance_id: generateId(),
+        connection_id: generateId(),
+        granted_scopes: JSON.stringify(["read", "write"]),
+        created_at: now,
+        ...overrides
+    };
+}
+
+/**
+ * Generate a mock persona instance connection detail row (with joined connection info)
+ */
+export function generatePersonaInstanceConnectionDetailRow(
+    overrides: Partial<MockPersonaInstanceConnectionDetailRow> = {}
+): MockPersonaInstanceConnectionDetailRow {
+    const now = new Date();
+    return {
+        id: generateId(),
+        instance_id: generateId(),
+        connection_id: generateId(),
+        granted_scopes: JSON.stringify(["read", "write"]),
+        created_at: now,
+        connection_name: "My Slack Connection",
+        connection_provider: "slack",
+        connection_method: "oauth2",
+        ...overrides
+    };
+}
+
 // ============================================================================
 // TYPE DEFINITIONS FOR MOCK ROWS
 // ============================================================================
@@ -1851,6 +1958,62 @@ export interface MockPersonaTaskTemplateRow {
     status: string;
     created_at: string;
     updated_at: string;
+}
+
+export interface MockPersonaApprovalRequestRow {
+    id: string;
+    instance_id: string;
+    action_type: string;
+    tool_name: string | null;
+    action_description: string;
+    action_arguments: string; // JSON string
+    risk_level: string;
+    estimated_cost_credits: string | null;
+    agent_context: string | null;
+    alternatives: string | null;
+    status: string;
+    responded_by: string | null;
+    responded_at: string | null;
+    response_note: string | null;
+    created_at: Date;
+    expires_at: Date | null;
+}
+
+export interface MockPersonaInstanceMessageRow {
+    id: string;
+    instance_id: string;
+    role: string;
+    content: string;
+    metadata: string; // JSON string
+    created_at: Date;
+}
+
+export interface MockPersonaInstanceDeliverableRow {
+    id: string;
+    instance_id: string;
+    name: string;
+    description: string | null;
+    type: string;
+    content: string | null;
+    file_url: string | null;
+    file_size_bytes: number | null;
+    file_extension: string | null;
+    preview: string | null;
+    created_at: Date;
+}
+
+export interface MockPersonaInstanceConnectionRow {
+    id: string;
+    instance_id: string;
+    connection_id: string;
+    granted_scopes: string; // JSON string
+    created_at: Date;
+}
+
+export interface MockPersonaInstanceConnectionDetailRow extends MockPersonaInstanceConnectionRow {
+    connection_name: string;
+    connection_provider: string;
+    connection_method: string;
 }
 
 // ============================================================================

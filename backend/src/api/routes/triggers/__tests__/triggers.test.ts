@@ -68,7 +68,10 @@ jest.mock("../../../../storage/repositories", () => ({
 const mockSchedulerService = {
     createScheduledTrigger: jest.fn().mockResolvedValue(undefined),
     updateSchedule: jest.fn().mockResolvedValue(undefined),
+    updateScheduledTrigger: jest.fn().mockResolvedValue(undefined),
     pauseSchedule: jest.fn().mockResolvedValue(undefined),
+    pauseScheduledTrigger: jest.fn().mockResolvedValue(undefined),
+    resumeScheduledTrigger: jest.fn().mockResolvedValue(undefined),
     deleteSchedule: jest.fn().mockResolvedValue(undefined),
     deleteScheduledTrigger: jest.fn().mockResolvedValue(undefined),
     getScheduleInfo: jest.fn().mockResolvedValue(null)
@@ -565,6 +568,167 @@ describe("Trigger Routes", () => {
             });
 
             expectStatus(response, 404);
+        });
+    });
+
+    // ========================================================================
+    // UPDATE TRIGGER
+    // ========================================================================
+
+    describe("PUT /triggers/:id", () => {
+        it("should update trigger name", async () => {
+            const testUser = createTestUser();
+            const triggerId = uuidv4();
+            const trigger = createMockTrigger({
+                id: triggerId,
+                name: "Old Name",
+                trigger_type: "manual"
+            });
+
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
+            mockTriggerRepo.update.mockResolvedValue({
+                ...trigger,
+                name: "New Name"
+            });
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "PUT",
+                url: `/triggers/${triggerId}`,
+                payload: { name: "New Name" }
+            });
+
+            expectStatus(response, 200);
+            const body = expectSuccessResponse<{ name: string }>(response);
+            expect(body.data.name).toBe("New Name");
+        });
+
+        it("should update trigger enabled status", async () => {
+            const testUser = createTestUser();
+            const triggerId = uuidv4();
+            const trigger = createMockTrigger({
+                id: triggerId,
+                trigger_type: "manual",
+                enabled: true
+            });
+
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
+            mockTriggerRepo.update.mockResolvedValue({
+                ...trigger,
+                enabled: false
+            });
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "PUT",
+                url: `/triggers/${triggerId}`,
+                payload: { enabled: false }
+            });
+
+            expectStatus(response, 200);
+            const body = expectSuccessResponse<{ enabled: boolean }>(response);
+            expect(body.data.enabled).toBe(false);
+        });
+
+        it("should update schedule trigger config and update Temporal schedule", async () => {
+            const testUser = createTestUser();
+            const triggerId = uuidv4();
+            const trigger = createMockTrigger({
+                id: triggerId,
+                trigger_type: "schedule",
+                config: { cron: "0 9 * * *", timezone: "UTC" }
+            });
+
+            const newConfig = { cron: "0 12 * * *", timezone: "America/New_York" };
+
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
+            mockTriggerRepo.update.mockResolvedValue({
+                ...trigger,
+                config: newConfig
+            });
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "PUT",
+                url: `/triggers/${triggerId}`,
+                payload: { config: newConfig }
+            });
+
+            expectStatus(response, 200);
+            expect(mockSchedulerService.updateScheduledTrigger).toHaveBeenCalledWith(
+                triggerId,
+                newConfig
+            );
+        });
+
+        it("should pause schedule trigger when disabled", async () => {
+            const testUser = createTestUser();
+            const triggerId = uuidv4();
+            const trigger = createMockTrigger({
+                id: triggerId,
+                trigger_type: "schedule",
+                enabled: true
+            });
+
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
+            mockTriggerRepo.update.mockResolvedValue({
+                ...trigger,
+                enabled: false
+            });
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "PUT",
+                url: `/triggers/${triggerId}`,
+                payload: { enabled: false }
+            });
+
+            expectStatus(response, 200);
+            expect(mockSchedulerService.pauseScheduledTrigger).toHaveBeenCalledWith(triggerId);
+        });
+
+        it("should resume schedule trigger when enabled", async () => {
+            const testUser = createTestUser();
+            const triggerId = uuidv4();
+            const trigger = createMockTrigger({
+                id: triggerId,
+                trigger_type: "schedule",
+                enabled: false
+            });
+
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
+            mockTriggerRepo.update.mockResolvedValue({
+                ...trigger,
+                enabled: true
+            });
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "PUT",
+                url: `/triggers/${triggerId}`,
+                payload: { enabled: true }
+            });
+
+            expectStatus(response, 200);
+            expect(mockSchedulerService.resumeScheduledTrigger).toHaveBeenCalledWith(triggerId);
+        });
+
+        it("should return 404 for non-existent trigger", async () => {
+            const testUser = createTestUser();
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "PUT",
+                url: `/triggers/${uuidv4()}`,
+                payload: { name: "Updated" }
+            });
+
+            expectErrorResponse(response, 404);
+        });
+
+        it("should return 401 without authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "PUT",
+                url: `/triggers/${uuidv4()}`,
+                payload: { name: "Test" }
+            });
+
+            expectErrorResponse(response, 401);
         });
     });
 

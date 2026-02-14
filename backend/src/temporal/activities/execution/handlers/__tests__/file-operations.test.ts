@@ -739,4 +739,458 @@ describe("FileOperationsNodeHandler", () => {
             expect((result.metadata as JsonObject).size).toBe(1024);
         });
     });
+
+    describe("URL timeout handling", () => {
+        it("handles slow URL downloads", async () => {
+            // Mock a slow response (but within timeout)
+            nock("https://slow.example.com")
+                .get("/file.txt")
+                .delay(100)
+                .reply(200, "Slow content");
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "read",
+                    fileSource: "url",
+                    filePath: "https://slow.example.com/file.txt"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBe("Slow content");
+        });
+
+        it("handles URL server errors", async () => {
+            nock("https://error.example.com").get("/file.txt").reply(500, "Internal Server Error");
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "read",
+                    fileSource: "url",
+                    filePath: "https://error.example.com/file.txt"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/HTTP 500/);
+        });
+
+        it("handles URL redirect chains", async () => {
+            nock("https://redirect.example.com")
+                .get("/file.txt")
+                .reply(302, "", { Location: "https://cdn.example.com/actual-file.txt" });
+
+            nock("https://cdn.example.com").get("/actual-file.txt").reply(200, "Redirected content");
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "read",
+                    fileSource: "url",
+                    filePath: "https://redirect.example.com/file.txt"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBe("Redirected content");
+        });
+    });
+
+    describe("PDF edge cases", () => {
+        beforeEach(() => {
+            mockPdfParse.mockReset();
+        });
+
+        it("handles PDFs with empty text (image-only)", async () => {
+            mockReadFile.mockResolvedValue(Buffer.from("image-only PDF"));
+            mockPdfParse.mockResolvedValue({
+                numpages: 10,
+                text: "" // No extractable text
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "path",
+                    filePath: "/tmp/image-only.pdf"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBe("");
+            expect((result.metadata as JsonObject).pages).toBe(10);
+        });
+
+        it("handles very large PDFs", async () => {
+            const largePdfBuffer = Buffer.alloc(50 * 1024 * 1024); // 50MB
+            mockReadFile.mockResolvedValue(largePdfBuffer);
+            mockPdfParse.mockResolvedValue({
+                numpages: 500,
+                text: "Large document text content..."
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "path",
+                    filePath: "/tmp/large-document.pdf"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect((result.metadata as JsonObject).pages).toBe(500);
+            expect((result.metadata as JsonObject).size).toBe(50 * 1024 * 1024);
+        });
+
+        it("handles PDF with special characters in text", async () => {
+            mockReadFile.mockResolvedValue(Buffer.from("PDF with unicode"));
+            mockPdfParse.mockResolvedValue({
+                numpages: 1,
+                text: "Special chars: café, naïve, 日本語, émojis 🎉"
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "path",
+                    filePath: "/tmp/unicode.pdf"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toContain("café");
+            expect(result.content).toContain("日本語");
+            expect(result.content).toContain("🎉");
+        });
+
+        it("handles encrypted PDF error", async () => {
+            mockReadFile.mockResolvedValue(Buffer.from("encrypted PDF"));
+            mockPdfParse.mockRejectedValue(new Error("Encrypted PDF: password required"));
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "path",
+                    filePath: "/tmp/encrypted.pdf"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/password|encrypted/i);
+        });
+
+        it("handles corrupted PDF error", async () => {
+            mockReadFile.mockResolvedValue(Buffer.from("not a real PDF file content"));
+            mockPdfParse.mockRejectedValue(new Error("Invalid PDF structure"));
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "path",
+                    filePath: "/tmp/corrupted.pdf"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/Invalid PDF/);
+        });
+    });
+
+    describe("CSV edge cases", () => {
+        it("handles CSV with extra whitespace", async () => {
+            mockReadFile.mockResolvedValue("  name  ,  email  \n  Alice  ,  alice@test.com  ");
+            mockStat.mockResolvedValue({ size: 50 });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parseCSV",
+                    fileSource: "path",
+                    filePath: "/tmp/whitespace.csv"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            const parsed = JSON.parse(result.content as string);
+            expect(parsed[0].name).toBe("Alice");
+            expect(parsed[0].email).toBe("alice@test.com");
+        });
+
+        it("handles CSV with missing values", async () => {
+            mockReadFile.mockResolvedValue("name,email,phone\nAlice,alice@test.com,\nBob,,555-1234");
+            mockStat.mockResolvedValue({ size: 60 });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parseCSV",
+                    fileSource: "path",
+                    filePath: "/tmp/missing-values.csv"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            const parsed = JSON.parse(result.content as string);
+            expect(parsed[0].phone).toBe("");
+            expect(parsed[1].email).toBe("");
+        });
+
+        it("handles CSV with only headers (no data)", async () => {
+            mockReadFile.mockResolvedValue("name,email,phone");
+            mockStat.mockResolvedValue({ size: 15 });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parseCSV",
+                    fileSource: "path",
+                    filePath: "/tmp/headers-only.csv"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            const parsed = JSON.parse(result.content as string);
+            expect(parsed).toEqual([]);
+        });
+
+        it("handles single-column CSV", async () => {
+            mockReadFile.mockResolvedValue("names\nAlice\nBob\nCharlie");
+            mockStat.mockResolvedValue({ size: 25 });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parseCSV",
+                    fileSource: "path",
+                    filePath: "/tmp/single-column.csv"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            const parsed = JSON.parse(result.content as string);
+            expect(parsed).toHaveLength(3);
+            expect(parsed[0]).toEqual({ names: "Alice" });
+        });
+
+        it("handles CSV with numeric values", async () => {
+            mockReadFile.mockResolvedValue("id,score,rate\n1,95,0.85\n2,87,0.72");
+            mockStat.mockResolvedValue({ size: 40 });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parseCSV",
+                    fileSource: "path",
+                    filePath: "/tmp/numeric.csv"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            const parsed = JSON.parse(result.content as string);
+            // Note: Current implementation returns all values as strings
+            expect(parsed[0].id).toBe("1");
+            expect(parsed[0].score).toBe("95");
+        });
+    });
+
+    describe("concurrent operations", () => {
+        it("handles multiple concurrent read operations", async () => {
+            mockReadFile.mockImplementation(async (path: string) => {
+                return `Content of ${path}`;
+            });
+            mockStat.mockResolvedValue({ size: 20 });
+
+            const inputs = Array.from({ length: 5 }, (_, i) =>
+                createHandlerInput({
+                    nodeConfig: {
+                        operation: "read",
+                        fileSource: "path",
+                        filePath: `/tmp/file-${i}.txt`
+                    }
+                })
+            );
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(5);
+            outputs.forEach((output, i) => {
+                const result = output.result as JsonObject;
+                expect(result.content).toBe(`Content of /tmp/file-${i}.txt`);
+            });
+        });
+
+        it("handles multiple concurrent write operations", async () => {
+            mockStat.mockResolvedValue({ size: 10 });
+
+            const inputs = Array.from({ length: 5 }, (_, i) =>
+                createHandlerInput({
+                    nodeConfig: {
+                        operation: "write",
+                        content: `Content ${i}`,
+                        outputPath: `/tmp/output-${i}.txt`
+                    }
+                })
+            );
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(5);
+            expect(mockWriteFile).toHaveBeenCalledTimes(5);
+        });
+
+        it("handles mixed concurrent operations", async () => {
+            mockStat.mockResolvedValue({ size: 15 });
+
+            // Set up mocks for each operation in order
+            mockReadFile
+                .mockResolvedValueOnce("Read content") // For read operation
+                .mockResolvedValueOnce("name,value\na,1"); // For parseCSV operation
+
+            const inputs = [
+                createHandlerInput({
+                    nodeConfig: { operation: "read", fileSource: "path", filePath: "/tmp/read.txt" }
+                }),
+                createHandlerInput({
+                    nodeConfig: { operation: "write", content: "Write content", outputPath: "/tmp/write.txt" }
+                }),
+                createHandlerInput({
+                    nodeConfig: { operation: "parseCSV", fileSource: "path", filePath: "/tmp/data.csv" }
+                })
+            ];
+
+            const outputs = await Promise.all(inputs.map((input) => handler.execute(input)));
+
+            expect(outputs).toHaveLength(3);
+        });
+    });
+
+    describe("edge cases", () => {
+        beforeEach(() => {
+            // Reset mocks to ensure clean state for each edge case test
+            jest.clearAllMocks();
+            mockStat.mockResolvedValue({ size: 100 });
+            mockMkdir.mockResolvedValue(undefined);
+            mockWriteFile.mockResolvedValue(undefined);
+        });
+
+        it("handles very long file paths", async () => {
+            const longPath = `/tmp/${"subdir/".repeat(50)}file.txt`;
+            mockReadFile.mockResolvedValue("Deep file content");
+            mockStat.mockResolvedValue({ size: 17 });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "read",
+                    fileSource: "path",
+                    filePath: longPath
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBe("Deep file content");
+            expect(mockReadFile).toHaveBeenCalledWith(longPath, "utf-8");
+        });
+
+        it("handles file paths with special characters", async () => {
+            mockReadFile.mockResolvedValue("Special path content");
+            mockStat.mockResolvedValue({ size: 20 });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "read",
+                    fileSource: "path",
+                    filePath: "/tmp/file with spaces & symbols (1).txt"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBe("Special path content");
+        });
+
+        it("handles empty file read", async () => {
+            mockReadFile.mockResolvedValue("");
+            mockStat.mockResolvedValue({ size: 0 });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "read",
+                    fileSource: "path",
+                    filePath: "/tmp/empty.txt"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBe("");
+            expect((result.metadata as JsonObject).size).toBe(0);
+        });
+
+        it("handles binary file content (as UTF-8)", async () => {
+            // When reading binary files as UTF-8, content may be garbled
+            const binaryContent = Buffer.from([0x89, 0x50, 0x4e, 0x47]).toString("utf-8");
+            mockReadFile.mockResolvedValue(binaryContent);
+            mockStat.mockResolvedValue({ size: 4 });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "read",
+                    fileSource: "path",
+                    filePath: "/tmp/image.png"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBeDefined();
+        });
+
+        it("handles JSON with deeply nested structure", async () => {
+            const deepJson = JSON.stringify({
+                level1: {
+                    level2: {
+                        level3: {
+                            level4: {
+                                level5: {
+                                    value: "deep"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            mockReadFile.mockResolvedValue(deepJson);
+            mockStat.mockResolvedValue({ size: deepJson.length });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parseJSON",
+                    fileSource: "path",
+                    filePath: "/tmp/deep.json"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            const parsed = JSON.parse(result.content as string);
+            expect(parsed.level1.level2.level3.level4.level5.value).toBe("deep");
+        });
+    });
 });

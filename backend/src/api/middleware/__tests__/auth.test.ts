@@ -190,7 +190,8 @@ describe("optionalAuthMiddleware", () => {
 
     it("should not fail when no token is provided", async () => {
         const request = createMockRequest({
-            headers: {}
+            headers: {},
+            user: undefined
         });
         request.jwtVerify = jest.fn().mockRejectedValue(new Error("No token"));
 

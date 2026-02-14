@@ -9,14 +9,14 @@ import {
     runAgentExecution,
     createTestAgent,
     createTestKBTool
-} from "../../helpers/agent-test-env";
-import { knowledgeBaseToolFixtures } from "../../helpers/agent-test-fixtures";
+} from "./helpers/agent-test-env";
+import { knowledgeBaseToolFixtures } from "./helpers/agent-test-fixtures";
 import {
     createCompletionResponse,
     createToolCallResponse,
     createToolSequence
 } from "../../helpers/llm-mock-client";
-import type { AgentTestEnvironment } from "../../helpers/agent-test-env";
+import type { AgentTestEnvironment } from "./helpers/agent-test-env";
 
 // Increase test timeout for Temporal workflows
 jest.setTimeout(60000);

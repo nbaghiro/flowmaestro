@@ -13,7 +13,21 @@ export {
     orchestratorWorkflow,
     type OrchestratorInput,
     type OrchestratorResult,
-    type WorkflowDefinition
+    type WorkflowDefinition,
+    // Signals
+    cancelWorkflowSignal,
+    pauseWorkflowSignal,
+    resumeWorkflowSignal,
+    humanReviewResponseSignal,
+    // Queries
+    executionProgressQuery,
+    nodeStatusQuery,
+    executionSummaryQuery,
+    // Query result types
+    type ExecutionProgressResult,
+    type NodeStatusResult,
+    type ExecutionSummaryResult,
+    type HumanReviewResponsePayload
 } from "./workflow-orchestrator";
 
 // Agent orchestrator workflow

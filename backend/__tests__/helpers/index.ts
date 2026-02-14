@@ -2,6 +2,10 @@
  * Test Helpers Index
  *
  * Central export for all test utilities.
+ *
+ * Note: Some helpers have been moved to specific test suite folders:
+ * - Agent helpers: __tests__/integration/agents/helpers/
+ * - Workflow helpers: __tests__/integration/workflows/helpers/
  */
 
 // HTTP Mocking
@@ -13,26 +17,23 @@ export * from "./database-mock";
 // Module Mocks (for jest.mock)
 export * from "./module-mocks";
 
-// Handler Test Utilities
-export * from "./handler-test-utils";
-
 // Temporal Test Environment
 export * from "./temporal-test-env";
-
-// Re-export assertion helpers if they exist
-// export * from "./assertion-helpers";
 
 // Provider Test Utilities (for integration testing)
 export * from "./provider-test-utils";
 
-// Agent Test Environment (for agent integration testing)
-export * from "./agent-test-env";
-
 // LLM Mock Client (for deterministic LLM responses)
 export * from "./llm-mock-client";
 
-// Agent Test Fixtures (reusable configurations)
-export * from "./agent-test-fixtures";
-
 // Redis Mock (for rate limiting and pub/sub testing)
 export * from "./redis-mock";
+
+// Service Mocks
+export * from "./service-mocks";
+
+// Fastify Test Client (HTTP endpoint testing)
+export * from "./fastify-test-client";
+
+// Middleware Test Utilities (for middleware unit tests)
+export * from "./middleware-test-utils";

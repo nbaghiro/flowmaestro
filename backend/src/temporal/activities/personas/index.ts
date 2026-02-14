@@ -44,3 +44,24 @@ export {
     type EmitPersonaCompletedInput,
     type EmitPersonaFailedInput
 } from "./events";
+
+// Approval handling
+export {
+    // Risk assessment
+    checkToolRequiresApproval,
+    getToolRiskLevel,
+    generateToolDescription,
+    // Approval request lifecycle
+    createPersonaApprovalRequest,
+    emitApprovalNeeded,
+    emitApprovalResolved,
+    clearPendingApproval,
+    parseApprovalSignal,
+    // Types
+    type CreatePersonaApprovalRequestInput,
+    type CreatePersonaApprovalRequestResult,
+    type CheckToolRequiresApprovalInput,
+    type EmitApprovalNeededInput,
+    type EmitApprovalResolvedInput,
+    type ClearPendingApprovalInput
+} from "./approvals";
