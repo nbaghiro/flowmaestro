@@ -120,7 +120,9 @@ export const config = {
         // Bucket for knowledge base documents
         knowledgeDocsBucket: process.env.GCS_KNOWLEDGE_DOCS_BUCKET || "",
         // Bucket for workflow execution artifacts
-        artifactsBucket: process.env.GCS_ARTIFACTS_BUCKET || ""
+        artifactsBucket: process.env.GCS_ARTIFACTS_BUCKET || "",
+        // Bucket for interface documents (form submissions and chat attachments)
+        interfaceDocsBucket: process.env.GCS_INTERFACE_DOCS_BUCKET || ""
     },
 
     // ==========================================================================
