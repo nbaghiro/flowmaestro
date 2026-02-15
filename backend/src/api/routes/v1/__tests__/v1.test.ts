@@ -189,7 +189,8 @@ jest.mock("../../../../storage/models/OutgoingWebhook", () => ({
     ]
 }));
 
-jest.mock("../../../../core/utils/workflow-converter", () => ({
+jest.mock("@flowmaestro/shared", () => ({
+    ...jest.requireActual("@flowmaestro/shared"),
     validateWorkflowForExecution: jest.fn().mockReturnValue({ isValid: true, errors: [] }),
     convertFrontendToBackend: jest.fn().mockImplementation((def, name) => ({ ...def, name })),
     stripNonExecutableNodes: jest.fn().mockImplementation((def) => def)

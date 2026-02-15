@@ -63,8 +63,9 @@ jest.mock("../../../../temporal/client", () => ({
     closeTemporalConnection: jest.fn().mockResolvedValue(undefined)
 }));
 
-// Mock workflow converter
-jest.mock("../../../../core/utils/workflow-converter", () => ({
+// Mock workflow converter functions from shared package
+jest.mock("@flowmaestro/shared", () => ({
+    ...jest.requireActual("@flowmaestro/shared"),
     convertFrontendToBackend: jest.fn().mockImplementation((def) => ({
         name: def.name || "Converted Workflow",
         nodes: def.nodes || {},
@@ -72,8 +73,7 @@ jest.mock("../../../../core/utils/workflow-converter", () => ({
         entryPoint: "input"
     })),
     stripNonExecutableNodes: jest.fn().mockImplementation((def) => def),
-    validateWorkflowForExecution: jest.fn().mockReturnValue({ isValid: true, errors: [] }),
-    FrontendWorkflowDefinition: {}
+    validateWorkflowForExecution: jest.fn().mockReturnValue({ isValid: true, errors: [] })
 }));
 
 // Mock GCS storage service for file uploads

@@ -199,13 +199,20 @@ export interface SharedMemoryState {
 }
 
 /**
- * Result of resolving a variable reference
+ * Result of resolving a variable reference or expression
  */
 export interface VariableResolution {
     /** Resolved value */
     value: JsonValue;
     /** Source of the value */
-    source: "nodeOutput" | "workflowVariable" | "input" | "loop" | "parallel" | "shared";
+    source:
+        | "nodeOutput"
+        | "workflowVariable"
+        | "input"
+        | "loop"
+        | "parallel"
+        | "shared"
+        | "expression";
     /** Original path that was resolved */
     path: string;
 }

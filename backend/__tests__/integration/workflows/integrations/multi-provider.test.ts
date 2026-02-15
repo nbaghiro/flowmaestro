@@ -7,7 +7,7 @@
  * - Cross-provider data flow
  */
 
-import { sandboxDataService } from "../../../../src/integrations/sandbox";
+import { sandboxDataService, loadAllFixtures } from "../../../../src/integrations/sandbox";
 import { withOutputs } from "../../../fixtures/activities";
 import {
     createTestEnvironment,
@@ -16,8 +16,8 @@ import {
 } from "../../../helpers/temporal-test-env";
 import type { TestEnvironment } from "../../../helpers/temporal-test-env";
 
-// Import fixtures to register them
-import "../../../fixtures/integration-fixtures";
+// Load fixtures at module init
+loadAllFixtures().catch(() => {});
 
 describe("Workflow with Multiple Integration Nodes", () => {
     let testEnv: TestEnvironment;

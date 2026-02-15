@@ -9,12 +9,18 @@
 
 import type { JsonObject, WorkflowDefinition, WorkflowPattern } from "@flowmaestro/shared";
 import { getWorkflowPatternById } from "@flowmaestro/shared";
-import { sandboxDataService, fixtureRegistry } from "../../../../src/integrations/sandbox";
+import {
+    sandboxDataService,
+    fixtureRegistry,
+    loadAllFixtures
+} from "../../../../src/integrations/sandbox";
 import { createContext, storeNodeOutput } from "../../../../src/temporal/core/services/context";
 import type { ContextSnapshot } from "../../../../src/temporal/core/types";
 
-// Import fixtures to register them
-import "../../../fixtures/integration-fixtures";
+// Load fixtures at module init (async but cached)
+loadAllFixtures().catch(() => {
+    // Fixtures may fail to load in test environment - that's OK
+});
 
 // ============================================================================
 // TYPES

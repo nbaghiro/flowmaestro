@@ -591,6 +591,363 @@ describe("Variable Resolution", () => {
             expect(extractVariableNames("plain text")).toEqual([]);
         });
     });
+
+    describe("Expression Support", () => {
+        describe("Fallback/Coalesce (||)", () => {
+            it("should return first non-null value", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { id: "123" });
+
+                const result = resolveVariable(context, "node1.id || node1.fallback");
+                expect(result?.value).toBe("123");
+            });
+
+            it("should fall back when first value is null", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { fallback: "default" });
+
+                const result = resolveVariable(context, "node1.missing || node1.fallback");
+                expect(result?.value).toBe("default");
+            });
+
+            it("should chain multiple fallbacks", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { third: "value" });
+
+                const result = resolveVariable(
+                    context,
+                    "node1.first || node1.second || node1.third"
+                );
+                expect(result?.value).toBe("value");
+            });
+
+            it("should fall back to string literal", () => {
+                const context = createTestContext({});
+                const result = resolveVariable(context, 'missing || "default"');
+                expect(result?.value).toBe("default");
+            });
+
+            it("should NOT fall back for falsy but defined values (0)", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { count: 0 });
+
+                const result = resolveVariable(context, 'node1.count || "fallback"');
+                expect(result?.value).toBe(0);
+            });
+
+            it("should NOT fall back for empty string", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { text: "" });
+
+                const result = resolveVariable(context, 'node1.text || "fallback"');
+                expect(result?.value).toBe("");
+            });
+
+            it("should NOT fall back for false", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { flag: false });
+
+                const result = resolveVariable(context, 'node1.flag || "fallback"');
+                expect(result?.value).toBe(false);
+            });
+        });
+
+        describe("Logical AND (&&)", () => {
+            it("should return right when left is truthy", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "user", {
+                    verified: true,
+                    email: "test@example.com"
+                });
+
+                const result = resolveVariable(context, "user.verified && user.email");
+                expect(result?.value).toBe("test@example.com");
+            });
+
+            it("should return left when left is falsy", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "user", {
+                    verified: false,
+                    email: "test@example.com"
+                });
+
+                const result = resolveVariable(context, "user.verified && user.email");
+                expect(result?.value).toBe(false);
+            });
+
+            it("should chain AND operations", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "user", { a: true, b: true, c: "final" });
+
+                const result = resolveVariable(context, "user.a && user.b && user.c");
+                expect(result?.value).toBe("final");
+            });
+        });
+
+        describe("Logical NOT (!)", () => {
+            it("should negate true to false", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { flag: true });
+
+                const result = resolveVariable(context, "!node1.flag");
+                expect(result?.value).toBe(false);
+            });
+
+            it("should negate false to true", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { flag: false });
+
+                const result = resolveVariable(context, "!node1.flag");
+                expect(result?.value).toBe(true);
+            });
+
+            it("should negate null to true", () => {
+                const context = createTestContext({});
+                const result = resolveVariable(context, "!missing");
+                expect(result?.value).toBe(true);
+            });
+        });
+
+        describe("Comparison Operators", () => {
+            it("should compare equality (==)", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { status: "active" });
+
+                const result = resolveVariable(context, 'node1.status == "active"');
+                expect(result?.value).toBe(true);
+            });
+
+            it("should compare inequality (!=)", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { count: 5 });
+
+                const result = resolveVariable(context, "node1.count != 0");
+                expect(result?.value).toBe(true);
+            });
+
+            it("should compare greater than (>)", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { price: 150 });
+
+                const result = resolveVariable(context, "node1.price > 100");
+                expect(result?.value).toBe(true);
+            });
+
+            it("should compare greater than or equal (>=)", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { age: 18 });
+
+                const result = resolveVariable(context, "node1.age >= 18");
+                expect(result?.value).toBe(true);
+            });
+
+            it("should compare less than (<)", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { qty: 5 });
+
+                const result = resolveVariable(context, "node1.qty < 10");
+                expect(result?.value).toBe(true);
+            });
+
+            it("should compare less than or equal (<=)", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { score: 50 });
+
+                const result = resolveVariable(context, "node1.score <= 50");
+                expect(result?.value).toBe(true);
+            });
+
+            it("should handle type coercion in equality", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { num: "5" });
+
+                const result = resolveVariable(context, "node1.num == 5");
+                expect(result?.value).toBe(true);
+            });
+        });
+
+        describe("Ternary Operator (? :)", () => {
+            it("should return consequent when condition is true", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { active: true });
+
+                const result = resolveVariable(context, 'node1.active ? "yes" : "no"');
+                expect(result?.value).toBe("yes");
+            });
+
+            it("should return alternate when condition is false", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { active: false });
+
+                const result = resolveVariable(context, 'node1.active ? "yes" : "no"');
+                expect(result?.value).toBe("no");
+            });
+
+            it("should work with comparison in condition", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "order", { total: 150 });
+
+                const result = resolveVariable(context, "order.total > 100 ? 0.1 : 0");
+                expect(result?.value).toBe(0.1);
+            });
+
+            it("should handle nested ternary", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { score: 85 });
+
+                const result = resolveVariable(
+                    context,
+                    'node1.score >= 90 ? "gold" : node1.score >= 70 ? "silver" : "bronze"'
+                );
+                expect(result?.value).toBe("silver");
+            });
+
+            it("should use variable paths in branches", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "user", { name: "John", isGuest: false });
+
+                const result = resolveVariable(context, 'user.isGuest ? "Guest" : user.name');
+                expect(result?.value).toBe("John");
+            });
+        });
+
+        describe("Combined Expressions", () => {
+            it("should handle || with &&", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "user", { admin: true, verified: true });
+
+                // admin && verified || guest -> (admin && verified) || guest
+                const result = resolveVariable(
+                    context,
+                    "user.admin && user.verified || user.guest"
+                );
+                expect(result?.value).toBe(true);
+            });
+
+            it("should handle ternary with fallback", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { hasError: true });
+
+                const result = resolveVariable(
+                    context,
+                    'node1.hasError ? node1.errorMessage || "Unknown error" : "Success"'
+                );
+                expect(result?.value).toBe("Unknown error");
+            });
+
+            it("should handle complex condition in ternary", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "order", { status: "paid", amount: 100 });
+
+                const result = resolveVariable(
+                    context,
+                    'order.status == "paid" && order.amount > 0 ? "process" : "hold"'
+                );
+                expect(result?.value).toBe("process");
+            });
+        });
+
+        describe("Loop Context with Expressions", () => {
+            it("should use loop variables in expressions", () => {
+                const context = createTestContext({});
+                const loopState: LoopIterationState = {
+                    index: 2,
+                    item: { name: "Item 2" },
+                    total: 5,
+                    results: []
+                };
+
+                const result = resolveVariable(context, "loop.index > 0", loopState);
+                expect(result?.value).toBe(true);
+            });
+
+            it("should combine loop context with ternary", () => {
+                const context = createTestContext({});
+                const loopState: LoopIterationState = {
+                    index: 0,
+                    item: { name: "First" },
+                    total: 3,
+                    results: []
+                };
+
+                const result = resolveVariable(
+                    context,
+                    'loop.index == 0 ? "first" : "other"',
+                    loopState
+                );
+                expect(result?.value).toBe("first");
+            });
+        });
+
+        describe("String Interpolation with Expressions", () => {
+            it("should interpolate expression results", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "order", { status: "shipped" });
+
+                const result = interpolateString(
+                    context,
+                    'Order status: {{order.status == "shipped" ? "On its way!" : "Processing"}}'
+                );
+                expect(result).toBe("Order status: On its way!");
+            });
+
+            it("should handle multiple expressions in string", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "user", { name: "John", premium: true });
+
+                const result = interpolateString(
+                    context,
+                    'Hello {{user.name}}, you are {{user.premium ? "premium" : "free"}} tier'
+                );
+                expect(result).toBe("Hello John, you are premium tier");
+            });
+        });
+
+        describe("Edge Cases", () => {
+            it("should handle empty expression", () => {
+                const context = createTestContext({});
+                const result = resolveVariable(context, "");
+                expect(result).toBeNull();
+            });
+
+            it("should preserve simple path resolution", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { data: { nested: "value" } });
+
+                const result = resolveVariable(context, "node1.data.nested");
+                expect(result?.value).toBe("value");
+                expect(result?.source).toBe("nodeOutput");
+            });
+
+            it("should handle expression source type", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { a: 1 });
+
+                const result = resolveVariable(context, "node1.a || 0");
+                expect(result?.source).toBe("expression");
+            });
+
+            it("should handle number literals", () => {
+                const context = createTestContext({});
+                const result = resolveVariable(context, "missing || 42");
+                expect(result?.value).toBe(42);
+            });
+
+            it("should handle boolean literals", () => {
+                const context = createTestContext({});
+                const result = resolveVariable(context, "missing || true");
+                expect(result?.value).toBe(true);
+            });
+
+            it("should handle null literal", () => {
+                let context = createTestContext({});
+                context = storeNodeOutput(context, "node1", { val: "exists" });
+
+                const result = resolveVariable(context, "node1.val == null");
+                expect(result?.value).toBe(false);
+            });
+        });
+    });
 });
 
 // ============================================================================

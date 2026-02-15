@@ -10,12 +10,16 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { sandboxDataService, fixtureRegistry } from "../../../../src/integrations/sandbox";
+import {
+    sandboxDataService,
+    fixtureRegistry,
+    loadAllFixtures
+} from "../../../../src/integrations/sandbox";
 import { createContext, storeNodeOutput } from "../../../../src/temporal/core/services/context";
 import type { ContextSnapshot } from "../../../../src/temporal/core/types";
 
-// Import fixtures to register them
-import "../../../fixtures/integration-fixtures";
+// Load fixtures at module init
+loadAllFixtures().catch(() => {});
 
 // Simplified types for test workflow building
 interface TestNode {
@@ -438,6 +442,11 @@ async function simulateApprovalWorkflow(
 }
 
 describe("Multi-Step Approval Workflow", () => {
+    beforeAll(async () => {
+        // Wait for fixtures to load
+        await loadAllFixtures();
+    });
+
     beforeEach(() => {
         // Clear any custom scenarios between tests
         sandboxDataService.clearScenarios();

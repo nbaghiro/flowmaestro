@@ -5,7 +5,7 @@
  * These tests verify that integration operations work correctly within the workflow context.
  */
 
-import { sandboxDataService } from "../../../../src/integrations/sandbox";
+import { sandboxDataService, loadAllFixtures } from "../../../../src/integrations/sandbox";
 import { withOutputs } from "../../../fixtures/activities";
 import {
     createTestEnvironment,
@@ -14,8 +14,8 @@ import {
 } from "../../../helpers/temporal-test-env";
 import type { TestEnvironment } from "../../../helpers/temporal-test-env";
 
-// Import fixtures to register them
-import "../../../fixtures/integration-fixtures";
+// Load fixtures at module init
+loadAllFixtures().catch(() => {});
 
 describe("Workflow with Single Integration Node", () => {
     let testEnv: TestEnvironment;

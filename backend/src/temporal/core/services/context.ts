@@ -424,8 +424,10 @@ export function deserializeSharedMemoryState(
 }
 
 /**
- * Resolve a variable reference.
- * Supports: {{variableName}}, {{nodeId.field}}, {{loop.index}}, {{parallel.index}}, {{shared.key}}
+ * Resolve a variable reference or expression.
+ * Supports:
+ * - Simple paths: {{variableName}}, {{nodeId.field}}, {{loop.index}}, {{parallel.index}}, {{shared.key}}
+ * - Expressions: {{a || b}}, {{a && b}}, {{a == b}}, {{a ? b : c}}, {{!a}}
  */
 export function resolveVariable(
     context: ContextSnapshot,
@@ -434,70 +436,22 @@ export function resolveVariable(
     parallelState?: ParallelBranchState
 ): VariableResolution | null {
     const cleanPath = path.replace(/^\{\{|\}\}$/g, "").trim();
-    const parts = parsePath(cleanPath);
 
-    if (parts.length === 0) return null;
+    if (cleanPath.length === 0) return null;
 
-    const rootKey = parts[0];
-    const remainingPath = parts.slice(1);
-
-    // Check loop context
-    if (rootKey === "loop" && loopState) {
-        const value = resolveLoopPath(remainingPath, loopState);
-        if (value !== undefined) {
-            return { value, source: "loop", path: cleanPath };
+    // Check if this is an expression (contains operators)
+    if (isExpression(cleanPath)) {
+        const tokens = tokenize(cleanPath);
+        const ast = parseExpression(tokens);
+        if (ast) {
+            const value = evaluateExpression(ast, context, loopState, parallelState);
+            return { value, source: "expression" as VariableResolution["source"], path: cleanPath };
         }
+        // If parsing fails, fall back to simple path resolution
     }
 
-    // Check parallel context
-    if (rootKey === "parallel" && parallelState) {
-        const value = resolveParallelPath(remainingPath, parallelState);
-        if (value !== undefined) {
-            return { value, source: "parallel", path: cleanPath };
-        }
-    }
-
-    // Check shared memory context ({{shared.keyName}} or {{shared.keyName.nestedPath}})
-    if (rootKey === "shared" && remainingPath.length > 0) {
-        const sharedKey = remainingPath[0];
-        const sharedValue = getSharedMemoryValue(context, sharedKey);
-        if (sharedValue !== undefined) {
-            // If there are more path segments, navigate into the value
-            const finalValue =
-                remainingPath.length > 1
-                    ? navigatePath(sharedValue, remainingPath.slice(1))
-                    : sharedValue;
-            if (finalValue !== undefined) {
-                return { value: finalValue, source: "shared", path: cleanPath };
-            }
-        }
-    }
-
-    // Try workflow variables
-    if (context.workflowVariables.has(rootKey)) {
-        const rootValue = context.workflowVariables.get(rootKey)!;
-        const value = navigatePath(rootValue, remainingPath);
-        if (value !== undefined) {
-            return { value, source: "workflowVariable", path: cleanPath };
-        }
-    }
-
-    // Try node outputs
-    if (context.nodeOutputs.has(rootKey)) {
-        const nodeOutput = context.nodeOutputs.get(rootKey)!;
-        const value = navigatePath(nodeOutput, remainingPath);
-        if (value !== undefined) {
-            return { value, source: "nodeOutput", path: cleanPath };
-        }
-    }
-
-    // Try inputs
-    const inputValue = navigatePath(context.inputs, parts);
-    if (inputValue !== undefined) {
-        return { value: inputValue, source: "input", path: cleanPath };
-    }
-
-    return null;
+    // Simple path resolution (original logic)
+    return resolveVariablePath(context, cleanPath, loopState, parallelState);
 }
 
 /**
@@ -1062,6 +1016,625 @@ function detectValueType(value: JsonValue): "string" | "number" | "boolean" | "j
     if (typeof value === "number") return "number";
     if (typeof value === "boolean") return "boolean";
     return "json";
+}
+
+// ============================================================================
+// INTERNAL HELPERS - Expression Parsing
+// ============================================================================
+
+/**
+ * Token types for expression parsing.
+ */
+type TokenType =
+    | "VARIABLE" // Variable path like "input.id" or "user.name"
+    | "STRING" // String literal like "default" or 'value'
+    | "NUMBER" // Number literal like 123 or 45.67
+    | "BOOLEAN" // true or false
+    | "NULL" // null
+    | "OR" // ||
+    | "AND" // &&
+    | "NOT" // !
+    | "EQ" // ==
+    | "NEQ" // !=
+    | "GT" // >
+    | "GTE" // >=
+    | "LT" // <
+    | "LTE" // <=
+    | "QUESTION" // ?
+    | "COLON" // :
+    | "LPAREN" // (
+    | "RPAREN"; // )
+
+interface Token {
+    type: TokenType;
+    value: string;
+}
+
+/**
+ * AST node types for expression parsing.
+ */
+type ExpressionNode =
+    | { type: "literal"; value: JsonValue }
+    | { type: "variable"; path: string }
+    | { type: "unary"; operator: "!"; operand: ExpressionNode }
+    | { type: "binary"; operator: string; left: ExpressionNode; right: ExpressionNode }
+    | {
+          type: "ternary";
+          condition: ExpressionNode;
+          consequent: ExpressionNode;
+          alternate: ExpressionNode;
+      };
+
+/**
+ * Check if a string contains expression operators.
+ */
+function isExpression(content: string): boolean {
+    // Check for operators, but be careful not to match inside quoted strings
+    let inString = false;
+    let stringChar = "";
+
+    for (let i = 0; i < content.length; i++) {
+        const char = content[i];
+
+        if (!inString && (char === '"' || char === "'")) {
+            inString = true;
+            stringChar = char;
+        } else if (inString && char === stringChar && content[i - 1] !== "\\") {
+            inString = false;
+        } else if (!inString) {
+            // Check for operators
+            const remaining = content.slice(i);
+            if (
+                remaining.startsWith("||") ||
+                remaining.startsWith("&&") ||
+                remaining.startsWith("==") ||
+                remaining.startsWith("!=") ||
+                remaining.startsWith(">=") ||
+                remaining.startsWith("<=") ||
+                remaining.startsWith("?") ||
+                char === "!" ||
+                char === ">" ||
+                char === "<"
+            ) {
+                // Make sure it's not part of a variable path
+                // ! at start could be negation, > < could be comparisons
+                if (char === "!" && i === 0) return true;
+                if (char === ">" || char === "<") return true;
+                if (remaining.startsWith("||") || remaining.startsWith("&&")) return true;
+                if (remaining.startsWith("==") || remaining.startsWith("!=")) return true;
+                if (remaining.startsWith(">=") || remaining.startsWith("<=")) return true;
+                if (remaining.startsWith("?")) return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Tokenize an expression string.
+ */
+function tokenize(expr: string): Token[] {
+    const tokens: Token[] = [];
+    let i = 0;
+
+    while (i < expr.length) {
+        // Skip whitespace
+        if (/\s/.test(expr[i])) {
+            i++;
+            continue;
+        }
+
+        // Two-character operators
+        const twoChar = expr.slice(i, i + 2);
+        if (twoChar === "||") {
+            tokens.push({ type: "OR", value: "||" });
+            i += 2;
+            continue;
+        }
+        if (twoChar === "&&") {
+            tokens.push({ type: "AND", value: "&&" });
+            i += 2;
+            continue;
+        }
+        if (twoChar === "==") {
+            tokens.push({ type: "EQ", value: "==" });
+            i += 2;
+            continue;
+        }
+        if (twoChar === "!=") {
+            tokens.push({ type: "NEQ", value: "!=" });
+            i += 2;
+            continue;
+        }
+        if (twoChar === ">=") {
+            tokens.push({ type: "GTE", value: ">=" });
+            i += 2;
+            continue;
+        }
+        if (twoChar === "<=") {
+            tokens.push({ type: "LTE", value: "<=" });
+            i += 2;
+            continue;
+        }
+
+        // Single-character operators
+        if (expr[i] === ">") {
+            tokens.push({ type: "GT", value: ">" });
+            i++;
+            continue;
+        }
+        if (expr[i] === "<") {
+            tokens.push({ type: "LT", value: "<" });
+            i++;
+            continue;
+        }
+        if (expr[i] === "!") {
+            tokens.push({ type: "NOT", value: "!" });
+            i++;
+            continue;
+        }
+        if (expr[i] === "?") {
+            tokens.push({ type: "QUESTION", value: "?" });
+            i++;
+            continue;
+        }
+        if (expr[i] === ":") {
+            tokens.push({ type: "COLON", value: ":" });
+            i++;
+            continue;
+        }
+        if (expr[i] === "(") {
+            tokens.push({ type: "LPAREN", value: "(" });
+            i++;
+            continue;
+        }
+        if (expr[i] === ")") {
+            tokens.push({ type: "RPAREN", value: ")" });
+            i++;
+            continue;
+        }
+
+        // String literals (double or single quotes)
+        if (expr[i] === '"' || expr[i] === "'") {
+            const quote = expr[i];
+            let str = "";
+            i++; // Skip opening quote
+            while (i < expr.length && expr[i] !== quote) {
+                if (expr[i] === "\\" && i + 1 < expr.length) {
+                    // Handle escape sequences
+                    i++;
+                    if (expr[i] === "n") str += "\n";
+                    else if (expr[i] === "t") str += "\t";
+                    else if (expr[i] === "r") str += "\r";
+                    else str += expr[i];
+                } else {
+                    str += expr[i];
+                }
+                i++;
+            }
+            i++; // Skip closing quote
+            tokens.push({ type: "STRING", value: str });
+            continue;
+        }
+
+        // Numbers
+        if (/[0-9]/.test(expr[i]) || (expr[i] === "-" && /[0-9]/.test(expr[i + 1] || ""))) {
+            let num = "";
+            if (expr[i] === "-") {
+                num = "-";
+                i++;
+            }
+            while (i < expr.length && /[0-9.]/.test(expr[i])) {
+                num += expr[i];
+                i++;
+            }
+            tokens.push({ type: "NUMBER", value: num });
+            continue;
+        }
+
+        // Keywords and variable paths
+        if (/[a-zA-Z_$]/.test(expr[i])) {
+            let identifier = "";
+            while (i < expr.length && /[a-zA-Z0-9_$.[\]'"]/.test(expr[i])) {
+                // Handle bracket notation
+                if (expr[i] === "[") {
+                    identifier += expr[i];
+                    i++;
+                    // Consume everything until closing bracket
+                    while (i < expr.length && expr[i] !== "]") {
+                        identifier += expr[i];
+                        i++;
+                    }
+                    if (expr[i] === "]") {
+                        identifier += expr[i];
+                        i++;
+                    }
+                    continue;
+                }
+                identifier += expr[i];
+                i++;
+            }
+
+            // Check for keywords
+            if (identifier === "true") {
+                tokens.push({ type: "BOOLEAN", value: "true" });
+            } else if (identifier === "false") {
+                tokens.push({ type: "BOOLEAN", value: "false" });
+            } else if (identifier === "null") {
+                tokens.push({ type: "NULL", value: "null" });
+            } else {
+                tokens.push({ type: "VARIABLE", value: identifier });
+            }
+            continue;
+        }
+
+        // Unknown character - skip it
+        i++;
+    }
+
+    return tokens;
+}
+
+/**
+ * Parse tokens into an AST.
+ * Precedence (lowest to highest):
+ * 1. Ternary (? :)
+ * 2. OR (||)
+ * 3. AND (&&)
+ * 4. Comparison (==, !=, >, <, >=, <=)
+ * 5. Unary (!)
+ * 6. Primary (literals, variables, parentheses)
+ */
+function parseExpression(tokens: Token[]): ExpressionNode | null {
+    let pos = 0;
+
+    function current(): Token | undefined {
+        return tokens[pos];
+    }
+
+    function advance(): Token | undefined {
+        return tokens[pos++];
+    }
+
+    function match(...types: TokenType[]): boolean {
+        const token = current();
+        return token !== undefined && types.includes(token.type);
+    }
+
+    // Parse ternary (lowest precedence)
+    function parseTernary(): ExpressionNode | null {
+        const condition = parseOr();
+        if (!condition) return null;
+
+        if (match("QUESTION")) {
+            advance(); // consume ?
+            const consequent = parseTernary();
+            if (!consequent) return null;
+
+            if (!match("COLON")) return null;
+            advance(); // consume :
+
+            const alternate = parseTernary();
+            if (!alternate) return null;
+
+            return { type: "ternary", condition, consequent, alternate };
+        }
+
+        return condition;
+    }
+
+    // Parse OR
+    function parseOr(): ExpressionNode | null {
+        let left = parseAnd();
+        if (!left) return null;
+
+        while (match("OR")) {
+            advance();
+            const right = parseAnd();
+            if (!right) return null;
+            left = { type: "binary", operator: "||", left, right };
+        }
+
+        return left;
+    }
+
+    // Parse AND
+    function parseAnd(): ExpressionNode | null {
+        let left = parseComparison();
+        if (!left) return null;
+
+        while (match("AND")) {
+            advance();
+            const right = parseComparison();
+            if (!right) return null;
+            left = { type: "binary", operator: "&&", left, right };
+        }
+
+        return left;
+    }
+
+    // Parse comparison
+    function parseComparison(): ExpressionNode | null {
+        let left = parseUnary();
+        if (!left) return null;
+
+        while (match("EQ", "NEQ", "GT", "GTE", "LT", "LTE")) {
+            const op = advance()!.value;
+            const right = parseUnary();
+            if (!right) return null;
+            left = { type: "binary", operator: op, left, right };
+        }
+
+        return left;
+    }
+
+    // Parse unary
+    function parseUnary(): ExpressionNode | null {
+        if (match("NOT")) {
+            advance();
+            const operand = parseUnary();
+            if (!operand) return null;
+            return { type: "unary", operator: "!", operand };
+        }
+
+        return parsePrimary();
+    }
+
+    // Parse primary (literals, variables, parentheses)
+    function parsePrimary(): ExpressionNode | null {
+        const token = current();
+        if (!token) return null;
+
+        if (token.type === "LPAREN") {
+            advance();
+            const expr = parseTernary();
+            if (match("RPAREN")) advance();
+            return expr;
+        }
+
+        if (token.type === "STRING") {
+            advance();
+            return { type: "literal", value: token.value };
+        }
+
+        if (token.type === "NUMBER") {
+            advance();
+            const num = parseFloat(token.value);
+            return { type: "literal", value: isNaN(num) ? 0 : num };
+        }
+
+        if (token.type === "BOOLEAN") {
+            advance();
+            return { type: "literal", value: token.value === "true" };
+        }
+
+        if (token.type === "NULL") {
+            advance();
+            return { type: "literal", value: null };
+        }
+
+        if (token.type === "VARIABLE") {
+            advance();
+            return { type: "variable", path: token.value };
+        }
+
+        return null;
+    }
+
+    return parseTernary();
+}
+
+/**
+ * Evaluate an expression AST.
+ */
+function evaluateExpression(
+    node: ExpressionNode,
+    context: ContextSnapshot,
+    loopState?: LoopIterationState,
+    parallelState?: ParallelBranchState
+): JsonValue {
+    switch (node.type) {
+        case "literal":
+            return node.value;
+
+        case "variable": {
+            // Resolve the variable path
+            const resolution = resolveVariablePath(context, node.path, loopState, parallelState);
+            return resolution?.value ?? null;
+        }
+
+        case "unary": {
+            const operand = evaluateExpression(node.operand, context, loopState, parallelState);
+            if (node.operator === "!") {
+                return !isTruthy(operand);
+            }
+            return null;
+        }
+
+        case "binary": {
+            const left = evaluateExpression(node.left, context, loopState, parallelState);
+
+            // Short-circuit evaluation for || and &&
+            if (node.operator === "||") {
+                // Return left if it's not null/undefined, otherwise return right
+                if (left !== null && left !== undefined) {
+                    return left;
+                }
+                return evaluateExpression(node.right, context, loopState, parallelState);
+            }
+
+            if (node.operator === "&&") {
+                // Return left if it's falsy, otherwise return right
+                if (!isTruthy(left)) {
+                    return left;
+                }
+                return evaluateExpression(node.right, context, loopState, parallelState);
+            }
+
+            // For comparison operators, evaluate both sides
+            const right = evaluateExpression(node.right, context, loopState, parallelState);
+
+            switch (node.operator) {
+                case "==":
+                    return looseEquals(left, right);
+                case "!=":
+                    return !looseEquals(left, right);
+                case ">":
+                    return toNumber(left) > toNumber(right);
+                case ">=":
+                    return toNumber(left) >= toNumber(right);
+                case "<":
+                    return toNumber(left) < toNumber(right);
+                case "<=":
+                    return toNumber(left) <= toNumber(right);
+                default:
+                    return null;
+            }
+        }
+
+        case "ternary": {
+            const condition = evaluateExpression(node.condition, context, loopState, parallelState);
+            if (isTruthy(condition)) {
+                return evaluateExpression(node.consequent, context, loopState, parallelState);
+            }
+            return evaluateExpression(node.alternate, context, loopState, parallelState);
+        }
+
+        default:
+            return null;
+    }
+}
+
+/**
+ * Check if a value is truthy (JavaScript-like truthiness).
+ */
+function isTruthy(value: JsonValue): boolean {
+    if (value === null || value === undefined) return false;
+    if (value === false) return false;
+    if (value === 0) return false;
+    if (value === "") return false;
+    return true;
+}
+
+/**
+ * Loose equality comparison (like JavaScript ==).
+ */
+function looseEquals(a: JsonValue, b: JsonValue): boolean {
+    // Handle null/undefined
+    if (a === null || a === undefined) {
+        return b === null || b === undefined;
+    }
+    if (b === null || b === undefined) {
+        return false;
+    }
+
+    // Same type comparison
+    if (typeof a === typeof b) {
+        if (typeof a === "object") {
+            return JSON.stringify(a) === JSON.stringify(b);
+        }
+        return a === b;
+    }
+
+    // Type coercion for number/string comparison
+    if (typeof a === "number" && typeof b === "string") {
+        return a === parseFloat(b);
+    }
+    if (typeof a === "string" && typeof b === "number") {
+        return parseFloat(a) === b;
+    }
+
+    return false;
+}
+
+/**
+ * Convert a value to a number for comparison.
+ */
+function toNumber(value: JsonValue): number {
+    if (typeof value === "number") return value;
+    if (typeof value === "string") {
+        const num = parseFloat(value);
+        return isNaN(num) ? 0 : num;
+    }
+    if (typeof value === "boolean") return value ? 1 : 0;
+    return 0;
+}
+
+/**
+ * Resolve a simple variable path (no expressions).
+ * This is the original resolveVariable logic extracted for reuse.
+ */
+function resolveVariablePath(
+    context: ContextSnapshot,
+    path: string,
+    loopState?: LoopIterationState,
+    parallelState?: ParallelBranchState
+): VariableResolution | null {
+    const cleanPath = path.replace(/^\{\{|\}\}$/g, "").trim();
+    const parts = parsePath(cleanPath);
+
+    if (parts.length === 0) return null;
+
+    const rootKey = parts[0];
+    const remainingPath = parts.slice(1);
+
+    // Check loop context
+    if (rootKey === "loop" && loopState) {
+        const value = resolveLoopPath(remainingPath, loopState);
+        if (value !== undefined) {
+            return { value, source: "loop", path: cleanPath };
+        }
+    }
+
+    // Check parallel context
+    if (rootKey === "parallel" && parallelState) {
+        const value = resolveParallelPath(remainingPath, parallelState);
+        if (value !== undefined) {
+            return { value, source: "parallel", path: cleanPath };
+        }
+    }
+
+    // Check shared memory context
+    if (rootKey === "shared" && remainingPath.length > 0) {
+        const sharedKey = remainingPath[0];
+        const sharedValue = getSharedMemoryValue(context, sharedKey);
+        if (sharedValue !== undefined) {
+            const finalValue =
+                remainingPath.length > 1
+                    ? navigatePath(sharedValue, remainingPath.slice(1))
+                    : sharedValue;
+            if (finalValue !== undefined) {
+                return { value: finalValue, source: "shared", path: cleanPath };
+            }
+        }
+    }
+
+    // Try workflow variables
+    if (context.workflowVariables.has(rootKey)) {
+        const rootValue = context.workflowVariables.get(rootKey)!;
+        const value = navigatePath(rootValue, remainingPath);
+        if (value !== undefined) {
+            return { value, source: "workflowVariable", path: cleanPath };
+        }
+    }
+
+    // Try node outputs
+    if (context.nodeOutputs.has(rootKey)) {
+        const nodeOutput = context.nodeOutputs.get(rootKey)!;
+        const value = navigatePath(nodeOutput, remainingPath);
+        if (value !== undefined) {
+            return { value, source: "nodeOutput", path: cleanPath };
+        }
+    }
+
+    // Try inputs
+    const inputValue = navigatePath(context.inputs, parts);
+    if (inputValue !== undefined) {
+        return { value: inputValue, source: "input", path: cleanPath };
+    }
+
+    return null;
 }
 
 // ============================================================================

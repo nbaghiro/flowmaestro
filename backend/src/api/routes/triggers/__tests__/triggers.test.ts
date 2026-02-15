@@ -103,8 +103,9 @@ jest.mock("../../../../temporal/client", () => ({
     closeTemporalConnection: jest.fn().mockResolvedValue(undefined)
 }));
 
-// Mock workflow converter
-jest.mock("../../../../core/utils/workflow-converter", () => ({
+// Mock workflow converter functions from shared package
+jest.mock("@flowmaestro/shared", () => ({
+    ...jest.requireActual("@flowmaestro/shared"),
     convertFrontendToBackend: jest.fn().mockImplementation((def) => ({
         name: "Converted",
         nodes: def.nodes || {},
