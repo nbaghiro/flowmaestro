@@ -20,9 +20,6 @@ export * from "./module-mocks";
 // Temporal Test Environment
 export * from "./temporal-test-env";
 
-// Provider Test Utilities (for integration testing)
-export * from "./provider-test-utils";
-
 // LLM Mock Client (for deterministic LLM responses)
 export * from "./llm-mock-client";
 

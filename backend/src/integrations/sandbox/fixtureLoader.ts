@@ -182,7 +182,7 @@ export async function loadAllFixtures(): Promise<void> {
     for (const provider of providers) {
         try {
             // Dynamic import of fixtures
-            const module = await import(`../providers/${provider}/__tests__/fixtures`);
+            const module = await import(`../providers/${provider}/fixtures`);
             const fixturesKey = Object.keys(module).find((key) => key.endsWith("Fixtures"));
 
             if (fixturesKey && Array.isArray(module[fixturesKey])) {
