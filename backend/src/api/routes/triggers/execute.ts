@@ -1,11 +1,11 @@
 import { FastifyInstance } from "fastify";
 import type { JsonValue } from "@flowmaestro/shared";
-import { WorkflowDefinition } from "@flowmaestro/shared";
 import {
+    WorkflowDefinition,
     convertFrontendToBackend,
     stripNonExecutableNodes,
     validateWorkflowForExecution
-} from "../../../core/utils/workflow-converter";
+} from "@flowmaestro/shared";
 import { ManualTriggerConfig } from "../../../storage/models/Trigger";
 import { ExecutionRepository } from "../../../storage/repositories/ExecutionRepository";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";

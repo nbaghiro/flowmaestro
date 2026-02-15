@@ -1,10 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { JsonValue, WorkflowDefinition } from "@flowmaestro/shared";
+import { convertFrontendToBackend, stripNonExecutableNodes } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../../core/logging";
-import {
-    convertFrontendToBackend,
-    stripNonExecutableNodes
-} from "../../../../core/utils/workflow-converter";
 import { ExecutionRepository } from "../../../../storage/repositories/ExecutionRepository";
 import { TriggerRepository } from "../../../../storage/repositories/TriggerRepository";
 import { WorkflowRepository } from "../../../../storage/repositories/WorkflowRepository";

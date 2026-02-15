@@ -12,13 +12,6 @@
 import * as fs from "fs/promises";
 import { Context } from "@temporalio/activity";
 import type { JsonObject, JsonValue, WorkflowDefinition } from "@flowmaestro/shared";
-import {
-    validateWorkflowInputs,
-    validateWorkflowOutputs,
-    validateWorkflowContext,
-    type ValidatedWorkflowDefinition,
-    type WorkflowValidationResult
-} from "../../core/validation/workflow-state-validation";
 import { EmbeddingService } from "../../services/embeddings/EmbeddingService";
 import { TextChunker } from "../../services/embeddings/TextChunker";
 import { TextExtractor } from "../../services/embeddings/TextExtractor";
@@ -35,6 +28,13 @@ import {
 } from "../../storage/repositories";
 import { ExecutionRepository } from "../../storage/repositories/ExecutionRepository";
 import { activityLogger, createActivityLogger } from "../core";
+import {
+    validateWorkflowInputs,
+    validateWorkflowOutputs,
+    validateWorkflowContext,
+    type ValidatedWorkflowDefinition,
+    type WorkflowValidationResult
+} from "../core/schemas";
 
 // ============================================================================
 // BASE EVENT TYPES

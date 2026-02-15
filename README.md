@@ -51,7 +51,7 @@ Built for TypeScript developers who need both visual workflow orchestration and 
 - **[Deployment Guide](./.docs/deployment-guide.md)** - Google Kubernetes Engine with Pulumi infrastructure-as-code
 - **[Testing](./.docs/testing-guide.md)** - Integration test suite with real-world scenarios
 - **[Observability](./.docs/agent-architecture.md#observability)** - Execution spans, logging, and telemetry
-- **Security** - AES-256-GCM encryption, multi-tenancy, Workload Identity
+- **[Safety & Security](./.docs/safety-module.md)** - PII redaction, prompt injection detection, AES-256-GCM encryption, multi-tenancy
 
 ## Quick Start
 
@@ -107,6 +107,7 @@ Comprehensive documentation is available in the `.docs/` directory:
 
 - **[Workflow System](./.docs/workflow-system.md)** - Complete workflow builder guide
 - **[Agent Architecture](./.docs/agent-architecture.md)** - AI agent system and memory
+- **[Safety Module](./.docs/safety-module.md)** - PII detection, prompt injection prevention, content moderation
 - **[Temporal Workflows](./.docs/temporal-workflows.md)** - Durable workflow execution
 - **[Integration System](./.docs/integrations-system.md)** - Provider SDK and external connections
 - **[Public API & SDKs](./.docs/public-api.md)** - REST API reference and SDK documentation

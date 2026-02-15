@@ -1,11 +1,25 @@
 /**
- * Workflow State Validation Tests
+ * Schema Validation Tests
  *
- * Tests for workflow input, output, and context validation utilities.
+ * Tests for node config schemas, validation utilities, and workflow state validation.
  */
 
 import { z } from "zod";
 import {
+    // Node config validation
+    validateConfig,
+    validateOrThrow,
+    getNodeSchema,
+    validateNodeConfig,
+    NodeSchemaRegistry,
+    // Node config schemas
+    LLMNodeConfigSchema,
+    HTTPNodeConfigSchema,
+    TransformNodeConfigSchema,
+    LoopNodeConfigSchema,
+    ConditionalNodeConfigSchema,
+    CodeNodeConfigSchema,
+    // Workflow state validation
     formatWorkflowZodErrors,
     formatWorkflowValidationMessage,
     validateWorkflowInputs,
@@ -16,7 +30,7 @@ import {
     CommonWorkflowOutputSchemas,
     type WorkflowValidationError,
     type ValidatedWorkflowDefinition
-} from "../workflow-state-validation";
+} from "../schemas";
 
 // Helper to create a minimal workflow definition
 function createWorkflowDefinition(
@@ -30,6 +44,415 @@ function createWorkflowDefinition(
         stateSchema
     };
 }
+
+// ============================================================================
+// NODE CONFIG VALIDATION UTILITIES
+// ============================================================================
+
+describe("Node Config Validation Utilities", () => {
+    describe("validateConfig", () => {
+        const testSchema = z.object({
+            name: z.string().min(1),
+            count: z.number().positive()
+        });
+
+        it("should return success for valid config", () => {
+            const result = validateConfig(testSchema, { name: "test", count: 5 }, "TestNode");
+
+            expect(result.success).toBe(true);
+            expect(result.data).toEqual({ name: "test", count: 5 });
+            expect(result.error).toBeUndefined();
+        });
+
+        it("should return error for invalid config", () => {
+            const result = validateConfig(testSchema, { name: "", count: -1 }, "TestNode");
+
+            expect(result.success).toBe(false);
+            expect(result.data).toBeUndefined();
+            expect(result.error).toBeDefined();
+            expect(result.error!.message).toContain("TestNode");
+        });
+
+        it("should include field paths in error", () => {
+            const result = validateConfig(testSchema, { name: "", count: 5 }, "TestNode");
+
+            expect(result.success).toBe(false);
+            expect(result.error!.errors.some((e) => e.path === "name")).toBe(true);
+        });
+
+        it("should handle missing required fields", () => {
+            const result = validateConfig(testSchema, {}, "TestNode");
+
+            expect(result.success).toBe(false);
+            expect(result.error!.errors.length).toBeGreaterThanOrEqual(2);
+        });
+    });
+
+    describe("validateOrThrow", () => {
+        const testSchema = z.object({
+            value: z.string()
+        });
+
+        it("should return data for valid config", () => {
+            const result = validateOrThrow(testSchema, { value: "test" }, "TestNode");
+
+            expect(result).toEqual({ value: "test" });
+        });
+
+        it("should throw for invalid config", () => {
+            expect(() => {
+                validateOrThrow(testSchema, { value: 123 }, "TestNode");
+            }).toThrow("TestNode configuration error");
+        });
+
+        it("should include field info in error message", () => {
+            expect(() => {
+                validateOrThrow(testSchema, {}, "TestNode");
+            }).toThrow("value");
+        });
+
+        it("should apply schema defaults", () => {
+            const schemaWithDefault = z.object({
+                value: z.string().default("default")
+            });
+
+            const result = validateOrThrow(schemaWithDefault, {}, "TestNode");
+
+            expect(result.value).toBe("default");
+        });
+    });
+
+    describe("getNodeSchema", () => {
+        it("should return schema for known node types", () => {
+            expect(getNodeSchema("llm")).toBeDefined();
+            expect(getNodeSchema("http")).toBeDefined();
+            expect(getNodeSchema("transform")).toBeDefined();
+            expect(getNodeSchema("loop")).toBeDefined();
+            expect(getNodeSchema("conditional")).toBeDefined();
+        });
+
+        it("should return undefined for unknown node types", () => {
+            expect(getNodeSchema("unknown-node-type")).toBeUndefined();
+            expect(getNodeSchema("")).toBeUndefined();
+        });
+    });
+
+    describe("validateNodeConfig", () => {
+        it("should validate LLM node config", () => {
+            const result = validateNodeConfig("llm", {
+                provider: "openai",
+                model: "gpt-4",
+                prompt: "Hello"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should fail for invalid LLM config", () => {
+            const result = validateNodeConfig("llm", {
+                provider: "invalid-provider",
+                model: "",
+                prompt: ""
+            });
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should pass through unknown node types", () => {
+            const result = validateNodeConfig("custom-node", { anything: "goes" });
+
+            expect(result.success).toBe(true);
+            expect(result.data).toEqual({ anything: "goes" });
+        });
+    });
+
+    describe("NodeSchemaRegistry", () => {
+        it("should contain expected node types", () => {
+            const expectedTypes = [
+                "llm",
+                "http",
+                "code",
+                "transform",
+                "loop",
+                "switch",
+                "conditional",
+                "wait",
+                "output"
+            ];
+
+            for (const type of expectedTypes) {
+                expect(NodeSchemaRegistry[type]).toBeDefined();
+            }
+        });
+    });
+});
+
+// ============================================================================
+// NODE CONFIG SCHEMAS
+// ============================================================================
+
+describe("Node Config Schemas", () => {
+    describe("LLMNodeConfigSchema", () => {
+        it("should accept valid LLM config", () => {
+            const result = LLMNodeConfigSchema.safeParse({
+                provider: "openai",
+                model: "gpt-4",
+                prompt: "Write a poem"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should accept config with all optional fields", () => {
+            const result = LLMNodeConfigSchema.safeParse({
+                provider: "anthropic",
+                model: "claude-3-opus",
+                prompt: "Hello",
+                systemPrompt: "You are helpful",
+                temperature: 0.7,
+                maxTokens: 1000,
+                topP: 0.9,
+                outputVariable: "response",
+                enableThinking: true,
+                thinkingBudget: 2048
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should reject invalid provider", () => {
+            const result = LLMNodeConfigSchema.safeParse({
+                provider: "invalid",
+                model: "gpt-4",
+                prompt: "Hello"
+            });
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should reject empty prompt", () => {
+            const result = LLMNodeConfigSchema.safeParse({
+                provider: "openai",
+                model: "gpt-4",
+                prompt: ""
+            });
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should reject temperature out of range", () => {
+            const result = LLMNodeConfigSchema.safeParse({
+                provider: "openai",
+                model: "gpt-4",
+                prompt: "Hello",
+                temperature: 3
+            });
+
+            expect(result.success).toBe(false);
+        });
+    });
+
+    describe("HTTPNodeConfigSchema", () => {
+        it("should accept valid HTTP config", () => {
+            const result = HTTPNodeConfigSchema.safeParse({
+                method: "GET",
+                url: "https://api.example.com/data"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should accept POST with body", () => {
+            const result = HTTPNodeConfigSchema.safeParse({
+                method: "POST",
+                url: "https://api.example.com/data",
+                bodyType: "json",
+                body: '{"key": "value"}',
+                headers: [{ key: "Content-Type", value: "application/json" }]
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should apply defaults", () => {
+            const result = HTTPNodeConfigSchema.safeParse({
+                url: "https://api.example.com"
+            });
+
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.data.method).toBe("GET");
+                expect(result.data.timeout).toBe(30);
+                expect(result.data.retryCount).toBe(0);
+            }
+        });
+
+        it("should reject empty URL", () => {
+            const result = HTTPNodeConfigSchema.safeParse({
+                method: "GET",
+                url: ""
+            });
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should reject timeout exceeding max", () => {
+            const result = HTTPNodeConfigSchema.safeParse({
+                url: "https://api.example.com",
+                timeout: 500
+            });
+
+            expect(result.success).toBe(false);
+        });
+    });
+
+    describe("TransformNodeConfigSchema", () => {
+        it("should accept valid transform config", () => {
+            const result = TransformNodeConfigSchema.safeParse({
+                operation: "map",
+                inputData: "{{items}}",
+                expression: "item.name"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should accept passthrough operation", () => {
+            const result = TransformNodeConfigSchema.safeParse({
+                operation: "passthrough",
+                inputData: "{{data}}"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should reject invalid operation", () => {
+            const result = TransformNodeConfigSchema.safeParse({
+                operation: "invalid",
+                inputData: "{{data}}"
+            });
+
+            expect(result.success).toBe(false);
+        });
+    });
+
+    describe("LoopNodeConfigSchema", () => {
+        it("should accept forEach loop", () => {
+            const result = LoopNodeConfigSchema.safeParse({
+                loopType: "forEach",
+                arrayPath: "{{items}}",
+                itemVariable: "item"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should accept count loop", () => {
+            const result = LoopNodeConfigSchema.safeParse({
+                loopType: "count",
+                count: 10
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should accept while loop with condition", () => {
+            const result = LoopNodeConfigSchema.safeParse({
+                loopType: "while",
+                condition: "{{counter}} < 10",
+                maxIterations: 100
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should apply defaults", () => {
+            const result = LoopNodeConfigSchema.safeParse({});
+
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.data.loopType).toBe("forEach");
+                expect(result.data.itemVariable).toBe("item");
+                expect(result.data.indexVariable).toBe("index");
+                expect(result.data.maxIterations).toBe(1000);
+            }
+        });
+    });
+
+    describe("ConditionalNodeConfigSchema", () => {
+        it("should accept simple condition", () => {
+            const result = ConditionalNodeConfigSchema.safeParse({
+                conditionType: "simple",
+                leftValue: "{{status}}",
+                operator: "==",
+                rightValue: "active"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should accept expression condition", () => {
+            const result = ConditionalNodeConfigSchema.safeParse({
+                conditionType: "expression",
+                expression: "{{count}} > 10 && {{status}} === 'active'"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should accept isEmpty operator", () => {
+            const result = ConditionalNodeConfigSchema.safeParse({
+                conditionType: "simple",
+                leftValue: "{{value}}",
+                operator: "isEmpty"
+            });
+
+            expect(result.success).toBe(true);
+        });
+    });
+
+    describe("CodeNodeConfigSchema", () => {
+        it("should accept JavaScript code", () => {
+            const result = CodeNodeConfigSchema.safeParse({
+                language: "javascript",
+                code: "return inputs.value * 2;"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should accept Python code", () => {
+            const result = CodeNodeConfigSchema.safeParse({
+                language: "python",
+                code: "return inputs['value'] * 2"
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it("should reject invalid language", () => {
+            const result = CodeNodeConfigSchema.safeParse({
+                language: "ruby",
+                code: "puts 'hello'"
+            });
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should reject empty code", () => {
+            const result = CodeNodeConfigSchema.safeParse({
+                language: "javascript",
+                code: ""
+            });
+
+            expect(result.success).toBe(false);
+        });
+    });
+});
+
+// ============================================================================
+// WORKFLOW STATE VALIDATION
+// ============================================================================
 
 describe("Workflow State Validation", () => {
     // ========================================================================

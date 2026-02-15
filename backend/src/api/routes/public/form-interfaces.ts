@@ -6,12 +6,12 @@ import type {
     WorkflowDefinition,
     JsonValue
 } from "@flowmaestro/shared";
-import { createServiceLogger } from "../../../core/logging";
 import {
     convertFrontendToBackend,
     stripNonExecutableNodes,
     validateWorkflowForExecution
-} from "../../../core/utils/workflow-converter";
+} from "@flowmaestro/shared";
+import { createServiceLogger } from "../../../core/logging";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { AgentRepository } from "../../../storage/repositories/AgentRepository";
 import { ExecutionRepository } from "../../../storage/repositories/ExecutionRepository";

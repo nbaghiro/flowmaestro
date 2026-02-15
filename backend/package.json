@@ -31,8 +31,7 @@
         "db:seed:personas": "tsx scripts/seed-personas.ts",
         "db:seed:persona-task-templates": "tsx scripts/seed-persona-task-templates.ts",
         "db:seed": "npm run db:seed:workflow-templates && npm run db:seed:agent-templates && npm run db:seed:personas && npm run db:seed:persona-task-templates",
-        "db:seed:system-workflows": "tsx scripts/seed-system-workflows.ts",
-        "analytics:aggregate": "tsx src/services/AnalyticsService.ts"
+        "db:seed:system-workflows": "tsx scripts/seed-system-workflows.ts"
     },
     "dependencies": {
         "@anthropic-ai/sdk": "^0.67.0",

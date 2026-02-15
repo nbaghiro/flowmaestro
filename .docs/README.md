@@ -91,6 +91,24 @@ These documents cover the main features of FlowMaestro:
 
 ---
 
+#### [safety-module.md](./safety-module.md)
+
+**Safety & Content Moderation** - Input/output validation for AI agents
+
+**Topics covered:**
+
+- PII detection and redaction (email, phone, SSN, credit card, API keys)
+- Prompt injection detection (system override, role manipulation, jailbreak attempts)
+- Safety pipeline architecture and processing flow
+- Per-agent safety configuration
+- Database logging and metrics
+- Integration with agent/persona orchestrator workflows
+- Custom validator extensibility
+
+**When to read:** Working on agent security, implementing content moderation, auditing safety events
+
+---
+
 ### Infrastructure & Operations
 
 #### [deployment-guide.md](./deployment-guide.md)
@@ -220,6 +238,7 @@ iPaaS platform evaluation for replacing custom OAuth implementation
 | Tools         | [agents.md](./agents.md)                           | Tool Execution System    |
 | RAG           | [agents.md](./agents.md)                           | RAG (Knowledge Bases)    |
 | Observability | [agents.md](./agents.md)                           | Observability & Tracing  |
+| Safety        | [safety-module.md](./safety-module.md)             | All sections             |
 | OAuth         | [integrations-system.md](./integrations-system.md) | Authentication Methods   |
 | MCP Tools     | [integrations-system.md](./integrations-system.md) | MCP Adapter Pattern      |
 | Temporal      | [temporal.md](./temporal.md)                       | All sections             |
@@ -241,7 +260,8 @@ iPaaS platform evaluation for replacing custom OAuth implementation
 1. [temporal.md](./temporal.md) - Workflow execution, activity patterns
 2. [agents.md](./agents.md) - LLM integration, tool execution
 3. [integrations-system.md](./integrations-system.md) - Provider SDK, connection pooling, security
-4. [websocket.md](./websocket.md) - Event emission, WebSocket management
+4. [safety-module.md](./safety-module.md) - PII detection, prompt injection, content moderation
+5. [websocket.md](./websocket.md) - Event emission, WebSocket management
 
 **DevOps/Infrastructure**:
 

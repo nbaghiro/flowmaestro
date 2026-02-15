@@ -18,7 +18,7 @@ import { BlogPostRepository } from "../../../storage/repositories/BlogPostReposi
 import { authMiddleware } from "../../middleware/auth";
 import { blogAdminMiddleware } from "../../middleware/blog-admin";
 import { NotFoundError, BadRequestError } from "../../middleware/error-handler";
-import { invalidateBlogCache } from "../public/blog";
+import { invalidateBlogCache } from "../public/blog-posts";
 
 const logger = createServiceLogger("AdminBlogRoutes");
 

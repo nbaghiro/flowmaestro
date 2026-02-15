@@ -6,7 +6,7 @@ import type {
     JsonValue,
     WorkflowDefinition
 } from "@flowmaestro/shared";
-import { validateWorkflowForExecution } from "../../../core/utils/workflow-converter";
+import { validateWorkflowForExecution } from "@flowmaestro/shared";
 import { WorkflowRepository, ExecutionRepository } from "../../../storage/repositories";
 import { getTemporalClient } from "../../../temporal/client";
 import { orchestratorWorkflow } from "../../../temporal/workflows/workflow-orchestrator";

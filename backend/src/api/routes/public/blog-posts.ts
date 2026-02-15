@@ -7,16 +7,16 @@
 
 import { FastifyInstance } from "fastify";
 import type { BlogPostSummary, BlogPost, BlogPostWithRelated } from "@flowmaestro/shared";
-import { createServiceLogger } from "../../../../core/logging";
-import { redis } from "../../../../services/redis";
+import { createServiceLogger } from "../../../core/logging";
+import { redis } from "../../../services/redis";
 import {
     BLOG_CATEGORIES,
     BLOG_CATEGORY_META,
     type BlogCategory,
     type BlogPostModel,
     type BlogPostSummary as BackendBlogPostSummary
-} from "../../../../storage/models/BlogPost";
-import { BlogPostRepository } from "../../../../storage/repositories/BlogPostRepository";
+} from "../../../storage/models/BlogPost";
+import { BlogPostRepository } from "../../../storage/repositories/BlogPostRepository";
 
 const logger = createServiceLogger("PublicBlogRoutes");
 

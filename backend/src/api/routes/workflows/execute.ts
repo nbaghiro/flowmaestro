@@ -4,7 +4,7 @@ import {
     FrontendWorkflowDefinition,
     stripNonExecutableNodes,
     validateWorkflowForExecution
-} from "../../../core/utils/workflow-converter";
+} from "@flowmaestro/shared";
 import { getTemporalClient } from "../../../temporal/client";
 import { authMiddleware } from "../../middleware";
 

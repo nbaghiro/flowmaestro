@@ -6,14 +6,15 @@
  */
 
 import {
-    WorkflowDefinition,
-    WorkflowNode,
     validateWorkflow,
     toValidatableNodes,
-    toValidatableEdges,
-    type WorkflowValidationContext,
-    type WorkflowValidationResult
-} from "@flowmaestro/shared";
+    toValidatableEdges
+} from "./workflow-validation-engine";
+import type { WorkflowDefinition, WorkflowNode } from "./types";
+import type {
+    WorkflowValidationContext,
+    WorkflowValidationResult
+} from "./workflow-validation-types";
 
 export interface FrontendWorkflowNode {
     id: string;
