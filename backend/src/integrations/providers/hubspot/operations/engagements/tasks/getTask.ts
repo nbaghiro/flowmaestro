@@ -35,7 +35,7 @@ export async function executeGetTask(
     params: GetTaskParams
 ): Promise<OperationResult> {
     try {
-        const endpoint = "/crm/v3/objects/tasks/${params.taskId}";
+        const endpoint = `/crm/v3/objects/tasks/${params.taskId}`;
 
         const queryParams: Record<string, unknown> = {};
         if (params.properties && params.properties.length > 0) {

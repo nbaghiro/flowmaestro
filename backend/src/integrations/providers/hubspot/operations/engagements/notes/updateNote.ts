@@ -35,7 +35,7 @@ export async function executeUpdateNote(
 ): Promise<OperationResult> {
     try {
         const response = await client.patch<HubspotEngagement>(
-            "/crm/v3/objects/notes/${params.noteId}",
+            `/crm/v3/objects/notes/${params.noteId}`,
             { properties: params.properties }
         );
 

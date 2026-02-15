@@ -35,7 +35,7 @@ export async function executeUpdateTask(
 ): Promise<OperationResult> {
     try {
         const response = await client.patch<HubspotEngagement>(
-            "/crm/v3/objects/tasks/${params.taskId}",
+            `/crm/v3/objects/tasks/${params.taskId}`,
             { properties: params.properties }
         );
 
