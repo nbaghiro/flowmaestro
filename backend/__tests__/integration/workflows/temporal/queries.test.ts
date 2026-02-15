@@ -20,6 +20,7 @@ import {
     waitForNodesComplete,
     waitForNodeStatus,
     waitForWorkflowState,
+    waitForWorkflowInitialized,
     createLinearTestWorkflow,
     createParallelTestWorkflow,
     createSlowTestWorkflow,
@@ -54,9 +55,8 @@ describe("Workflow Queries", () => {
 
             const { handle } = await startWorkflow(testEnv, workflow);
 
-            // Query immediately
-            await delay(100); // Small delay to let workflow start
-            const progress = await queryExecutionProgress(handle);
+            // Wait for workflow to initialize (graph built, totalNodes set)
+            const progress = await waitForWorkflowInitialized(handle, { timeoutMs: 5000 });
 
             expect(progress.totalNodes).toBe(5);
             expect(progress.percentComplete).toBeLessThanOrEqual(100);

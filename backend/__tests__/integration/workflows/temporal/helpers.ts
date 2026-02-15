@@ -419,6 +419,39 @@ export async function waitForNodesComplete(
 }
 
 /**
+ * Wait for workflow to be initialized (totalNodes > 0).
+ * This is needed because the workflow graph building happens asynchronously.
+ */
+export async function waitForWorkflowInitialized(
+    handle: WorkflowHandle,
+    options: {
+        timeoutMs?: number;
+        pollIntervalMs?: number;
+    } = {}
+): Promise<ExecutionProgressResult> {
+    const { timeoutMs = 10000, pollIntervalMs = 100 } = options;
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+        try {
+            const progress = await queryExecutionProgress(handle);
+            if (progress.totalNodes > 0) {
+                return progress;
+            }
+        } catch (error) {
+            // Query might fail if workflow hasn't started yet
+            if (!(error instanceof Error) || !error.message.includes("not found")) {
+                throw error;
+            }
+        }
+
+        await delay(pollIntervalMs);
+    }
+
+    throw new Error(`Timeout waiting for workflow to initialize after ${timeoutMs}ms`);
+}
+
+/**
  * Wait for a specific node to reach a status.
  */
 export async function waitForNodeStatus(
