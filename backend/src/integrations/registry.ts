@@ -2181,5 +2181,35 @@ const activecampaignEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(activecampaignEntry);
 
+// Register Constant Contact provider
+const constantcontactEntry: ProviderRegistryEntry = {
+    name: "constantcontact",
+    displayName: "Constant Contact",
+    authMethod: "oauth2",
+    category: "marketing",
+    loader: async () => {
+        const { ConstantContactProvider } = await import(
+            "./providers/constantcontact/ConstantContactProvider"
+        );
+        return new ConstantContactProvider();
+    }
+};
+
+providerRegistry.register(constantcontactEntry);
+
+// Register ConvertKit provider
+const convertkitEntry: ProviderRegistryEntry = {
+    name: "convertkit",
+    displayName: "ConvertKit",
+    authMethod: "api_key",
+    category: "marketing",
+    loader: async () => {
+        const { ConvertKitProvider } = await import("./providers/convertkit/ConvertKitProvider");
+        return new ConvertKitProvider();
+    }
+};
+
+providerRegistry.register(convertkitEntry);
+
 // Export for use in application
 export { providerRegistry };

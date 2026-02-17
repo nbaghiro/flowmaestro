@@ -1423,8 +1423,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Email marketing platform",
         logoUrl: getBrandLogo("constantcontact.com"),
         category: "Marketing",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "typeform",
@@ -1466,7 +1465,12 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("convertkit.com"),
         category: "Marketing",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "your-api-key",
+            helpText: "Find your API key in ConvertKit Settings > Advanced > API",
+            helpUrl: "https://app.convertkit.com/account_settings/advanced_settings"
+        }
     },
     {
         provider: "drip",

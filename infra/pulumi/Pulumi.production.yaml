@@ -218,6 +218,8 @@ config:
       {"name":"front-client-secret","envVar":"FRONT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Front OAuth client secret"},
       {"name":"ringcentral-client-id","envVar":"RINGCENTRAL_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"RingCentral OAuth client ID"},
       {"name":"ringcentral-client-secret","envVar":"RINGCENTRAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"RingCentral OAuth client secret"},
+      {"name":"constantcontact-client-id","envVar":"CONSTANTCONTACT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Constant Contact OAuth client ID"},
+      {"name":"constantcontact-client-secret","envVar":"CONSTANTCONTACT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Constant Contact OAuth client secret"},
       {"name":"stripe-secret-key","envVar":"STRIPE_SECRET_KEY","category":"service","deployments":["api"],"required":false,"description":"Stripe API secret key"},
       {"name":"stripe-webhook-secret","envVar":"STRIPE_WEBHOOK_SECRET","category":"service","deployments":["api"],"required":false,"description":"Stripe webhook signing secret"},
       {"name":"stripe-publishable-key","envVar":"STRIPE_PUBLISHABLE_KEY","category":"service","deployments":[],"required":false,"description":"Stripe publishable key (for frontend)"},

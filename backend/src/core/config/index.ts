@@ -720,6 +720,12 @@ export const config = {
         ringcentral: {
             clientId: process.env.RINGCENTRAL_CLIENT_ID || "",
             clientSecret: process.env.RINGCENTRAL_CLIENT_SECRET || ""
+        },
+
+        // Constant Contact
+        constantContact: {
+            clientId: process.env.CONSTANTCONTACT_CLIENT_ID || "",
+            clientSecret: process.env.CONSTANTCONTACT_CLIENT_SECRET || ""
         }
     }
 };
@@ -843,7 +849,10 @@ export function getOAuthRedirectUri(provider: string): string {
 
         // Communication providers
         front: "/oauth/front/callback",
-        ringcentral: "/oauth/ringcentral/callback"
+        ringcentral: "/oauth/ringcentral/callback",
+
+        // Marketing providers
+        constantcontact: "/oauth/constantcontact/callback"
     };
 
     const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
@@ -958,7 +967,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "bill-com": "billCom",
         ramp: "ramp",
         front: "front",
-        ringcentral: "ringcentral"
+        ringcentral: "ringcentral",
+        constantcontact: "constantContact"
     };
 
     const configKey = providerMap[provider];

@@ -5245,6 +5245,57 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         tokenAuthMethod: "basic"
+    },
+
+    // ==========================================================================
+    // Constant Contact - Email Marketing
+    // Uses OAuth 2.0 with PKCE support
+    // ==========================================================================
+
+    constantcontact: {
+        name: "constantcontact",
+        displayName: "Constant Contact",
+        authUrl: "https://authz.constantcontact.com/oauth2/default/v1/authorize",
+        tokenUrl: "https://authz.constantcontact.com/oauth2/default/v1/token",
+        scopes: ["contact_data", "campaign_data", "offline_access"],
+        clientId: config.oauth.constantContact.clientId,
+        clientSecret: config.oauth.constantContact.clientSecret,
+        redirectUri: getOAuthRedirectUri("constantcontact"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.cc.email/v3/account/summary", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    first_name?: string;
+                    last_name?: string;
+                    organization_name?: string;
+                    email?: string;
+                };
+
+                return {
+                    name:
+                        `${data.first_name || ""} ${data.last_name || ""}`.trim() ||
+                        "Constant Contact User",
+                    organization: data.organization_name,
+                    email: data.email || "unknown@constantcontact"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Constant Contact user info");
+                return {
+                    name: "Constant Contact User",
+                    email: "unknown@constantcontact"
+                };
+            }
+        },
+        refreshable: true
     }
 };
 
