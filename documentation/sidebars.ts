@@ -10,57 +10,90 @@ const sidebars: SidebarsConfig = {
         },
         {
             type: "category",
-            label: "Core Concepts",
+            label: "Workflows",
             items: [
+                "core-concepts/workflows/index",
+                "core-concepts/workflows/canvas",
                 {
                     type: "category",
-                    label: "Workflows",
+                    label: "Node Types",
                     items: [
-                        "core-concepts/workflows/index",
-                        "core-concepts/workflows/canvas",
                         "core-concepts/workflows/nodes",
-                        "core-concepts/workflows/execution",
-                        "core-concepts/workflows/variables"
+                        "core-concepts/workflows/nodes/ai-nodes",
+                        "core-concepts/workflows/nodes/logic-nodes",
+                        "core-concepts/workflows/nodes/data-nodes",
+                        "core-concepts/workflows/nodes/integration-nodes",
+                        "core-concepts/workflows/nodes/builtin-tools"
                     ]
                 },
-                {
-                    type: "category",
-                    label: "Agents",
-                    items: [
-                        "core-concepts/agents/index",
-                        "core-concepts/agents/building-agents",
-                        "core-concepts/agents/threads",
-                        "core-concepts/agents/memory"
-                    ]
-                },
-                {
-                    type: "category",
-                    label: "Triggers",
-                    items: [
-                        "core-concepts/triggers/index",
-                        "core-concepts/triggers/webhooks",
-                        "core-concepts/triggers/schedules",
-                        "core-concepts/triggers/events"
-                    ]
-                },
-                {
-                    type: "category",
-                    label: "Integrations",
-                    items: [
-                        "core-concepts/integrations/index",
-                        "core-concepts/integrations/oauth",
-                        "core-concepts/integrations/available"
-                    ]
-                },
-                {
-                    type: "category",
-                    label: "Knowledge Bases",
-                    items: [
-                        "core-concepts/knowledge-bases/index",
-                        "core-concepts/knowledge-bases/documents",
-                        "core-concepts/knowledge-bases/querying"
-                    ]
-                }
+                "core-concepts/workflows/execution",
+                "core-concepts/workflows/variables",
+                "core-concepts/workflows/error-handling",
+                "core-concepts/workflows/parallel-execution"
+            ]
+        },
+        {
+            type: "category",
+            label: "Agents",
+            items: [
+                "core-concepts/agents/index",
+                "core-concepts/agents/building-agents",
+                "core-concepts/agents/threads",
+                "core-concepts/agents/memory"
+            ]
+        },
+        {
+            type: "category",
+            label: "Triggers",
+            items: [
+                "core-concepts/triggers/index",
+                "core-concepts/triggers/webhooks",
+                "core-concepts/triggers/schedules",
+                "core-concepts/triggers/events"
+            ]
+        },
+        {
+            type: "category",
+            label: "Integrations",
+            items: [
+                "core-concepts/integrations/index",
+                "core-concepts/integrations/oauth",
+                "core-concepts/integrations/available"
+            ]
+        },
+        {
+            type: "category",
+            label: "Knowledge Bases",
+            items: [
+                "core-concepts/knowledge-bases/index",
+                "core-concepts/knowledge-bases/documents",
+                "core-concepts/knowledge-bases/querying"
+            ]
+        },
+        {
+            type: "category",
+            label: "Interfaces",
+            items: [
+                "interfaces/index",
+                "interfaces/chat-interfaces",
+                "interfaces/form-interfaces",
+                "interfaces/embedding",
+                "interfaces/customization"
+            ]
+        },
+        {
+            type: "category",
+            label: "Personas",
+            items: ["personas/index", "personas/creating-personas", "personas/using-personas"]
+        },
+        {
+            type: "category",
+            label: "Browser Extension",
+            items: [
+                "extension/index",
+                "extension/page-context",
+                "extension/workflows",
+                "extension/agent-chat"
             ]
         },
         {
@@ -70,7 +103,11 @@ const sidebars: SidebarsConfig = {
                 "guides/first-workflow",
                 "guides/first-agent",
                 "guides/connecting-integrations",
-                "guides/using-ai-nodes"
+                "guides/using-ai-nodes",
+                "guides/deploying-chat-interface",
+                "guides/building-rag-agent",
+                "guides/using-personas",
+                "guides/browser-extension"
             ]
         },
         {

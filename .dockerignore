@@ -55,9 +55,8 @@ infra/docker/*/.dockerignore
 # This is handled by selective COPY in Dockerfiles
 
 # Other packages not needed in most builds
-# Note: marketing and sdks are needed for their respective Docker builds
+# Note: marketing, sdks, and documentation are needed for their respective Docker builds
 cli
-documentation
 examples
 extensions
 
