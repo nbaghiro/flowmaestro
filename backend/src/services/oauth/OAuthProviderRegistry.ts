@@ -876,6 +876,61 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    "hubspot-marketing": {
+        name: "hubspot-marketing",
+        displayName: "HubSpot Marketing",
+        authUrl: "https://app.hubspot.com/oauth/authorize",
+        tokenUrl: "https://api.hubapi.com/oauth/v1/token",
+        scopes: [
+            // Contacts
+            "crm.objects.contacts.read",
+            "crm.objects.contacts.write",
+            // Lists
+            "crm.lists.read",
+            "crm.lists.write",
+            // Marketing
+            "content",
+            "forms",
+            "automation"
+        ],
+        clientId: config.oauth.hubspot.clientId,
+        clientSecret: config.oauth.hubspot.clientSecret,
+        redirectUri: getOAuthRedirectUri("hubspot-marketing"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://api.hubapi.com/account-info/v3/api-usage/daily",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    portalId?: number;
+                    timeZone?: string;
+                };
+
+                return {
+                    portalId: data.portalId || "unknown",
+                    timeZone: data.timeZone || "UTC"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get HubSpot Marketing account info");
+                return {
+                    portalId: "unknown",
+                    timeZone: "UTC"
+                };
+            }
+        },
+        refreshable: true
+    },
+
     linear: {
         name: "linear",
         displayName: "Linear",

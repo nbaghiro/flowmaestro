@@ -2149,5 +2149,37 @@ const crispEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(crispEntry);
 
+// Register HubSpot Marketing provider
+const hubspotMarketingEntry: ProviderRegistryEntry = {
+    name: "hubspot-marketing",
+    displayName: "HubSpot Marketing",
+    authMethod: "oauth2",
+    category: "marketing",
+    loader: async () => {
+        const { HubspotMarketingProvider } = await import(
+            "./providers/hubspot-marketing/HubspotMarketingProvider"
+        );
+        return new HubspotMarketingProvider();
+    }
+};
+
+providerRegistry.register(hubspotMarketingEntry);
+
+// Register ActiveCampaign provider
+const activecampaignEntry: ProviderRegistryEntry = {
+    name: "activecampaign",
+    displayName: "ActiveCampaign",
+    authMethod: "api_key",
+    category: "marketing",
+    loader: async () => {
+        const { ActiveCampaignProvider } = await import(
+            "./providers/activecampaign/ActiveCampaignProvider"
+        );
+        return new ActiveCampaignProvider();
+    }
+};
+
+providerRegistry.register(activecampaignEntry);
+
 // Export for use in application
 export { providerRegistry };

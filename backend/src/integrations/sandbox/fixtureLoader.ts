@@ -22,6 +22,7 @@ export async function loadAllFixtures(): Promise<void> {
     }
 
     const providers = [
+        "activecampaign",
         "adp",
         "airtable",
         "amazon-seller-central",
@@ -94,6 +95,7 @@ export async function loadAllFixtures(): Promise<void> {
         "hotjar",
         "hootsuite",
         "hubspot",
+        "hubspot-marketing",
         "insightly",
         "instagram",
         "intercom",

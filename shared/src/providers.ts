@@ -1352,11 +1352,11 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "hubspot-marketing",
         displayName: "HubSpot Marketing",
-        description: "Marketing automation",
+        description:
+            "Marketing automation with contacts, lists, campaigns, forms, emails, and workflows",
         logoUrl: getBrandLogo("hubspot.com"),
         category: "Marketing",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "marketo",
@@ -1393,11 +1393,29 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "activecampaign",
         displayName: "ActiveCampaign",
-        description: "Email marketing automation",
+        description:
+            "Email marketing automation with contacts, lists, tags, automations, and campaigns",
         logoUrl: getBrandLogo("activecampaign.com"),
         category: "Marketing",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "your-api-key",
+            helpText: "Find your API key in Settings > Developer",
+            helpUrl:
+                "https://help.activecampaign.com/hc/en-us/articles/207317590-Getting-started-with-the-API"
+        },
+        oauthSettings: [
+            {
+                name: "account",
+                label: "Account Name",
+                placeholder: "your-account",
+                helpText:
+                    "Your ActiveCampaign account name (the subdomain from your-account.activehosted.com)",
+                required: true,
+                type: "text"
+            }
+        ]
     },
     {
         provider: "constantcontact",
