@@ -45,8 +45,8 @@ const client = new FlowMaestroClient({
     // Required: Your API key
     apiKey: "fm_live_your_api_key",
 
-    // Optional: Custom base URL (default: https://api.flowmaestro.io)
-    baseUrl: "https://api.flowmaestro.io",
+    // Optional: Custom base URL (default: https://api.flowmaestro.ai)
+    baseUrl: "https://api.flowmaestro.ai",
 
     // Optional: Request timeout in ms (default: 30000)
     timeout: 30000,

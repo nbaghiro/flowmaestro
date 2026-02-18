@@ -31,7 +31,7 @@ POST /api/v1/threads/:id/messages
 ### Example
 
 ```bash
-curl -X POST "https://api.flowmaestro.io/api/v1/threads/thread_xyz789/messages" \
+curl -X POST "https://api.flowmaestro.ai/v1/threads/thread_xyz789/messages" \
   -H "X-API-Key: fm_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{

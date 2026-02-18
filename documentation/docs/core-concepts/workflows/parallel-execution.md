@@ -32,6 +32,7 @@ The execution engine automatically identifies independent branches and runs them
 ### Branch Configuration
 
 Each parallel branch can have its own:
+
 - Error handling strategy
 - Timeout settings
 - Retry policies
@@ -55,11 +56,11 @@ Process array items in parallel instead of sequentially.
 
 ### Concurrency Control
 
-| Setting | Description |
-|---------|-------------|
+| Setting          | Description                 |
+| ---------------- | --------------------------- |
 | `maxConcurrency` | Maximum parallel executions |
-| `rateLimit` | Requests per second limit |
-| `batchSize` | Process items in batches |
+| `rateLimit`      | Requests per second limit   |
+| `batchSize`      | Process items in batches    |
 
 ### Example: Parallel API Calls
 
@@ -222,17 +223,18 @@ Access parallel execution context:
 
 ### When to Use Parallel Execution
 
-| Use Case | Parallel? | Reason |
-|----------|-----------|--------|
-| Independent API calls | Yes | No data dependencies |
-| Sequential dependencies | No | Order matters |
-| Rate-limited APIs | Limited | Control concurrency |
-| Database writes | Careful | Avoid conflicts |
-| Batch processing | Yes | Improve throughput |
+| Use Case                | Parallel? | Reason               |
+| ----------------------- | --------- | -------------------- |
+| Independent API calls   | Yes       | No data dependencies |
+| Sequential dependencies | No        | Order matters        |
+| Rate-limited APIs       | Limited   | Control concurrency  |
+| Database writes         | Careful   | Avoid conflicts      |
+| Batch processing        | Yes       | Improve throughput   |
 
 ### Concurrency Limits
 
 Set appropriate limits based on:
+
 - External API rate limits
 - Database connection pools
 - Memory constraints

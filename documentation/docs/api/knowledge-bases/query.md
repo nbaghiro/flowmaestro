@@ -31,7 +31,7 @@ POST /api/v1/knowledge-bases/:id/query
 ### Example
 
 ```bash
-curl -X POST "https://api.flowmaestro.io/api/v1/knowledge-bases/kb_abc123/query" \
+curl -X POST "https://api.flowmaestro.ai/v1/knowledge-bases/kb_abc123/query" \
   -H "X-API-Key: fm_live_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{

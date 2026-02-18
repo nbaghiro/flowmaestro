@@ -27,8 +27,8 @@ A fully branded chat widget that:
 2. Click **New Interface**
 3. Select **Chat Interface**
 4. Configure:
-   - Name: "Website Support Chat"
-   - Target: Select your agent
+    - Name: "Website Support Chat"
+    - Target: Select your agent
 
 ## Step 2: Configure Branding
 
@@ -68,11 +68,11 @@ Create a compelling first impression:
 
 Control conversation behavior:
 
-| Setting | Value | Description |
-|---------|-------|-------------|
+| Setting         | Value      | Description                    |
+| --------------- | ---------- | ------------------------------ |
 | Session Timeout | 30 minutes | How long until session expires |
-| Message Limit | 100 | Max messages per session |
-| Rate Limit | 20/minute | Prevent spam |
+| Message Limit   | 100        | Max messages per session       |
+| Rate Limit      | 20/minute  | Prevent spam                   |
 
 ## Step 5: Choose Embedding Method
 
@@ -82,10 +82,10 @@ Add this snippet before `</body>`:
 
 ```html
 <script
-  src="https://cdn.flowmaestro.com/widget.js"
-  data-interface-id="ci_abc123"
-  data-position="bottom-right"
-  async
+    src="https://cdn.flowmaestro.com/widget.js"
+    data-interface-id="ci_abc123"
+    data-position="bottom-right"
+    async
 ></script>
 ```
 
@@ -95,13 +95,13 @@ Add this snippet before `</body>`:
 import { ChatWidget } from "@flowmaestro/react";
 
 function App() {
-  return (
-    <ChatWidget
-      interfaceId="ci_abc123"
-      position="bottom-right"
-      onMessage={(msg) => console.log(msg)}
-    />
-  );
+    return (
+        <ChatWidget
+            interfaceId="ci_abc123"
+            position="bottom-right"
+            onMessage={(msg) => console.log(msg)}
+        />
+    );
 }
 ```
 
@@ -109,10 +109,10 @@ function App() {
 
 ```html
 <iframe
-  src="https://chat.flowmaestro.com/ci_abc123"
-  width="400"
-  height="600"
-  frameborder="0"
+    src="https://chat.flowmaestro.com/ci_abc123"
+    width="400"
+    height="600"
+    frameborder="0"
 ></iframe>
 ```
 
@@ -178,12 +178,12 @@ After deployment, monitor usage in the dashboard:
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
+| Issue                 | Solution                                        |
+| --------------------- | ----------------------------------------------- |
 | Widget doesn't appear | Check interface is published, verify embed code |
-| Styling looks wrong | Clear browser cache, check CSS conflicts |
-| Agent not responding | Verify agent is active, check API quota |
-| CORS errors | Add your domain to allowed origins |
+| Styling looks wrong   | Clear browser cache, check CSS conflicts        |
+| Agent not responding  | Verify agent is active, check API quota         |
+| CORS errors           | Add your domain to allowed origins              |
 
 ## Next Steps
 

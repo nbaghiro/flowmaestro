@@ -24,7 +24,7 @@ DELETE /api/v1/threads/:id
 ### Example
 
 ```bash
-curl -X DELETE "https://api.flowmaestro.io/api/v1/threads/thread_xyz789" \
+curl -X DELETE "https://api.flowmaestro.ai/v1/threads/thread_xyz789" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

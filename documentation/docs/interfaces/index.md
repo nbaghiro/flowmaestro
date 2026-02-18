@@ -14,6 +14,7 @@ FlowMaestro allows you to deploy your workflows and agents as public-facing inte
 Chat interfaces turn your AI agents into conversational widgets that can be embedded on any website. Users can have natural conversations with your agents, which can access their tools and knowledge bases.
 
 **Use cases:**
+
 - Customer support chatbots
 - Sales assistants
 - Product guides
@@ -27,6 +28,7 @@ Chat interfaces turn your AI agents into conversational widgets that can be embe
 Form interfaces provide a structured way to collect input and run workflows or agents. They're ideal for tasks that require specific inputs and produce defined outputs.
 
 **Use cases:**
+
 - Content generation (blog posts, social media)
 - Document processing
 - Data transformation
@@ -40,6 +42,7 @@ Form interfaces provide a structured way to collect input and run workflows or a
 ### Branding & Customization
 
 Both interface types support extensive customization:
+
 - Custom colors, fonts, and border radius
 - Logo and icon uploads
 - Cover images (uploaded, colors, or gradients)
@@ -51,6 +54,7 @@ Both interface types support extensive customization:
 ### Embedding Options
 
 Deploy your interfaces anywhere:
+
 - **Script tag** — Simple JavaScript embed
 - **Iframe** — Full-page or inline embedding
 - **React component** — Native React integration
@@ -61,6 +65,7 @@ Deploy your interfaces anywhere:
 ### Session Management
 
 Interfaces automatically manage user sessions:
+
 - Session persistence (per-session or local storage)
 - Configurable timeouts
 - Visitor tracking (IP, user agent, referrer)
@@ -69,6 +74,7 @@ Interfaces automatically manage user sessions:
 ### Rate Limiting
 
 Protect your interfaces from abuse:
+
 - Configurable message rate limits
 - Per-IP request throttling
 - File upload limits
@@ -83,14 +89,14 @@ Protect your interfaces from abuse:
 
 ## Comparison
 
-| Feature | Chat Interface | Form Interface |
-|---------|---------------|----------------|
-| Target | Agents only | Workflows or Agents |
-| Interaction | Conversational | Single submission |
-| Real-time | Streaming responses | Polling for results |
-| File uploads | Attachments per message | Batch uploads |
-| Output | Chat messages | Structured deliverables |
-| Best for | Ongoing dialogue | Task completion |
+| Feature      | Chat Interface          | Form Interface          |
+| ------------ | ----------------------- | ----------------------- |
+| Target       | Agents only             | Workflows or Agents     |
+| Interaction  | Conversational          | Single submission       |
+| Real-time    | Streaming responses     | Polling for results     |
+| File uploads | Attachments per message | Batch uploads           |
+| Output       | Chat messages           | Structured deliverables |
+| Best for     | Ongoing dialogue        | Task completion         |
 
 ## API Access
 

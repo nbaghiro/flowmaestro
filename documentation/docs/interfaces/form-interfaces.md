@@ -51,11 +51,11 @@ Connect to an agent. The form submission starts a conversation with the agent, p
 
 #### Cover Options
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `image` | Uploaded or URL image | `https://example.com/cover.jpg` |
-| `color` | Solid background color | `#1a1a2e` |
-| `stock` | Unsplash photo ID | `photo-abc123` |
+| Type    | Description            | Example                         |
+| ------- | ---------------------- | ------------------------------- |
+| `image` | Uploaded or URL image  | `https://example.com/cover.jpg` |
+| `color` | Solid background color | `#1a1a2e`                       |
+| `stock` | Unsplash photo ID      | `photo-abc123`                  |
 
 #### Icon
 
@@ -78,12 +78,13 @@ Static text displayed above the form:
 
 The primary text input field:
 
-| Setting | Description |
-|---------|-------------|
-| **Input Label** | Label above the input |
-| **Input Placeholder** | Placeholder text |
+| Setting               | Description           |
+| --------------------- | --------------------- |
+| **Input Label**       | Label above the input |
+| **Input Placeholder** | Placeholder text      |
 
 Example:
+
 ```typescript
 {
   inputLabel: "Topic or brief",
@@ -95,15 +96,16 @@ Example:
 
 Allow users to upload files for processing:
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| **Allow File Upload** | false | Enable uploads |
-| **File Upload Label** | "Upload files" | Button label |
-| **Max Files** | 5 | Maximum files |
-| **Max File Size** | 25 MB | Per-file limit |
-| **Allowed Types** | All | MIME whitelist |
+| Setting               | Default        | Description    |
+| --------------------- | -------------- | -------------- |
+| **Allow File Upload** | false          | Enable uploads |
+| **File Upload Label** | "Upload files" | Button label   |
+| **Max Files**         | 5              | Maximum files  |
+| **Max File Size**     | 25 MB          | Per-file limit |
+| **Allowed Types**     | All            | MIME whitelist |
 
 Example:
+
 ```typescript
 {
   allowFileUpload: true,
@@ -125,12 +127,13 @@ Files are securely stored and made available to your workflow or agent.
 
 Allow users to provide URLs for content extraction:
 
-| Setting | Description |
-|---------|-------------|
-| **Allow URL Input** | Enable URL fields |
+| Setting             | Description         |
+| ------------------- | ------------------- |
+| **Allow URL Input** | Enable URL fields   |
 | **URL Input Label** | Label for the input |
 
 Example:
+
 ```typescript
 {
   allowUrlInput: true,
@@ -144,14 +147,15 @@ URLs are fetched and their content is extracted for processing.
 
 Configure how results are displayed:
 
-| Setting | Description |
-|---------|-------------|
-| **Output Label** | Label for the output area |
-| **Show Copy Button** | Enable copy to clipboard |
+| Setting                  | Description                    |
+| ------------------------ | ------------------------------ |
+| **Output Label**         | Label for the output area      |
+| **Show Copy Button**     | Enable copy to clipboard       |
 | **Show Download Button** | Enable download (markdown/txt) |
-| **Allow Output Edit** | Let users edit results |
+| **Allow Output Edit**    | Let users edit results         |
 
 Example:
+
 ```typescript
 {
   outputLabel: "Generated Content",
@@ -184,12 +188,12 @@ Customize the submit button:
 
 ### Supported File Types
 
-| Category | Types |
-|----------|-------|
+| Category  | Types                         |
+| --------- | ----------------------------- |
 | Documents | PDF, DOCX, DOC, TXT, MD, HTML |
-| Data | JSON, CSV, XLSX |
-| Images | PNG, JPG, GIF, WEBP |
-| Code | JS, TS, PY, and more |
+| Data      | JSON, CSV, XLSX               |
+| Images    | PNG, JPG, GIF, WEBP           |
+| Code      | JS, TS, PY, and more          |
 
 ### Storage Details
 
@@ -229,6 +233,7 @@ POST /api/public/form-interfaces/{slug}/submissions/{id}/query
 ```
 
 This enables your workflow or agent to:
+
 - Answer questions about uploaded documents
 - Find relevant sections across multiple files
 - Generate content based on source material
@@ -277,10 +282,10 @@ Each submission tracks:
 
 ## Rate Limiting
 
-| Endpoint | Limit |
-|----------|-------|
-| File uploads | 20/minute/IP |
-| Submissions | 10/minute/IP |
+| Endpoint       | Limit        |
+| -------------- | ------------ |
+| File uploads   | 20/minute/IP |
+| Submissions    | 10/minute/IP |
 | Vector queries | 30/minute/IP |
 
 ## Embedding
@@ -299,10 +304,10 @@ Embed in your website:
 
 ```html
 <iframe
-  src="https://app.flowmaestro.com/form/{your-slug}"
-  width="100%"
-  height="800"
-  frameborder="0"
+    src="https://app.flowmaestro.com/form/{your-slug}"
+    width="100%"
+    height="800"
+    frameborder="0"
 ></iframe>
 ```
 
@@ -315,6 +320,7 @@ Point your domain to FlowMaestro for white-label forms.
 ### Clear Instructions
 
 Use the description field to explain:
+
 - What inputs are expected
 - What the output will be
 - Any limitations or requirements
@@ -324,10 +330,7 @@ Use the description field to explain:
 Configure allowed file types to prevent unsupported uploads:
 
 ```typescript
-allowedFileTypes: [
-  "application/pdf",
-  "text/plain"
-]
+allowedFileTypes: ["application/pdf", "text/plain"];
 ```
 
 ### Output Formatting
@@ -345,6 +348,7 @@ Format your response as:
 ### Error Handling
 
 Handle potential failures gracefully:
+
 - Set appropriate timeouts
 - Configure retry logic in your workflow
 - Provide helpful error messages

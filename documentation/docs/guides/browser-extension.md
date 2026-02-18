@@ -47,13 +47,13 @@ You're now connected to your workspace.
 
 Toggle what to include:
 
-| Option | Description |
-|--------|-------------|
-| **URL** | Current page URL |
-| **Title** | Page title |
-| **Content** | Extracted text content |
+| Option         | Description              |
+| -------------- | ------------------------ |
+| **URL**        | Current page URL         |
+| **Title**      | Page title               |
+| **Content**    | Extracted text content   |
 | **Screenshot** | Visible viewport capture |
-| **Metadata** | Open Graph, meta tags |
+| **Metadata**   | Open Graph, meta tags    |
 
 ### Execute
 
@@ -166,25 +166,27 @@ user seats...
 
 When you enable page context, the extension extracts:
 
-| Data | Description |
-|------|-------------|
-| URL | Full page URL |
-| Title | Document title |
-| Meta tags | Description, keywords, OG tags |
-| Headings | H1-H6 hierarchy |
-| Text content | Main body text |
-| Tables | Structured table data |
-| Lists | Bullet and numbered lists |
-| Links | Anchor text and URLs |
+| Data         | Description                    |
+| ------------ | ------------------------------ |
+| URL          | Full page URL                  |
+| Title        | Document title                 |
+| Meta tags    | Description, keywords, OG tags |
+| Headings     | H1-H6 hierarchy                |
+| Text content | Main body text                 |
+| Tables       | Structured table data          |
+| Lists        | Bullet and numbered lists      |
+| Links        | Anchor text and URLs           |
 
 ### Screenshot Capture
 
 Screenshots capture:
+
 - Visible viewport only
 - Current scroll position
 - Rendered state (after JS)
 
 Use for:
+
 - Visual analysis
 - Design review
 - Error documentation
@@ -244,36 +246,37 @@ Access extension settings:
 
 ### Options
 
-| Setting | Description |
-|---------|-------------|
-| Default agent | Agent to open by default |
-| Auto-capture | What to capture automatically |
-| Keyboard shortcut | Quick access hotkey |
-| Theme | Light/dark/system |
+| Setting           | Description                   |
+| ----------------- | ----------------------------- |
+| Default agent     | Agent to open by default      |
+| Auto-capture      | What to capture automatically |
+| Keyboard shortcut | Quick access hotkey           |
+| Theme             | Light/dark/system             |
 
 ### Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+Shift+F` | Open extension |
+| Shortcut       | Action             |
+| -------------- | ------------------ |
+| `Ctrl+Shift+F` | Open extension     |
 | `Ctrl+Shift+S` | Capture screenshot |
-| `Ctrl+Shift+R` | Run last workflow |
+| `Ctrl+Shift+R` | Run last workflow  |
 
 Customize in Chrome: `chrome://extensions/shortcuts`
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
+| Issue                 | Solution                        |
+| --------------------- | ------------------------------- |
 | Extension not loading | Refresh page, check permissions |
-| "Not authenticated" | Click sign in, re-authorize |
-| Page content empty | Some sites block extraction |
-| Screenshot blank | Try scrolling, wait for load |
-| Workflow not found | Check workspace permissions |
+| "Not authenticated"   | Click sign in, re-authorize     |
+| Page content empty    | Some sites block extraction     |
+| Screenshot blank      | Try scrolling, wait for load    |
+| Workflow not found    | Check workspace permissions     |
 
 ### Site Restrictions
 
 Some sites block content extraction:
+
 - Banking and financial sites
 - Sites with strict CSP
 - Paywalled content

@@ -31,7 +31,7 @@ GET /api/v1/threads/:id/messages
 ### Example
 
 ```bash
-curl "https://api.flowmaestro.io/api/v1/threads/thread_xyz789/messages" \
+curl "https://api.flowmaestro.ai/v1/threads/thread_xyz789/messages" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

@@ -24,7 +24,7 @@ POST /api/v1/webhooks/:id/test
 ### Example
 
 ```bash
-curl -X POST "https://api.flowmaestro.io/api/v1/webhooks/wh_abc123/test" \
+curl -X POST "https://api.flowmaestro.ai/v1/webhooks/wh_abc123/test" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

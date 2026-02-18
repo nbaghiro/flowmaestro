@@ -10,7 +10,7 @@ Programmatically manage workflows, agents, and execute automations.
 ## Base URL
 
 ```
-https://api.flowmaestro.io/api/v1
+https://api.flowmaestro.ai/v1
 ```
 
 ## Request Format

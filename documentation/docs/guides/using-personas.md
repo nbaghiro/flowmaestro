@@ -20,22 +20,22 @@ A persona-based workflow that:
 
 Personas are **pre-configured AI specialists** designed for specific tasks. Unlike open-ended chat agents, personas:
 
-| Feature | Agents | Personas |
-|---------|--------|----------|
-| Input | Freeform chat | Structured fields |
-| Output | Conversation | Defined deliverables |
-| Process | Dynamic | SOP-based |
-| Approval | Optional | Built-in checkpoints |
+| Feature  | Agents        | Personas             |
+| -------- | ------------- | -------------------- |
+| Input    | Freeform chat | Structured fields    |
+| Output   | Conversation  | Defined deliverables |
+| Process  | Dynamic       | SOP-based            |
+| Approval | Optional      | Built-in checkpoints |
 
 ## Step 1: Browse Available Personas
 
 1. Navigate to **Personas** in the sidebar
 2. Browse by category:
-   - **Research** — Market research, competitor analysis
-   - **Content** — Blog posts, social media, documentation
-   - **Development** — Code review, architecture, testing
-   - **Data** — Analysis, reporting, visualization
-   - **Business** — Strategy, proposals, planning
+    - **Research** — Market research, competitor analysis
+    - **Content** — Blog posts, social media, documentation
+    - **Development** — Code review, architecture, testing
+    - **Data** — Analysis, reporting, visualization
+    - **Business** — Strategy, proposals, planning
 
 ## Step 2: Select a Persona
 
@@ -55,14 +55,14 @@ For this guide, we'll use **Blog Post Writer**:
 1. Click **Run Task**
 2. Fill in the structured inputs:
 
-| Field | Type | Example |
-|-------|------|---------|
-| Topic | text | "Introduction to RAG" |
-| Target Audience | select | "Technical developers" |
-| Tone | select | "Professional but approachable" |
-| Word Count | number | 1500 |
-| Key Points | multiline | "What RAG is, How it works, Use cases" |
-| Reference URLs | url_list | "https://docs.example.com/rag" |
+| Field           | Type      | Example                                |
+| --------------- | --------- | -------------------------------------- |
+| Topic           | text      | "Introduction to RAG"                  |
+| Target Audience | select    | "Technical developers"                 |
+| Tone            | select    | "Professional but approachable"        |
+| Word Count      | number    | 1500                                   |
+| Key Points      | multiline | "What RAG is, How it works, Use cases" |
+| Reference URLs  | url_list  | "https://docs.example.com/rag"         |
 
 <!-- Screenshot: Persona input form -->
 
@@ -79,6 +79,7 @@ The persona follows its SOP:
 ```
 
 Each step shows:
+
 - Status (pending, in progress, complete)
 - Time spent
 - Output preview
@@ -106,6 +107,7 @@ The outline is ready for your review:
 ```
 
 **Options:**
+
 - **Approve** — Continue to next step
 - **Request Changes** — Provide feedback, persona revises
 - **Cancel** — Stop the task
@@ -116,23 +118,23 @@ When complete, access your outputs:
 
 ```typescript
 {
-  deliverables: [
-    {
-      type: "document",
-      name: "blog-post-rag-intro.md",
-      format: "markdown"
-    },
-    {
-      type: "document",
-      name: "social-snippets.txt",
-      format: "text"
-    },
-    {
-      type: "summary",
-      name: "seo-keywords.json",
-      format: "json"
-    }
-  ]
+    deliverables: [
+        {
+            type: "document",
+            name: "blog-post-rag-intro.md",
+            format: "markdown"
+        },
+        {
+            type: "document",
+            name: "social-snippets.txt",
+            format: "text"
+        },
+        {
+            type: "summary",
+            name: "seo-keywords.json",
+            format: "json"
+        }
+    ];
 }
 ```
 
@@ -142,11 +144,11 @@ Download or copy each deliverable as needed.
 
 ### Approval Levels
 
-| Level | Behavior |
-|-------|----------|
-| `none` | Runs autonomously to completion |
-| `checkpoints` | Pauses at defined review points |
-| `all_steps` | Requires approval after each step |
+| Level         | Behavior                          |
+| ------------- | --------------------------------- |
+| `none`        | Runs autonomously to completion   |
+| `checkpoints` | Pauses at defined review points   |
+| `all_steps`   | Requires approval after each step |
 
 ### Setting Approval Level
 
@@ -210,6 +212,7 @@ Set cost limits when starting tasks:
 Using the **Market Research** persona:
 
 **Inputs:**
+
 ```typescript
 {
   company: "Acme Corp",
@@ -221,6 +224,7 @@ Using the **Market Research** persona:
 ```
 
 **SOP Steps:**
+
 1. Gather company background
 2. Analyze market landscape
 3. Identify key competitors
@@ -229,10 +233,12 @@ Using the **Market Research** persona:
 6. Generate report
 
 **Checkpoints:**
+
 - After competitor analysis (verify competitors)
 - Before final report (review draft)
 
 **Deliverables:**
+
 - Market research report (PDF)
 - Competitor comparison table (spreadsheet)
 - Key insights summary (document)
@@ -273,12 +279,12 @@ See [Creating Personas](../personas/creating-personas) for details.
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
+| Issue                    | Solution                               |
+| ------------------------ | -------------------------------------- |
 | Task stuck at checkpoint | Check notifications, approve or cancel |
-| Cost exceeded | Increase limit or optimize persona |
-| Poor quality output | Refine inputs, add examples |
-| Persona not finding info | Add reference URLs or documents |
+| Cost exceeded            | Increase limit or optimize persona     |
+| Poor quality output      | Refine inputs, add examples            |
+| Persona not finding info | Add reference URLs or documents        |
 
 ## Next Steps
 

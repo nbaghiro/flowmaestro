@@ -14,13 +14,11 @@ Deploy your chat and form interfaces anywhere with multiple embedding options.
 The simplest way to add a chat widget to your website:
 
 ```html
-<script
-  src="https://app.flowmaestro.com/widget/{your-slug}.js"
-  async
-></script>
+<script src="https://app.flowmaestro.com/widget/{your-slug}.js" async></script>
 ```
 
 The widget automatically:
+
 - Loads configuration from your interface settings
 - Appears as a floating button
 - Handles sessions and persistence
@@ -32,19 +30,19 @@ Customize behavior with data attributes:
 
 ```html
 <script
-  src="https://app.flowmaestro.com/widget/{your-slug}.js"
-  data-auto-init="true"
-  data-position="bottom-right"
-  data-initial-state="collapsed"
-  async
+    src="https://app.flowmaestro.com/widget/{your-slug}.js"
+    data-auto-init="true"
+    data-position="bottom-right"
+    data-initial-state="collapsed"
+    async
 ></script>
 ```
 
-| Attribute | Values | Description |
-|-----------|--------|-------------|
-| `data-auto-init` | `true`, `false` | Auto-initialize on load |
-| `data-position` | `bottom-right`, `bottom-left` | Widget position |
-| `data-initial-state` | `collapsed`, `expanded` | Starting state |
+| Attribute            | Values                        | Description             |
+| -------------------- | ----------------------------- | ----------------------- |
+| `data-auto-init`     | `true`, `false`               | Auto-initialize on load |
+| `data-position`      | `bottom-right`, `bottom-left` | Widget position         |
+| `data-initial-state` | `collapsed`, `expanded`       | Starting state          |
 
 ### JavaScript API
 
@@ -52,21 +50,21 @@ Control the widget programmatically:
 
 ```javascript
 // Wait for widget to load
-window.addEventListener('flowmaestro:ready', () => {
-  // Open chat
-  FlowMaestroWidget.open();
+window.addEventListener("flowmaestro:ready", () => {
+    // Open chat
+    FlowMaestroWidget.open();
 
-  // Close chat
-  FlowMaestroWidget.close();
+    // Close chat
+    FlowMaestroWidget.close();
 
-  // Toggle visibility
-  FlowMaestroWidget.toggle();
+    // Toggle visibility
+    FlowMaestroWidget.toggle();
 
-  // Check if open
-  const isOpen = FlowMaestroWidget.isOpen();
+    // Check if open
+    const isOpen = FlowMaestroWidget.isOpen();
 
-  // Destroy widget
-  FlowMaestroWidget.destroy();
+    // Destroy widget
+    FlowMaestroWidget.destroy();
 });
 ```
 
@@ -75,16 +73,16 @@ window.addEventListener('flowmaestro:ready', () => {
 Listen to widget events:
 
 ```javascript
-window.addEventListener('flowmaestro:open', () => {
-  console.log('Chat opened');
+window.addEventListener("flowmaestro:open", () => {
+    console.log("Chat opened");
 });
 
-window.addEventListener('flowmaestro:close', () => {
-  console.log('Chat closed');
+window.addEventListener("flowmaestro:close", () => {
+    console.log("Chat closed");
 });
 
-window.addEventListener('flowmaestro:message', (event) => {
-  console.log('New message:', event.detail);
+window.addEventListener("flowmaestro:message", (event) => {
+    console.log("New message:", event.detail);
 });
 ```
 
@@ -94,26 +92,26 @@ For more control, disable auto-init:
 
 ```html
 <script
-  src="https://app.flowmaestro.com/widget/{your-slug}.js"
-  data-auto-init="false"
-  async
+    src="https://app.flowmaestro.com/widget/{your-slug}.js"
+    data-auto-init="false"
+    async
 ></script>
 
 <script>
-  window.addEventListener('flowmaestro:loaded', () => {
-    // Custom initialization logic
-    if (userIsLoggedIn) {
-      FlowMaestroWidget.init({
-        position: 'bottom-left',
-        initialState: 'expanded',
-        // Pass user context
-        metadata: {
-          userId: currentUser.id,
-          plan: currentUser.plan
+    window.addEventListener("flowmaestro:loaded", () => {
+        // Custom initialization logic
+        if (userIsLoggedIn) {
+            FlowMaestroWidget.init({
+                position: "bottom-left",
+                initialState: "expanded",
+                // Pass user context
+                metadata: {
+                    userId: currentUser.id,
+                    plan: currentUser.plan
+                }
+            });
         }
-      });
-    }
-  });
+    });
 </script>
 ```
 
@@ -125,11 +123,11 @@ Embed the full chat experience in an iframe:
 
 ```html
 <iframe
-  src="https://app.flowmaestro.com/embed/chat/{your-slug}"
-  width="100%"
-  height="600"
-  frameborder="0"
-  allow="clipboard-write"
+    src="https://app.flowmaestro.com/embed/chat/{your-slug}"
+    width="100%"
+    height="600"
+    frameborder="0"
+    allow="clipboard-write"
 ></iframe>
 ```
 
@@ -139,11 +137,11 @@ Place the chat in a specific location:
 
 ```html
 <div class="chat-container">
-  <iframe
-    src="https://app.flowmaestro.com/embed/chat/{your-slug}"
-    style="width: 400px; height: 600px; border: 1px solid #e5e7eb; border-radius: 12px;"
-    allow="clipboard-write"
-  ></iframe>
+    <iframe
+        src="https://app.flowmaestro.com/embed/chat/{your-slug}"
+        style="width: 400px; height: 600px; border: 1px solid #e5e7eb; border-radius: 12px;"
+        allow="clipboard-write"
+    ></iframe>
 </div>
 ```
 
@@ -152,21 +150,24 @@ Place the chat in a specific location:
 Communicate with the embedded interface:
 
 ```javascript
-const iframe = document.querySelector('iframe');
+const iframe = document.querySelector("iframe");
 
 // Send message to iframe
-iframe.contentWindow.postMessage({
-  type: 'flowmaestro:sendMessage',
-  payload: { message: 'Hello!' }
-}, 'https://app.flowmaestro.com');
+iframe.contentWindow.postMessage(
+    {
+        type: "flowmaestro:sendMessage",
+        payload: { message: "Hello!" }
+    },
+    "https://app.flowmaestro.com"
+);
 
 // Receive messages from iframe
-window.addEventListener('message', (event) => {
-  if (event.origin !== 'https://app.flowmaestro.com') return;
+window.addEventListener("message", (event) => {
+    if (event.origin !== "https://app.flowmaestro.com") return;
 
-  if (event.data.type === 'flowmaestro:newMessage') {
-    console.log('New message:', event.data.payload);
-  }
+    if (event.data.type === "flowmaestro:newMessage") {
+        console.log("New message:", event.data.payload);
+    }
 });
 ```
 
@@ -183,23 +184,23 @@ npm install @flowmaestro/widget
 Use in your React app:
 
 ```tsx
-import { FlowMaestroChatWidget } from '@flowmaestro/widget/react';
+import { FlowMaestroChatWidget } from "@flowmaestro/widget/react";
 
 function App() {
-  return (
-    <div>
-      <h1>My App</h1>
+    return (
+        <div>
+            <h1>My App</h1>
 
-      <FlowMaestroChatWidget
-        slug="your-slug"
-        position="bottom-right"
-        initialState="collapsed"
-        onOpen={() => console.log('Opened')}
-        onClose={() => console.log('Closed')}
-        onMessage={(msg) => console.log('Message:', msg)}
-      />
-    </div>
-  );
+            <FlowMaestroChatWidget
+                slug="your-slug"
+                position="bottom-right"
+                initialState="collapsed"
+                onOpen={() => console.log("Opened")}
+                onClose={() => console.log("Closed")}
+                onMessage={(msg) => console.log("Message:", msg)}
+            />
+        </div>
+    );
 }
 ```
 
@@ -208,20 +209,20 @@ function App() {
 Embed chat directly in your layout:
 
 ```tsx
-import { FlowMaestroChat } from '@flowmaestro/widget/react';
+import { FlowMaestroChat } from "@flowmaestro/widget/react";
 
 function SupportPage() {
-  return (
-    <div className="support-container">
-      <h1>Contact Support</h1>
+    return (
+        <div className="support-container">
+            <h1>Contact Support</h1>
 
-      <FlowMaestroChat
-        slug="support-bot"
-        style={{ height: '500px' }}
-        className="chat-embed"
-      />
-    </div>
-  );
+            <FlowMaestroChat
+                slug="support-bot"
+                style={{ height: "500px" }}
+                className="chat-embed"
+            />
+        </div>
+    );
 }
 ```
 
@@ -230,11 +231,7 @@ function SupportPage() {
 The package includes TypeScript definitions:
 
 ```tsx
-import type {
-  ChatWidgetProps,
-  ChatMessage,
-  WidgetConfig
-} from '@flowmaestro/widget';
+import type { ChatWidgetProps, ChatMessage, WidgetConfig } from "@flowmaestro/widget";
 ```
 
 ## Form Interface Embedding
@@ -253,11 +250,11 @@ Embed forms in your website:
 
 ```html
 <iframe
-  src="https://app.flowmaestro.com/form/{your-slug}"
-  width="100%"
-  height="800"
-  frameborder="0"
-  style="border-radius: 8px;"
+    src="https://app.flowmaestro.com/form/{your-slug}"
+    width="100%"
+    height="800"
+    frameborder="0"
+    style="border-radius: 8px;"
 ></iframe>
 ```
 
@@ -267,11 +264,11 @@ Make the iframe responsive:
 
 ```html
 <div style="position: relative; padding-bottom: 75%; height: 0;">
-  <iframe
-    src="https://app.flowmaestro.com/form/{your-slug}"
-    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-    frameborder="0"
-  ></iframe>
+    <iframe
+        src="https://app.flowmaestro.com/form/{your-slug}"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+        frameborder="0"
+    ></iframe>
 </div>
 ```
 
@@ -327,6 +324,7 @@ FlowMaestro APIs support CORS for browser-based requests from allowed origins.
 ### Responsive Widget
 
 The chat widget is mobile-responsive by default:
+
 - Full-screen on small devices
 - Floating button positions adjust
 - Touch-optimized interactions
@@ -335,10 +333,10 @@ The chat widget is mobile-responsive by default:
 
 ```html
 <script
-  src="https://app.flowmaestro.com/widget/{your-slug}.js"
-  data-mobile-fullscreen="true"
-  data-mobile-position="bottom-center"
-  async
+    src="https://app.flowmaestro.com/widget/{your-slug}.js"
+    data-mobile-fullscreen="true"
+    data-mobile-position="bottom-center"
+    async
 ></script>
 ```
 
@@ -350,10 +348,10 @@ Load the widget only when needed:
 
 ```javascript
 // Load on user interaction
-document.querySelector('.help-button').addEventListener('click', () => {
-  const script = document.createElement('script');
-  script.src = 'https://app.flowmaestro.com/widget/{your-slug}.js';
-  document.body.appendChild(script);
+document.querySelector(".help-button").addEventListener("click", () => {
+    const script = document.createElement("script");
+    script.src = "https://app.flowmaestro.com/widget/{your-slug}.js";
+    document.body.appendChild(script);
 });
 ```
 
@@ -362,11 +360,7 @@ document.querySelector('.help-button').addEventListener('click', () => {
 Preload for faster initial display:
 
 ```html
-<link
-  rel="preload"
-  href="https://app.flowmaestro.com/widget/{your-slug}.js"
-  as="script"
->
+<link rel="preload" href="https://app.flowmaestro.com/widget/{your-slug}.js" as="script" />
 ```
 
 ## Troubleshooting
@@ -391,6 +385,6 @@ If your site's CSS conflicts with the widget:
 ```css
 /* Reset styles for widget container */
 #flowmaestro-widget {
-  all: initial;
+    all: initial;
 }
 ```

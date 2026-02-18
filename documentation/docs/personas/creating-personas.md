@@ -87,13 +87,13 @@ List the persona's competencies:
 
 ```typescript
 {
-  expertiseAreas: [
-    "API documentation and reference guides",
-    "User manuals and getting started guides",
-    "Architecture diagrams and system documentation",
-    "Code examples and tutorials",
-    "Changelog and release notes"
-  ]
+    expertiseAreas: [
+        "API documentation and reference guides",
+        "User manuals and getting started guides",
+        "Architecture diagrams and system documentation",
+        "Code examples and tutorials",
+        "Changelog and release notes"
+    ];
 }
 ```
 
@@ -103,13 +103,13 @@ Concrete examples of what the persona can do:
 
 ```typescript
 {
-  exampleTasks: [
-    "Document a REST API with endpoints, parameters, and examples",
-    "Create a user guide for a new feature",
-    "Write architecture decision records (ADRs)",
-    "Generate SDK documentation from code comments",
-    "Create a migration guide between versions"
-  ]
+    exampleTasks: [
+        "Document a REST API with endpoints, parameters, and examples",
+        "Create a user guide for a new feature",
+        "Write architecture decision records (ADRs)",
+        "Generate SDK documentation from code comments",
+        "Create a migration guide between versions"
+    ];
 }
 ```
 
@@ -119,78 +119,67 @@ Define the data users provide when running the persona.
 
 ### Field Types
 
-| Type | Description | Options |
-|------|-------------|---------|
-| `text` | Single-line text input | - |
-| `textarea` | Multi-line text input | - |
-| `select` | Dropdown selection | `options` array |
-| `multiselect` | Multiple selection | `options` array |
-| `tags` | Free-form tags | - |
-| `number` | Numeric input | `min`, `max` |
-| `checkbox` | Boolean toggle | - |
+| Type          | Description            | Options         |
+| ------------- | ---------------------- | --------------- |
+| `text`        | Single-line text input | -               |
+| `textarea`    | Multi-line text input  | -               |
+| `select`      | Dropdown selection     | `options` array |
+| `multiselect` | Multiple selection     | `options` array |
+| `tags`        | Free-form tags         | -               |
+| `number`      | Numeric input          | `min`, `max`    |
+| `checkbox`    | Boolean toggle         | -               |
 
 ### Field Definition
 
 ```typescript
 {
-  inputFields: [
-    {
-      name: "project_name",
-      label: "Project Name",
-      type: "text",
-      required: true,
-      placeholder: "e.g., Acme API",
-      helpText: "The name of the project to document"
-    },
-    {
-      name: "doc_type",
-      label: "Documentation Type",
-      type: "select",
-      required: true,
-      options: [
-        "API Reference",
-        "User Guide",
-        "Architecture Doc",
-        "Tutorial",
-        "Changelog"
-      ],
-      defaultValue: "API Reference"
-    },
-    {
-      name: "target_audience",
-      label: "Target Audience",
-      type: "multiselect",
-      options: [
-        "Developers",
-        "DevOps",
-        "Product Managers",
-        "End Users"
-      ]
-    },
-    {
-      name: "code_repository",
-      label: "Code Repository URL",
-      type: "text",
-      required: false,
-      placeholder: "https://github.com/...",
-      validation: {
-        pattern: "^https://(github|gitlab)\\.com/.*",
-        message: "Must be a GitHub or GitLab URL"
-      }
-    },
-    {
-      name: "include_examples",
-      label: "Include Code Examples",
-      type: "checkbox",
-      defaultValue: true
-    },
-    {
-      name: "focus_areas",
-      label: "Focus Areas",
-      type: "tags",
-      placeholder: "Add topics to emphasize"
-    }
-  ]
+    inputFields: [
+        {
+            name: "project_name",
+            label: "Project Name",
+            type: "text",
+            required: true,
+            placeholder: "e.g., Acme API",
+            helpText: "The name of the project to document"
+        },
+        {
+            name: "doc_type",
+            label: "Documentation Type",
+            type: "select",
+            required: true,
+            options: ["API Reference", "User Guide", "Architecture Doc", "Tutorial", "Changelog"],
+            defaultValue: "API Reference"
+        },
+        {
+            name: "target_audience",
+            label: "Target Audience",
+            type: "multiselect",
+            options: ["Developers", "DevOps", "Product Managers", "End Users"]
+        },
+        {
+            name: "code_repository",
+            label: "Code Repository URL",
+            type: "text",
+            required: false,
+            placeholder: "https://github.com/...",
+            validation: {
+                pattern: "^https://(github|gitlab)\\.com/.*",
+                message: "Must be a GitHub or GitLab URL"
+            }
+        },
+        {
+            name: "include_examples",
+            label: "Include Code Examples",
+            type: "checkbox",
+            defaultValue: true
+        },
+        {
+            name: "focus_areas",
+            label: "Focus Areas",
+            type: "tags",
+            placeholder: "Add topics to emphasize"
+        }
+    ];
 }
 ```
 
@@ -214,47 +203,47 @@ Define the outputs the persona will produce.
 
 ### Deliverable Types
 
-| Type | Description | File Extension |
-|------|-------------|----------------|
-| `markdown` | Markdown document | `.md` |
-| `csv` | Spreadsheet data | `.csv` |
-| `json` | Structured data | `.json` |
-| `pdf` | PDF document | `.pdf` |
-| `code` | Source code | Varies |
-| `image` | Generated image | `.png` |
-| `html` | HTML document | `.html` |
+| Type       | Description       | File Extension |
+| ---------- | ----------------- | -------------- |
+| `markdown` | Markdown document | `.md`          |
+| `csv`      | Spreadsheet data  | `.csv`         |
+| `json`     | Structured data   | `.json`        |
+| `pdf`      | PDF document      | `.pdf`         |
+| `code`     | Source code       | Varies         |
+| `image`    | Generated image   | `.png`         |
+| `html`     | HTML document     | `.html`        |
 
 ### Deliverable Definition
 
 ```typescript
 {
-  deliverables: [
-    {
-      name: "api_reference",
-      description: "Complete API reference documentation",
-      type: "markdown",
-      guaranteed: true,
-      fileExtension: ".md"
-    },
-    {
-      name: "endpoint_summary",
-      description: "Summary table of all endpoints",
-      type: "csv",
-      guaranteed: true
-    },
-    {
-      name: "architecture_diagram",
-      description: "System architecture diagram",
-      type: "image",
-      guaranteed: false  // Best-effort, not guaranteed
-    },
-    {
-      name: "openapi_spec",
-      description: "OpenAPI 3.0 specification",
-      type: "json",
-      guaranteed: true
-    }
-  ]
+    deliverables: [
+        {
+            name: "api_reference",
+            description: "Complete API reference documentation",
+            type: "markdown",
+            guaranteed: true,
+            fileExtension: ".md"
+        },
+        {
+            name: "endpoint_summary",
+            description: "Summary table of all endpoints",
+            type: "csv",
+            guaranteed: true
+        },
+        {
+            name: "architecture_diagram",
+            description: "System architecture diagram",
+            type: "image",
+            guaranteed: false // Best-effort, not guaranteed
+        },
+        {
+            name: "openapi_spec",
+            description: "OpenAPI 3.0 specification",
+            type: "json",
+            guaranteed: true
+        }
+    ];
 }
 ```
 
@@ -266,17 +255,17 @@ Define the step-by-step process the persona follows:
 
 ```typescript
 {
-  sopSteps: [
-    "Review project requirements and documentation scope",
-    "Analyze code repository and existing documentation",
-    "Identify all API endpoints and their parameters",
-    "Document request/response schemas with examples",
-    "Write authentication and getting started sections",
-    "Create code examples in multiple languages",
-    "Generate endpoint summary and quick reference",
-    "Review for completeness and consistency",
-    "Format and finalize all deliverables"
-  ]
+    sopSteps: [
+        "Review project requirements and documentation scope",
+        "Analyze code repository and existing documentation",
+        "Identify all API endpoints and their parameters",
+        "Document request/response schemas with examples",
+        "Write authentication and getting started sections",
+        "Create code examples in multiple languages",
+        "Generate endpoint summary and quick reference",
+        "Review for completeness and consistency",
+        "Format and finalize all deliverables"
+    ];
 }
 ```
 
@@ -295,7 +284,7 @@ Write a detailed prompt that guides the persona's behavior:
 
 ```typescript
 {
-  systemPrompt: `You are a Technical Documentation Writer specializing in API documentation.
+    systemPrompt: `You are a Technical Documentation Writer specializing in API documentation.
 
 ## Your Expertise
 - Creating clear, comprehensive API references
@@ -323,7 +312,7 @@ Follow the SOP steps provided. At each step:
 3. Ask for clarification if needed
 4. Proceed to the next step
 
-Always prioritize accuracy over speed.`
+Always prioritize accuracy over speed.`;
 }
 ```
 
@@ -340,12 +329,12 @@ Always prioritize accuracy over speed.`
 
 **Model recommendations:**
 
-| Task Type | Recommended Model | Temperature |
-|-----------|-------------------|-------------|
-| Research | claude-sonnet-4 | 0.5-0.7 |
-| Writing | claude-sonnet-4, gpt-4.1 | 0.7-0.9 |
-| Code | claude-sonnet-4, gpt-4.1 | 0.3-0.5 |
-| Data Analysis | gpt-4.1, claude-sonnet-4 | 0.3-0.5 |
+| Task Type     | Recommended Model        | Temperature |
+| ------------- | ------------------------ | ----------- |
+| Research      | claude-sonnet-4          | 0.5-0.7     |
+| Writing       | claude-sonnet-4, gpt-4.1 | 0.7-0.9     |
+| Code          | claude-sonnet-4, gpt-4.1 | 0.3-0.5     |
+| Data Analysis | gpt-4.1, claude-sonnet-4 | 0.3-0.5     |
 
 ## Tools
 
@@ -355,25 +344,25 @@ Configure tools the persona has access to:
 
 ```typescript
 {
-  defaultTools: [
-    {
-      type: "mcp",
-      provider: "github",
-      config: { scopes: ["repo:read", "contents:read"] }
-    },
-    {
-      type: "knowledge_base",
-      knowledgeBaseId: "kb_company_docs"
-    },
-    {
-      type: "builtin",
-      name: "web_search"
-    },
-    {
-      type: "workflow",
-      workflowId: "wf_generate_diagram"
-    }
-  ]
+    defaultTools: [
+        {
+            type: "mcp",
+            provider: "github",
+            config: { scopes: ["repo:read", "contents:read"] }
+        },
+        {
+            type: "knowledge_base",
+            knowledgeBaseId: "kb_company_docs"
+        },
+        {
+            type: "builtin",
+            name: "web_search"
+        },
+        {
+            type: "workflow",
+            workflowId: "wf_generate_diagram"
+        }
+    ];
 }
 ```
 
@@ -383,19 +372,19 @@ Specify required integrations:
 
 ```typescript
 {
-  connectionRequirements: [
-    {
-      provider: "github",
-      required: true,
-      scopes: ["repo", "read:org"],
-      reason: "Access code repositories for documentation"
-    },
-    {
-      provider: "notion",
-      required: false,
-      reason: "Publish documentation directly to Notion"
-    }
-  ]
+    connectionRequirements: [
+        {
+            provider: "github",
+            required: true,
+            scopes: ["repo", "read:org"],
+            reason: "Access code repositories for documentation"
+        },
+        {
+            provider: "notion",
+            required: false,
+            reason: "Publish documentation directly to Notion"
+        }
+    ];
 }
 ```
 
@@ -428,11 +417,11 @@ Specify required integrations:
 }
 ```
 
-| Level | Behavior |
-|-------|----------|
-| `full_auto` | No approvals required (within limits) |
-| `approve_high_risk` | Pause for high-risk tool calls |
-| `approve_all` | Pause at every step |
+| Level               | Behavior                              |
+| ------------------- | ------------------------------------- |
+| `full_auto`         | No approvals required (within limits) |
+| `approve_high_risk` | Pause for high-risk tool calls        |
+| `approve_all`       | Pause at every step                   |
 
 ## Task Templates
 
@@ -440,19 +429,20 @@ Create reusable templates for common tasks:
 
 ```typescript
 {
-  taskTemplates: [
-    {
-      name: "API Documentation from OpenAPI",
-      taskTemplate: "Create complete API documentation for {{project_name}} based on the OpenAPI specification at {{openapi_url}}. Target audience: {{audience}}.",
-      variables: [
-        { name: "project_name", type: "text", required: true },
-        { name: "openapi_url", type: "text", required: true },
-        { name: "audience", type: "select", options: ["developers", "partners", "public"] }
-      ],
-      suggestedDuration: 60,
-      suggestedCost: 50
-    }
-  ]
+    taskTemplates: [
+        {
+            name: "API Documentation from OpenAPI",
+            taskTemplate:
+                "Create complete API documentation for {{project_name}} based on the OpenAPI specification at {{openapi_url}}. Target audience: {{audience}}.",
+            variables: [
+                { name: "project_name", type: "text", required: true },
+                { name: "openapi_url", type: "text", required: true },
+                { name: "audience", type: "select", options: ["developers", "partners", "public"] }
+            ],
+            suggestedDuration: 60,
+            suggestedCost: 50
+        }
+    ];
 }
 ```
 

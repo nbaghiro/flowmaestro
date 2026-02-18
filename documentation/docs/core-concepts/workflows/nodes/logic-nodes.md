@@ -15,10 +15,10 @@ Branch execution based on conditions.
 
 ### Modes
 
-| Mode | Description |
-|------|-------------|
-| **Simple** | Compare two values with an operator |
-| **Expression** | Evaluate a JavaScript expression |
+| Mode           | Description                         |
+| -------------- | ----------------------------------- |
+| **Simple**     | Compare two values with an operator |
+| **Expression** | Evaluate a JavaScript expression    |
 
 ### Simple Mode
 
@@ -33,21 +33,21 @@ Branch execution based on conditions.
 
 ### Operators
 
-| Operator | Description |
-|----------|-------------|
-| `==` | Equal to |
-| `!=` | Not equal to |
-| `>` | Greater than |
-| `<` | Less than |
-| `>=` | Greater than or equal |
-| `<=` | Less than or equal |
-| `contains` | String contains |
-| `startsWith` | String starts with |
-| `endsWith` | String ends with |
-| `isEmpty` | Value is empty/null |
-| `isNotEmpty` | Value has content |
-| `isNull` | Value is null |
-| `isNotNull` | Value is not null |
+| Operator     | Description           |
+| ------------ | --------------------- |
+| `==`         | Equal to              |
+| `!=`         | Not equal to          |
+| `>`          | Greater than          |
+| `<`          | Less than             |
+| `>=`         | Greater than or equal |
+| `<=`         | Less than or equal    |
+| `contains`   | String contains       |
+| `startsWith` | String starts with    |
+| `endsWith`   | String ends with      |
+| `isEmpty`    | Value is empty/null   |
+| `isNotEmpty` | Value has content     |
+| `isNull`     | Value is null         |
+| `isNotNull`  | Value is not null     |
 
 ### Expression Mode
 
@@ -61,6 +61,7 @@ Branch execution based on conditions.
 ### Branches
 
 Each conditional node has two outputs:
+
 - **True** — Condition is met
 - **False** — Condition is not met
 
@@ -69,22 +70,25 @@ Connect different nodes to each branch to create different execution paths.
 ### Examples
 
 **User role check:**
+
 ```typescript
-leftValue: "{{user.role}}"
-operator: "=="
-rightValue: "admin"
+leftValue: "{{user.role}}";
+operator: "==";
+rightValue: "admin";
 ```
 
 **Order value threshold:**
+
 ```typescript
-expression: "{{order.total}} >= 500"
+expression: "{{order.total}} >= 500";
 ```
 
 **String validation:**
+
 ```typescript
-leftValue: "{{input.email}}"
-operator: "contains"
-rightValue: "@"
+leftValue: "{{input.email}}";
+operator: "contains";
+rightValue: "@";
 ```
 
 ---
@@ -134,11 +138,11 @@ Iterate over arrays or repeat operations.
 
 ### Loop Types
 
-| Type | Description |
-|------|-------------|
+| Type      | Description                        |
+| --------- | ---------------------------------- |
 | `forEach` | Iterate over each item in an array |
-| `while` | Repeat while condition is true |
-| `count` | Repeat a fixed number of times |
+| `while`   | Repeat while condition is true     |
+| `count`   | Repeat a fixed number of times     |
 
 ### forEach Loop
 
@@ -152,6 +156,7 @@ Iterate over arrays or repeat operations.
 ```
 
 **Inside the loop, access:**
+
 - `{{loop.item}}` or `{{user}}` — Current item
 - `{{loop.index}}` or `{{index}}` — Current index (0-based)
 - `{{loop.isFirst}}` — Is first iteration
@@ -179,6 +184,7 @@ Iterate over arrays or repeat operations.
 ```
 
 **Inside the loop:**
+
 - `{{loop.index}}` — Current iteration (0-4)
 - `{{loop.count}}` — Total count (5)
 
@@ -188,7 +194,11 @@ After the loop completes, collected outputs are available:
 
 ```typescript
 // If loop body outputs to 'result'
-{{loop_node.outputs}}  // Array of all 'result' values
+{
+    {
+        loop_node.outputs;
+    }
+} // Array of all 'result' values
 ```
 
 ### Best Practices
@@ -206,10 +216,10 @@ Pause workflow execution.
 
 ### Wait Types
 
-| Type | Description |
-|------|-------------|
+| Type       | Description                     |
+| ---------- | ------------------------------- |
 | `duration` | Wait for a specific time period |
-| `until` | Wait until a specific timestamp |
+| `until`    | Wait until a specific timestamp |
 
 ### Duration Wait
 
@@ -233,13 +243,13 @@ Pause workflow execution.
 
 ### Duration Units
 
-| Unit | Description |
-|------|-------------|
-| `ms` | Milliseconds |
-| `seconds` | Seconds |
-| `minutes` | Minutes |
-| `hours` | Hours |
-| `days` | Days |
+| Unit      | Description  |
+| --------- | ------------ |
+| `ms`      | Milliseconds |
+| `seconds` | Seconds      |
+| `minutes` | Minutes      |
+| `hours`   | Hours        |
+| `days`    | Days         |
 
 ### Use Cases
 
@@ -274,12 +284,12 @@ Pause for human input or approval.
 
 ### Input Types
 
-| Type | Description | Widget |
-|------|-------------|--------|
-| `text` | Single line text | Text input |
-| `number` | Numeric value | Number input |
-| `boolean` | Yes/No decision | Toggle/checkbox |
-| `json` | Structured data | JSON editor |
+| Type      | Description      | Widget          |
+| --------- | ---------------- | --------------- |
+| `text`    | Single line text | Text input      |
+| `number`  | Numeric value    | Number input    |
+| `boolean` | Yes/No decision  | Toggle/checkbox |
+| `json`    | Structured data  | JSON editor     |
 
 ### How It Works
 
@@ -291,6 +301,7 @@ Pause for human input or approval.
 ### Notifications
 
 Configure who receives review requests:
+
 - Email notifications
 - Slack messages
 - Dashboard alerts
@@ -310,18 +321,18 @@ Transform and manipulate data.
 
 ### Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `map` | Transform each item in array |
-| `filter` | Filter array items |
-| `reduce` | Reduce array to single value |
-| `sort` | Sort array |
-| `merge` | Combine multiple objects |
-| `extract` | Extract specific fields |
-| `custom` | Custom JavaScript transformation |
-| `parseXML` | Parse XML to JSON |
-| `parseJSON` | Parse JSON string |
-| `passthrough` | Pass data unchanged |
+| Operation     | Description                      |
+| ------------- | -------------------------------- |
+| `map`         | Transform each item in array     |
+| `filter`      | Filter array items               |
+| `reduce`      | Reduce array to single value     |
+| `sort`        | Sort array                       |
+| `merge`       | Combine multiple objects         |
+| `extract`     | Extract specific fields          |
+| `custom`      | Custom JavaScript transformation |
+| `parseXML`    | Parse XML to JSON                |
+| `parseJSON`   | Parse JSON string                |
+| `passthrough` | Pass data unchanged              |
 
 ### Map Operation
 
@@ -394,10 +405,10 @@ Store and retrieve data across workflow nodes with optional semantic search.
 
 ### Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `store` | Store a key-value pair |
-| `search` | Search stored values |
+| Operation | Description            |
+| --------- | ---------------------- |
+| `store`   | Store a key-value pair |
+| `search`  | Search stored values   |
 
 ### Store Operation
 
@@ -436,10 +447,10 @@ Execute custom JavaScript or Python code.
 
 ### Languages
 
-| Language | Runtime |
-|----------|---------|
+| Language   | Runtime                 |
+| ---------- | ----------------------- |
 | JavaScript | V8 (Node.js compatible) |
-| Python | Python 3.11 |
+| Python     | Python 3.11             |
 
 ### Configuration
 
@@ -488,12 +499,12 @@ return {"processed": processed, "count": len(processed)}
 
 ### Security Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `allowNetworkAccess` | false | Allow HTTP requests |
-| `allowFileSystemAccess` | false | Allow file operations |
-| `timeout` | 30000 | Max execution time (ms) |
-| `memory` | 256 | Memory limit (MB) |
+| Option                  | Default | Description             |
+| ----------------------- | ------- | ----------------------- |
+| `allowNetworkAccess`    | false   | Allow HTTP requests     |
+| `allowFileSystemAccess` | false   | Allow file operations   |
+| `timeout`               | 30000   | Max execution time (ms) |
+| `memory`                | 256     | Memory limit (MB)       |
 
 ### Use Cases
 

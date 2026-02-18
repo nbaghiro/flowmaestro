@@ -22,12 +22,12 @@ Chat interfaces turn your AI agents into embeddable chat widgets. Users can have
 
 ### Basic Settings
 
-| Field | Description |
-|-------|-------------|
-| **Name** | Internal name for the interface |
-| **Slug** | URL identifier (e.g., `my-chat` becomes `app.flowmaestro.com/chat/my-chat`) |
-| **Agent** | The AI agent that powers this chat |
-| **Status** | Published or draft |
+| Field      | Description                                                                 |
+| ---------- | --------------------------------------------------------------------------- |
+| **Name**   | Internal name for the interface                                             |
+| **Slug**   | URL identifier (e.g., `my-chat` becomes `app.flowmaestro.com/chat/my-chat`) |
+| **Agent**  | The AI agent that powers this chat                                          |
+| **Status** | Published or draft                                                          |
 
 ### Branding
 
@@ -37,16 +37,16 @@ Choose how the header area appears:
 
 ```typescript
 // Image cover
-coverType: "image"
-coverValue: "https://example.com/header.jpg"
+coverType: "image";
+coverValue: "https://example.com/header.jpg";
 
 // Solid color
-coverType: "color"
-coverValue: "#1a1a2e"
+coverType: "color";
+coverValue: "#1a1a2e";
 
 // Gradient
-coverType: "gradient"
-coverValue: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+coverType: "gradient";
+coverValue: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
 ```
 
 #### Icon
@@ -55,11 +55,11 @@ Upload a custom avatar or logo that appears in the chat header and widget button
 
 #### Theme
 
-| Option | Description |
-|--------|-------------|
+| Option            | Description                              |
+| ----------------- | ---------------------------------------- |
 | **Primary Color** | Accent color for buttons and links (hex) |
-| **Font Family** | Custom font for the interface |
-| **Border Radius** | Rounded corners in pixels |
+| **Font Family**   | Custom font for the interface            |
+| **Border Radius** | Rounded corners in pixels                |
 
 ### Chat Configuration
 
@@ -90,9 +90,9 @@ Pre-defined prompts shown as clickable buttons:
 
 ```json
 [
-  { "text": "Track my order", "emoji": "package" },
-  { "text": "Return policy", "emoji": "refresh" },
-  { "text": "Contact support", "emoji": "headphones" }
+    { "text": "Track my order", "emoji": "package" },
+    { "text": "Return policy", "emoji": "refresh" },
+    { "text": "Contact support", "emoji": "headphones" }
 ]
 ```
 
@@ -102,12 +102,12 @@ Pre-defined prompts shown as clickable buttons:
 
 Enable users to upload files in their messages:
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| **Allow File Upload** | false | Enable/disable uploads |
-| **Max Files** | 3 | Files per message |
-| **Max File Size** | 10 MB | Size limit per file |
-| **Allowed Types** | All | MIME type whitelist |
+| Setting               | Default | Description            |
+| --------------------- | ------- | ---------------------- |
+| **Allow File Upload** | false   | Enable/disable uploads |
+| **Max Files**         | 3       | Files per message      |
+| **Max File Size**     | 10 MB   | Size limit per file    |
+| **Allowed Types**     | All     | MIME type whitelist    |
 
 Example configuration:
 
@@ -129,20 +129,20 @@ Example configuration:
 
 Configure the floating widget button:
 
-| Setting | Options | Description |
-|---------|---------|-------------|
-| **Position** | `bottom-right`, `bottom-left` | Widget placement |
-| **Button Icon** | Emoji or custom | Icon on the widget button |
-| **Button Text** | Optional | Label next to the icon |
-| **Initial State** | `collapsed`, `expanded` | Starting state |
+| Setting           | Options                       | Description               |
+| ----------------- | ----------------------------- | ------------------------- |
+| **Position**      | `bottom-right`, `bottom-left` | Widget placement          |
+| **Button Icon**   | Emoji or custom               | Icon on the widget button |
+| **Button Text**   | Optional                      | Label next to the icon    |
+| **Initial State** | `collapsed`, `expanded`       | Starting state            |
 
 ### Session Management
 
 #### Persistence Type
 
-| Type | Behavior |
-|------|----------|
-| `session` | New session on each page visit |
+| Type            | Behavior                              |
+| --------------- | ------------------------------------- |
+| `session`       | New session on each page visit        |
 | `local_storage` | Persists across visits (same browser) |
 
 #### Session Timeout
@@ -150,12 +150,13 @@ Configure the floating widget button:
 Configure how long sessions remain active:
 
 ```typescript
-sessionTimeoutMinutes: 60 // Sessions expire after 1 hour of inactivity
+sessionTimeoutMinutes: 60; // Sessions expire after 1 hour of inactivity
 ```
 
 #### Session Data
 
 FlowMaestro automatically captures:
+
 - Browser fingerprint
 - IP address
 - User agent
@@ -180,10 +181,7 @@ Protect against abuse:
 Add this snippet to your website:
 
 ```html
-<script
-  src="https://app.flowmaestro.com/widget/your-slug.js"
-  async
-></script>
+<script src="https://app.flowmaestro.com/widget/your-slug.js" async></script>
 ```
 
 The widget automatically initializes and appears in the configured position.
@@ -211,18 +209,14 @@ FlowMaestroWidget.destroy();
 For more control, disable auto-init and initialize manually:
 
 ```html
-<script
-  src="https://app.flowmaestro.com/widget/your-slug.js"
-  data-auto-init="false"
-  async
-></script>
+<script src="https://app.flowmaestro.com/widget/your-slug.js" data-auto-init="false" async></script>
 
 <script>
-  // Initialize when ready
-  FlowMaestroWidget.init({
-    position: 'bottom-left',
-    initialState: 'expanded'
-  });
+    // Initialize when ready
+    FlowMaestroWidget.init({
+        position: "bottom-left",
+        initialState: "expanded"
+    });
 </script>
 ```
 
@@ -235,6 +229,7 @@ GET /api/public/chat-interfaces/{slug}/stream/{sessionToken}
 ```
 
 The stream delivers:
+
 - Token-by-token responses
 - Tool execution updates
 - Completion signals
@@ -279,6 +274,7 @@ Available tools:
 ### Suggested Prompts
 
 Choose prompts that:
+
 - Cover common questions
 - Are action-oriented
 - Help users get started quickly
@@ -286,6 +282,7 @@ Choose prompts that:
 ### Welcome Message
 
 Your welcome message should:
+
 - Introduce the bot's capabilities
 - Set expectations for response types
 - Provide quick starting points

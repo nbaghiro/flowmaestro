@@ -25,6 +25,7 @@ Upload a custom header image or provide a URL:
 ```
 
 **Recommendations:**
+
 - Dimensions: 1200x400px minimum
 - Format: JPG, PNG, or WebP
 - File size: Under 500KB for fast loading
@@ -43,6 +44,7 @@ Use a solid background color:
 ```
 
 **Tips:**
+
 - Use your brand's primary color
 - Ensure contrast with white text
 - Consider dark colors for professional look
@@ -60,22 +62,24 @@ Create dynamic backgrounds with CSS gradients:
 
 **Example gradients:**
 
-| Style | Value |
-|-------|-------|
+| Style          | Value                                               |
+| -------------- | --------------------------------------------------- |
 | Blue to Purple | `linear-gradient(135deg, #667eea 0%, #764ba2 100%)` |
-| Sunset | `linear-gradient(90deg, #f093fb 0%, #f5576c 100%)` |
-| Ocean | `linear-gradient(180deg, #2193b0 0%, #6dd5ed 100%)` |
-| Forest | `linear-gradient(120deg, #11998e 0%, #38ef7d 100%)` |
-| Dark | `linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)` |
+| Sunset         | `linear-gradient(90deg, #f093fb 0%, #f5576c 100%)`  |
+| Ocean          | `linear-gradient(180deg, #2193b0 0%, #6dd5ed 100%)` |
+| Forest         | `linear-gradient(120deg, #11998e 0%, #38ef7d 100%)` |
+| Dark           | `linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)` |
 
 ### Icon/Avatar
 
 Upload a custom icon that appears:
+
 - In the chat header
 - On the widget button (chat interfaces)
 - In the form header (form interfaces)
 
 **Specifications:**
+
 - Dimensions: 128x128px minimum (square)
 - Format: PNG with transparency recommended
 - File size: Under 100KB
@@ -87,6 +91,7 @@ Upload a custom icon that appears:
 #### Primary Color
 
 The accent color used for:
+
 - Buttons and CTAs
 - Links
 - Active states
@@ -94,18 +99,18 @@ The accent color used for:
 
 ```typescript
 {
-  primaryColor: "#6366f1" // Indigo
+    primaryColor: "#6366f1"; // Indigo
 }
 ```
 
 **Color suggestions by industry:**
 
-| Industry | Recommended Colors |
-|----------|-------------------|
-| Tech/SaaS | `#6366f1`, `#3b82f6`, `#8b5cf6` |
-| Finance | `#059669`, `#0d9488`, `#0284c7` |
-| Healthcare | `#0ea5e9`, `#06b6d4`, `#10b981` |
-| E-commerce | `#f59e0b`, `#ef4444`, `#ec4899` |
+| Industry     | Recommended Colors              |
+| ------------ | ------------------------------- |
+| Tech/SaaS    | `#6366f1`, `#3b82f6`, `#8b5cf6` |
+| Finance      | `#059669`, `#0d9488`, `#0284c7` |
+| Healthcare   | `#0ea5e9`, `#06b6d4`, `#10b981` |
+| E-commerce   | `#f59e0b`, `#ef4444`, `#ec4899` |
 | Professional | `#475569`, `#334155`, `#1e293b` |
 
 #### Font Family
@@ -114,11 +119,12 @@ Customize the font for all interface text:
 
 ```typescript
 {
-  fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Inter, system-ui, sans-serif";
 }
 ```
 
 **Popular options:**
+
 - `Inter` - Modern, clean
 - `Roboto` - Google's readable font
 - `SF Pro` - Apple-style
@@ -131,16 +137,16 @@ Control the roundedness of elements:
 
 ```typescript
 {
-  borderRadius: 12 // pixels
+    borderRadius: 12; // pixels
 }
 ```
 
-| Value | Style |
-|-------|-------|
-| 0 | Sharp corners |
-| 4-8 | Subtle rounding |
-| 12-16 | Modern rounded |
-| 24+ | Pill-shaped buttons |
+| Value | Style               |
+| ----- | ------------------- |
+| 0     | Sharp corners       |
+| 4-8   | Subtle rounding     |
+| 12-16 | Modern rounded      |
+| 24+   | Pill-shaped buttons |
 
 ## Content Customization
 
@@ -152,6 +158,7 @@ The first message users see (chat interfaces):
 # Welcome to Acme Support!
 
 I'm here to help you with:
+
 - Product questions
 - Order tracking
 - Returns and refunds
@@ -160,6 +167,7 @@ What can I help you with today?
 ```
 
 **Best practices:**
+
 - Keep it concise (2-4 lines)
 - List capabilities clearly
 - End with an open question
@@ -172,12 +180,12 @@ Input field placeholder:
 ```typescript
 // Chat interface
 {
-  inputPlaceholder: "Type your message..."
+    inputPlaceholder: "Type your message...";
 }
 
 // Form interface
 {
-  inputPlaceholder: "Describe what you need..."
+    inputPlaceholder: "Describe what you need...";
 }
 ```
 
@@ -187,28 +195,29 @@ Pre-defined prompts shown as clickable buttons (chat interfaces):
 
 ```typescript
 {
-  suggestedPrompts: [
-    {
-      text: "Track my order",
-      emoji: "package"
-    },
-    {
-      text: "Return policy",
-      emoji: "refresh"
-    },
-    {
-      text: "Pricing plans",
-      emoji: "credit-card"
-    },
-    {
-      text: "Talk to human",
-      emoji: "headphones"
-    }
-  ]
+    suggestedPrompts: [
+        {
+            text: "Track my order",
+            emoji: "package"
+        },
+        {
+            text: "Return policy",
+            emoji: "refresh"
+        },
+        {
+            text: "Pricing plans",
+            emoji: "credit-card"
+        },
+        {
+            text: "Talk to human",
+            emoji: "headphones"
+        }
+    ];
 }
 ```
 
 **Tips:**
+
 - Use 3-4 prompts maximum
 - Cover common use cases
 - Keep text short (2-4 words)
@@ -260,7 +269,7 @@ Where the floating button appears:
 
 ```typescript
 {
-  widgetPosition: "bottom-right" // or "bottom-left"
+    widgetPosition: "bottom-right"; // or "bottom-left"
 }
 ```
 
@@ -270,7 +279,7 @@ The icon on the widget button:
 
 ```typescript
 {
-  widgetButtonIcon: "message-circle" // or emoji like "speech-balloon"
+    widgetButtonIcon: "message-circle"; // or emoji like "speech-balloon"
 }
 ```
 
@@ -280,7 +289,7 @@ Optional text next to the icon:
 
 ```typescript
 {
-  widgetButtonText: "Chat with us"
+    widgetButtonText: "Chat with us";
 }
 ```
 
@@ -290,7 +299,7 @@ Whether the chat starts open or closed:
 
 ```typescript
 {
-  widgetInitialState: "collapsed" // or "expanded"
+    widgetInitialState: "collapsed"; // or "expanded"
 }
 ```
 
@@ -310,6 +319,7 @@ Whether the chat starts open or closed:
 ### Download Format
 
 When download is enabled, users can save output as:
+
 - Markdown (.md)
 - Plain text (.txt)
 
@@ -321,15 +331,15 @@ For custom domain deployments, override CSS variables:
 
 ```css
 :root {
-  --fm-primary: #6366f1;
-  --fm-primary-hover: #4f46e5;
-  --fm-text: #1f2937;
-  --fm-text-muted: #6b7280;
-  --fm-bg: #ffffff;
-  --fm-bg-muted: #f3f4f6;
-  --fm-border: #e5e7eb;
-  --fm-radius: 12px;
-  --fm-font: 'Inter', system-ui, sans-serif;
+    --fm-primary: #6366f1;
+    --fm-primary-hover: #4f46e5;
+    --fm-text: #1f2937;
+    --fm-text-muted: #6b7280;
+    --fm-bg: #ffffff;
+    --fm-bg-muted: #f3f4f6;
+    --fm-border: #e5e7eb;
+    --fm-radius: 12px;
+    --fm-font: "Inter", system-ui, sans-serif;
 }
 ```
 
@@ -339,12 +349,12 @@ FlowMaestro interfaces automatically respect user's system preference. For custo
 
 ```css
 @media (prefers-color-scheme: dark) {
-  :root {
-    --fm-text: #f9fafb;
-    --fm-bg: #111827;
-    --fm-bg-muted: #1f2937;
-    --fm-border: #374151;
-  }
+    :root {
+        --fm-text: #f9fafb;
+        --fm-bg: #111827;
+        --fm-bg-muted: #1f2937;
+        --fm-border: #374151;
+    }
 }
 ```
 

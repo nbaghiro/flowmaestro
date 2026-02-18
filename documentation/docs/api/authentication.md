@@ -30,14 +30,14 @@ You can authenticate using either method:
 ### X-API-Key Header (Recommended)
 
 ```bash
-curl https://api.flowmaestro.io/api/v1/workflows \
+curl https://api.flowmaestro.ai/v1/workflows \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 
 ### Authorization Bearer Header
 
 ```bash
-curl https://api.flowmaestro.io/api/v1/workflows \
+curl https://api.flowmaestro.ai/v1/workflows \
   -H "Authorization: Bearer fm_live_your_api_key"
 ```
 

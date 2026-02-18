@@ -24,7 +24,7 @@ GET /api/v1/executions/:id/events
 ### Example
 
 ```bash
-curl -N "https://api.flowmaestro.io/api/v1/executions/exec_xyz789/events" \
+curl -N "https://api.flowmaestro.ai/v1/executions/exec_xyz789/events" \
   -H "X-API-Key: fm_live_your_api_key" \
   -H "Accept: text/event-stream"
 ```
@@ -72,14 +72,11 @@ data: {"execution_id": "exec_xyz789", "status": "completed", "outputs": {...}}
 ## JavaScript Example
 
 ```javascript
-const eventSource = new EventSource(
-    "https://api.flowmaestro.io/api/v1/executions/exec_xyz789/events",
-    {
-        headers: {
-            "X-API-Key": "fm_live_your_api_key"
-        }
+const eventSource = new EventSource("https://api.flowmaestro.ai/v1/executions/exec_xyz789/events", {
+    headers: {
+        "X-API-Key": "fm_live_your_api_key"
     }
-);
+});
 
 eventSource.addEventListener("execution:completed", (event) => {
     const data = JSON.parse(event.data);

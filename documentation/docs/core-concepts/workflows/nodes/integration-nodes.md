@@ -41,17 +41,17 @@ The generic integration node works with any connected service.
 
 Connect to messaging and communication platforms.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **Slack** | send_message, list_channels, create_channel |
-| **Discord** | send_message, create_webhook, manage_roles |
-| **Microsoft Teams** | send_message, create_meeting, list_channels |
-| **Gmail** | send_email, list_emails, create_draft, get_thread |
-| **Outlook** | send_email, create_event, list_contacts |
-| **WhatsApp Business** | send_message, send_template, send_media |
-| **Telegram** | send_message, send_photo, create_poll |
-| **Twilio** | send_sms, make_call, send_whatsapp |
-| **Zoom** | create_meeting, list_meetings, get_recording |
+| Provider              | Key Operations                                    |
+| --------------------- | ------------------------------------------------- |
+| **Slack**             | send_message, list_channels, create_channel       |
+| **Discord**           | send_message, create_webhook, manage_roles        |
+| **Microsoft Teams**   | send_message, create_meeting, list_channels       |
+| **Gmail**             | send_email, list_emails, create_draft, get_thread |
+| **Outlook**           | send_email, create_event, list_contacts           |
+| **WhatsApp Business** | send_message, send_template, send_media           |
+| **Telegram**          | send_message, send_photo, create_poll             |
+| **Twilio**            | send_sms, make_call, send_whatsapp                |
+| **Zoom**              | create_meeting, list_meetings, get_recording      |
 
 **Slack Example:**
 
@@ -81,16 +81,16 @@ Connect to messaging and communication platforms.
 
 Manage online stores and order processing.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **Shopify** | create_product, get_order, update_inventory, list_customers |
-| **WooCommerce** | create_order, update_product, list_orders |
-| **Stripe** | create_charge, create_customer, create_refund |
-| **BigCommerce** | create_product, update_order, manage_inventory |
-| **Etsy** | create_listing, get_orders, update_shop |
-| **Square** | create_payment, list_orders, manage_inventory |
-| **PayPal** | create_payment, get_transaction, create_refund |
-| **Shippo** | create_shipment, get_rates, track_package |
+| Provider        | Key Operations                                              |
+| --------------- | ----------------------------------------------------------- |
+| **Shopify**     | create_product, get_order, update_inventory, list_customers |
+| **WooCommerce** | create_order, update_product, list_orders                   |
+| **Stripe**      | create_charge, create_customer, create_refund               |
+| **BigCommerce** | create_product, update_order, manage_inventory              |
+| **Etsy**        | create_listing, get_orders, update_shop                     |
+| **Square**      | create_payment, list_orders, manage_inventory               |
+| **PayPal**      | create_payment, get_transaction, create_refund              |
+| **Shippo**      | create_shipment, get_rates, track_package                   |
 
 **Shopify Example:**
 
@@ -112,13 +112,13 @@ Manage online stores and order processing.
 
 Manage customer relationships and sales pipelines.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **HubSpot** | create_contact, update_deal, create_company, add_note |
-| **Salesforce** | create_record, update_record, query_records |
-| **Pipedrive** | create_deal, update_person, create_activity |
-| **Apollo.io** | search_people, enrich_contact, create_sequence |
-| **Zoho CRM** | create_lead, update_contact, search_records |
+| Provider       | Key Operations                                        |
+| -------------- | ----------------------------------------------------- |
+| **HubSpot**    | create_contact, update_deal, create_company, add_note |
+| **Salesforce** | create_record, update_record, query_records           |
+| **Pipedrive**  | create_deal, update_person, create_activity           |
+| **Apollo.io**  | search_people, enrich_contact, create_sequence        |
+| **Zoho CRM**   | create_lead, update_contact, search_records           |
 
 **HubSpot Example:**
 
@@ -142,16 +142,16 @@ Manage customer relationships and sales pipelines.
 
 Connect to workspace and productivity tools.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **Google Sheets** | read_rows, append_row, update_cell, create_sheet |
-| **Google Docs** | create_document, insert_text, get_document |
-| **Google Calendar** | create_event, list_events, update_event |
-| **Notion** | create_page, update_database, query_database |
-| **Airtable** | create_record, update_record, list_records, search |
-| **Coda** | create_row, update_row, list_rows |
-| **Miro** | create_sticky, create_board, add_shape |
-| **Figma** | get_file, list_projects, get_comments |
+| Provider            | Key Operations                                     |
+| ------------------- | -------------------------------------------------- |
+| **Google Sheets**   | read_rows, append_row, update_cell, create_sheet   |
+| **Google Docs**     | create_document, insert_text, get_document         |
+| **Google Calendar** | create_event, list_events, update_event            |
+| **Notion**          | create_page, update_database, query_database       |
+| **Airtable**        | create_record, update_record, list_records, search |
+| **Coda**            | create_row, update_row, list_rows                  |
+| **Miro**            | create_sticky, create_board, add_shape             |
+| **Figma**           | get_file, list_projects, get_comments              |
 
 **Google Sheets Example:**
 
@@ -195,15 +195,15 @@ Connect to workspace and productivity tools.
 
 Post and manage social media content.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **Instagram** | create_post, get_insights, reply_to_comment |
-| **Facebook** | create_post, list_pages, get_page_insights |
-| **LinkedIn** | create_post, get_profile, share_article |
-| **X (Twitter)** | create_tweet, search_tweets, get_user |
-| **YouTube** | upload_video, list_videos, get_analytics |
-| **TikTok** | get_videos, get_analytics |
-| **Buffer** | create_post, schedule_post, list_profiles |
+| Provider        | Key Operations                              |
+| --------------- | ------------------------------------------- |
+| **Instagram**   | create_post, get_insights, reply_to_comment |
+| **Facebook**    | create_post, list_pages, get_page_insights  |
+| **LinkedIn**    | create_post, get_profile, share_article     |
+| **X (Twitter)** | create_tweet, search_tweets, get_user       |
+| **YouTube**     | upload_video, list_videos, get_analytics    |
+| **TikTok**      | get_videos, get_analytics                   |
+| **Buffer**      | create_post, schedule_post, list_profiles   |
 
 **LinkedIn Example:**
 
@@ -225,16 +225,16 @@ Post and manage social media content.
 
 Integrate with development and DevOps tools.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **GitHub** | create_issue, create_pr, list_repos, get_file |
-| **GitLab** | create_issue, create_mr, trigger_pipeline |
-| **Jira** | create_issue, update_issue, add_comment |
-| **Linear** | create_issue, update_issue, list_projects |
-| **PagerDuty** | create_incident, acknowledge, resolve |
-| **Sentry** | list_issues, resolve_issue, get_event |
-| **Vercel** | create_deployment, list_deployments, get_logs |
-| **CircleCI** | trigger_pipeline, get_workflow, list_jobs |
+| Provider      | Key Operations                                |
+| ------------- | --------------------------------------------- |
+| **GitHub**    | create_issue, create_pr, list_repos, get_file |
+| **GitLab**    | create_issue, create_mr, trigger_pipeline     |
+| **Jira**      | create_issue, update_issue, add_comment       |
+| **Linear**    | create_issue, update_issue, list_projects     |
+| **PagerDuty** | create_incident, acknowledge, resolve         |
+| **Sentry**    | list_issues, resolve_issue, get_event         |
+| **Vercel**    | create_deployment, list_deployments, get_logs |
+| **CircleCI**  | trigger_pipeline, get_workflow, list_jobs     |
 
 **GitHub Example:**
 
@@ -258,13 +258,13 @@ Integrate with development and DevOps tools.
 
 Manage support tickets and customer interactions.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **Zendesk** | create_ticket, update_ticket, add_comment |
-| **Intercom** | create_conversation, send_message, list_users |
-| **Freshdesk** | create_ticket, update_ticket, list_agents |
+| Provider       | Key Operations                                  |
+| -------------- | ----------------------------------------------- |
+| **Zendesk**    | create_ticket, update_ticket, add_comment       |
+| **Intercom**   | create_conversation, send_message, list_users   |
+| **Freshdesk**  | create_ticket, update_ticket, list_agents       |
 | **Help Scout** | create_conversation, send_reply, list_customers |
-| **LiveChat** | send_message, get_chat, list_agents |
+| **LiveChat**   | send_message, get_chat, list_agents             |
 
 **Zendesk Example:**
 
@@ -288,12 +288,12 @@ Manage support tickets and customer interactions.
 
 Email marketing and automation platforms.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **Mailchimp** | add_member, send_campaign, create_campaign |
-| **SendGrid** | send_email, create_template, list_contacts |
-| **Klaviyo** | track_event, add_to_list, send_campaign |
-| **Marketo** | create_lead, add_to_campaign, send_email |
+| Provider              | Key Operations                              |
+| --------------------- | ------------------------------------------- |
+| **Mailchimp**         | add_member, send_campaign, create_campaign  |
+| **SendGrid**          | send_email, create_template, list_contacts  |
+| **Klaviyo**           | track_event, add_to_list, send_campaign     |
+| **Marketo**           | create_lead, add_to_campaign, send_email    |
 | **HubSpot Marketing** | create_email, list_campaigns, get_analytics |
 
 **Mailchimp Example:**
@@ -321,14 +321,14 @@ Email marketing and automation platforms.
 
 Access analytics and business intelligence data.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **Google Analytics** | get_report, list_properties, get_realtime |
-| **Mixpanel** | track_event, get_report, list_users |
-| **Amplitude** | track_event, get_user, list_events |
-| **Segment** | track, identify, group |
-| **Tableau** | get_view, list_workbooks, refresh_extract |
-| **Power BI** | refresh_dataset, get_report, list_dashboards |
+| Provider             | Key Operations                               |
+| -------------------- | -------------------------------------------- |
+| **Google Analytics** | get_report, list_properties, get_realtime    |
+| **Mixpanel**         | track_event, get_report, list_users          |
+| **Amplitude**        | track_event, get_user, list_events           |
+| **Segment**          | track, identify, group                       |
+| **Tableau**          | get_view, list_workbooks, refresh_extract    |
+| **Power BI**         | refresh_dataset, get_report, list_dashboards |
 
 ---
 
@@ -336,13 +336,13 @@ Access analytics and business intelligence data.
 
 File storage and management.
 
-| Provider | Key Operations |
-|----------|----------------|
-| **AWS S3** | upload_file, download_file, list_objects, delete_object |
-| **Google Cloud Storage** | upload_file, download_file, list_files |
-| **Dropbox** | upload_file, download_file, create_folder |
-| **Google Drive** | upload_file, list_files, share_file |
-| **Box** | upload_file, list_files, create_folder |
+| Provider                 | Key Operations                                          |
+| ------------------------ | ------------------------------------------------------- |
+| **AWS S3**               | upload_file, download_file, list_objects, delete_object |
+| **Google Cloud Storage** | upload_file, download_file, list_files                  |
+| **Dropbox**              | upload_file, download_file, create_folder               |
+| **Google Drive**         | upload_file, list_files, share_file                     |
+| **Box**                  | upload_file, list_files, create_folder                  |
 
 **AWS S3 Example:**
 
@@ -366,14 +366,14 @@ File storage and management.
 
 External AI/ML service integrations.
 
-| Provider | Use Case |
-|----------|----------|
-| **OpenAI** | GPT models, DALL-E, Whisper |
-| **Anthropic** | Claude models |
-| **Google** | Gemini, Vertex AI |
-| **ElevenLabs** | Voice synthesis |
-| **Replicate** | Various ML models |
-| **Stability AI** | Stable Diffusion |
+| Provider         | Use Case                    |
+| ---------------- | --------------------------- |
+| **OpenAI**       | GPT models, DALL-E, Whisper |
+| **Anthropic**    | Claude models               |
+| **Google**       | Gemini, Vertex AI           |
+| **ElevenLabs**   | Voice synthesis             |
+| **Replicate**    | Various ML models           |
+| **Stability AI** | Stable Diffusion            |
 
 ---
 
@@ -391,12 +391,12 @@ Start workflows from external events.
 
 ### Event Examples
 
-| Provider | Events |
-|----------|--------|
-| Shopify | order_created, product_updated, inventory_changed |
-| Stripe | payment_succeeded, subscription_created, refund_created |
-| GitHub | push, pull_request, issue_created |
-| Slack | message_received, reaction_added, channel_created |
+| Provider | Events                                                  |
+| -------- | ------------------------------------------------------- |
+| Shopify  | order_created, product_updated, inventory_changed       |
+| Stripe   | payment_succeeded, subscription_created, refund_created |
+| GitHub   | push, pull_request, issue_created                       |
+| Slack    | message_received, reaction_added, channel_created       |
 
 ---
 
@@ -406,13 +406,13 @@ Manage files in connected storage.
 
 ### Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `read` | Read file contents |
-| `write` | Write content to file |
-| `delete` | Delete a file |
-| `list` | List files in directory |
-| `exists` | Check if file exists |
+| Operation | Description             |
+| --------- | ----------------------- |
+| `read`    | Read file contents      |
+| `write`   | Write content to file   |
+| `delete`  | Delete a file           |
+| `list`    | List files in directory |
+| `exists`  | Check if file exists    |
 
 ```typescript
 {

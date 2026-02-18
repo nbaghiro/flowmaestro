@@ -43,27 +43,27 @@ Response with Citations
 1. Navigate to **Knowledge Bases**
 2. Click **New Knowledge Base**
 3. Configure:
-   - Name: "Product Documentation"
-   - Description: "Company product docs and FAQs"
+    - Name: "Product Documentation"
+    - Description: "Company product docs and FAQs"
 
 ## Step 2: Upload Documents
 
 1. Click **Add Documents**
 2. Upload your files:
-   - PDFs, Word docs, Markdown
-   - Text files, HTML pages
-   - Or add from URLs
+    - PDFs, Word docs, Markdown
+    - Text files, HTML pages
+    - Or add from URLs
 
 3. Wait for processing (extract → chunk → embed)
 
 **Supported formats:**
 
-| Format | Best For |
-|--------|----------|
-| PDF | Product manuals, policies |
-| Markdown | Technical docs, guides |
-| HTML | Web pages, help articles |
-| TXT | Plain text content |
+| Format   | Best For                  |
+| -------- | ------------------------- |
+| PDF      | Product manuals, policies |
+| Markdown | Technical docs, guides    |
+| HTML     | Web pages, help articles  |
+| TXT      | Plain text content        |
 
 ## Step 3: Configure Chunking
 
@@ -88,8 +88,8 @@ Adjust how documents are split:
 1. Go to **Agents** > **New Agent**
 2. Choose **General Assistant** template
 3. Configure:
-   - Name: "Documentation Assistant"
-   - Model: claude-sonnet-4-5 (good at following instructions)
+    - Name: "Documentation Assistant"
+    - Model: claude-sonnet-4-5 (good at following instructions)
 
 ## Step 5: Write the System Prompt
 
@@ -254,12 +254,12 @@ Source: refund-policy.pdf, section "Damaged Items"
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| Agent doesn't find relevant docs | Lower threshold, increase topK |
-| Wrong information retrieved | Improve chunking, add metadata |
-| Agent makes up facts | Strengthen system prompt instructions |
-| Slow responses | Reduce topK, optimize chunk size |
+| Issue                            | Solution                              |
+| -------------------------------- | ------------------------------------- |
+| Agent doesn't find relevant docs | Lower threshold, increase topK        |
+| Wrong information retrieved      | Improve chunking, add metadata        |
+| Agent makes up facts             | Strengthen system prompt instructions |
+| Slow responses                   | Reduce topK, optimize chunk size      |
 
 ## Next Steps
 

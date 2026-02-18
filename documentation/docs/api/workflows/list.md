@@ -25,7 +25,7 @@ GET /api/v1/workflows
 ### Example
 
 ```bash
-curl "https://api.flowmaestro.io/api/v1/workflows?page=1&per_page=20" \
+curl "https://api.flowmaestro.ai/v1/workflows?page=1&per_page=20" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

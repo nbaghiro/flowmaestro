@@ -60,8 +60,8 @@ client = FlowMaestroClient(
     # Required: Your API key
     api_key="fm_live_your_api_key",
 
-    # Optional: Custom base URL (default: https://api.flowmaestro.io)
-    base_url="https://api.flowmaestro.io",
+    # Optional: Custom base URL (default: https://api.flowmaestro.ai)
+    base_url="https://api.flowmaestro.ai",
 
     # Optional: Request timeout in seconds (default: 30.0)
     timeout=30.0,

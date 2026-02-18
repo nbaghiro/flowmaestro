@@ -50,35 +50,36 @@ Accept file uploads in your workflow.
 
 ### Supported File Types
 
-| Category | Extensions | MIME Types |
-|----------|------------|------------|
-| Documents | PDF, DOCX, DOC, TXT, MD, HTML | application/pdf, etc. |
-| Data | JSON, CSV, XLSX | application/json, text/csv |
-| Code | JS, TS, PY, etc. | text/javascript, etc. |
-| Images | PNG, JPG, GIF, WEBP | image/* |
+| Category  | Extensions                    | MIME Types                 |
+| --------- | ----------------------------- | -------------------------- |
+| Documents | PDF, DOCX, DOC, TXT, MD, HTML | application/pdf, etc.      |
+| Data      | JSON, CSV, XLSX               | application/json, text/csv |
+| Code      | JS, TS, PY, etc.              | text/javascript, etc.      |
+| Images    | PNG, JPG, GIF, WEBP           | image/\*                   |
 
 ### Output
 
 ```typescript
 {
-  files: [
-    {
-      name: "report.pdf",
-      size: 1024000,
-      mimeType: "application/pdf",
-      content: "Extracted text content...",
-      chunks: [
-        { text: "Chunk 1...", index: 0 },
-        { text: "Chunk 2...", index: 1 }
-      ]
-    }
-  ]
+    files: [
+        {
+            name: "report.pdf",
+            size: 1024000,
+            mimeType: "application/pdf",
+            content: "Extracted text content...",
+            chunks: [
+                { text: "Chunk 1...", index: 0 },
+                { text: "Chunk 2...", index: 1 }
+            ]
+        }
+    ];
 }
 ```
 
 ### Chunking
 
 Files are automatically chunked for RAG applications:
+
 - `chunkSize`: Characters per chunk (default: 1000)
 - `chunkOverlap`: Overlap between chunks (default: 200)
 
@@ -109,10 +110,10 @@ Accept and process URLs.
 
 ### Scraping Modes
 
-| Mode | Output |
-|------|--------|
-| `html` | Raw HTML content |
-| `text` | Plain text only |
+| Mode       | Output              |
+| ---------- | ------------------- |
+| `html`     | Raw HTML content    |
+| `text`     | Plain text only     |
 | `markdown` | Structured markdown |
 
 ### Output
@@ -154,14 +155,14 @@ Search the web and return results.
 
 ```typescript
 {
-  results: [
-    {
-      title: "Result Title",
-      url: "https://...",
-      snippet: "Preview text...",
-      publishedDate: "2024-01-15"
-    }
-  ]
+    results: [
+        {
+            title: "Result Title",
+            url: "https://...",
+            snippet: "Preview text...",
+            publishedDate: "2024-01-15"
+        }
+    ];
 }
 ```
 
@@ -292,13 +293,13 @@ Generated on: {{current_date}}
 
 ### Template Syntax
 
-| Syntax | Description |
-|--------|-------------|
-| `{{variable}}` | Insert variable value |
-| `{{#each items}}...{{/each}}` | Loop over array |
-| `{{#if condition}}...{{/if}}` | Conditional content |
-| `{{this}}` | Current item in loop |
-| `{{@index}}` | Current loop index |
+| Syntax                        | Description           |
+| ----------------------------- | --------------------- |
+| `{{variable}}`                | Insert variable value |
+| `{{#each items}}...{{/each}}` | Loop over array       |
+| `{{#if condition}}...{{/if}}` | Conditional content   |
+| `{{this}}`                    | Current item in loop  |
+| `{{@index}}`                  | Current loop index    |
 
 ---
 
@@ -320,6 +321,7 @@ Perform external actions (send, create, update, delete).
 ```
 
 Used for:
+
 - Sending notifications
 - Creating records
 - Updating external systems
@@ -356,17 +358,17 @@ Create charts and visualizations.
 
 ### Chart Types
 
-| Type | Description |
-|------|-------------|
-| `bar` | Vertical bar chart |
+| Type             | Description          |
+| ---------------- | -------------------- |
+| `bar`            | Vertical bar chart   |
 | `horizontal_bar` | Horizontal bar chart |
-| `line` | Line chart |
-| `area` | Area chart |
-| `pie` | Pie chart |
-| `donut` | Donut chart |
-| `scatter` | Scatter plot |
-| `histogram` | Histogram |
-| `heatmap` | Heat map |
+| `line`           | Line chart           |
+| `area`           | Area chart           |
+| `pie`            | Pie chart            |
+| `donut`          | Donut chart          |
+| `scatter`        | Scatter plot         |
+| `histogram`      | Histogram            |
+| `heatmap`        | Heat map             |
 
 ---
 
@@ -490,30 +492,30 @@ Make HTTP requests to external APIs.
 
 ### Methods
 
-| Method | Use Case |
-|--------|----------|
-| `GET` | Retrieve data |
-| `POST` | Create resources |
-| `PUT` | Replace resources |
-| `PATCH` | Partial updates |
-| `DELETE` | Remove resources |
+| Method   | Use Case          |
+| -------- | ----------------- |
+| `GET`    | Retrieve data     |
+| `POST`   | Create resources  |
+| `PUT`    | Replace resources |
+| `PATCH`  | Partial updates   |
+| `DELETE` | Remove resources  |
 
 ### Authentication Types
 
-| Type | Configuration |
-|------|---------------|
-| `none` | No authentication |
-| `basic` | `{ username, password }` |
-| `bearer` | `{ token }` |
+| Type     | Configuration              |
+| -------- | -------------------------- |
+| `none`   | No authentication          |
+| `basic`  | `{ username, password }`   |
+| `bearer` | `{ token }`                |
 | `apiKey` | `{ key, value, location }` |
 
 ### Body Types
 
-| Type | Content-Type |
-|------|--------------|
-| `json` | application/json |
+| Type   | Content-Type                      |
+| ------ | --------------------------------- |
+| `json` | application/json                  |
 | `form` | application/x-www-form-urlencoded |
-| `raw` | Custom (set in headers) |
+| `raw`  | Custom (set in headers)           |
 
 ### Output
 
@@ -535,20 +537,20 @@ Query and manipulate databases.
 
 ### Supported Databases
 
-| Type | Description |
-|------|-------------|
-| `postgresql` | PostgreSQL |
-| `mysql` | MySQL / MariaDB |
-| `mongodb` | MongoDB |
+| Type         | Description     |
+| ------------ | --------------- |
+| `postgresql` | PostgreSQL      |
+| `mysql`      | MySQL / MariaDB |
+| `mongodb`    | MongoDB         |
 
 ### Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `query` | Execute SELECT query |
-| `insert` | Insert records |
-| `update` | Update records |
-| `delete` | Delete records |
+| Operation | Description          |
+| --------- | -------------------- |
+| `query`   | Execute SELECT query |
+| `insert`  | Insert records       |
+| `update`  | Update records       |
+| `delete`  | Delete records       |
 
 ### Configuration
 

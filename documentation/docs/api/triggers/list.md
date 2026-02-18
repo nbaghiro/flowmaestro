@@ -25,7 +25,7 @@ GET /api/v1/triggers
 ### Example
 
 ```bash
-curl "https://api.flowmaestro.io/api/v1/triggers" \
+curl "https://api.flowmaestro.ai/v1/triggers" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

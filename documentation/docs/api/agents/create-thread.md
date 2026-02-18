@@ -24,7 +24,7 @@ POST /api/v1/agents/:id/threads
 ### Example
 
 ```bash
-curl -X POST "https://api.flowmaestro.io/api/v1/agents/agent_abc123/threads" \
+curl -X POST "https://api.flowmaestro.ai/v1/agents/agent_abc123/threads" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

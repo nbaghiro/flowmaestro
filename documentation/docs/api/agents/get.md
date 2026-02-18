@@ -24,7 +24,7 @@ GET /api/v1/agents/:id
 ### Example
 
 ```bash
-curl "https://api.flowmaestro.io/api/v1/agents/agent_abc123" \
+curl "https://api.flowmaestro.ai/v1/agents/agent_abc123" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

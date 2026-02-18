@@ -24,7 +24,7 @@ DELETE /api/v1/webhooks/:id
 ### Example
 
 ```bash
-curl -X DELETE "https://api.flowmaestro.io/api/v1/webhooks/wh_abc123" \
+curl -X DELETE "https://api.flowmaestro.ai/v1/webhooks/wh_abc123" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

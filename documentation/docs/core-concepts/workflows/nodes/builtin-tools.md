@@ -15,17 +15,17 @@ Create visualizations from your data.
 
 ### Chart Types
 
-| Type | Best For |
-|------|----------|
-| **Bar** | Comparing categories |
-| **Horizontal Bar** | Long category names |
-| **Line** | Trends over time |
-| **Area** | Volume/cumulative data |
-| **Pie** | Part-to-whole relationships |
-| **Donut** | Part-to-whole with center label |
-| **Scatter** | Correlations between variables |
-| **Histogram** | Distribution of values |
-| **Heatmap** | Two-dimensional patterns |
+| Type               | Best For                        |
+| ------------------ | ------------------------------- |
+| **Bar**            | Comparing categories            |
+| **Horizontal Bar** | Long category names             |
+| **Line**           | Trends over time                |
+| **Area**           | Volume/cumulative data          |
+| **Pie**            | Part-to-whole relationships     |
+| **Donut**          | Part-to-whole with center label |
+| **Scatter**        | Correlations between variables  |
+| **Histogram**      | Distribution of values          |
+| **Heatmap**        | Two-dimensional patterns        |
 
 ### Configuration
 
@@ -58,10 +58,10 @@ Your data source should be an array of objects:
 
 ```typescript
 [
-  { month: "Jan", revenue: 45000 },
-  { month: "Feb", revenue: 52000 },
-  { month: "Mar", revenue: 61000 }
-]
+    { month: "Jan", revenue: 45000 },
+    { month: "Feb", revenue: 52000 },
+    { month: "Mar", revenue: 61000 }
+];
 ```
 
 ### Multiple Series
@@ -99,10 +99,10 @@ Create Excel or CSV files from data.
 
 ### Formats
 
-| Format | Description |
-|--------|-------------|
+| Format | Description                    |
+| ------ | ------------------------------ |
 | `xlsx` | Excel workbook with formatting |
-| `csv` | Plain comma-separated values |
+| `csv`  | Plain comma-separated values   |
 
 ### Configuration
 
@@ -123,13 +123,13 @@ Create Excel or CSV files from data.
 
 ### Styling Options
 
-| Option | Description |
-|--------|-------------|
-| `headerBold` | Bold header row |
-| `headerBackgroundColor` | Header background (hex) |
-| `headerFontColor` | Header text color (hex) |
-| `alternateRows` | Alternate row shading |
-| `freezeHeader` | Keep header visible on scroll |
+| Option                  | Description                   |
+| ----------------------- | ----------------------------- |
+| `headerBold`            | Bold header row               |
+| `headerBackgroundColor` | Header background (hex)       |
+| `headerFontColor`       | Header text color (hex)       |
+| `alternateRows`         | Alternate row shading         |
+| `freezeHeader`          | Keep header visible on scroll |
 
 ### Multiple Sheets (XLSX)
 
@@ -190,13 +190,13 @@ Create PDF documents from markdown or HTML.
 
 ### Page Sizes
 
-| Size | Dimensions |
-|------|------------|
-| `A4` | 210 x 297 mm |
-| `Letter` | 8.5 x 11 in |
-| `Legal` | 8.5 x 14 in |
-| `A3` | 297 x 420 mm |
-| `Tabloid` | 11 x 17 in |
+| Size      | Dimensions   |
+| --------- | ------------ |
+| `A4`      | 210 x 297 mm |
+| `Letter`  | 8.5 x 11 in  |
+| `Legal`   | 8.5 x 14 in  |
+| `A3`      | 297 x 420 mm |
+| `Tabloid` | 11 x 17 in   |
 
 ### Markdown Support
 
@@ -207,20 +207,23 @@ The PDF generator supports full markdown:
 
 ## Section Heading
 
-Regular paragraph with **bold** and *italic* text.
+Regular paragraph with **bold** and _italic_ text.
 
 ### Code Block
+
 \`\`\`javascript
 const greeting = "Hello, World!";
 console.log(greeting);
 \`\`\`
 
 ### Table
+
 | Column A | Column B |
-|----------|----------|
+| -------- | -------- |
 | Value 1  | Value 2  |
 
 ### List
+
 - Item one
 - Item two
 - Item three
@@ -232,17 +235,23 @@ For full control, use HTML:
 
 ```html
 <html>
-<head>
-  <style>
-    body { font-family: Arial, sans-serif; }
-    h1 { color: #333; }
-    .highlight { background: #ffeb3b; }
-  </style>
-</head>
-<body>
-  <h1>Report Title</h1>
-  <p class="highlight">Important information</p>
-</body>
+    <head>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+            }
+            h1 {
+                color: #333;
+            }
+            .highlight {
+                background: #ffeb3b;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Report Title</h1>
+        <p class="highlight">Important information</p>
+    </body>
 </html>
 ```
 
@@ -274,15 +283,15 @@ Capture web page screenshots.
 
 ### Options
 
-| Option | Description |
-|--------|-------------|
-| `fullPage` | Capture entire page (scrolling) |
-| `width` | Viewport width |
-| `height` | Viewport height |
-| `deviceScale` | Pixel density (1, 2, 3) |
-| `delay` | Wait for page to settle |
-| `selector` | CSS selector for specific element |
-| `darkMode` | Emulate dark mode preference |
+| Option        | Description                       |
+| ------------- | --------------------------------- |
+| `fullPage`    | Capture entire page (scrolling)   |
+| `width`       | Viewport width                    |
+| `height`      | Viewport height                   |
+| `deviceScale` | Pixel density (1, 2, 3)           |
+| `delay`       | Wait for page to settle           |
+| `selector`    | CSS selector for specific element |
+| `darkMode`    | Emulate dark mode preference      |
 
 ### Element Screenshots
 
@@ -334,24 +343,24 @@ Extract text from images.
 
 ### Page Segmentation Modes (PSM)
 
-| Mode | Description |
-|------|-------------|
-| 0 | Orientation and script detection only |
-| 1 | Automatic page segmentation with OSD |
-| 3 | Fully automatic (default) |
-| 4 | Assume single column of text |
-| 6 | Assume single uniform block of text |
-| 7 | Treat image as single text line |
-| 8 | Treat image as single word |
+| Mode | Description                           |
+| ---- | ------------------------------------- |
+| 0    | Orientation and script detection only |
+| 1    | Automatic page segmentation with OSD  |
+| 3    | Fully automatic (default)             |
+| 4    | Assume single column of text          |
+| 6    | Assume single uniform block of text   |
+| 7    | Treat image as single text line       |
+| 8    | Treat image as single word            |
 
 ### Preprocessing
 
-| Option | Description |
-|--------|-------------|
-| `deskew` | Straighten rotated text |
-| `denoise` | Remove image noise |
-| `contrast` | Adjust contrast (auto, high, low) |
-| `threshold` | Apply binary thresholding |
+| Option      | Description                       |
+| ----------- | --------------------------------- |
+| `deskew`    | Straighten rotated text           |
+| `denoise`   | Remove image noise                |
+| `contrast`  | Adjust contrast (auto, high, low) |
+| `threshold` | Apply binary thresholding         |
 
 ### Output
 
@@ -471,24 +480,24 @@ Best regards,
 
 ### Template Syntax
 
-| Syntax | Example | Description |
-|--------|---------|-------------|
-| `{{var}}` | `{{user.name}}` | Variable interpolation |
-| `{{#each arr}}...{{/each}}` | `{{#each items}}...{{/each}}` | Loop over array |
-| `{{#if cond}}...{{/if}}` | `{{#if user.isPremium}}...{{/if}}` | Conditional |
-| `{{#if cond}}...{{else}}...{{/if}}` | Full conditional | With else clause |
-| `{{this}}` | In loop | Current item |
-| `{{@index}}` | In loop | Current index |
-| `{{@first}}` | In loop | Is first item |
-| `{{@last}}` | In loop | Is last item |
+| Syntax                              | Example                            | Description            |
+| ----------------------------------- | ---------------------------------- | ---------------------- |
+| `{{var}}`                           | `{{user.name}}`                    | Variable interpolation |
+| `{{#each arr}}...{{/each}}`         | `{{#each items}}...{{/each}}`      | Loop over array        |
+| `{{#if cond}}...{{/if}}`            | `{{#if user.isPremium}}...{{/if}}` | Conditional            |
+| `{{#if cond}}...{{else}}...{{/if}}` | Full conditional                   | With else clause       |
+| `{{this}}`                          | In loop                            | Current item           |
+| `{{@index}}`                        | In loop                            | Current index          |
+| `{{@first}}`                        | In loop                            | Is first item          |
+| `{{@last}}`                         | In loop                            | Is last item           |
 
 ### Conditional Example
 
 ```handlebars
 {{#if order.isPriority}}
-**PRIORITY ORDER** - Ship immediately
+    **PRIORITY ORDER** - Ship immediately
 {{else}}
-Standard shipping (3-5 business days)
+    Standard shipping (3-5 business days)
 {{/if}}
 ```
 
@@ -496,10 +505,13 @@ Standard shipping (3-5 business days)
 
 ```handlebars
 {{#each departments}}
-## {{this.name}}
-{{#each this.employees}}
-- {{this.name}} ({{this.role}})
-{{/each}}
+    ##
+    {{this.name}}
+    {{#each this.employees}}
+        -
+        {{this.name}}
+        ({{this.role}})
+    {{/each}}
 {{/each}}
 ```
 

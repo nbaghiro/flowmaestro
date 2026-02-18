@@ -15,14 +15,14 @@ The core AI node for text generation and reasoning.
 
 ### Providers & Models
 
-| Provider | Models |
-|----------|--------|
-| **OpenAI** | gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3, o3-mini |
-| **Anthropic** | claude-opus-4-5, claude-sonnet-4-5, claude-haiku-4-5 |
-| **Google** | gemini-3-pro-preview, gemini-3-flash-preview, gemini-2.5-pro, gemini-2.5-flash |
-| **Cohere** | command-a-03-2025, command-r-plus, command-r |
-| **Hugging Face** | Llama-4-Scout, Llama-4-Maverick, Qwen-3-235B, DeepSeek-R1 |
-| **x.ai** | grok-3, grok-3-fast, grok-2-vision |
+| Provider         | Models                                                                         |
+| ---------------- | ------------------------------------------------------------------------------ |
+| **OpenAI**       | gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3, o3-mini |
+| **Anthropic**    | claude-opus-4-5, claude-sonnet-4-5, claude-haiku-4-5                           |
+| **Google**       | gemini-3-pro-preview, gemini-3-flash-preview, gemini-2.5-pro, gemini-2.5-flash |
+| **Cohere**       | command-a-03-2025, command-r-plus, command-r                                   |
+| **Hugging Face** | Llama-4-Scout, Llama-4-Maverick, Qwen-3-235B, DeepSeek-R1                      |
+| **x.ai**         | grok-3, grok-3-fast, grok-2-vision                                             |
 
 ### Configuration
 
@@ -39,16 +39,16 @@ The core AI node for text generation and reasoning.
 }
 ```
 
-| Field | Description |
-|-------|-------------|
-| `provider` | AI provider to use |
-| `model` | Specific model |
-| `systemPrompt` | System instructions (optional) |
-| `prompt` | User prompt (supports variables) |
-| `temperature` | Creativity (0-2, lower = deterministic) |
-| `maxTokens` | Maximum response length |
-| `topP` | Nucleus sampling parameter |
-| `outputVariable` | Variable name for result |
+| Field            | Description                             |
+| ---------------- | --------------------------------------- |
+| `provider`       | AI provider to use                      |
+| `model`          | Specific model                          |
+| `systemPrompt`   | System instructions (optional)          |
+| `prompt`         | User prompt (supports variables)        |
+| `temperature`    | Creativity (0-2, lower = deterministic) |
+| `maxTokens`      | Maximum response length                 |
+| `topP`           | Nucleus sampling parameter              |
+| `outputVariable` | Variable name for result                |
 
 ### Extended Thinking
 
@@ -64,6 +64,7 @@ Some models support extended thinking/reasoning:
 ```
 
 **Supported models:**
+
 - OpenAI: o3, o3-mini, gpt-4.1
 - Anthropic: claude-opus-4-5, claude-sonnet-4-5
 - Google: gemini-3-pro, gemini-3-flash
@@ -92,18 +93,18 @@ Analyze images with AI vision models.
 
 ### Providers
 
-| Provider | Models |
-|----------|--------|
-| **OpenAI** | gpt-4o, gpt-4o-mini |
+| Provider      | Models                             |
+| ------------- | ---------------------------------- |
+| **OpenAI**    | gpt-4o, gpt-4o-mini                |
 | **Anthropic** | claude-opus-4-5, claude-sonnet-4-5 |
-| **Google** | gemini-3-pro, gemini-3-flash |
-| **x.ai** | grok-2-vision |
+| **Google**    | gemini-3-pro, gemini-3-flash       |
+| **x.ai**      | grok-2-vision                      |
 
 ### Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `analyze` | Analyze and describe image content |
+| Operation  | Description                          |
+| ---------- | ------------------------------------ |
+| `analyze`  | Analyze and describe image content   |
 | `generate` | Generate images (provider-dependent) |
 
 ### Configuration
@@ -138,9 +139,9 @@ Transcribe audio to text.
 
 ### Providers
 
-| Provider | Models |
-|----------|--------|
-| **OpenAI** | whisper-1 |
+| Provider     | Models                       |
+| ------------ | ---------------------------- |
+| **OpenAI**   | whisper-1                    |
 | **Deepgram** | nova-2, nova, enhanced, base |
 
 ### Configuration
@@ -184,11 +185,11 @@ Generate speech from text.
 
 ### Providers
 
-| Provider | Voices |
-|----------|--------|
-| **OpenAI** | alloy, echo, fable, onyx, nova, shimmer |
-| **ElevenLabs** | 100+ voices, custom voice cloning |
-| **Deepgram** | aura, aura-asteria, aura-luna |
+| Provider       | Voices                                  |
+| -------------- | --------------------------------------- |
+| **OpenAI**     | alloy, echo, fable, onyx, nova, shimmer |
+| **ElevenLabs** | 100+ voices, custom voice cloning       |
+| **Deepgram**   | aura, aura-asteria, aura-luna           |
 
 ### Configuration
 
@@ -208,9 +209,9 @@ Generate speech from text.
 
 ### Output Options
 
-| Option | Description |
-|--------|-------------|
-| `returnAsUrl: true` | Returns URL to audio file |
+| Option               | Description                  |
+| -------------------- | ---------------------------- |
+| `returnAsUrl: true`  | Returns URL to audio file    |
 | `returnAsUrl: false` | Returns base64-encoded audio |
 
 ---
@@ -236,10 +237,10 @@ Advanced transcription with more options.
 
 ### Tasks
 
-| Task | Description |
-|------|-------------|
-| `transcribe` | Transcribe in original language |
-| `translate` | Transcribe and translate to English |
+| Task         | Description                         |
+| ------------ | ----------------------------------- |
+| `transcribe` | Transcribe in original language     |
+| `translate`  | Transcribe and translate to English |
 
 ---
 
@@ -249,11 +250,11 @@ Generate vector embeddings for semantic search.
 
 ### Providers
 
-| Provider | Models |
-|----------|--------|
+| Provider   | Models                                         |
+| ---------- | ---------------------------------------------- |
 | **OpenAI** | text-embedding-3-small, text-embedding-3-large |
-| **Cohere** | embed-english-v3.0, embed-multilingual-v3.0 |
-| **Google** | text-embedding-004 |
+| **Cohere** | embed-english-v3.0, embed-multilingual-v3.0    |
+| **Google** | text-embedding-004                             |
 
 ### Configuration
 
@@ -357,12 +358,12 @@ Search your knowledge bases with semantic similarity.
 }
 ```
 
-| Field | Description |
-|-------|-------------|
-| `knowledgeBaseId` | Target knowledge base |
-| `query` | Search query |
-| `topK` | Number of results |
-| `threshold` | Minimum similarity (0-1) |
+| Field             | Description              |
+| ----------------- | ------------------------ |
+| `knowledgeBaseId` | Target knowledge base    |
+| `query`           | Search query             |
+| `topK`            | Number of results        |
+| `threshold`       | Minimum similarity (0-1) |
 
 ### Output
 
@@ -432,23 +433,23 @@ Generate images with AI.
 
 ### Providers
 
-| Provider | Models |
-|----------|--------|
-| **OpenAI** | dall-e-3, dall-e-2 |
-| **Replicate** | flux-pro, flux-schnell |
+| Provider         | Models                   |
+| ---------------- | ------------------------ |
+| **OpenAI**       | dall-e-3, dall-e-2       |
+| **Replicate**    | flux-pro, flux-schnell   |
 | **Stability AI** | stable-diffusion-3, sdxl |
-| **FAL** | Various models |
+| **FAL**          | Various models           |
 
 ### Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `generate` | Create new image from prompt |
-| `inpaint` | Edit parts of an image |
-| `outpaint` | Extend image beyond borders |
-| `upscale` | Increase image resolution |
-| `removeBackground` | Remove image background |
-| `styleTransfer` | Apply style to image |
+| Operation          | Description                  |
+| ------------------ | ---------------------------- |
+| `generate`         | Create new image from prompt |
+| `inpaint`          | Edit parts of an image       |
+| `outpaint`         | Extend image beyond borders  |
+| `upscale`          | Increase image resolution    |
+| `removeBackground` | Remove image background      |
+| `styleTransfer`    | Apply style to image         |
 
 ### Configuration
 
@@ -476,12 +477,12 @@ Generate videos with AI.
 
 ### Providers
 
-| Provider | Models |
-|----------|--------|
-| **Google Veo** | veo-2 |
-| **Runway** | gen-3 |
-| **Luma** | dream-machine |
-| **Replicate** | Various |
+| Provider       | Models        |
+| -------------- | ------------- |
+| **Google Veo** | veo-2         |
+| **Runway**     | gen-3         |
+| **Luma**       | dream-machine |
+| **Replicate**  | Various       |
 
 ### Configuration
 
@@ -505,23 +506,23 @@ Generate videos with AI.
 
 ### Model Selection
 
-| Task | Recommended |
-|------|-------------|
-| Complex reasoning | claude-opus-4-5, o3, gpt-4.1 |
-| Fast responses | gpt-4o-mini, claude-haiku-4-5, gemini-flash |
-| Vision tasks | gpt-4o, claude-sonnet-4-5 |
-| Code generation | claude-sonnet-4-5, gpt-4.1 |
-| Cost-sensitive | gpt-4o-mini, gemini-flash-lite |
+| Task              | Recommended                                 |
+| ----------------- | ------------------------------------------- |
+| Complex reasoning | claude-opus-4-5, o3, gpt-4.1                |
+| Fast responses    | gpt-4o-mini, claude-haiku-4-5, gemini-flash |
+| Vision tasks      | gpt-4o, claude-sonnet-4-5                   |
+| Code generation   | claude-sonnet-4-5, gpt-4.1                  |
+| Cost-sensitive    | gpt-4o-mini, gemini-flash-lite              |
 
 ### Temperature Guidelines
 
-| Use Case | Temperature |
-|----------|-------------|
-| Factual Q&A | 0.0 - 0.3 |
-| Code generation | 0.2 - 0.4 |
-| General assistant | 0.5 - 0.7 |
-| Creative writing | 0.7 - 1.0 |
-| Brainstorming | 0.9 - 1.2 |
+| Use Case          | Temperature |
+| ----------------- | ----------- |
+| Factual Q&A       | 0.0 - 0.3   |
+| Code generation   | 0.2 - 0.4   |
+| General assistant | 0.5 - 0.7   |
+| Creative writing  | 0.7 - 1.0   |
+| Brainstorming     | 0.9 - 1.2   |
 
 ### Error Handling
 
@@ -529,7 +530,7 @@ Always handle potential AI failures:
 
 ```typescript
 // Use conditional node after LLM
-condition: "{{llm_node.output.error}} == null"
+condition: "{{llm_node.output.error}} == null";
 ```
 
 ### Cost Optimization

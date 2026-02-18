@@ -24,7 +24,7 @@ POST /api/v1/executions/:id/cancel
 ### Example
 
 ```bash
-curl -X POST "https://api.flowmaestro.io/api/v1/executions/exec_xyz789/cancel" \
+curl -X POST "https://api.flowmaestro.ai/v1/executions/exec_xyz789/cancel" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

@@ -31,7 +31,7 @@ GET /api/v1/webhooks/:id/deliveries
 ### Example
 
 ```bash
-curl "https://api.flowmaestro.io/api/v1/webhooks/wh_abc123/deliveries" \
+curl "https://api.flowmaestro.ai/v1/webhooks/wh_abc123/deliveries" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 

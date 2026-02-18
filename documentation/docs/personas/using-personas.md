@@ -22,6 +22,7 @@ Complete the required fields:
 <!-- Screenshot: Persona input form -->
 
 Each persona has specific inputs tailored to its task. Fields may include:
+
 - Text inputs for names, descriptions
 - Selections for options and preferences
 - Tags for topics or keywords
@@ -32,11 +33,11 @@ Each persona has specific inputs tailored to its task. Fields may include:
 
 Set limits for the task:
 
-| Setting | Description | Recommendation |
-|---------|-------------|----------------|
-| **Max Duration** | Maximum hours to run | Start with persona's estimate |
-| **Max Cost** | Maximum credits to spend | 2-3x estimated cost |
-| **Autonomy Level** | Approval requirements | `approve_high_risk` for new personas |
+| Setting            | Description              | Recommendation                       |
+| ------------------ | ------------------------ | ------------------------------------ |
+| **Max Duration**   | Maximum hours to run     | Start with persona's estimate        |
+| **Max Cost**       | Maximum credits to spend | 2-3x estimated cost                  |
+| **Autonomy Level** | Approval requirements    | `approve_high_risk` for new personas |
 
 ### 4. Connect Integrations
 
@@ -59,6 +60,7 @@ Track your persona task in real-time:
 <!-- Screenshot: Persona progress dashboard -->
 
 The dashboard shows:
+
 - **Current step** — Which SOP step is active
 - **Progress bar** — Visual completion percentage
 - **Cost tracker** — Credits consumed so far
@@ -69,12 +71,12 @@ The dashboard shows:
 
 Each SOP step has a status:
 
-| Status | Description |
-|--------|-------------|
-| Pending | Not yet started |
-| In Progress | Currently executing |
-| Completed | Successfully finished |
-| Skipped | Bypassed (not applicable) |
+| Status      | Description               |
+| ----------- | ------------------------- |
+| Pending     | Not yet started           |
+| In Progress | Currently executing       |
+| Completed   | Successfully finished     |
+| Skipped     | Bypassed (not applicable) |
 
 ```
 Step Progress:
@@ -152,11 +154,11 @@ Approval requests include:
 
 You have three options:
 
-| Action | Description |
-|--------|-------------|
-| **Approve** | Allow the action to proceed |
-| **Reject** | Deny the action, persona will find alternative |
-| **Modify** | Change parameters before approving |
+| Action      | Description                                    |
+| ----------- | ---------------------------------------------- |
+| **Approve** | Allow the action to proceed                    |
+| **Reject**  | Deny the action, persona will find alternative |
+| **Modify**  | Change parameters before approving             |
 
 <!-- Screenshot: Approval dialog with options -->
 
@@ -180,14 +182,14 @@ Configure where you receive approval requests:
 
 Tasks complete with one of these statuses:
 
-| Status | Description |
-|--------|-------------|
-| `completed` | Successfully finished with all deliverables |
-| `max_duration` | Hit time limit |
-| `max_cost` | Hit credit limit |
-| `cancelled` | Manually cancelled |
-| `failed` | Encountered unrecoverable error |
-| `user_completed` | User marked as done early |
+| Status           | Description                                 |
+| ---------------- | ------------------------------------------- |
+| `completed`      | Successfully finished with all deliverables |
+| `max_duration`   | Hit time limit                              |
+| `max_cost`       | Hit credit limit                            |
+| `cancelled`      | Manually cancelled                          |
+| `failed`         | Encountered unrecoverable error             |
+| `user_completed` | User marked as done early                   |
 
 ### Deliverables
 
@@ -196,6 +198,7 @@ When a task completes, collect your deliverables:
 <!-- Screenshot: Deliverables panel with download buttons -->
 
 Each deliverable includes:
+
 - **Preview** — View content inline
 - **Download** — Save to your device
 - **Copy** — Copy content to clipboard
@@ -203,21 +206,22 @@ Each deliverable includes:
 
 ### Deliverable Types
 
-| Type | Format | Actions |
-|------|--------|---------|
-| `markdown` | .md | Preview, Download, Copy |
-| `csv` | .csv | Preview, Download |
-| `json` | .json | Preview, Download, Copy |
-| `pdf` | .pdf | Preview, Download |
-| `code` | Various | Preview, Download, Copy |
-| `image` | .png/.jpg | Preview, Download |
-| `html` | .html | Preview, Download |
+| Type       | Format    | Actions                 |
+| ---------- | --------- | ----------------------- |
+| `markdown` | .md       | Preview, Download, Copy |
+| `csv`      | .csv      | Preview, Download       |
+| `json`     | .json     | Preview, Download, Copy |
+| `pdf`      | .pdf      | Preview, Download       |
+| `code`     | Various   | Preview, Download, Copy |
+| `image`    | .png/.jpg | Preview, Download       |
+| `html`     | .html     | Preview, Download       |
 
 ## Cost Tracking
 
 ### Credits
 
 Persona tasks consume credits based on:
+
 - LLM tokens (input and output)
 - Tool calls (web search, integrations)
 - File processing (documents, images)
@@ -261,9 +265,9 @@ Link relevant knowledge bases for the persona to reference:
 
 ```typescript
 {
-  additionalContext: {
-    knowledgeBases: ["kb_company_docs", "kb_competitors"]
-  }
+    additionalContext: {
+        knowledgeBases: ["kb_company_docs", "kb_competitors"];
+    }
 }
 ```
 
@@ -272,12 +276,12 @@ Upload reference documents:
 
 ```typescript
 {
-  additionalContext: {
-    files: [
-      { name: "brand_guidelines.pdf", url: "..." },
-      { name: "previous_analysis.md", url: "..." }
-    ]
-  }
+    additionalContext: {
+        files: [
+            { name: "brand_guidelines.pdf", url: "..." },
+            { name: "previous_analysis.md", url: "..." }
+        ];
+    }
 }
 ```
 
@@ -286,12 +290,9 @@ Provide web pages for context:
 
 ```typescript
 {
-  additionalContext: {
-    urls: [
-      "https://competitor.com/pricing",
-      "https://docs.competitor.com/api"
-    ]
-  }
+    additionalContext: {
+        urls: ["https://competitor.com/pricing", "https://docs.competitor.com/api"];
+    }
 }
 ```
 
@@ -313,6 +314,7 @@ If you're satisfied with partial results:
 3. Deliverables generated so far are saved
 
 This is useful when:
+
 - You have what you need
 - The task is taking longer than expected
 - You want to iterate on partial results
@@ -346,6 +348,7 @@ Poor: "Compare competitors"
 ### Iterative Approach
 
 For complex tasks:
+
 1. Start with a shorter duration limit
 2. Review partial results
 3. Run again with refinements if needed
@@ -353,6 +356,7 @@ For complex tasks:
 ### Monitor Actively
 
 For important tasks:
+
 - Watch the progress dashboard
 - Respond to questions promptly
 - Provide guidance when asked
@@ -360,6 +364,7 @@ For important tasks:
 ### Review Deliverables
 
 Always review generated content before using:
+
 - Check factual accuracy
 - Verify calculations
 - Ensure brand/style alignment
@@ -369,6 +374,7 @@ Always review generated content before using:
 ### Task Stuck
 
 If a task isn't progressing:
+
 1. Check for pending approvals
 2. Verify connected services are working
 3. Check if cost/duration limits are reached
@@ -377,6 +383,7 @@ If a task isn't progressing:
 ### Poor Quality Results
 
 If deliverables aren't meeting expectations:
+
 1. Provide more specific inputs
 2. Add additional context (files, URLs)
 3. Use `approve_all` to guide each step
@@ -385,6 +392,7 @@ If deliverables aren't meeting expectations:
 ### Connection Errors
 
 If integrations fail:
+
 1. Verify connections in Settings
 2. Re-authenticate if needed
 3. Check required permissions/scopes

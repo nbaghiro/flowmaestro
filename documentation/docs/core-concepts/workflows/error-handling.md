@@ -12,6 +12,7 @@ FlowMaestro provides robust error handling capabilities to ensure your workflows
 ### Node Errors
 
 Errors that occur within a node's execution:
+
 - API request failures
 - Invalid data formats
 - Authentication issues
@@ -20,6 +21,7 @@ Errors that occur within a node's execution:
 ### System Errors
 
 Platform-level issues:
+
 - Network connectivity
 - Service unavailability
 - Resource limits exceeded
@@ -27,6 +29,7 @@ Platform-level issues:
 ### Validation Errors
 
 Input/output validation failures:
+
 - Missing required fields
 - Type mismatches
 - Schema violations
@@ -47,6 +50,7 @@ Skip the failed node and continue execution with the next node.
 ```
 
 **Use when:**
+
 - Node is optional (e.g., sending a notification)
 - Downstream nodes can handle missing data
 - Partial success is acceptable
@@ -63,6 +67,7 @@ Execute an alternative path when a node fails.
 ```
 
 **Use when:**
+
 - Alternative approaches exist
 - Backup services are available
 - Redundancy is required
@@ -79,6 +84,7 @@ Jump to a specific node on error.
 ```
 
 **Use when:**
+
 - Centralized error handling is preferred
 - Custom error processing is needed
 - Error logging/alerting is required
@@ -95,6 +101,7 @@ Stop workflow execution immediately.
 ```
 
 **Use when:**
+
 - Continuing would cause data corruption
 - Error is unrecoverable
 - Manual intervention is required
@@ -120,11 +127,11 @@ Configure automatic retries for transient failures.
 
 ### Backoff Strategies
 
-| Strategy | Description |
-|----------|-------------|
-| **Fixed** | Same delay between retries |
-| **Exponential** | Delay doubles each retry |
-| **Linear** | Delay increases by fixed amount |
+| Strategy        | Description                     |
+| --------------- | ------------------------------- |
+| **Fixed**       | Same delay between retries      |
+| **Exponential** | Delay doubles each retry        |
+| **Linear**      | Delay increases by fixed amount |
 
 ### Exponential Backoff Example
 
@@ -140,13 +147,13 @@ Attempt 4: Success
 
 ### Retryable Errors
 
-| Error Type | Description |
-|------------|-------------|
-| `TIMEOUT` | Request timed out |
-| `RATE_LIMIT` | Rate limit exceeded (429) |
-| `SERVER_ERROR` | 5xx HTTP errors |
-| `NETWORK` | Network connectivity issues |
-| `TRANSIENT` | Temporary service issues |
+| Error Type     | Description                 |
+| -------------- | --------------------------- |
+| `TIMEOUT`      | Request timed out           |
+| `RATE_LIMIT`   | Rate limit exceeded (429)   |
+| `SERVER_ERROR` | 5xx HTTP errors             |
+| `NETWORK`      | Network connectivity issues |
+| `TRANSIENT`    | Temporary service issues    |
 
 ## Error Context
 
@@ -300,6 +307,7 @@ Transform errors for downstream systems:
 ### 1. Classify Errors
 
 Distinguish between:
+
 - **Retryable** — Transient issues that may succeed on retry
 - **Fatal** — Unrecoverable errors requiring manual intervention
 - **Expected** — Business logic failures (e.g., "user not found")
@@ -314,6 +322,7 @@ Distinguish between:
 ### 3. Preserve Context
 
 Always capture relevant context for debugging:
+
 - Input parameters
 - Request/response data
 - Timestamps
@@ -328,6 +337,7 @@ Always capture relevant context for debugging:
 ### 5. Test Error Paths
 
 Regularly test error scenarios:
+
 - Simulate API failures
 - Test timeout handling
 - Verify fallback chains
@@ -346,6 +356,7 @@ View errors in workflow execution history:
 ### Error Analytics
 
 Track error patterns over time:
+
 - Error rate by node
 - Most common error types
 - Retry success rates
@@ -357,17 +368,17 @@ Set up alerts for error conditions:
 
 ```typescript
 {
-  alerts: [
-    {
-      condition: "error_rate > 0.1",
-      window: "5m",
-      notify: ["slack:#alerts", "email:team@company.com"]
-    },
-    {
-      condition: "consecutive_failures >= 3",
-      notify: ["pagerduty:service_key"]
-    }
-  ]
+    alerts: [
+        {
+            condition: "error_rate > 0.1",
+            window: "5m",
+            notify: ["slack:#alerts", "email:team@company.com"]
+        },
+        {
+            condition: "consecutive_failures >= 3",
+            notify: ["pagerduty:service_key"]
+        }
+    ];
 }
 ```
 
