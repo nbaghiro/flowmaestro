@@ -415,6 +415,8 @@ function createAgentTestActivities(options: ActivityFactoryOptions) {
 
         updateThreadTokens: jest.fn().mockResolvedValue(undefined),
 
+        storeThreadEmbeddings: jest.fn().mockResolvedValue(undefined),
+
         // ==========================================
         // Safety Validation (Real with optional override)
         // ==========================================
