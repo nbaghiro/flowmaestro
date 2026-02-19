@@ -4,12 +4,16 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { initAnalytics } from "./lib/analytics";
+import { initDebug } from "./lib/debug";
 import { useAuthStore } from "./stores/authStore";
 import { useWorkspaceStore } from "./stores/workspaceStore";
 import "./App.css";
 
 // Initialize analytics before React renders
 initAnalytics();
+
+// Initialize debug namespace in development
+initDebug();
 
 // Create a client for TanStack Query
 const queryClient = new QueryClient({
