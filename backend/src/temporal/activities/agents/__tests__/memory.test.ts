@@ -55,6 +55,9 @@ import {
     clearExecutionMemory,
     createThreadMemoryTool,
     injectThreadMemoryTool,
+    injectThreadMemoryTools,
+    createClearThreadMemoryTool,
+    executeClearThreadMemory,
     createWorkingMemoryTool,
     executeUpdateWorkingMemory,
     getWorkingMemoryForAgent,
@@ -63,7 +66,8 @@ import {
     createWriteSharedMemoryTool,
     createSearchSharedMemoryTool,
     injectSharedMemoryTools,
-    isSharedMemoryTool
+    isSharedMemoryTool,
+    summarizeMessages
 } from "../memory";
 import { emitTokensUpdated } from "../streaming";
 
@@ -288,6 +292,7 @@ describe("Agent Memory Activities", () => {
                 agentId: "agent-1",
                 userId: "user-1",
                 executionId: "exec-1",
+                threadId: "thread-1",
                 messages: mockMessages
             });
 
@@ -296,6 +301,7 @@ describe("Agent Memory Activities", () => {
                 agentId: "agent-1",
                 userId: "user-1",
                 executionId: "exec-1",
+                threadId: "thread-1",
                 messages: mockMessages,
                 embeddingModel: "text-embedding-3-small",
                 embeddingProvider: "openai"
@@ -427,6 +433,132 @@ describe("Agent Memory Activities", () => {
             const result = injectThreadMemoryTool(existingTools);
 
             expect(result).toHaveLength(1);
+        });
+    });
+
+    describe("injectThreadMemoryTools", () => {
+        it("should inject both search and clear memory tools", () => {
+            const existingTools: Tool[] = [
+                {
+                    id: "tool-1",
+                    name: "other_tool",
+                    type: "function",
+                    description: "Other tool",
+                    schema: {},
+                    config: {}
+                }
+            ];
+
+            const result = injectThreadMemoryTools(existingTools);
+
+            expect(result).toHaveLength(3);
+            expect(result.map((t) => t.name)).toContain("search_thread_memory");
+            expect(result.map((t) => t.name)).toContain("clear_thread_memory");
+            expect(result.map((t) => t.name)).toContain("other_tool");
+        });
+
+        it("should not duplicate existing tools", () => {
+            const existingTools: Tool[] = [
+                {
+                    id: "built-in-search-thread-memory",
+                    name: "search_thread_memory",
+                    type: "function",
+                    description: "Search",
+                    schema: {},
+                    config: {}
+                },
+                {
+                    id: "built-in-clear-thread-memory",
+                    name: "clear_thread_memory",
+                    type: "function",
+                    description: "Clear",
+                    schema: {},
+                    config: {}
+                }
+            ];
+
+            const result = injectThreadMemoryTools(existingTools);
+
+            expect(result).toHaveLength(2);
+        });
+    });
+
+    describe("createClearThreadMemoryTool", () => {
+        it("should create clear thread memory tool definition", () => {
+            const tool = createClearThreadMemoryTool();
+
+            expect(tool.id).toBe("built-in-clear-thread-memory");
+            expect(tool.name).toBe("clear_thread_memory");
+            expect(tool.type).toBe("function");
+            expect(tool.schema.properties).toHaveProperty("reason");
+            expect(tool.schema.properties).toHaveProperty("confirmation");
+            expect(tool.schema.required).toContain("confirmation");
+            expect(tool.config.functionName).toBe("clear_thread_memory");
+        });
+    });
+
+    describe("executeClearThreadMemory", () => {
+        it("should clear thread memory successfully", async () => {
+            // Set up mock return value using the shared instance
+            mockThreadMemoryServiceInstance.clearExecutionMemory.mockResolvedValue(10);
+
+            const result = await executeClearThreadMemory({
+                agentId: "agent-1",
+                userId: "user-1",
+                executionId: "exec-1",
+                reason: "User requested fresh start"
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.deletedCount).toBe(10);
+            expect(result.message).toContain("Cleared 10 memory entries");
+            expect(result.message).toContain("User requested fresh start");
+        });
+
+        it("should handle clear without reason", async () => {
+            mockThreadMemoryServiceInstance.clearExecutionMemory.mockResolvedValue(5);
+
+            const result = await executeClearThreadMemory({
+                agentId: "agent-1",
+                userId: "user-1",
+                executionId: "exec-1"
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.deletedCount).toBe(5);
+            expect(result.message).toContain("Cleared 5 memory entries");
+        });
+
+        it("should handle errors gracefully", async () => {
+            mockThreadMemoryServiceInstance.clearExecutionMemory.mockRejectedValue(
+                new Error("Database error")
+            );
+
+            const result = await executeClearThreadMemory({
+                agentId: "agent-1",
+                userId: "user-1",
+                executionId: "exec-1"
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBe(true);
+            expect(result.message).toBe("Database error");
+        });
+    });
+
+    describe("summarizeMessages", () => {
+        // Note: summarizeMessages makes actual LLM calls in production.
+        // These tests verify the function handles empty input correctly.
+        // Full LLM integration tests should be in a separate test suite.
+
+        it("should return empty result for no messages", async () => {
+            const result = await summarizeMessages({
+                messages: []
+            });
+
+            expect(result.summary).toBe("");
+            expect(result.originalMessageCount).toBe(0);
+            expect(result.tokensSaved).toBe(0);
         });
     });
 

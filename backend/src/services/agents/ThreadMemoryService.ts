@@ -19,6 +19,7 @@ export interface StoreThreadEmbeddingsInput {
     agentId: string;
     userId: string;
     executionId: string;
+    threadId: string;
     messages: ThreadMessage[];
     embeddingModel?: string;
     embeddingProvider?: string;
@@ -65,12 +66,28 @@ export class ThreadMemoryService {
             agentId,
             userId,
             executionId,
+            threadId,
             messages,
             embeddingModel = "text-embedding-3-small",
             embeddingProvider = "openai"
         } = input;
 
+        logger.info(
+            {
+                component: "ThreadMemoryService",
+                executionId,
+                agentId,
+                userId,
+                messageCount: messages.length
+            },
+            "storeThreadEmbeddings - Starting"
+        );
+
         if (messages.length === 0) {
+            logger.info(
+                { component: "ThreadMemoryService", executionId },
+                "storeThreadEmbeddings - No messages to store"
+            );
             return { stored: 0, skipped: 0 };
         }
 
@@ -94,20 +111,71 @@ export class ThreadMemoryService {
             return true;
         });
 
+        logger.info(
+            {
+                component: "ThreadMemoryService",
+                executionId,
+                totalMessages: messages.length,
+                embeddableCount: embeddableMessages.length,
+                skippedCount: messages.length - embeddableMessages.length,
+                embeddableRoles: embeddableMessages.map((m) => m.role)
+            },
+            "storeThreadEmbeddings - Filtered messages"
+        );
+
         if (embeddableMessages.length === 0) {
+            logger.info(
+                { component: "ThreadMemoryService", executionId },
+                "storeThreadEmbeddings - No embeddable messages after filtering"
+            );
             return { stored: 0, skipped: messages.length };
         }
 
         // Generate embeddings for all messages
         const texts = embeddableMessages.map((msg) => msg.content);
-        const embeddingResult = await this.embeddingService.generateEmbeddings(
-            texts,
+
+        logger.info(
             {
-                model: embeddingModel,
-                provider: embeddingProvider
+                component: "ThreadMemoryService",
+                executionId,
+                textCount: texts.length,
+                embeddingModel,
+                embeddingProvider
             },
-            userId
+            "storeThreadEmbeddings - Generating embeddings"
         );
+
+        let embeddingResult;
+        try {
+            embeddingResult = await this.embeddingService.generateEmbeddings(
+                texts,
+                {
+                    model: embeddingModel,
+                    provider: embeddingProvider
+                },
+                userId
+            );
+
+            logger.info(
+                {
+                    component: "ThreadMemoryService",
+                    executionId,
+                    embeddingCount: embeddingResult.embeddings.length,
+                    firstEmbeddingDim: embeddingResult.embeddings[0]?.length
+                },
+                "storeThreadEmbeddings - Embeddings generated successfully"
+            );
+        } catch (embeddingError) {
+            logger.error(
+                {
+                    component: "ThreadMemoryService",
+                    executionId,
+                    err: embeddingError
+                },
+                "storeThreadEmbeddings - Embedding generation FAILED"
+            );
+            throw embeddingError;
+        }
 
         // Create embedding records
         const embeddingInputs: CreateThreadEmbeddingInput[] = embeddableMessages.map(
@@ -117,6 +185,7 @@ export class ThreadMemoryService {
                     agent_id: agentId,
                     user_id: userId,
                     execution_id: executionId,
+                    thread_id: threadId,
                     message_id: msg.id,
                     message_role: msg.role as "user" | "assistant" | "system" | "tool",
                     message_index: messageIndex,
@@ -128,13 +197,40 @@ export class ThreadMemoryService {
             }
         );
 
-        // Store in database (batch insert)
-        const stored = await this.repository.createBatch(embeddingInputs);
-
         logger.info(
-            { component: "ThreadMemoryService", storedCount: stored.length, executionId },
-            "Stored thread embeddings"
+            {
+                component: "ThreadMemoryService",
+                executionId,
+                inputCount: embeddingInputs.length
+            },
+            "storeThreadEmbeddings - Storing in database"
         );
+
+        // Store in database (batch insert)
+        let stored;
+        try {
+            stored = await this.repository.createBatch(embeddingInputs);
+
+            logger.info(
+                {
+                    component: "ThreadMemoryService",
+                    storedCount: stored.length,
+                    executionId,
+                    inputCount: embeddingInputs.length
+                },
+                "storeThreadEmbeddings - Database insert complete"
+            );
+        } catch (dbError) {
+            logger.error(
+                {
+                    component: "ThreadMemoryService",
+                    executionId,
+                    err: dbError
+                },
+                "storeThreadEmbeddings - Database insert FAILED"
+            );
+            throw dbError;
+        }
 
         return {
             stored: stored.length,
@@ -161,15 +257,50 @@ export class ThreadMemoryService {
             embeddingProvider = "openai"
         } = input;
 
-        // Generate query embedding
-        const queryEmbedding = await this.embeddingService.generateQueryEmbedding(
-            query,
+        logger.info(
             {
-                model: embeddingModel,
-                provider: embeddingProvider
+                component: "ThreadMemoryService",
+                agentId,
+                userId,
+                query: query.substring(0, 100),
+                topK,
+                similarityThreshold,
+                contextWindow,
+                executionId,
+                excludeCurrentExecution
             },
-            userId
+            "searchThreadMemory - Starting search"
         );
+
+        // Generate query embedding
+        let queryEmbedding;
+        try {
+            queryEmbedding = await this.embeddingService.generateQueryEmbedding(
+                query,
+                {
+                    model: embeddingModel,
+                    provider: embeddingProvider
+                },
+                userId
+            );
+
+            logger.info(
+                {
+                    component: "ThreadMemoryService",
+                    embeddingDim: queryEmbedding?.length
+                },
+                "searchThreadMemory - Query embedding generated"
+            );
+        } catch (embeddingError) {
+            logger.error(
+                {
+                    component: "ThreadMemoryService",
+                    err: embeddingError
+                },
+                "searchThreadMemory - Query embedding generation FAILED"
+            );
+            throw embeddingError;
+        }
 
         // Search for similar messages
         const searchInput: SearchSimilarMessagesInput = {
@@ -190,15 +321,31 @@ export class ThreadMemoryService {
             }
         }
 
+        logger.info(
+            {
+                component: "ThreadMemoryService",
+                searchParams: {
+                    agent_id: searchInput.agent_id,
+                    user_id: searchInput.user_id,
+                    top_k: searchInput.top_k,
+                    similarity_threshold: searchInput.similarity_threshold,
+                    execution_id: searchInput.execution_id,
+                    exclude_execution_id: searchInput.exclude_execution_id
+                }
+            },
+            "searchThreadMemory - Executing database search"
+        );
+
         const results = await this.repository.searchSimilar(searchInput);
 
         logger.info(
             {
                 component: "ThreadMemoryService",
                 resultCount: results.length,
-                queryPreview: query.substring(0, 50)
+                queryPreview: query.substring(0, 50),
+                topSimilarities: results.slice(0, 3).map((r) => r.similarity)
             },
-            "Found similar messages for query"
+            "searchThreadMemory - Search complete"
         );
 
         return {

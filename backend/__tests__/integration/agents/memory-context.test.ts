@@ -10,7 +10,7 @@ import {
     runAgentExecution,
     createTestAgent
 } from "./helpers/agent-test-env";
-import { simpleChatAgent, VECTOR_MEMORY_CONFIG } from "./helpers/agent-test-fixtures";
+import { simpleChatAgent } from "./helpers/agent-test-fixtures";
 import type { AgentTestEnvironment } from "./helpers/agent-test-env";
 import type { MemoryConfig } from "../../../src/storage/models/Agent";
 
@@ -303,7 +303,6 @@ describe("Memory Context Integration Tests", () => {
     describe("Context Window Management", () => {
         it("should truncate old messages when exceeding max", async () => {
             const limitedMemoryConfig: MemoryConfig = {
-                type: "buffer",
                 max_messages: 10
             };
 
@@ -349,7 +348,6 @@ describe("Memory Context Integration Tests", () => {
 
         it("should preserve system message during truncation", async () => {
             const smallContextConfig: MemoryConfig = {
-                type: "buffer",
                 max_messages: 5
             };
 
@@ -384,69 +382,66 @@ describe("Memory Context Integration Tests", () => {
     // =========================================================================
 
     describe("Memory Configuration Types", () => {
-        it("should handle buffer memory type", async () => {
-            const bufferConfig: MemoryConfig = {
-                type: "buffer",
+        it("should handle default memory configuration", async () => {
+            const memoryConfig: MemoryConfig = {
                 max_messages: 50
             };
 
             testEnv = await createAgentTestEnvironment({
-                mockLLMResponses: [createCompletionResponse("Buffer memory response")]
+                mockLLMResponses: [createCompletionResponse("Memory response")]
             });
 
-            const bufferAgent = createTestAgent({
-                id: "agent-buffer",
-                memoryConfig: bufferConfig
+            const agent = createTestAgent({
+                id: "agent-default-memory",
+                memoryConfig: memoryConfig
             });
-            testEnv.registerAgent(bufferAgent);
+            testEnv.registerAgent(agent);
 
             const result = await runAgentExecution(testEnv, {
-                agentId: bufferAgent.id,
-                initialMessage: "Test buffer memory"
+                agentId: agent.id,
+                initialMessage: "Test memory"
             });
 
             expect(result.result.success).toBe(true);
         });
 
-        it("should handle summary memory type", async () => {
-            const summaryConfig: MemoryConfig = {
-                type: "summary",
-                max_messages: 100,
-                summary_interval: 20
+        it("should handle large context memory configuration", async () => {
+            const largeContextConfig: MemoryConfig = {
+                max_messages: 100
             };
 
             testEnv = await createAgentTestEnvironment({
-                mockLLMResponses: [createCompletionResponse("Summary memory response")]
+                mockLLMResponses: [createCompletionResponse("Large context response")]
             });
 
-            const summaryAgent = createTestAgent({
-                id: "agent-summary",
-                memoryConfig: summaryConfig
+            const largeContextAgent = createTestAgent({
+                id: "agent-large-context",
+                memoryConfig: largeContextConfig
             });
-            testEnv.registerAgent(summaryAgent);
+            testEnv.registerAgent(largeContextAgent);
 
             const result = await runAgentExecution(testEnv, {
-                agentId: summaryAgent.id,
-                initialMessage: "Test summary memory"
+                agentId: largeContextAgent.id,
+                initialMessage: "Test large context memory"
             });
 
             expect(result.result.success).toBe(true);
         });
 
-        it("should handle vector memory type", async () => {
+        it("should handle memory with embeddings enabled", async () => {
             testEnv = await createAgentTestEnvironment({
-                mockLLMResponses: [createCompletionResponse("Vector memory response")]
+                mockLLMResponses: [createCompletionResponse("Embeddings enabled response")]
             });
 
-            const vectorAgent = createTestAgent({
-                id: "agent-vector",
-                memoryConfig: VECTOR_MEMORY_CONFIG
+            const embeddingsAgent = createTestAgent({
+                id: "agent-embeddings",
+                memoryConfig: { max_messages: 50, embeddings_enabled: true }
             });
-            testEnv.registerAgent(vectorAgent);
+            testEnv.registerAgent(embeddingsAgent);
 
             const result = await runAgentExecution(testEnv, {
-                agentId: vectorAgent.id,
-                initialMessage: "Test vector memory"
+                agentId: embeddingsAgent.id,
+                initialMessage: "Test embeddings memory"
             });
 
             expect(result.result.success).toBe(true);

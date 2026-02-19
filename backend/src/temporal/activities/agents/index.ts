@@ -89,10 +89,15 @@ export {
     // Memory tools
     createThreadMemoryTool,
     injectThreadMemoryTool,
+    injectThreadMemoryTools,
+    createClearThreadMemoryTool,
+    executeClearThreadMemory,
+    type ClearThreadMemoryInput,
     createWorkingMemoryTool,
     executeUpdateWorkingMemory,
     getWorkingMemoryForAgent,
     isWorkingMemoryEnabled,
+    injectWorkingMemoryTool,
     type UpdateWorkingMemoryInput,
     // Shared memory tools (workflow-scoped key-value storage)
     createReadSharedMemoryTool,
@@ -101,5 +106,9 @@ export {
     injectSharedMemoryTools,
     isSharedMemoryTool,
     type SharedMemoryToolInput,
-    type SharedMemoryToolResult
+    type SharedMemoryToolResult,
+    // Message summarization
+    summarizeMessages,
+    type SummarizeMessagesInput,
+    type SummarizeMessagesResult
 } from "./memory";

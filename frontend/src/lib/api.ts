@@ -1996,8 +1996,12 @@ export interface BuiltinTool {
 }
 
 export interface MemoryConfig {
-    type: "buffer" | "summary" | "vector";
+    /** Maximum messages to keep in context window (default: 50) */
     max_messages: number;
+    /** Enable cross-thread semantic search via embeddings (default: true) */
+    embeddings_enabled?: boolean;
+    /** Enable persistent working memory for user facts (default: true) */
+    working_memory_enabled?: boolean;
 }
 
 export interface Agent {
@@ -6957,6 +6961,234 @@ export async function getPaymentHistory(
         headers: {
             ...(token && { Authorization: `Bearer ${token}` }),
             "X-Workspace-Id": workspaceId
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+// ============================================================================
+// Agent Memory API
+// ============================================================================
+
+export interface AgentWorkingMemory {
+    user_id: string;
+    working_memory: string;
+    metadata?: Record<string, unknown>;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AgentMemoryDetail {
+    agent_id: string;
+    user_id: string;
+    working_memory: string;
+    metadata?: Record<string, unknown>;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface AgentMemorySearchResult {
+    content: string;
+    role: "user" | "assistant" | "system" | "tool";
+    similarity: number;
+    execution_id: string;
+    context_before?: Array<{ content: string; message_role: string }>;
+    context_after?: Array<{ content: string; message_role: string }>;
+}
+
+export interface AgentMemoryStats {
+    agent_id: string;
+    working_memory_count: number;
+    embedding_count: number;
+    memory_config?: MemoryConfig;
+}
+
+export interface AgentMemoryPaginatedResponse {
+    data: AgentWorkingMemory[];
+    pagination: {
+        page: number;
+        per_page: number;
+        total_count: number;
+        total_pages: number;
+        has_next: boolean;
+        has_prev: boolean;
+    };
+}
+
+/**
+ * List all working memories for an agent
+ */
+export async function getAgentMemories(
+    agentId: string,
+    options?: { page?: number; per_page?: number }
+): Promise<AgentMemoryPaginatedResponse> {
+    const token = getAuthToken();
+    const params = new URLSearchParams();
+    if (options?.page) params.set("page", options.page.toString());
+    if (options?.per_page) params.set("per_page", options.per_page.toString());
+
+    const url = `${API_BASE_URL}/agents/${agentId}/memory${params.toString() ? `?${params}` : ""}`;
+    const response = await apiFetch(url, {
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get a specific user's working memory for an agent
+ */
+export async function getAgentMemory(agentId: string, userId: string): Promise<AgentMemoryDetail> {
+    const token = getAuthToken();
+    const response = await apiFetch(`${API_BASE_URL}/agents/${agentId}/memory/${userId}`, {
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Update a user's working memory for an agent
+ */
+export async function updateAgentMemory(
+    agentId: string,
+    userId: string,
+    workingMemory: string,
+    metadata?: Record<string, unknown>
+): Promise<AgentMemoryDetail> {
+    const token = getAuthToken();
+    const response = await apiFetch(`${API_BASE_URL}/agents/${agentId}/memory/${userId}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({
+            working_memory: workingMemory,
+            ...(metadata && { metadata })
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Delete a user's working memory for an agent
+ */
+export async function deleteAgentMemory(agentId: string, userId: string): Promise<void> {
+    const token = getAuthToken();
+    const response = await apiFetch(`${API_BASE_URL}/agents/${agentId}/memory/${userId}`, {
+        method: "DELETE",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+}
+
+/**
+ * Clear all memory for an agent (working memories and embeddings)
+ */
+export async function clearAllAgentMemory(agentId: string): Promise<{
+    working_memories_deleted: number;
+    embeddings_deleted: number;
+}> {
+    const token = getAuthToken();
+    const response = await apiFetch(`${API_BASE_URL}/agents/${agentId}/memory/clear`, {
+        method: "POST",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Semantic search across agent memories
+ */
+export async function searchAgentMemory(
+    agentId: string,
+    query: string,
+    options?: {
+        top_k?: number;
+        similarity_threshold?: number;
+        user_id?: string;
+    }
+): Promise<{
+    agent_id: string;
+    query: string;
+    results: AgentMemorySearchResult[];
+    result_count: number;
+}> {
+    const token = getAuthToken();
+    const response = await apiFetch(`${API_BASE_URL}/agents/${agentId}/memory/search`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({
+            query,
+            ...options
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+}
+
+/**
+ * Get memory statistics for an agent
+ */
+export async function getAgentMemoryStats(agentId: string): Promise<AgentMemoryStats> {
+    const token = getAuthToken();
+    const response = await apiFetch(`${API_BASE_URL}/agents/${agentId}/memory/stats`, {
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
         }
     });
 

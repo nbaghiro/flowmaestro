@@ -7,11 +7,14 @@ import {
     sendNotFound,
     parsePaginationQuery
 } from "../response-helpers";
+import { agentMemoryRoutes } from "./memory";
 
 /**
  * Public API v1 - Agents routes.
  */
 export async function agentsV1Routes(fastify: FastifyInstance): Promise<void> {
+    // Register memory sub-routes
+    await fastify.register(agentMemoryRoutes);
     // GET /api/v1/agents - List agents
     fastify.get(
         "/",

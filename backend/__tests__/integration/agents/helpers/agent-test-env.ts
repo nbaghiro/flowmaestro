@@ -112,8 +112,9 @@ const DEFAULT_SAFETY_CONFIG: SafetyConfig = {
 };
 
 const DEFAULT_MEMORY_CONFIG: MemoryConfig = {
-    type: "buffer",
-    max_messages: 100
+    max_messages: 100,
+    embeddings_enabled: true,
+    working_memory_enabled: true
 };
 
 // Track if Runtime has been installed

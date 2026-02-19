@@ -25,7 +25,7 @@ describe("ThreadEmbeddingRepository", () => {
     let repository: ThreadEmbeddingRepository;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        mockQuery.mockReset();
         repository = new ThreadEmbeddingRepository();
     });
 
@@ -35,6 +35,7 @@ describe("ThreadEmbeddingRepository", () => {
                 agent_id: generateId(),
                 user_id: generateId(),
                 execution_id: generateId(),
+                thread_id: generateId(),
                 message_id: generateId(),
                 message_role: "user" as const,
                 message_index: 0,
@@ -86,11 +87,13 @@ describe("ThreadEmbeddingRepository", () => {
             const executionId = generateId();
             const agentId = generateId();
             const userId = generateId();
+            const threadId = generateId();
             const inputs = [
                 {
                     agent_id: agentId,
                     user_id: userId,
                     execution_id: executionId,
+                    thread_id: threadId,
                     message_id: generateId(),
                     message_role: "user" as const,
                     message_index: 0,
@@ -103,6 +106,7 @@ describe("ThreadEmbeddingRepository", () => {
                     agent_id: agentId,
                     user_id: userId,
                     execution_id: executionId,
+                    thread_id: threadId,
                     message_id: generateId(),
                     message_role: "assistant" as const,
                     message_index: 1,
@@ -160,6 +164,9 @@ describe("ThreadEmbeddingRepository", () => {
                 }
             ];
 
+            // First mock: COUNT query to check if embeddings exist
+            mockQuery.mockResolvedValueOnce(mockCountResult(10));
+            // Second mock: similarity search results
             mockQuery.mockResolvedValueOnce(mockRows(mockResults));
 
             const result = await repository.searchSimilar({
@@ -216,9 +223,12 @@ describe("ThreadEmbeddingRepository", () => {
                 }
             ];
 
-            mockQuery
-                .mockResolvedValueOnce(mockRows(mockResults))
-                .mockResolvedValueOnce(mockRows(mockContext));
+            // First mock: COUNT query
+            mockQuery.mockResolvedValueOnce(mockCountResult(10));
+            // Second mock: similarity search results
+            mockQuery.mockResolvedValueOnce(mockRows(mockResults));
+            // Third mock: context window query
+            mockQuery.mockResolvedValueOnce(mockRows(mockContext));
 
             const result = await repository.searchSimilar({
                 agent_id: agentId,
@@ -238,6 +248,9 @@ describe("ThreadEmbeddingRepository", () => {
             const userId = generateId();
             const executionId = generateId();
 
+            // First mock: COUNT query
+            mockQuery.mockResolvedValueOnce(mockCountResult(10));
+            // Second mock: similarity search (empty results)
             mockQuery.mockResolvedValueOnce(mockRows([]));
 
             await repository.searchSimilar({
@@ -259,6 +272,9 @@ describe("ThreadEmbeddingRepository", () => {
             const userId = generateId();
             const excludeId = generateId();
 
+            // First mock: COUNT query
+            mockQuery.mockResolvedValueOnce(mockCountResult(10));
+            // Second mock: similarity search (empty results)
             mockQuery.mockResolvedValueOnce(mockRows([]));
 
             await repository.searchSimilar({
@@ -279,6 +295,9 @@ describe("ThreadEmbeddingRepository", () => {
             const agentId = generateId();
             const userId = generateId();
 
+            // First mock: COUNT query
+            mockQuery.mockResolvedValueOnce(mockCountResult(10));
+            // Second mock: similarity search (empty results)
             mockQuery.mockResolvedValueOnce(mockRows([]));
 
             await repository.searchSimilar({
@@ -296,7 +315,8 @@ describe("ThreadEmbeddingRepository", () => {
         });
 
         it("should return empty array when no similar messages found", async () => {
-            mockQuery.mockResolvedValueOnce(mockRows([]));
+            // Mock COUNT returning 0 - should return early
+            mockQuery.mockResolvedValueOnce(mockCountResult(0));
 
             const result = await repository.searchSimilar({
                 agent_id: generateId(),
@@ -404,6 +424,40 @@ describe("ThreadEmbeddingRepository", () => {
             await repository.getLatest(agentId, userId);
 
             expect(mockQuery).toHaveBeenCalledWith(expect.anything(), [agentId, userId, 10]);
+        });
+    });
+
+    describe("deleteByAgent", () => {
+        it("should delete all embeddings for an agent and return count", async () => {
+            const agentId = generateId();
+
+            mockQuery.mockResolvedValueOnce(mockAffectedRows(100));
+
+            const result = await repository.deleteByAgent(agentId);
+
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("DELETE FROM flowmaestro.agent_conversation_embeddings"),
+                [agentId]
+            );
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("WHERE agent_id = $1"),
+                expect.anything()
+            );
+            expect(result).toBe(100);
+        });
+
+        it("should return 0 when no embeddings to delete", async () => {
+            const agentId = generateId();
+
+            mockQuery.mockResolvedValueOnce(mockAffectedRows(0));
+
+            const result = await repository.deleteByAgent(agentId);
+
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("DELETE FROM flowmaestro.agent_conversation_embeddings"),
+                [agentId]
+            );
+            expect(result).toBe(0);
         });
     });
 });

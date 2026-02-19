@@ -3,7 +3,6 @@ import type { SafetyConfig } from "../../core/safety/types";
 
 export type LLMProvider = "openai" | "anthropic" | "google" | "xai" | "cohere" | "huggingface";
 export type ToolType = "workflow" | "function" | "knowledge_base" | "agent" | "mcp" | "builtin";
-export type MemoryType = "buffer" | "summary" | "vector";
 
 export interface Tool {
     id: string;
@@ -37,11 +36,21 @@ export interface ToolConfig {
     creditCost?: number;
 }
 
+/**
+ * Memory configuration for agents.
+ *
+ * Features:
+ * - Message buffer (recent N messages in context)
+ * - Embeddings (for cross-thread semantic search)
+ * - Working memory (persistent user facts)
+ */
 export interface MemoryConfig {
-    type: MemoryType;
+    /** Maximum messages to keep in context window (default: 50) */
     max_messages: number;
-    summary_interval?: number; // For summary type
-    vector_store_id?: string; // For vector type
+    /** Enable cross-thread semantic search via embeddings (default: true) */
+    embeddings_enabled?: boolean;
+    /** Enable persistent working memory for user facts (default: true) */
+    working_memory_enabled?: boolean;
 }
 
 export interface AgentModel {

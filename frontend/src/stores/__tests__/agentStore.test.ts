@@ -57,7 +57,7 @@ function createMockAgent(overrides?: Partial<Agent>): Agent {
         max_tokens: 1000,
         max_iterations: 10,
         available_tools: [],
-        memory_config: { type: "buffer", max_messages: 100 },
+        memory_config: { max_messages: 100 },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         deleted_at: null,

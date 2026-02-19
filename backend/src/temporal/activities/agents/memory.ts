@@ -1,8 +1,11 @@
 /**
- * Agent Memory Activities - Thread management, semantic search, and memory tools
+ * Agent Memory Activities - Thread management, semantic search, memory tools, and summarization
  */
 
+import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
+import { config as appConfig } from "../../../core/config";
 import { calculateCost } from "../../../core/observability";
 import { ThreadManager } from "../../../services/agents/ThreadManager";
 import { ThreadMemoryService } from "../../../services/agents/ThreadMemoryService";
@@ -86,6 +89,7 @@ export interface StoreThreadEmbeddingsInput {
     agentId: string;
     userId: string;
     executionId: string;
+    threadId: string;
     messages: ThreadMessage[];
     embeddingModel?: string;
     embeddingProvider?: string;
@@ -416,37 +420,63 @@ export async function storeThreadEmbeddings(
         agentId,
         userId,
         executionId,
+        threadId,
         messages,
         embeddingModel = "text-embedding-3-small",
         embeddingProvider = "openai"
     } = input;
 
-    threadMemoryLogger.info("Storing thread embeddings", {
+    // Detailed logging to help debug embedding storage issues
+    threadMemoryLogger.info("Storing thread embeddings - START", {
         executionId,
         agentId,
         userId,
+        threadId,
         messageCount: messages.length,
         embeddingModel,
-        embeddingProvider
+        embeddingProvider,
+        messageRoles: messages.map((m) => m.role),
+        messagePreview: messages.slice(0, 3).map((m) => ({
+            role: m.role,
+            contentLength: m.content?.length ?? 0,
+            preview: m.content?.substring(0, 50)
+        }))
     });
 
-    const result = await conversationMemoryService.storeThreadEmbeddings({
-        agentId,
-        userId,
-        executionId,
-        messages,
-        embeddingModel,
-        embeddingProvider
-    });
+    try {
+        const result = await conversationMemoryService.storeThreadEmbeddings({
+            agentId,
+            userId,
+            executionId,
+            threadId,
+            messages,
+            embeddingModel,
+            embeddingProvider
+        });
 
-    threadMemoryLogger.info("Thread embeddings stored", {
-        executionId,
-        agentId,
-        storedCount: result.stored,
-        skippedCount: result.skipped
-    });
+        threadMemoryLogger.info("Thread embeddings stored - SUCCESS", {
+            executionId,
+            agentId,
+            userId,
+            storedCount: result.stored,
+            skippedCount: result.skipped
+        });
 
-    return result;
+        return result;
+    } catch (error) {
+        // Log the full error for debugging
+        threadMemoryLogger.error(
+            "Thread embeddings storage - FAILED",
+            error instanceof Error ? error : new Error(String(error)),
+            {
+                executionId,
+                agentId,
+                userId,
+                messageCount: messages.length
+            }
+        );
+        throw error;
+    }
 }
 
 /**
@@ -614,7 +644,7 @@ Returns:
                 searchPastExecutions: {
                     type: "boolean",
                     description:
-                        "Search across all past threads (default: false). If true, searches beyond current thread. If false, only searches current thread."
+                        "Search across all past threads (default: true). Set to false to only search the current thread."
                 },
                 messageRoles: {
                     type: "array",
@@ -649,6 +679,130 @@ export function injectThreadMemoryTool(existingTools: Tool[]): Tool[] {
 
     // Add to the beginning for easy discovery
     return [threadMemoryTool, ...existingTools];
+}
+
+// =============================================================================
+// Clear Thread Memory Tool - Reset conversation memory
+// =============================================================================
+
+/**
+ * Create the clearThreadMemory tool definition
+ * This tool allows agents to clear conversation memory when appropriate
+ */
+export function createClearThreadMemoryTool(): Tool {
+    return {
+        id: "built-in-clear-thread-memory",
+        name: "clear_thread_memory",
+        description: `Clear the conversation memory for this thread. Use this tool when:
+- The user explicitly requests to start fresh or "forget everything"
+- The topic has changed significantly and old context is no longer relevant
+- The conversation has become confused due to accumulated misunderstandings
+- You want to reset the context to provide clearer responses
+
+Note: This clears the vector embeddings used for semantic search, not the visible conversation history.
+The user will still see previous messages, but you won't retrieve them for context.`,
+        type: "function",
+        schema: {
+            type: "object",
+            properties: {
+                reason: {
+                    type: "string",
+                    description:
+                        "Brief reason for clearing memory (for logging purposes). Example: 'User requested fresh start'"
+                },
+                confirmation: {
+                    type: "boolean",
+                    description:
+                        "Set to true to confirm the clear operation. This is required to prevent accidental clearing."
+                }
+            },
+            required: ["confirmation"]
+        },
+        config: {
+            functionName: "clear_thread_memory"
+        }
+    };
+}
+
+/**
+ * Input for clearing thread memory
+ */
+export interface ClearThreadMemoryInput {
+    executionId: string;
+    agentId: string;
+    userId: string;
+    reason?: string;
+}
+
+/**
+ * Execute the clearThreadMemory tool
+ */
+export async function executeClearThreadMemory(input: ClearThreadMemoryInput): Promise<JsonObject> {
+    const { executionId, agentId, userId, reason } = input;
+
+    threadMemoryLogger.info("Clearing thread memory", {
+        executionId,
+        agentId,
+        userId,
+        reason
+    });
+
+    try {
+        const deleted = await conversationMemoryService.clearExecutionMemory(executionId);
+
+        threadMemoryLogger.info("Thread memory cleared", {
+            executionId,
+            agentId,
+            userId,
+            deletedCount: deleted,
+            reason
+        });
+
+        return {
+            success: true,
+            message: `Cleared ${deleted} memory entries from this conversation.${reason ? ` Reason: ${reason}` : ""}`,
+            deletedCount: deleted
+        };
+    } catch (error) {
+        threadMemoryLogger.error(
+            "Failed to clear thread memory",
+            error instanceof Error ? error : new Error(String(error)),
+            {
+                executionId,
+                agentId,
+                userId,
+                reason
+            }
+        );
+        return {
+            success: false,
+            error: true,
+            message: error instanceof Error ? error.message : "Failed to clear thread memory"
+        };
+    }
+}
+
+/**
+ * Inject both thread memory tools (search and clear) into agent's available tools
+ */
+export function injectThreadMemoryTools(existingTools: Tool[]): Tool[] {
+    const searchTool = createThreadMemoryTool();
+    const clearTool = createClearThreadMemoryTool();
+
+    const toolsToAdd: Tool[] = [];
+
+    // Check if search tool already exists
+    if (!existingTools.some((tool) => tool.name === searchTool.name)) {
+        toolsToAdd.push(searchTool);
+    }
+
+    // Check if clear tool already exists
+    if (!existingTools.some((tool) => tool.name === clearTool.name)) {
+        toolsToAdd.push(clearTool);
+    }
+
+    // Add to the beginning for easy discovery
+    return [...toolsToAdd, ...existingTools];
 }
 
 // =============================================================================
@@ -775,6 +929,25 @@ function getSuccessMessage(reason: "created" | "appended" | "replaced" | "duplic
  */
 export function isWorkingMemoryEnabled(agentMetadata: JsonObject): boolean {
     return agentMetadata.workingMemoryEnabled === true;
+}
+
+/**
+ * Inject the working memory tool into agent's available tools
+ */
+export function injectWorkingMemoryTool(existingTools: Tool[]): Tool[] {
+    const workingMemoryTool = createWorkingMemoryTool();
+
+    // Check if tool already exists
+    const toolExists = existingTools.some((tool) => tool.name === workingMemoryTool.name);
+
+    if (toolExists) {
+        return existingTools;
+    }
+
+    workingMemoryLogger.debug("Injecting working memory tool");
+
+    // Add to the beginning for easy discovery
+    return [workingMemoryTool, ...existingTools];
 }
 
 // =============================================================================
@@ -953,4 +1126,144 @@ export interface SharedMemoryToolResult {
  */
 export function isSharedMemoryTool(toolName: string): boolean {
     return ["read_shared_memory", "write_shared_memory", "search_shared_memory"].includes(toolName);
+}
+
+// =============================================================================
+// Message Summarization Activity
+// =============================================================================
+
+const summarizeLogger = createActivityLogger({ component: "SummarizeActivity" });
+
+/**
+ * Input for summarizing messages
+ */
+export interface SummarizeMessagesInput {
+    messages: ThreadMessage[];
+    model?: string;
+    provider?: "openai" | "anthropic";
+    maxSummaryTokens?: number;
+}
+
+/**
+ * Result from message summarization
+ */
+export interface SummarizeMessagesResult {
+    summary: string;
+    originalMessageCount: number;
+    originalTokenEstimate: number;
+    summaryTokenEstimate: number;
+    tokensSaved: number;
+}
+
+/**
+ * Summarize a list of messages into a concise summary.
+ * Used by the summary memory type to compress older conversation history.
+ */
+export async function summarizeMessages(
+    input: SummarizeMessagesInput
+): Promise<SummarizeMessagesResult> {
+    const { messages, model = "gpt-4o-mini", provider = "openai", maxSummaryTokens = 500 } = input;
+
+    if (messages.length === 0) {
+        return {
+            summary: "",
+            originalMessageCount: 0,
+            originalTokenEstimate: 0,
+            summaryTokenEstimate: 0,
+            tokensSaved: 0
+        };
+    }
+
+    // Estimate original token count (rough: 4 chars per token)
+    const originalTokenEstimate = messages.reduce(
+        (acc, m) => acc + Math.ceil(m.content.length / 4),
+        0
+    );
+
+    // Format messages for summarization
+    const formattedMessages = messages
+        .map((m) => `[${m.role.toUpperCase()}]: ${m.content}`)
+        .join("\n\n");
+
+    const systemPrompt = `You are a conversation summarizer. Your task is to create a concise summary of the following conversation that preserves:
+1. Key facts and information shared
+2. Important decisions or conclusions reached
+3. User preferences or requirements mentioned
+4. Any commitments or action items
+
+Keep the summary under ${maxSummaryTokens} tokens. Focus on information that would be useful context for continuing the conversation later.`;
+
+    const userPrompt = `Please summarize the following conversation:\n\n${formattedMessages}`;
+
+    summarizeLogger.info("Summarizing messages", {
+        messageCount: messages.length,
+        originalTokenEstimate,
+        provider,
+        model
+    });
+
+    let summary: string;
+
+    try {
+        if (provider === "anthropic") {
+            const apiKey = appConfig.ai.anthropic.apiKey;
+            if (!apiKey) {
+                throw new Error("Anthropic API key not configured");
+            }
+
+            const anthropic = new Anthropic({ apiKey });
+            const response = await anthropic.messages.create({
+                model: model || "claude-3-haiku-20240307",
+                max_tokens: maxSummaryTokens,
+                system: systemPrompt,
+                messages: [{ role: "user", content: userPrompt }]
+            });
+
+            const textBlock = response.content.find((block) => block.type === "text");
+            summary = textBlock ? textBlock.text : "";
+        } else {
+            // Default to OpenAI
+            const apiKey = appConfig.ai.openai.apiKey;
+            if (!apiKey) {
+                throw new Error("OpenAI API key not configured");
+            }
+
+            const openai = new OpenAI({ apiKey });
+            const response = await openai.chat.completions.create({
+                model: model || "gpt-4o-mini",
+                max_tokens: maxSummaryTokens,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userPrompt }
+                ]
+            });
+
+            summary = response.choices[0]?.message?.content || "";
+        }
+    } catch (error) {
+        summarizeLogger.error(
+            "Failed to summarize messages",
+            error instanceof Error ? error : new Error(String(error)),
+            { messageCount: messages.length }
+        );
+        throw error;
+    }
+
+    const summaryTokenEstimate = Math.ceil(summary.length / 4);
+    const tokensSaved = Math.max(0, originalTokenEstimate - summaryTokenEstimate);
+
+    summarizeLogger.info("Messages summarized successfully", {
+        originalMessageCount: messages.length,
+        originalTokenEstimate,
+        summaryTokenEstimate,
+        tokensSaved
+    });
+
+    return {
+        summary,
+        originalMessageCount: messages.length,
+        originalTokenEstimate,
+        summaryTokenEstimate,
+        tokensSaved
+    };
 }

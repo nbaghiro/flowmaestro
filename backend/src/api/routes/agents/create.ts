@@ -25,12 +25,14 @@ const createAgentSchema = z.object({
     available_tools: z.array(toolSchema).default([]),
     memory_config: z
         .object({
-            type: z.enum(["buffer", "summary", "vector"]).default("buffer"),
-            max_messages: z.number().min(1).max(1000).default(50)
+            max_messages: z.number().min(1).max(1000).default(50),
+            embeddings_enabled: z.boolean().default(true),
+            working_memory_enabled: z.boolean().default(true)
         })
         .default({
-            type: "buffer",
-            max_messages: 50
+            max_messages: 50,
+            embeddings_enabled: true,
+            working_memory_enabled: true
         })
 });
 

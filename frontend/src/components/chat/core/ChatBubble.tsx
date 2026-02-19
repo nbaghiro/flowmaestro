@@ -162,7 +162,7 @@ export function ChatBubble({
                             ? "max-w-[80%] bg-primary text-primary-foreground"
                             : assistantVariant === "muted"
                               ? "bg-muted text-foreground"
-                              : "bg-card border border-border text-foreground"
+                              : "bg-muted border border-border/50 text-foreground"
                     )}
                 >
                     {showTypingIndicator || (isStreaming && !content) ? (

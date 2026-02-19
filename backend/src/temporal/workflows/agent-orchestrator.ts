@@ -23,11 +23,13 @@ const {
     callLLM,
     executeToolCall,
     saveThreadIncremental,
+    storeThreadEmbeddings,
     validateInput,
     validateOutput,
     createSpan,
     endSpan,
-    updateThreadTokens
+    updateThreadTokens,
+    getWorkingMemoryForAgent
 } = proxyActivities<typeof activities>({
     startToCloseTimeout: "10 minutes",
     retry: {
@@ -110,10 +112,7 @@ export interface AgentConfig {
     max_tokens: number;
     max_iterations: number;
     available_tools: Tool[];
-    memory_config: {
-        type: "buffer" | "summary" | "vector";
-        max_messages: number;
-    };
+    memory_config: MemoryConfig;
     safety_config: {
         enablePiiDetection: boolean;
         enablePromptInjectionDetection: boolean;
@@ -320,11 +319,25 @@ export async function agentOrchestratorWorkflow(
             lastEmittedSequence: 0
         };
 
+        // Fetch current working memory to include in system prompt
+        let workingMemory: string | null = null;
+        try {
+            workingMemory = await getWorkingMemoryForAgent(agentId, userId);
+        } catch (err) {
+            logger.warn("Failed to fetch working memory", { error: err });
+        }
+
+        // Build system prompt with working memory if available
+        let systemPromptContent = agent.system_prompt;
+        if (workingMemory) {
+            systemPromptContent += `\n\n---\n\n**Your Memory About This User:**\n${workingMemory}\n\nUse the update_working_memory tool to add new important information about this user.`;
+        }
+
         // Add system prompt
         const systemMessage: ThreadMessage = {
             id: `sys-${Date.now()}`,
             role: "system",
-            content: agent.system_prompt,
+            content: systemPromptContent,
             timestamp: new Date()
         };
         messageState.messages.push(systemMessage);
@@ -459,18 +472,36 @@ export async function agentOrchestratorWorkflow(
                 unsavedMessages.forEach((msg) => messageState.savedMessageIds.push(msg.id));
             }
 
-            // Summarize history if needed (keep last N messages)
-            const summarizedState = summarizeMessageState(
-                messageState,
-                agent.memory_config.max_messages
-            );
+            // Store embeddings for cross-thread semantic search (always enabled by default)
+            const embeddingsEnabled = agent.memory_config.embeddings_enabled !== false;
+            if (embeddingsEnabled && messageState.messages.length > 0) {
+                try {
+                    await storeThreadEmbeddings({
+                        agentId,
+                        userId,
+                        executionId,
+                        threadId,
+                        messages: messageState.messages
+                    });
+                } catch (embeddingError) {
+                    logger.warn("Failed to store embeddings before continue-as-new", {
+                        error:
+                            embeddingError instanceof Error
+                                ? embeddingError.message
+                                : String(embeddingError)
+                    });
+                }
+            }
+
+            // Trim message history to max_messages (older messages still searchable via embeddings)
+            const trimmedState = summarizeMessageState(messageState, agent.memory_config);
 
             return continueAsNew<typeof agentOrchestratorWorkflow>({
                 executionId,
                 agentId,
                 userId,
                 threadId,
-                serializedThread: summarizedState,
+                serializedThread: trimmedState,
                 iterations: currentIterations,
                 // Preserve override values across continue-as-new
                 ...(input.connectionId && { connectionId: input.connectionId }),
@@ -915,6 +946,29 @@ export async function agentOrchestratorWorkflow(
                 });
             }
 
+            // Store embeddings for cross-thread semantic search (always enabled by default)
+            const embeddingsEnabledOnComplete = agent.memory_config.embeddings_enabled !== false;
+            if (embeddingsEnabledOnComplete && messageState.messages.length > 0) {
+                try {
+                    await storeThreadEmbeddings({
+                        agentId,
+                        userId,
+                        executionId,
+                        threadId,
+                        messages: messageState.messages
+                    });
+                    logger.info("Thread embeddings stored for semantic search");
+                } catch (embeddingError) {
+                    // Log but don't fail the execution for embedding errors
+                    logger.warn("Failed to store thread embeddings", {
+                        error:
+                            embeddingError instanceof Error
+                                ? embeddingError.message
+                                : String(embeddingError)
+                    });
+                }
+            }
+
             logger.info("Agent completed task");
 
             await emitAgentExecutionCompleted({
@@ -1185,11 +1239,31 @@ function getUnsavedMessages(state: WorkflowMessageState): ThreadMessage[] {
 }
 
 /**
- * Summarize message state to keep only recent messages
- * This prevents history from growing too large for continue-as-new
+ * Memory configuration type
  */
-function summarizeMessageState(state: WorkflowMessageState, maxMessages: number): SerializedThread {
-    if (state.messages.length <= maxMessages) {
+interface MemoryConfig {
+    /** @deprecated Ignored - all memory features are now always enabled */
+    type?: "buffer" | "summary" | "vector";
+    /** Maximum messages to keep in context window */
+    max_messages: number;
+    /** Enable cross-thread semantic search via embeddings (default: true) */
+    embeddings_enabled?: boolean;
+    /** Enable persistent working memory for user facts (default: true) */
+    working_memory_enabled?: boolean;
+}
+
+/**
+ * Trim message state when approaching context limits.
+ * Keeps the system prompt + last N messages within max_messages limit.
+ * Older messages are still searchable via embeddings (cross-thread recall).
+ */
+function summarizeMessageState(
+    state: WorkflowMessageState,
+    memoryConfig: MemoryConfig
+): SerializedThread {
+    const { max_messages } = memoryConfig;
+
+    if (state.messages.length <= max_messages) {
         return {
             messages: state.messages,
             savedMessageIds: state.savedMessageIds,
@@ -1201,19 +1275,19 @@ function summarizeMessageState(state: WorkflowMessageState, maxMessages: number)
     const systemPrompt = state.messages.find((msg) => msg.role === "system");
 
     // Keep the last N messages
-    const recentMessages = state.messages.slice(-(maxMessages - 1));
+    const recentMessages = state.messages.slice(-(max_messages - 1));
 
-    // Combine
-    const summarizedMessages = systemPrompt
+    // Combine: system prompt + recent messages
+    const trimmedMessages = systemPrompt
         ? [systemPrompt, ...recentMessages.filter((msg) => msg.id !== systemPrompt.id)]
         : recentMessages;
 
     // Keep only saved IDs that are still in the messages
-    const keptMessageIds = new Set(summarizedMessages.map((m) => m.id));
+    const keptMessageIds = new Set(trimmedMessages.map((m) => m.id));
     const savedIds = state.savedMessageIds.filter((id) => keptMessageIds.has(id));
 
     return {
-        messages: summarizedMessages,
+        messages: trimmedMessages,
         savedMessageIds: savedIds,
         metadata: state.metadata
     };

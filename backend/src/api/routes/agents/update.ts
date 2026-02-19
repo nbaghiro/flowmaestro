@@ -32,8 +32,9 @@ const updateAgentSchema = z.object({
     available_tools: z.array(toolSchema).optional(),
     memory_config: z
         .object({
-            type: z.enum(["buffer", "summary", "vector"]),
-            max_messages: z.number().min(1).max(1000)
+            max_messages: z.number().min(1).max(1000),
+            embeddings_enabled: z.boolean().optional(),
+            working_memory_enabled: z.boolean().optional()
         })
         .optional(),
     metadata: z.record(z.any()).optional()

@@ -48,7 +48,8 @@ import type {
     Tool,
     KnowledgeBase,
     Agent,
-    JsonObject
+    JsonObject,
+    MemoryConfig
 } from "../lib/api";
 
 export function AgentBuilder() {
@@ -115,6 +116,13 @@ export function AgentBuilder() {
     // Voice settings state
     const [voiceConfig, setVoiceConfig] = useState<AgentVoiceConfig>(DEFAULT_VOICE_CONFIG);
 
+    // Memory settings state (simplified architecture - all features enabled by default)
+    const [memoryConfig, setMemoryConfig] = useState<MemoryConfig>({
+        max_messages: 30,
+        embeddings_enabled: true,
+        working_memory_enabled: true
+    });
+
     const temperatureMax = useMemo(() => getTemperatureMaxForProvider(provider), [provider]);
 
     // Track original values to detect changes
@@ -127,6 +135,7 @@ export function AgentBuilder() {
         systemPrompt: string;
         temperature: number;
         maxTokens: number;
+        memoryConfig: MemoryConfig;
     } | null>(null);
 
     // Inline editing state
@@ -201,6 +210,22 @@ export function AgentBuilder() {
                         setVoiceConfig(DEFAULT_VOICE_CONFIG);
                     }
 
+                    // Load memory config from agent (with backward compatibility)
+                    if (agent.memory_config) {
+                        setMemoryConfig({
+                            max_messages: agent.memory_config.max_messages || 30,
+                            embeddings_enabled: agent.memory_config.embeddings_enabled !== false,
+                            working_memory_enabled:
+                                agent.memory_config.working_memory_enabled !== false
+                        });
+                    } else {
+                        setMemoryConfig({
+                            max_messages: 30,
+                            embeddings_enabled: true,
+                            working_memory_enabled: true
+                        });
+                    }
+
                     // Store original values for change detection
                     setOriginalValues({
                         name: agent.name,
@@ -210,7 +235,12 @@ export function AgentBuilder() {
                         connectionId: agent.connection_id || "",
                         systemPrompt: agent.system_prompt,
                         temperature: agent.temperature,
-                        maxTokens: agent.max_tokens
+                        maxTokens: agent.max_tokens,
+                        memoryConfig: agent.memory_config || {
+                            max_messages: 30,
+                            embeddings_enabled: true,
+                            working_memory_enabled: true
+                        }
                     });
                 }
             });
@@ -424,6 +454,7 @@ export function AgentBuilder() {
                 system_prompt: systemPrompt,
                 temperature,
                 max_tokens: maxTokens,
+                memory_config: memoryConfig,
                 metadata: {
                     ...existingMetadata,
                     voice: voiceConfig as unknown as JsonObject
@@ -450,7 +481,12 @@ export function AgentBuilder() {
                     connectionId: savedAgent.connection_id || "",
                     systemPrompt: savedAgent.system_prompt,
                     temperature: savedAgent.temperature,
-                    maxTokens: savedAgent.max_tokens
+                    maxTokens: savedAgent.max_tokens,
+                    memoryConfig: savedAgent.memory_config || {
+                        max_messages: 30,
+                        embeddings_enabled: true,
+                        working_memory_enabled: true
+                    }
                 });
             } else {
                 // Fallback: update originalValues from form values if agent not available
@@ -462,7 +498,8 @@ export function AgentBuilder() {
                     connectionId: connectionId || "",
                     systemPrompt,
                     temperature,
-                    maxTokens
+                    maxTokens,
+                    memoryConfig
                 });
             }
         } catch (err) {
@@ -484,7 +521,11 @@ export function AgentBuilder() {
             connectionId !== originalValues.connectionId ||
             systemPrompt !== originalValues.systemPrompt ||
             temperature !== originalValues.temperature ||
-            maxTokens !== originalValues.maxTokens);
+            maxTokens !== originalValues.maxTokens ||
+            memoryConfig.max_messages !== originalValues.memoryConfig.max_messages ||
+            memoryConfig.embeddings_enabled !== originalValues.memoryConfig.embeddings_enabled ||
+            memoryConfig.working_memory_enabled !==
+                originalValues.memoryConfig.working_memory_enabled);
 
     // Warn user about unsaved changes when closing/refreshing browser
     useEffect(() => {
@@ -541,6 +582,7 @@ export function AgentBuilder() {
                 system_prompt: systemPrompt,
                 temperature,
                 max_tokens: maxTokens,
+                memory_config: memoryConfig,
                 metadata: {
                     ...existingMetadata,
                     voice: voiceConfig as unknown as JsonObject
@@ -566,7 +608,12 @@ export function AgentBuilder() {
                     connectionId: savedAgent.connection_id || "",
                     systemPrompt: savedAgent.system_prompt,
                     temperature: savedAgent.temperature,
-                    maxTokens: savedAgent.max_tokens
+                    maxTokens: savedAgent.max_tokens,
+                    memoryConfig: savedAgent.memory_config || {
+                        max_messages: 30,
+                        embeddings_enabled: true,
+                        working_memory_enabled: true
+                    }
                 });
             } else {
                 // Fallback: update originalValues from form values
@@ -578,7 +625,8 @@ export function AgentBuilder() {
                     connectionId: connectionId || "",
                     systemPrompt,
                     temperature,
-                    maxTokens
+                    maxTokens,
+                    memoryConfig
                 });
             }
 
@@ -602,6 +650,7 @@ export function AgentBuilder() {
         systemPrompt,
         temperature,
         maxTokens,
+        memoryConfig,
         voiceConfig,
         agentId,
         currentAgent,
@@ -1178,7 +1227,8 @@ export function AgentBuilder() {
                             <div
                                 className={cn(
                                     "flex-1 flex overflow-hidden",
-                                    activeTab === "settings" && "border-l border-border"
+                                    (activeTab === "settings" || activeTab === "slack") &&
+                                        "border-l border-border"
                                 )}
                             >
                                 {activeTab === "threads" && (
@@ -1241,219 +1291,440 @@ export function AgentBuilder() {
 
                                 {activeTab === "settings" && (
                                     <div className="flex-1 bg-card overflow-auto">
-                                        <div className="max-w-3xl mx-auto p-6 space-y-6">
-                                            {/* Agent Name */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-foreground mb-2">
-                                                    Agent Name
-                                                </label>
-                                                <Input
-                                                    type="text"
-                                                    value={name}
-                                                    onChange={(e) => setName(e.target.value)}
-                                                    placeholder="My Assistant"
-                                                    className={cn(
-                                                        "w-full px-3 py-2 rounded-lg",
-                                                        "bg-muted border border-border",
-                                                        "text-foreground placeholder:text-muted-foreground",
-                                                        "focus:outline-none focus:ring-2 focus:ring-primary"
-                                                    )}
-                                                />
-                                            </div>
+                                        <div className="max-w-6xl mx-auto p-6">
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                {/* Left Column */}
+                                                <div className="space-y-6">
+                                                    {/* Basic Settings Card */}
+                                                    <div className="bg-muted/30 rounded-xl border border-border/50 p-5">
+                                                        <h3 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+                                                            <svg
+                                                                className="w-4 h-4 text-muted-foreground"
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                                stroke="currentColor"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                                />
+                                                            </svg>
+                                                            Basic Information
+                                                        </h3>
+                                                        <div className="space-y-4">
+                                                            {/* Agent Name */}
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-foreground mb-2">
+                                                                    Agent Name
+                                                                </label>
+                                                                <Input
+                                                                    type="text"
+                                                                    value={name}
+                                                                    onChange={(e) =>
+                                                                        setName(e.target.value)
+                                                                    }
+                                                                    placeholder="My Assistant"
+                                                                    className={cn(
+                                                                        "w-full px-3 py-2 rounded-lg",
+                                                                        "bg-muted border border-border",
+                                                                        "text-foreground placeholder:text-muted-foreground",
+                                                                        "focus:outline-none focus:ring-2 focus:ring-primary"
+                                                                    )}
+                                                                />
+                                                            </div>
 
-                                            {/* Description */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-foreground mb-2">
-                                                    Description (optional)
-                                                </label>
-                                                <Textarea
-                                                    value={description}
-                                                    onChange={(
-                                                        e: React.ChangeEvent<HTMLTextAreaElement>
-                                                    ) => setDescription(e.target.value)}
-                                                    placeholder="What does this agent do?"
-                                                    rows={2}
-                                                    className={cn(
-                                                        "w-full px-3 py-2 rounded-lg",
-                                                        "bg-muted border border-border",
-                                                        "text-foreground placeholder:text-muted-foreground",
-                                                        "focus:outline-none focus:ring-2 focus:ring-primary",
-                                                        "resize-y"
-                                                    )}
-                                                />
-                                            </div>
-
-                                            {/* Connection (optional) */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-foreground mb-2">
-                                                    API Connection (optional)
-                                                </label>
-                                                <Select
-                                                    value={connectionId}
-                                                    onChange={(connId) => {
-                                                        setConnectionId(connId);
-                                                        const selectedConnection =
-                                                            llmConnections.find(
-                                                                (conn) => conn.id === connId
-                                                            );
-                                                        if (selectedConnection) {
-                                                            const newProvider =
-                                                                selectedConnection.provider.toLowerCase() as Agent["provider"];
-                                                            setProvider(newProvider);
-                                                            const defaultModel =
-                                                                getDefaultModelForProvider(
-                                                                    newProvider
-                                                                );
-                                                            setModel(defaultModel);
-                                                        }
-                                                    }}
-                                                    placeholder="Use environment variables"
-                                                    options={llmConnections.map((conn) => ({
-                                                        value: conn.id,
-                                                        label: conn.name
-                                                    }))}
-                                                />
-                                            </div>
-
-                                            {/* Advanced Settings */}
-                                            <div>
-                                                <h3 className="text-base font-semibold text-foreground mb-4">
-                                                    Advanced Settings
-                                                </h3>
-                                                <div className="space-y-4">
-                                                    {/* Temperature */}
-                                                    <div>
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="text-sm text-muted-foreground">
-                                                                Temperature
-                                                            </span>
-                                                            <span className="text-sm font-medium">
-                                                                {temperature}
-                                                            </span>
+                                                            {/* Description */}
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-foreground mb-2">
+                                                                    Description
+                                                                </label>
+                                                                <Textarea
+                                                                    value={description}
+                                                                    onChange={(
+                                                                        e: React.ChangeEvent<HTMLTextAreaElement>
+                                                                    ) =>
+                                                                        setDescription(
+                                                                            e.target.value
+                                                                        )
+                                                                    }
+                                                                    placeholder="What does this agent do?"
+                                                                    rows={2}
+                                                                    className={cn(
+                                                                        "w-full px-3 py-2 rounded-lg",
+                                                                        "bg-muted border border-border",
+                                                                        "text-foreground placeholder:text-muted-foreground",
+                                                                        "focus:outline-none focus:ring-2 focus:ring-primary",
+                                                                        "resize-y"
+                                                                    )}
+                                                                />
+                                                            </div>
                                                         </div>
-                                                        <Input
-                                                            type="range"
-                                                            min="0"
-                                                            max={temperatureMax.toString()}
-                                                            step="0.1"
-                                                            value={temperature}
-                                                            onChange={(e) =>
-                                                                setTemperature(
-                                                                    parseFloat(e.target.value)
-                                                                )
-                                                            }
-                                                            className="w-full"
-                                                        />
                                                     </div>
 
-                                                    {/* Max Tokens */}
-                                                    <div>
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="text-sm text-muted-foreground">
-                                                                Max Tokens
-                                                            </span>
-                                                            <span className="text-sm font-medium">
-                                                                {maxTokens}
-                                                            </span>
-                                                        </div>
-                                                        <Input
-                                                            type="number"
-                                                            min="100"
-                                                            max="100000"
-                                                            step="100"
-                                                            value={maxTokens}
-                                                            onChange={(e) =>
-                                                                setMaxTokens(
-                                                                    parseInt(e.target.value)
-                                                                )
-                                                            }
-                                                            className={cn(
-                                                                "w-full px-3 py-2 rounded-lg",
-                                                                "bg-muted border border-border",
-                                                                "text-foreground",
-                                                                "focus:outline-none focus:ring-2 focus:ring-primary"
-                                                            )}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Voice Settings */}
-                                            <div>
-                                                <h3 className="text-base font-semibold text-foreground mb-4">
-                                                    Voice Settings
-                                                </h3>
-                                                <div className="space-y-4">
-                                                    {/* Voice Enabled Toggle */}
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <span className="text-sm font-medium text-foreground">
-                                                                Enable Voice Chat
-                                                            </span>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                Allow users to interact with voice
-                                                            </p>
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                setVoiceConfig((prev) => ({
-                                                                    ...prev,
-                                                                    enabled: !prev.enabled
-                                                                }))
-                                                            }
-                                                            className={cn(
-                                                                "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
-                                                                voiceConfig.enabled
-                                                                    ? "bg-primary"
-                                                                    : "bg-muted"
-                                                            )}
-                                                        >
-                                                            <span
-                                                                className={cn(
-                                                                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
-                                                                    voiceConfig.enabled
-                                                                        ? "translate-x-5"
-                                                                        : "translate-x-0"
-                                                                )}
-                                                            />
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Voice Selection */}
-                                                    {voiceConfig.enabled && (
+                                                    {/* API Connection Card */}
+                                                    <div className="bg-muted/30 rounded-xl border border-border/50 p-5">
+                                                        <h3 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+                                                            <svg
+                                                                className="w-4 h-4 text-muted-foreground"
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                                stroke="currentColor"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                                                                />
+                                                            </svg>
+                                                            API Connection
+                                                        </h3>
                                                         <div>
                                                             <label className="block text-sm font-medium text-foreground mb-2">
-                                                                Agent Voice
+                                                                LLM Connection
                                                             </label>
                                                             <Select
-                                                                value={voiceConfig.voiceId}
-                                                                onChange={(voiceId) => {
-                                                                    const voice =
-                                                                        ELEVENLABS_VOICES.find(
-                                                                            (v) =>
-                                                                                v.voiceId ===
-                                                                                voiceId
+                                                                value={connectionId}
+                                                                onChange={(connId) => {
+                                                                    setConnectionId(connId);
+                                                                    const selectedConnection =
+                                                                        llmConnections.find(
+                                                                            (conn) =>
+                                                                                conn.id === connId
                                                                         );
-                                                                    setVoiceConfig((prev) => ({
-                                                                        ...prev,
-                                                                        voiceId,
-                                                                        voiceName: voice?.name
-                                                                    }));
+                                                                    if (selectedConnection) {
+                                                                        const newProvider =
+                                                                            selectedConnection.provider.toLowerCase() as Agent["provider"];
+                                                                        setProvider(newProvider);
+                                                                        const defaultModel =
+                                                                            getDefaultModelForProvider(
+                                                                                newProvider
+                                                                            );
+                                                                        setModel(defaultModel);
+                                                                    }
                                                                 }}
-                                                                options={ELEVENLABS_VOICES.map(
-                                                                    (voice) => ({
-                                                                        value: voice.voiceId,
-                                                                        label: `${voice.name} - ${voice.description}`
+                                                                placeholder="Use environment variables"
+                                                                options={llmConnections.map(
+                                                                    (conn) => ({
+                                                                        value: conn.id,
+                                                                        label: conn.name
                                                                     })
                                                                 )}
                                                             />
-                                                            <p className="mt-1 text-xs text-muted-foreground">
-                                                                Selected:{" "}
-                                                                {voiceConfig.voiceName || "Rachel"}
+                                                            <p className="mt-2 text-xs text-muted-foreground">
+                                                                Leave empty to use server-side API
+                                                                keys
                                                             </p>
                                                         </div>
-                                                    )}
+                                                    </div>
+
+                                                    {/* Advanced Settings Card */}
+                                                    <div className="bg-muted/30 rounded-xl border border-border/50 p-5">
+                                                        <h3 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+                                                            <svg
+                                                                className="w-4 h-4 text-muted-foreground"
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                                stroke="currentColor"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                                                                />
+                                                            </svg>
+                                                            Model Parameters
+                                                        </h3>
+                                                        <div className="space-y-4">
+                                                            {/* Temperature */}
+                                                            <div>
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <span className="text-sm text-muted-foreground">
+                                                                        Temperature
+                                                                    </span>
+                                                                    <span className="text-sm font-medium tabular-nums">
+                                                                        {temperature}
+                                                                    </span>
+                                                                </div>
+                                                                <Input
+                                                                    type="range"
+                                                                    min="0"
+                                                                    max={temperatureMax.toString()}
+                                                                    step="0.1"
+                                                                    value={temperature}
+                                                                    onChange={(e) =>
+                                                                        setTemperature(
+                                                                            parseFloat(
+                                                                                e.target.value
+                                                                            )
+                                                                        )
+                                                                    }
+                                                                    className="w-full"
+                                                                />
+                                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                                    Controls randomness. Lower =
+                                                                    more focused, higher = more
+                                                                    creative
+                                                                </p>
+                                                            </div>
+
+                                                            {/* Max Tokens */}
+                                                            <div>
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <span className="text-sm text-muted-foreground">
+                                                                        Max Output Tokens
+                                                                    </span>
+                                                                    <span className="text-sm font-medium tabular-nums">
+                                                                        {maxTokens.toLocaleString()}
+                                                                    </span>
+                                                                </div>
+                                                                <Input
+                                                                    type="number"
+                                                                    min="100"
+                                                                    max="100000"
+                                                                    step="100"
+                                                                    value={maxTokens}
+                                                                    onChange={(e) =>
+                                                                        setMaxTokens(
+                                                                            parseInt(e.target.value)
+                                                                        )
+                                                                    }
+                                                                    className={cn(
+                                                                        "w-full px-3 py-2 rounded-lg",
+                                                                        "bg-muted border border-border",
+                                                                        "text-foreground",
+                                                                        "focus:outline-none focus:ring-2 focus:ring-primary"
+                                                                    )}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Right Column */}
+                                                <div className="space-y-6">
+                                                    {/* Voice Settings Card */}
+                                                    <div className="bg-muted/30 rounded-xl border border-border/50 p-5">
+                                                        <h3 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+                                                            <svg
+                                                                className="w-4 h-4 text-muted-foreground"
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                                stroke="currentColor"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                                                                />
+                                                            </svg>
+                                                            Voice Settings
+                                                        </h3>
+                                                        <div className="space-y-4">
+                                                            {/* Voice Enabled Toggle */}
+                                                            <div className="flex items-center justify-between">
+                                                                <div>
+                                                                    <span className="text-sm font-medium text-foreground">
+                                                                        Enable Voice Chat
+                                                                    </span>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        Allow users to interact with
+                                                                        voice
+                                                                    </p>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setVoiceConfig((prev) => ({
+                                                                            ...prev,
+                                                                            enabled: !prev.enabled
+                                                                        }))
+                                                                    }
+                                                                    className={cn(
+                                                                        "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                                                                        voiceConfig.enabled
+                                                                            ? "bg-primary"
+                                                                            : "bg-muted"
+                                                                    )}
+                                                                >
+                                                                    <span
+                                                                        className={cn(
+                                                                            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                                                                            voiceConfig.enabled
+                                                                                ? "translate-x-5"
+                                                                                : "translate-x-0"
+                                                                        )}
+                                                                    />
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Voice Selection */}
+                                                            {voiceConfig.enabled && (
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-foreground mb-2">
+                                                                        Agent Voice
+                                                                    </label>
+                                                                    <Select
+                                                                        value={voiceConfig.voiceId}
+                                                                        onChange={(voiceId) => {
+                                                                            const voice =
+                                                                                ELEVENLABS_VOICES.find(
+                                                                                    (v) =>
+                                                                                        v.voiceId ===
+                                                                                        voiceId
+                                                                                );
+                                                                            setVoiceConfig(
+                                                                                (prev) => ({
+                                                                                    ...prev,
+                                                                                    voiceId,
+                                                                                    voiceName:
+                                                                                        voice?.name
+                                                                                })
+                                                                            );
+                                                                        }}
+                                                                        options={ELEVENLABS_VOICES.map(
+                                                                            (voice) => ({
+                                                                                value: voice.voiceId,
+                                                                                label: `${voice.name} - ${voice.description}`
+                                                                            })
+                                                                        )}
+                                                                    />
+                                                                    <p className="mt-1 text-xs text-muted-foreground">
+                                                                        Selected:{" "}
+                                                                        {voiceConfig.voiceName ||
+                                                                            "Rachel"}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Memory Settings Card */}
+                                                    <div className="bg-muted/30 rounded-xl border border-border/50 p-5">
+                                                        <h3 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
+                                                            <svg
+                                                                className="w-4 h-4 text-muted-foreground"
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                                stroke="currentColor"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={2}
+                                                                    d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+                                                                />
+                                                            </svg>
+                                                            Memory Settings
+                                                        </h3>
+                                                        <div className="space-y-4">
+                                                            {/* Cross-thread recall toggle */}
+                                                            <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/30">
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-foreground">
+                                                                        Cross-thread Recall
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                                        Search previous
+                                                                        conversations
+                                                                    </p>
+                                                                </div>
+                                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="sr-only peer"
+                                                                        checked={
+                                                                            memoryConfig.embeddings_enabled !==
+                                                                            false
+                                                                        }
+                                                                        onChange={(e) =>
+                                                                            setMemoryConfig(
+                                                                                (prev) => ({
+                                                                                    ...prev,
+                                                                                    embeddings_enabled:
+                                                                                        e.target
+                                                                                            .checked
+                                                                                })
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <div className="w-11 h-6 bg-muted-foreground/30 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                                                </label>
+                                                            </div>
+
+                                                            {/* Working memory toggle */}
+                                                            <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-border/30">
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-foreground">
+                                                                        Working Memory
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                                        Remember facts about users
+                                                                    </p>
+                                                                </div>
+                                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="sr-only peer"
+                                                                        checked={
+                                                                            memoryConfig.working_memory_enabled !==
+                                                                            false
+                                                                        }
+                                                                        onChange={(e) =>
+                                                                            setMemoryConfig(
+                                                                                (prev) => ({
+                                                                                    ...prev,
+                                                                                    working_memory_enabled:
+                                                                                        e.target
+                                                                                            .checked
+                                                                                })
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                    <div className="w-11 h-6 bg-muted-foreground/30 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                                                </label>
+                                                            </div>
+
+                                                            {/* Max Messages Slider */}
+                                                            <div className="pt-2">
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <span className="text-sm font-medium text-foreground">
+                                                                        Context Window
+                                                                    </span>
+                                                                    <span className="text-sm text-muted-foreground tabular-nums">
+                                                                        {memoryConfig.max_messages}{" "}
+                                                                        messages
+                                                                    </span>
+                                                                </div>
+                                                                <Input
+                                                                    type="range"
+                                                                    min="10"
+                                                                    max="100"
+                                                                    step="5"
+                                                                    value={
+                                                                        memoryConfig.max_messages
+                                                                    }
+                                                                    onChange={(e) =>
+                                                                        setMemoryConfig((prev) => ({
+                                                                            ...prev,
+                                                                            max_messages: parseInt(
+                                                                                e.target.value,
+                                                                                10
+                                                                            )
+                                                                        }))
+                                                                    }
+                                                                    className="w-full"
+                                                                />
+                                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                                    Recent messages kept in context
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

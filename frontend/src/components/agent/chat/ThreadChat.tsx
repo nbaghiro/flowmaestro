@@ -25,6 +25,7 @@ import { Dialog } from "../../common/Dialog";
 import { Input } from "../../common/Input";
 import { TypingDots } from "../../common/TypingDots";
 import { AgentConnectionSelector } from "../controls/AgentConnectionSelector";
+import { MemoryIndicator } from "./MemoryIndicator";
 import { ToolMessageDisplay } from "./ToolMessageDisplay";
 import { VoiceChat } from "./VoiceChat";
 import { VoiceModeToggle } from "./VoiceModeToggle";
@@ -387,6 +388,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                             disabled={isSending}
                         />
                     )}
+                    <MemoryIndicator agentId={agent.id} />
                     <AgentConnectionSelector
                         agent={agent}
                         overrideConnectionId={overrideConnectionId}

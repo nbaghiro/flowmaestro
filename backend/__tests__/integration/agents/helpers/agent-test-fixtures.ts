@@ -32,13 +32,15 @@ export const STRICT_SAFETY_CONFIG: SafetyConfig = {
 };
 
 export const DEFAULT_MEMORY_CONFIG: MemoryConfig = {
-    type: "buffer",
-    max_messages: 100
+    max_messages: 100,
+    embeddings_enabled: true,
+    working_memory_enabled: true
 };
 
 export const VECTOR_MEMORY_CONFIG: MemoryConfig = {
-    type: "vector",
-    max_messages: 1000
+    max_messages: 1000,
+    embeddings_enabled: true,
+    working_memory_enabled: true
 };
 
 // ============================================================================

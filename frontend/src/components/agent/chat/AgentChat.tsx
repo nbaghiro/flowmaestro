@@ -26,6 +26,7 @@ import { Input } from "../../common/Input";
 import { MediaOutput, hasMediaContent } from "../../common/MediaOutput";
 import { TypingDots } from "../../common/TypingDots";
 import { AgentConnectionSelector } from "../controls/AgentConnectionSelector";
+import { MemoryIndicator } from "./MemoryIndicator";
 import { ToolMessageDisplay } from "./ToolMessageDisplay";
 import { VoiceChat } from "./VoiceChat";
 import { VoiceModeToggle } from "./VoiceModeToggle";
@@ -406,6 +407,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                             disabled={isSending}
                         />
                     )}
+                    <MemoryIndicator agentId={agent.id} />
                     <AgentConnectionSelector
                         agent={agent}
                         overrideConnectionId={overrideConnectionId}

@@ -28,7 +28,13 @@ import {
 } from "../../../tools";
 import { activityLogger, createActivityLogger } from "../../core";
 import { emitAgentToken } from "./events";
-import { searchThreadMemory as searchThreadMemoryActivity, injectThreadMemoryTool } from "./memory";
+import {
+    searchThreadMemory as searchThreadMemoryActivity,
+    injectThreadMemoryTools,
+    injectWorkingMemoryTool,
+    executeClearThreadMemory,
+    executeUpdateWorkingMemory
+} from "./memory";
 import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../../core/safety/types";
 import type { AgentModel, Tool } from "../../../storage/models/Agent";
 import type { ThreadMessage, ToolCall } from "../../../storage/models/AgentExecution";
@@ -270,8 +276,11 @@ export async function getAgentConfig(input: GetAgentConfigInput): Promise<AgentC
         throw new Error(`Agent ${agentId} not found or access denied`);
     }
 
-    // Inject conversation memory tool for semantic search
-    const toolsWithMemory = injectThreadMemoryTool(agent.available_tools);
+    // Inject memory tools:
+    // - Thread memory tools (search and clear) for semantic search
+    // - Working memory tool for persistent user context
+    let toolsWithMemory = injectThreadMemoryTools(agent.available_tools);
+    toolsWithMemory = injectWorkingMemoryTool(toolsWithMemory);
 
     return {
         id: agent.id,
@@ -1964,6 +1973,44 @@ async function executeFunctionTool(input: ExecuteFunctionToolInput): Promise<Jso
                 arguments: args
             });
 
+        case "clear_thread_memory":
+            if (!agentId || !userId || !executionId) {
+                throw new Error("clear_thread_memory requires agentId, userId, and executionId");
+            }
+            // Require explicit confirmation to prevent accidental clearing
+            if (args.confirmation !== true) {
+                return {
+                    success: false,
+                    error: "confirmation_required",
+                    message:
+                        "You must set confirmation: true to clear thread memory. This prevents accidental clearing."
+                };
+            }
+            return await executeClearThreadMemory({
+                executionId,
+                agentId,
+                userId,
+                reason: typeof args.reason === "string" ? args.reason : undefined
+            });
+
+        case "update_working_memory":
+            if (!agentId || !userId) {
+                throw new Error("update_working_memory requires agentId and userId");
+            }
+            if (typeof args.newMemory !== "string" || args.newMemory.trim().length === 0) {
+                return {
+                    success: false,
+                    error: "invalid_input",
+                    message: "newMemory must be a non-empty string"
+                };
+            }
+            return await executeUpdateWorkingMemory({
+                agentId,
+                userId,
+                newMemory: args.newMemory,
+                searchString: typeof args.searchString === "string" ? args.searchString : undefined
+            });
+
         case "get_current_time":
             return await getCurrentTime(args);
 
@@ -2317,7 +2364,9 @@ async function executeSearchThreadMemory(
     const similarityThreshold =
         typeof args.similarityThreshold === "number" ? args.similarityThreshold : 0.7;
     const contextWindow = typeof args.contextWindow === "number" ? args.contextWindow : 2;
-    const searchPastExecutions = args.searchPastExecutions === true;
+    // Default to searching past executions (true) since the tool is for recalling past interactions
+    // Only search current execution if explicitly set to false
+    const searchPastExecutions = args.searchPastExecutions !== false;
     const messageRoles = Array.isArray(args.messageRoles) ? args.messageRoles : undefined;
 
     try {
@@ -2328,8 +2377,10 @@ async function executeSearchThreadMemory(
             topK,
             similarityThreshold,
             contextWindow,
+            // When searching past executions: don't filter by executionId, but exclude current
+            // When searching only current: filter by executionId, don't exclude
             executionId: searchPastExecutions ? undefined : executionId,
-            excludeCurrentExecution: !searchPastExecutions && executionId ? true : false,
+            excludeCurrentExecution: searchPastExecutions && executionId ? true : false,
             messageRoles: messageRoles as ("user" | "assistant" | "system" | "tool")[] | undefined
         });
 

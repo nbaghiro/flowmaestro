@@ -150,6 +150,24 @@ function App() {
                 />
 
                 <Route
+                    path="/agents/:agentId/memory"
+                    element={
+                        <ProtectedRoute>
+                            <AgentBuilder />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/agents/:agentId/slack"
+                    element={
+                        <ProtectedRoute>
+                            <AgentBuilder />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
                     path="/agents/:agentId/settings"
                     element={
                         <ProtectedRoute>

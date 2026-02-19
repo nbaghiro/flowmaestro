@@ -103,9 +103,12 @@ export function NavigationPanel({ activeTab, onTabChange }: NavigationPanelProps
     // Expanded content - full navigation with collapse button
     const expandedContent = (
         <div className="flex flex-col h-full">
-            {/* Header with collapse button */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                <span className="text-sm font-medium text-muted-foreground">Navigation</span>
+            {/* Header with collapse button - aligned with nav items below */}
+            <div className="flex items-center justify-between p-4 border-b border-border">
+                <div className="flex items-center gap-3 px-4">
+                    <Menu className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">Navigation</span>
+                </div>
                 <Tooltip content="Collapse sidebar" position="right">
                     <button
                         onClick={() => togglePanel("navigation")}

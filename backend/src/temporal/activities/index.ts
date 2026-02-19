@@ -126,12 +126,17 @@ export {
     searchThreadMemory,
     getThreadMemoryStats,
     clearExecutionMemory,
+    summarizeMessages,
+    // Working memory
+    getWorkingMemoryForAgent,
     type StoreThreadEmbeddingsInput,
     type SearchThreadMemoryInput,
     type SearchThreadMemoryResult,
     type GetMemoryStatsInput,
     type MemoryStatsResult,
-    type ClearExecutionMemoryInput
+    type ClearExecutionMemoryInput,
+    type SummarizeMessagesInput,
+    type SummarizeMessagesResult
 } from "./agents";
 
 // Persona activities (separate from agents - background execution)

@@ -279,7 +279,7 @@ describe("Continue-As-New Integration Tests", () => {
 
             const agent = createTestAgent({
                 id: "agent-summarize-system",
-                memoryConfig: { max_messages: 50, type: "buffer" },
+                memoryConfig: { max_messages: 50 },
                 maxIterations: 100 // Allow for iterations starting at 51
             });
             testEnv.registerAgent(agent);
@@ -313,7 +313,7 @@ describe("Continue-As-New Integration Tests", () => {
 
             const agent = createTestAgent({
                 id: "agent-summarize-recent",
-                memoryConfig: { max_messages: maxMessages, type: "buffer" },
+                memoryConfig: { max_messages: maxMessages },
                 maxIterations: 100
             });
             testEnv.registerAgent(agent);
@@ -342,7 +342,7 @@ describe("Continue-As-New Integration Tests", () => {
 
             const agent = createTestAgent({
                 id: "agent-summarize-order",
-                memoryConfig: { max_messages: 40, type: "buffer" }
+                memoryConfig: { max_messages: 40 }
             });
             testEnv.registerAgent(agent);
 
@@ -559,7 +559,6 @@ describe("Continue-As-New Integration Tests", () => {
             const agent = createTestAgent({
                 id: "agent-memory-config",
                 memoryConfig: {
-                    type: "buffer",
                     max_messages: 20
                 },
                 maxIterations: 100 // Allow for iterations starting at 51
@@ -583,11 +582,10 @@ describe("Continue-As-New Integration Tests", () => {
             });
 
             // Agent has different memory config than the thread was created with
-            // Note: Memory summarization only happens at continue-as-new boundaries
+            // Note: Memory truncation only happens at continue-as-new boundaries
             const agent = createTestAgent({
                 id: "agent-config-change",
                 memoryConfig: {
-                    type: "buffer",
                     max_messages: 10 // Restrictive but only applies at continue-as-new
                 },
                 maxIterations: 100 // Allow for iterations starting at 51

@@ -50,7 +50,7 @@ export async function copyAgentTemplateRoute(fastify: FastifyInstance) {
                 temperature: template.temperature,
                 max_tokens: template.max_tokens,
                 available_tools: [], // Empty - user must connect their own tools
-                memory_config: { type: "buffer", max_messages: 20 }
+                memory_config: { max_messages: 20 }
             });
 
             // Increment use count in background

@@ -3,7 +3,10 @@
  * Implements semantic search with context window retrieval for better conversation continuity
  */
 
+import { getLogger } from "../../core/logging";
 import { db } from "../database";
+
+const logger = getLogger();
 
 export interface ThreadEmbedding {
     id: string;
@@ -24,6 +27,7 @@ export interface CreateThreadEmbeddingInput {
     agent_id: string;
     user_id: string;
     execution_id: string;
+    thread_id: string;
     message_id: string;
     message_role: "user" | "assistant" | "system" | "tool";
     message_index: number;
@@ -35,7 +39,7 @@ export interface CreateThreadEmbeddingInput {
 
 export interface SearchSimilarMessagesInput {
     agent_id: string;
-    user_id: string;
+    user_id?: string; // Optional: limit to specific user, omit to search across all users
     query_embedding: number[];
     top_k?: number;
     similarity_threshold?: number;
@@ -107,16 +111,17 @@ export class ThreadEmbeddingRepository {
             return [];
         }
 
-        // Build VALUES clause with proper parameterization
+        // Build VALUES clause with proper parameterization (11 fields per row)
         const valuesPlaceholders = inputs.map((_, index) => {
-            const base = index * 10;
-            return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, $${base + 10})`;
+            const base = index * 11;
+            return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, $${base + 10}, $${base + 11})`;
         });
 
         const values = inputs.flatMap((input) => [
             input.agent_id,
             input.user_id,
             input.execution_id,
+            input.thread_id,
             input.message_id,
             input.message_role,
             input.message_index,
@@ -131,6 +136,7 @@ export class ThreadEmbeddingRepository {
                 agent_id,
                 user_id,
                 execution_id,
+                thread_id,
                 message_id,
                 message_role,
                 message_index,
@@ -165,9 +171,15 @@ export class ThreadEmbeddingRepository {
         } = input;
 
         // Build WHERE clause conditions
-        const conditions = ["agent_id = $1", "user_id = $2"];
-        const params: unknown[] = [agent_id, user_id];
-        let paramIndex = 3;
+        const conditions = ["agent_id = $1"];
+        const params: unknown[] = [agent_id];
+        let paramIndex = 2;
+
+        if (user_id) {
+            conditions.push(`user_id = $${paramIndex}`);
+            params.push(user_id);
+            paramIndex++;
+        }
 
         if (execution_id) {
             conditions.push(`execution_id = $${paramIndex}`);
@@ -188,6 +200,48 @@ export class ThreadEmbeddingRepository {
         }
 
         const whereClause = conditions.join(" AND ");
+
+        // First, check if any embeddings exist for this agent/user
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.agent_conversation_embeddings
+            WHERE ${conditions.slice(0, user_id ? 2 : 1).join(" AND ")}
+        `;
+        const countParams = user_id ? [agent_id, user_id] : [agent_id];
+
+        try {
+            const countResult = await db.query<{ count: string }>(countQuery, countParams);
+            const totalEmbeddings = parseInt(countResult.rows[0]?.count || "0", 10);
+
+            // Log diagnostic info
+            logger.info(
+                {
+                    component: "ThreadEmbeddingRepository",
+                    agent_id,
+                    user_id,
+                    totalEmbeddings,
+                    exclude_execution_id
+                },
+                "searchSimilar diagnostics"
+            );
+
+            if (totalEmbeddings === 0) {
+                logger.info(
+                    { component: "ThreadEmbeddingRepository", agent_id, user_id },
+                    "No embeddings found for agent/user - returning empty results"
+                );
+                return [];
+            }
+        } catch (countError) {
+            logger.error(
+                {
+                    component: "ThreadEmbeddingRepository",
+                    err: countError
+                },
+                "Count query failed - table may not exist"
+            );
+            // Continue to try the main query anyway
+        }
 
         // Query for similar messages
         const similarityQuery = `
@@ -215,7 +269,24 @@ export class ThreadEmbeddingRepository {
             top_k // limit
         );
 
+        logger.info(
+            {
+                component: "ThreadEmbeddingRepository",
+                similarity_threshold,
+                top_k
+            },
+            "Executing similarity search"
+        );
+
         const similarResults = await db.query(similarityQuery, params);
+
+        logger.info(
+            {
+                component: "ThreadEmbeddingRepository",
+                resultCount: similarResults.rows.length
+            },
+            "Similarity search completed"
+        );
 
         if (similarResults.rows.length === 0) {
             return [];
@@ -338,6 +409,20 @@ export class ThreadEmbeddingRepository {
     }
 
     /**
+     * Get count of embeddings for an agent (across all users)
+     */
+    async getCountForAgent(agentId: string): Promise<number> {
+        const result = await db.query<{ count: string }>(
+            `SELECT COUNT(*) as count
+             FROM flowmaestro.agent_conversation_embeddings
+             WHERE agent_id = $1`,
+            [agentId]
+        );
+
+        return parseInt(result.rows[0].count, 10);
+    }
+
+    /**
      * Get latest embeddings for an agent-user pair (for memory recap)
      */
     async getLatest(
@@ -354,5 +439,18 @@ export class ThreadEmbeddingRepository {
         );
 
         return result.rows;
+    }
+
+    /**
+     * Delete all embeddings for an agent (across all users)
+     */
+    async deleteByAgent(agentId: string): Promise<number> {
+        const result = await db.query(
+            `DELETE FROM flowmaestro.agent_conversation_embeddings
+             WHERE agent_id = $1`,
+            [agentId]
+        );
+
+        return result.rowCount || 0;
     }
 }

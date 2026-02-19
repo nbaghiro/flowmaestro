@@ -10,6 +10,15 @@ import { getAgentHandler } from "./get";
 import { getExecutionHandler } from "./get-execution";
 import { listAgentsHandler } from "./list";
 import { listExecutionsHandler } from "./list-executions";
+import {
+    listMemoriesHandler,
+    getMemoryHandler,
+    updateMemoryHandler,
+    deleteMemoryHandler,
+    searchMemoryHandler,
+    getMemoryStatsHandler,
+    clearAllMemoryHandler
+} from "./memory";
 import { removeToolHandler } from "./remove-tool";
 import { sendMessageHandler } from "./send-message";
 import { streamAgentHandler } from "./stream";
@@ -38,4 +47,13 @@ export async function agentRoutes(fastify: FastifyInstance) {
     fastify.get("/:id/executions/:executionId", getExecutionHandler);
     fastify.get("/:id/executions/:executionId/stream", streamAgentHandler);
     fastify.post("/:id/executions/:executionId/message", sendMessageHandler);
+
+    // Memory management
+    fastify.get("/:id/memory", listMemoriesHandler);
+    fastify.get("/:id/memory/stats", getMemoryStatsHandler);
+    fastify.post("/:id/memory/clear", clearAllMemoryHandler);
+    fastify.get("/:id/memory/:userId", getMemoryHandler);
+    fastify.put("/:id/memory/:userId", updateMemoryHandler);
+    fastify.delete("/:id/memory/:userId", deleteMemoryHandler);
+    fastify.post("/:id/memory/search", searchMemoryHandler);
 }
