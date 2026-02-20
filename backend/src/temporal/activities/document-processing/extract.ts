@@ -140,9 +140,16 @@ export async function extractDocumentText(input: ExtractTextInput): Promise<stri
             const documentMetadata = extractedText.metadata as Parameters<
                 typeof documentRepo.update
             >[1]["metadata"];
+
+            // Calculate content size in bytes (UTF-8 encoded)
+            const contentSizeBytes = Buffer.byteLength(sanitizedContent, "utf8");
+
             await documentRepo.update(input.documentId, {
                 content: sanitizedContent,
-                metadata: documentMetadata
+                metadata: documentMetadata,
+                // Set file_size for URL documents (content size) or keep existing for files
+                file_size:
+                    input.sourceUrl || input.sourceType === "url" ? contentSizeBytes : undefined
             });
         }
 

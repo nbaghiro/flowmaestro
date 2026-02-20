@@ -69,6 +69,21 @@ export {
     type PersonaOrchestratorResult
 } from "./persona-orchestrator";
 
+// Integration import workflow (knowledge base document import from providers)
+export {
+    integrationImportWorkflow,
+    type IntegrationImportWorkflowInput,
+    type IntegrationImportWorkflowResult,
+    type ImportFileResult
+} from "./integration-import";
+
+// Sync scheduler workflow (cron workflow for scheduled syncs)
+export {
+    syncSchedulerWorkflow,
+    type SyncSchedulerWorkflowInput,
+    type SyncSchedulerWorkflowResult
+} from "./sync-scheduler";
+
 // Workflow logger (direct import, not from barrel)
 export { createWorkflowLogger } from "../core/workflow-logger";
 export type { WorkflowLogContext, WorkflowLogger } from "../core/workflow-logger";

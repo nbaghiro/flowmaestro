@@ -85,8 +85,8 @@ export function DocumentList({
     }
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {documents.map((doc) => {
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+            {documents.map((doc, index) => {
                 const isSelected = selectedDocumentId === doc.id;
                 const isClickable = doc.status === "ready" && onDocumentClick;
                 const isProcessing = processingDocId === doc.id;
@@ -95,8 +95,9 @@ export function DocumentList({
                     <div
                         key={doc.id}
                         className={`
-                            group relative bg-card border rounded-lg p-4 transition-all
-                            ${isSelected ? "border-primary ring-1 ring-primary/20 bg-primary/5" : "border-border hover:border-muted-foreground/30"}
+                            group flex items-center gap-3 px-4 py-4 transition-all
+                            ${index !== 0 ? "border-t border-border" : ""}
+                            ${isSelected ? "bg-primary/5" : "hover:bg-muted/50"}
                             ${isClickable ? "cursor-pointer" : ""}
                         `}
                         onClick={() => {
@@ -105,94 +106,97 @@ export function DocumentList({
                             }
                         }}
                     >
-                        {/* Top Row: Icon + Actions */}
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                                {getDocumentIcon(doc)}
-                            </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {doc.status === "failed" && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onReprocess(doc.id);
-                                        }}
-                                        disabled={isProcessing}
-                                        className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors disabled:opacity-50"
-                                        title="Reprocess document"
-                                    >
-                                        {isProcessing ? (
-                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        ) : (
-                                            <RefreshCw className="w-3.5 h-3.5" />
-                                        )}
-                                    </button>
-                                )}
+                        {/* Icon */}
+                        <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                            {getDocumentIcon(doc)}
+                        </div>
+
+                        {/* Name + URL */}
+                        <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-foreground text-sm leading-tight truncate">
+                                {doc.source_type === "url" && doc.source_url
+                                    ? new URL(doc.source_url).hostname
+                                    : doc.name}
+                            </h4>
+                            {doc.source_type === "url" && doc.source_url && (
+                                <p
+                                    className="text-xs text-muted-foreground truncate"
+                                    title={doc.source_url}
+                                >
+                                    {doc.source_url}
+                                </p>
+                            )}
+                            {doc.error_message && (
+                                <p
+                                    className="text-xs text-red-600 truncate"
+                                    title={doc.error_message}
+                                >
+                                    {doc.error_message}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Type Badge */}
+                        <span className="text-xs text-muted-foreground uppercase font-medium px-1.5 py-0.5 bg-muted rounded flex-shrink-0">
+                            {doc.file_type}
+                        </span>
+
+                        {/* File Size */}
+                        <span
+                            className={`text-xs text-muted-foreground w-16 flex-shrink-0 ${doc.file_size != null ? "text-right" : "text-center"}`}
+                        >
+                            {doc.file_size != null ? formatFileSize(Number(doc.file_size)) : "-"}
+                        </span>
+
+                        {/* Status */}
+                        <div className="flex items-center gap-1 w-24 flex-shrink-0">
+                            {getStatusIcon(doc.status)}
+                            <span
+                                className={`text-xs ${
+                                    doc.status === "ready"
+                                        ? "text-green-600"
+                                        : doc.status === "failed"
+                                          ? "text-red-600"
+                                          : doc.status === "processing"
+                                            ? "text-blue-600"
+                                            : "text-yellow-600"
+                                }`}
+                            >
+                                {getStatusText(doc.status)}
+                            </span>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                            {doc.status === "failed" && (
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        onDeleteClick(doc.id);
+                                        onReprocess(doc.id);
                                     }}
                                     disabled={isProcessing}
-                                    className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded transition-colors disabled:opacity-50"
-                                    title="Delete document"
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition-colors disabled:opacity-50"
+                                    title="Reprocess document"
                                 >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    {isProcessing ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <RefreshCw className="w-3.5 h-3.5" />
+                                    )}
                                 </button>
-                            </div>
-                        </div>
-
-                        {/* Document Name */}
-                        <h4 className="font-medium text-foreground text-sm leading-tight mb-2 line-clamp-2">
-                            {doc.source_type === "url" && doc.source_url
-                                ? new URL(doc.source_url).hostname
-                                : doc.name}
-                        </h4>
-
-                        {/* URL subtitle if applicable */}
-                        {doc.source_type === "url" && doc.source_url && (
-                            <p
-                                className="text-xs text-muted-foreground truncate mb-2"
-                                title={doc.source_url}
-                            >
-                                {doc.source_url}
-                            </p>
-                        )}
-
-                        {/* Meta Row: Type, Size, Status */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs text-muted-foreground uppercase font-medium px-1.5 py-0.5 bg-muted rounded">
-                                {doc.file_type}
-                            </span>
-                            {doc.file_size != null && (
-                                <span className="text-xs text-muted-foreground">
-                                    {formatFileSize(Number(doc.file_size))}
-                                </span>
                             )}
-                            <div className="flex items-center gap-1 ml-auto">
-                                {getStatusIcon(doc.status)}
-                                <span
-                                    className={`text-xs ${
-                                        doc.status === "ready"
-                                            ? "text-green-600"
-                                            : doc.status === "failed"
-                                              ? "text-red-600"
-                                              : doc.status === "processing"
-                                                ? "text-blue-600"
-                                                : "text-yellow-600"
-                                    }`}
-                                >
-                                    {getStatusText(doc.status)}
-                                </span>
-                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteClick(doc.id);
+                                }}
+                                disabled={isProcessing}
+                                className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded transition-colors disabled:opacity-50"
+                                title="Delete document"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                         </div>
-
-                        {/* Error message if failed */}
-                        {doc.error_message && (
-                            <p className="text-xs text-red-600 mt-2 line-clamp-2">
-                                {doc.error_message}
-                            </p>
-                        )}
                     </div>
                 );
             })}

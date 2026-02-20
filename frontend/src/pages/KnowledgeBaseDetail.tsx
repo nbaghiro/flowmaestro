@@ -9,7 +9,8 @@ import {
     Upload,
     Link as LinkIcon,
     Search,
-    Settings
+    Settings,
+    Cloud
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -22,13 +23,16 @@ import {
     KBSettingsSection
 } from "../components/knowledge-bases";
 import { DocumentList } from "../components/knowledge-bases/DocumentList";
+import { IntegrationImportProgress } from "../components/knowledge-bases/IntegrationImportProgress";
+import { IntegrationSourcesPanel } from "../components/knowledge-bases/IntegrationSourcesPanel";
 import { KBContextPanel } from "../components/knowledge-bases/KBContextPanel";
 import { KBOverviewSidebar } from "../components/knowledge-bases/KBOverviewSidebar";
+import { IntegrationFileBrowserModal } from "../components/knowledge-bases/modals/IntegrationFileBrowserModal";
 import { KnowledgeBaseEvents } from "../lib/analytics";
 import { logger } from "../lib/logger";
 import { streamKnowledgeBase } from "../lib/sse";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
-import type { KnowledgeDocument } from "../lib/api";
+import type { KnowledgeDocument, CreateKBSourceInput } from "../lib/api";
 
 type PanelMode = "empty" | "viewer" | "search" | "settings";
 
@@ -49,7 +53,19 @@ export function KnowledgeBaseDetail() {
         reprocessDoc,
         query,
         deleteKB,
-        updateKB
+        updateKB,
+        // Integration
+        integrationProviders: _integrationProviders,
+        integrationSources,
+        syncingSourceIds,
+        currentImportJobId,
+        fetchIntegrationProviders,
+        fetchIntegrationSources,
+        createIntegrationSource,
+        updateIntegrationSource,
+        deleteIntegrationSource,
+        triggerSync,
+        setCurrentImportJobId
     } = useKnowledgeBaseStore();
 
     const [showUrlModal, setShowUrlModal] = useState(false);
@@ -62,6 +78,8 @@ export function KnowledgeBaseDetail() {
     const [panelWidth, setPanelWidth] = useState(500);
     const [panelMode, setPanelMode] = useState<PanelMode>("empty");
     const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [showIntegrationBrowser, setShowIntegrationBrowser] = useState(false);
+    const [importingFromIntegration, setImportingFromIntegration] = useState(false);
 
     // Name editing state
     const [isEditingName, setIsEditingName] = useState(false);
@@ -83,6 +101,9 @@ export function KnowledgeBaseDetail() {
             fetchKnowledgeBase(id);
             fetchDocuments(id);
             fetchStats(id);
+            // Fetch integration data
+            fetchIntegrationProviders(id);
+            fetchIntegrationSources(id);
         }
     }, [id]);
 
@@ -312,6 +333,65 @@ export function KnowledgeBaseDetail() {
         }
     };
 
+    const handleIntegrationImport = async (input: CreateKBSourceInput) => {
+        if (!id) return;
+
+        setImportingFromIntegration(true);
+        try {
+            await createIntegrationSource(id, input);
+            setShowIntegrationBrowser(false);
+            // Refresh documents as they'll start appearing
+            fetchDocuments(id);
+            fetchStats(id);
+        } catch (error) {
+            logger.error("Failed to import from integration", error);
+        } finally {
+            setImportingFromIntegration(false);
+        }
+    };
+
+    const handleSyncSource = async (sourceId: string) => {
+        if (!id) return;
+        try {
+            await triggerSync(id, sourceId);
+        } catch (error) {
+            logger.error("Failed to trigger sync", error);
+        }
+    };
+
+    const handleDeleteSource = async (sourceId: string) => {
+        if (!id) return;
+        try {
+            await deleteIntegrationSource(id, sourceId);
+        } catch (error) {
+            logger.error("Failed to delete integration source", error);
+        }
+    };
+
+    const handleUpdateSource = async (
+        sourceId: string,
+        syncEnabled: boolean,
+        syncIntervalMinutes?: number
+    ) => {
+        if (!id) return;
+        try {
+            await updateIntegrationSource(id, sourceId, {
+                syncEnabled,
+                syncIntervalMinutes
+            });
+        } catch (error) {
+            logger.error("Failed to update integration source", error);
+        }
+    };
+
+    const handleImportComplete = () => {
+        if (id) {
+            fetchDocuments(id);
+            fetchStats(id);
+            fetchIntegrationSources(id);
+        }
+    };
+
     if (loading && !currentKB) {
         return (
             <div className="h-screen flex items-center justify-center bg-background">
@@ -461,6 +541,17 @@ export function KnowledgeBaseDetail() {
                                     <LinkIcon className="w-4 h-4" />
                                     Add URL
                                 </button>
+
+                                {/* Import from Apps Button */}
+                                <button
+                                    onClick={() => setShowIntegrationBrowser(true)}
+                                    disabled={uploading}
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Import files from connected apps"
+                                >
+                                    <Cloud className="w-4 h-4" />
+                                    Import
+                                </button>
                             </div>
 
                             {/* Search Button */}
@@ -478,7 +569,28 @@ export function KnowledgeBaseDetail() {
                         </div>
 
                         {/* Document Grid */}
-                        <div className="flex-1 overflow-auto p-4">
+                        <div className="flex-1 overflow-auto p-4 space-y-4">
+                            {/* Import Progress */}
+                            {currentImportJobId && (
+                                <IntegrationImportProgress
+                                    knowledgeBaseId={id || ""}
+                                    jobId={currentImportJobId}
+                                    onComplete={handleImportComplete}
+                                    onClose={() => setCurrentImportJobId(null)}
+                                />
+                            )}
+
+                            {/* Integration Sources */}
+                            {integrationSources.length > 0 && (
+                                <IntegrationSourcesPanel
+                                    sources={integrationSources}
+                                    onSync={handleSyncSource}
+                                    onDelete={handleDeleteSource}
+                                    onUpdate={handleUpdateSource}
+                                    isSyncing={syncingSourceIds}
+                                />
+                            )}
+
                             <DocumentList
                                 documents={currentDocuments}
                                 onDeleteClick={setDeleteConfirmDocId}
@@ -525,6 +637,14 @@ export function KnowledgeBaseDetail() {
                     onConfirm={handleDeleteKnowledgeBase}
                     isLoading={deletingKB}
                     knowledgeBaseName={currentKB.name}
+                />
+
+                <IntegrationFileBrowserModal
+                    isOpen={showIntegrationBrowser}
+                    onClose={() => setShowIntegrationBrowser(false)}
+                    knowledgeBaseId={id || ""}
+                    onImport={handleIntegrationImport}
+                    isLoading={importingFromIntegration}
                 />
 
                 {/* Settings Modal */}

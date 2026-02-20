@@ -5,6 +5,7 @@ import { deleteKnowledgeBaseRoute } from "./delete";
 import { deleteDocumentRoute } from "./delete-document";
 import { downloadDocumentRoute } from "./download-document";
 import { getKnowledgeBaseRoute } from "./get";
+import { integrationRoutes } from "./integration";
 import { listKnowledgeBasesRoute } from "./list";
 import { listDocumentsRoute } from "./list-documents";
 import { queryKnowledgeBaseRoute } from "./query";
@@ -36,4 +37,7 @@ export async function knowledgeBaseRoutes(fastify: FastifyInstance) {
 
     // Real-time streaming
     await streamKnowledgeBaseRoute(fastify);
+
+    // Integration (import from providers)
+    await integrationRoutes(fastify);
 }

@@ -1,18 +1,27 @@
 import type { JsonValue } from "@flowmaestro/shared";
 
-export type DocumentSourceType = "file" | "url";
+export type DocumentSourceType = "file" | "url" | "integration";
 
 export type DocumentFileType = "pdf" | "docx" | "doc" | "txt" | "md" | "html" | "json" | "csv";
 
 export type DocumentStatus = "pending" | "processing" | "ready" | "failed";
 
 export interface DocumentMetadata extends Record<string, JsonValue | undefined> {
+    // Standard metadata
     author?: string;
     created_date?: string;
     pages?: number;
     language?: string;
     file_size?: number;
     word_count?: number;
+    // Integration source metadata (when source_type = "integration")
+    integration_source_id?: string;
+    integration_connection_id?: string;
+    integration_provider?: string;
+    integration_file_id?: string;
+    integration_file_path?: string;
+    integration_last_modified?: string;
+    integration_content_hash?: string;
 }
 
 export interface KnowledgeDocumentModel {
@@ -32,6 +41,8 @@ export interface KnowledgeDocumentModel {
     processing_completed_at: Date | null;
     created_at: Date;
     updated_at: Date;
+    /** Reference to integration source if imported from provider */
+    source_id: string | null;
 }
 
 export interface CreateKnowledgeDocumentInput {
@@ -43,6 +54,8 @@ export interface CreateKnowledgeDocumentInput {
     file_type: DocumentFileType;
     file_size?: bigint;
     metadata?: DocumentMetadata;
+    /** Reference to integration source if imported from provider */
+    source_id?: string;
 }
 
 export interface UpdateKnowledgeDocumentInput {
@@ -53,4 +66,5 @@ export interface UpdateKnowledgeDocumentInput {
     error_message?: string;
     processing_started_at?: Date;
     processing_completed_at?: Date;
+    file_size?: number;
 }

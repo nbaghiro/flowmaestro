@@ -211,3 +211,23 @@ export {
     type EmbedAndStoreResult,
     type CompleteProcessingInput as CompleteDocumentProcessingInput
 } from "./document-processing";
+
+// Integration import activities
+export {
+    listIntegrationFiles,
+    checkExistingDocuments,
+    downloadIntegrationFile,
+    storeDocumentFile,
+    createIntegrationDocument,
+    updateSourceSyncStatus,
+    findSourcesDueForSync,
+    type ListIntegrationFilesInput,
+    type CheckExistingDocumentsInput,
+    type ExistingDocumentInfo,
+    type DownloadIntegrationFileInput,
+    type DownloadResult as IntegrationDownloadResult,
+    type StoreDocumentFileInput,
+    type CreateIntegrationDocumentInput,
+    type UpdateSourceSyncStatusInput,
+    type SourceDueForSync
+} from "./integration-import";

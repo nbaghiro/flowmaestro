@@ -97,7 +97,16 @@ import type {
     CreditPack,
     CreateCheckoutSessionResponse,
     CreatePortalSessionResponse,
-    PaymentHistoryItem
+    PaymentHistoryItem,
+    DocumentProviderCapability,
+    IntegrationBrowseResult,
+    BrowseIntegrationOptions,
+    KnowledgeBaseSource,
+    CreateKBSourceInput,
+    UpdateKBSourceInput,
+    CreateSourceResponse,
+    TriggerSyncResponse,
+    IntegrationImportJob
 } from "@flowmaestro/shared";
 import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 import { logger } from "./logger";
@@ -7199,6 +7208,298 @@ export async function getAgentMemoryStats(agentId: string): Promise<AgentMemoryS
 
     const data = await response.json();
     return data.data;
+}
+
+// ===== Knowledge Base Integration API Functions =====
+
+// Re-export integration types for components
+export type {
+    DocumentProviderCapability,
+    IntegrationBrowseResult,
+    BrowseIntegrationOptions,
+    KnowledgeBaseSource,
+    CreateKBSourceInput,
+    UpdateKBSourceInput,
+    CreateSourceResponse,
+    TriggerSyncResponse,
+    IntegrationImportJob,
+    IntegrationFile,
+    KBSourceConfig,
+    KBSourceType,
+    KBSyncStatus,
+    ImportFileResult,
+    ImportFileStatus,
+    ImportFileAction,
+    ImportJobStatus
+} from "@flowmaestro/shared";
+
+/**
+ * Get all integration providers with document import capabilities for a knowledge base
+ */
+export async function getKBIntegrationProviders(
+    kbId: string
+): Promise<{ success: boolean; data: DocumentProviderCapability[]; error?: string }> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/knowledge-bases/${kbId}/integration/providers`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get all provider IDs that support document import (regardless of connections)
+ */
+export async function getKBCapableProviderIds(
+    kbId: string
+): Promise<{ success: boolean; data: string[]; error?: string }> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/knowledge-bases/${kbId}/integration/capable-providers`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Browse files/folders in an integration provider
+ */
+export async function browseKBIntegration(
+    kbId: string,
+    connectionId: string,
+    options?: BrowseIntegrationOptions
+): Promise<{ success: boolean; data: IntegrationBrowseResult; error?: string }> {
+    const token = getAuthToken();
+
+    const queryParams = new URLSearchParams();
+    if (options?.folderId) queryParams.set("folderId", options.folderId);
+    if (options?.pageToken) queryParams.set("pageToken", options.pageToken);
+    if (options?.query) queryParams.set("query", options.query);
+    if (options?.pageSize) queryParams.set("pageSize", options.pageSize.toString());
+
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/knowledge-bases/${kbId}/integration/${connectionId}/browse${queryString ? `?${queryString}` : ""}`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get all integration sources for a knowledge base
+ */
+export async function getKBIntegrationSources(
+    kbId: string
+): Promise<{ success: boolean; data: KnowledgeBaseSource[]; error?: string }> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/knowledge-bases/${kbId}/integration/sources`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Create a new integration source (and trigger initial import)
+ */
+export async function createKBIntegrationSource(
+    kbId: string,
+    input: CreateKBSourceInput
+): Promise<{ success: boolean; data: CreateSourceResponse; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/knowledge-bases/${kbId}/integration/sources`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Update an integration source
+ */
+export async function updateKBIntegrationSource(
+    kbId: string,
+    sourceId: string,
+    input: UpdateKBSourceInput
+): Promise<{ success: boolean; data: KnowledgeBaseSource; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/knowledge-bases/${kbId}/integration/sources/${sourceId}`,
+        {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(input)
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Delete an integration source
+ */
+export async function deleteKBIntegrationSource(
+    kbId: string,
+    sourceId: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/knowledge-bases/${kbId}/integration/sources/${sourceId}`,
+        {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Trigger a manual sync for an integration source
+ */
+export async function triggerKBIntegrationSync(
+    kbId: string,
+    sourceId: string
+): Promise<{ success: boolean; data: TriggerSyncResponse; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/knowledge-bases/${kbId}/integration/sources/${sourceId}/sync`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get import job progress
+ */
+export async function getKBImportProgress(
+    kbId: string,
+    jobId: string
+): Promise<{ success: boolean; data: IntegrationImportJob; error?: string }> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/knowledge-bases/${kbId}/integration/import/${jobId}`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
 }
 
 // Re-export persona types for components

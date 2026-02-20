@@ -11,7 +11,14 @@ import {
     addUrlToKnowledgeBase,
     queryKnowledgeBase,
     deleteDocument,
-    reprocessDocument
+    reprocessDocument,
+    // Integration imports
+    getKBIntegrationProviders,
+    getKBIntegrationSources,
+    createKBIntegrationSource,
+    updateKBIntegrationSource,
+    deleteKBIntegrationSource,
+    triggerKBIntegrationSync
 } from "../lib/api";
 import type {
     KnowledgeBase,
@@ -20,7 +27,12 @@ import type {
     CreateKnowledgeBaseInput,
     UpdateKnowledgeBaseInput,
     QueryKnowledgeBaseInput,
-    ChunkSearchResult
+    ChunkSearchResult,
+    // Integration types
+    DocumentProviderCapability,
+    KnowledgeBaseSource,
+    CreateKBSourceInput,
+    UpdateKBSourceInput
 } from "../lib/api";
 
 interface KnowledgeBaseStore {
@@ -31,6 +43,13 @@ interface KnowledgeBaseStore {
     currentStats: KnowledgeBaseStats | null;
     loading: boolean;
     error: string | null;
+
+    // Integration state
+    integrationProviders: DocumentProviderCapability[];
+    integrationSources: KnowledgeBaseSource[];
+    loadingIntegration: boolean;
+    syncingSourceIds: Set<string>;
+    currentImportJobId: string | null;
 
     // Actions
     fetchKnowledgeBases: (params?: { folderId?: string }) => Promise<void>;
@@ -47,6 +66,19 @@ interface KnowledgeBaseStore {
     query: (id: string, input: QueryKnowledgeBaseInput) => Promise<ChunkSearchResult[]>;
     clearError: () => void;
     clearCurrent: () => void;
+
+    // Integration actions
+    fetchIntegrationProviders: (kbId: string) => Promise<void>;
+    fetchIntegrationSources: (kbId: string) => Promise<void>;
+    createIntegrationSource: (kbId: string, input: CreateKBSourceInput) => Promise<string>;
+    updateIntegrationSource: (
+        kbId: string,
+        sourceId: string,
+        input: UpdateKBSourceInput
+    ) => Promise<void>;
+    deleteIntegrationSource: (kbId: string, sourceId: string) => Promise<void>;
+    triggerSync: (kbId: string, sourceId: string) => Promise<string>;
+    setCurrentImportJobId: (jobId: string | null) => void;
 }
 
 export const useKnowledgeBaseStore = create<KnowledgeBaseStore>((set, get) => ({
@@ -57,6 +89,13 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseStore>((set, get) => ({
     currentStats: null,
     loading: false,
     error: null,
+
+    // Integration initial state
+    integrationProviders: [],
+    integrationSources: [],
+    loadingIntegration: false,
+    syncingSourceIds: new Set(),
+    currentImportJobId: null,
 
     // Fetch all knowledge bases
     fetchKnowledgeBases: async (params?: { folderId?: string }) => {
@@ -313,7 +352,150 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseStore>((set, get) => ({
         set({
             currentKB: null,
             currentDocuments: [],
-            currentStats: null
+            currentStats: null,
+            integrationProviders: [],
+            integrationSources: [],
+            currentImportJobId: null
         });
+    },
+
+    // Fetch integration providers for a knowledge base
+    fetchIntegrationProviders: async (kbId: string) => {
+        set({ loadingIntegration: true });
+        try {
+            const response = await getKBIntegrationProviders(kbId);
+            if (response.success) {
+                set({ integrationProviders: response.data, loadingIntegration: false });
+            } else {
+                throw new Error(response.error || "Failed to fetch integration providers");
+            }
+        } catch (error) {
+            set({
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to fetch integration providers",
+                loadingIntegration: false
+            });
+        }
+    },
+
+    // Fetch integration sources for a knowledge base
+    fetchIntegrationSources: async (kbId: string) => {
+        set({ loadingIntegration: true });
+        try {
+            const response = await getKBIntegrationSources(kbId);
+            if (response.success) {
+                set({ integrationSources: response.data, loadingIntegration: false });
+            } else {
+                throw new Error(response.error || "Failed to fetch integration sources");
+            }
+        } catch (error) {
+            set({
+                error:
+                    error instanceof Error ? error.message : "Failed to fetch integration sources",
+                loadingIntegration: false
+            });
+        }
+    },
+
+    // Create an integration source and start import
+    createIntegrationSource: async (kbId: string, input: CreateKBSourceInput) => {
+        set({ loadingIntegration: true, error: null });
+        try {
+            const response = await createKBIntegrationSource(kbId, input);
+            if (response.success && response.data) {
+                // Refresh sources list
+                await get().fetchIntegrationSources(kbId);
+                set({
+                    currentImportJobId: response.data.jobId,
+                    loadingIntegration: false
+                });
+                return response.data.jobId;
+            }
+            throw new Error(response.error || "Failed to create integration source");
+        } catch (error) {
+            set({
+                error:
+                    error instanceof Error ? error.message : "Failed to create integration source",
+                loadingIntegration: false
+            });
+            throw error;
+        }
+    },
+
+    // Update an integration source
+    updateIntegrationSource: async (kbId: string, sourceId: string, input: UpdateKBSourceInput) => {
+        try {
+            const response = await updateKBIntegrationSource(kbId, sourceId, input);
+            if (response.success && response.data) {
+                set((state) => ({
+                    integrationSources: state.integrationSources.map((s) =>
+                        s.id === sourceId ? response.data! : s
+                    )
+                }));
+            } else {
+                throw new Error(response.error || "Failed to update integration source");
+            }
+        } catch (error) {
+            set({
+                error:
+                    error instanceof Error ? error.message : "Failed to update integration source"
+            });
+            throw error;
+        }
+    },
+
+    // Delete an integration source
+    deleteIntegrationSource: async (kbId: string, sourceId: string) => {
+        try {
+            const response = await deleteKBIntegrationSource(kbId, sourceId);
+            if (response.success) {
+                set((state) => ({
+                    integrationSources: state.integrationSources.filter((s) => s.id !== sourceId)
+                }));
+            } else {
+                throw new Error(response.error || "Failed to delete integration source");
+            }
+        } catch (error) {
+            set({
+                error:
+                    error instanceof Error ? error.message : "Failed to delete integration source"
+            });
+            throw error;
+        }
+    },
+
+    // Trigger a manual sync for a source
+    triggerSync: async (kbId: string, sourceId: string) => {
+        set((state) => ({
+            syncingSourceIds: new Set([...state.syncingSourceIds, sourceId])
+        }));
+        try {
+            const response = await triggerKBIntegrationSync(kbId, sourceId);
+            if (response.success && response.data) {
+                set({ currentImportJobId: response.data.jobId });
+                // Refresh sources to show "syncing" status
+                await get().fetchIntegrationSources(kbId);
+                return response.data.jobId;
+            }
+            throw new Error(response.error || "Failed to trigger sync");
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to trigger sync"
+            });
+            throw error;
+        } finally {
+            set((state) => {
+                const newSyncingIds = new Set(state.syncingSourceIds);
+                newSyncingIds.delete(sourceId);
+                return { syncingSourceIds: newSyncingIds };
+            });
+        }
+    },
+
+    // Set current import job ID
+    setCurrentImportJobId: (jobId: string | null) => {
+        set({ currentImportJobId: jobId });
     }
 }));
