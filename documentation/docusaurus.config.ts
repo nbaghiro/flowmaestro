@@ -6,6 +6,7 @@ const config: Config = {
     title: "FlowMaestro",
     tagline: "Build AI automations without code",
     favicon: "img/favicon.svg",
+    clientModules: ["./src/clientModule.ts"],
 
     url: "https://docs.flowmaestro.ai",
     baseUrl: "/",
@@ -28,8 +29,7 @@ const config: Config = {
                 docs: {
                     routeBasePath: "/",
                     sidebarPath: "./sidebars.ts",
-                    editUrl: "https://github.com/flowmaestro/flowmaestro/tree/main/documentation/",
-                    showLastUpdateTime: true,
+                    showLastUpdateTime: false,
                     breadcrumbs: true
                 },
                 blog: false,
@@ -52,7 +52,8 @@ const config: Config = {
             title: "FlowMaestro",
             logo: {
                 alt: "FlowMaestro Logo",
-                src: "img/logo.svg"
+                src: "img/logo-dark.svg",
+                srcDark: "img/logo-light.svg"
             },
             items: [
                 {
@@ -66,6 +67,10 @@ const config: Config = {
                     docId: "api/introduction",
                     position: "left",
                     label: "API Reference"
+                },
+                {
+                    type: "custom-themeToggle",
+                    position: "right"
                 },
                 {
                     href: "https://flowmaestro.ai/community",
@@ -95,61 +100,6 @@ const config: Config = {
                     "aria-label": "GitHub repository"
                 }
             ]
-        },
-        footer: {
-            style: "dark",
-            logo: {
-                alt: "FlowMaestro",
-                src: "img/logo.svg",
-                href: "https://flowmaestro.ai",
-                width: 32,
-                height: 32
-            },
-            links: [
-                {
-                    title: "Product",
-                    items: [
-                        {
-                            label: "Features",
-                            href: "https://flowmaestro.ai/features"
-                        },
-                        {
-                            label: "Integrations",
-                            href: "https://flowmaestro.ai/integrations"
-                        },
-                        {
-                            label: "Pricing",
-                            href: "https://flowmaestro.ai/pricing"
-                        },
-                        {
-                            label: "Documentation",
-                            to: "/"
-                        }
-                    ]
-                },
-                {
-                    title: "Company",
-                    items: [
-                        {
-                            label: "About",
-                            href: "https://flowmaestro.ai/about"
-                        },
-                        {
-                            label: "Blog",
-                            href: "https://flowmaestro.ai/blog"
-                        },
-                        {
-                            label: "Careers",
-                            href: "https://flowmaestro.ai/careers"
-                        },
-                        {
-                            label: "Contact",
-                            href: "https://flowmaestro.ai/contact"
-                        }
-                    ]
-                }
-            ],
-            copyright: `© ${new Date().getFullYear()} FlowMaestro. All rights reserved.`
         },
         prism: {
             theme: prismThemes.github,
