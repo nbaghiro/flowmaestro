@@ -1,46 +1,33 @@
 /**
- * Trigger Routes Integration Tests
+ * Trigger CRUD Operations Tests
  *
- * Tests for trigger management endpoints including:
- * - CRUD operations
- * - Schedule triggers
- * - Webhook triggers
- * - Manual trigger execution
- * - Trigger providers
+ * Tests for listing, creating, getting, deleting, and updating triggers.
  */
 
 import { FastifyInstance } from "fastify";
-import { v4 as uuidv4 } from "uuid";
+import {
+    mockTriggerRepo,
+    mockWorkflowRepo,
+    mockExecutionRepo,
+    mockSchedulerService,
+    createMockTrigger,
+    createMockWorkflow,
+    resetAllMocks,
+    createTriggerTestServer,
+    closeTriggerTestServer,
+    createTestUser,
+    authenticatedRequest,
+    unauthenticatedRequest,
+    expectStatus,
+    expectSuccessResponse,
+    expectErrorResponse,
+    uuidv4,
+    DEFAULT_TEST_WORKSPACE_ID
+} from "./helpers/test-utils";
 
 // ============================================================================
 // MOCK SETUP
 // ============================================================================
-
-// Mock trigger repository
-const mockTriggerRepo = {
-    findById: jest.fn(),
-    findByWorkspaceId: jest.fn(),
-    findByIdAndWorkspaceId: jest.fn(),
-    findByWorkflowId: jest.fn(),
-    findByType: jest.fn(),
-    findScheduledTriggersToProcess: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    createExecution: jest.fn(),
-    recordTrigger: jest.fn()
-};
-
-// Mock workflow repository
-const mockWorkflowRepo = {
-    findById: jest.fn(),
-    findByIdAndWorkspaceId: jest.fn()
-};
-
-// Mock execution repository
-const mockExecutionRepo = {
-    create: jest.fn()
-};
 
 jest.mock("../../../../storage/repositories/TriggerRepository", () => ({
     TriggerRepository: jest.fn().mockImplementation(() => mockTriggerRepo)
@@ -64,46 +51,26 @@ jest.mock("../../../../storage/repositories", () => ({
     }))
 }));
 
-// Mock scheduler service
-const mockSchedulerService = {
-    createScheduledTrigger: jest.fn().mockResolvedValue(undefined),
-    updateSchedule: jest.fn().mockResolvedValue(undefined),
-    updateScheduledTrigger: jest.fn().mockResolvedValue(undefined),
-    pauseSchedule: jest.fn().mockResolvedValue(undefined),
-    pauseScheduledTrigger: jest.fn().mockResolvedValue(undefined),
-    resumeScheduledTrigger: jest.fn().mockResolvedValue(undefined),
-    deleteSchedule: jest.fn().mockResolvedValue(undefined),
-    deleteScheduledTrigger: jest.fn().mockResolvedValue(undefined),
-    getScheduleInfo: jest.fn().mockResolvedValue(null)
-};
-
 jest.mock("../../../../temporal/core/services/scheduler", () => ({
     SchedulerService: jest.fn().mockImplementation(() => mockSchedulerService)
 }));
 
-// Mock webhook service
-const mockWebhookService = {
-    processWebhook: jest.fn()
-};
-
 jest.mock("../../../../temporal/core/services/webhook", () => ({
-    WebhookService: jest.fn().mockImplementation(() => mockWebhookService),
+    WebhookService: jest.fn().mockImplementation(() => ({
+        processWebhook: jest.fn()
+    })),
     WebhookRequestData: {}
 }));
 
-// Mock Temporal client
-const mockTemporalClient = {
-    workflow: {
-        start: jest.fn().mockResolvedValue({ workflowId: "test-workflow-id" })
-    }
-};
-
 jest.mock("../../../../temporal/client", () => ({
-    getTemporalClient: jest.fn().mockResolvedValue(mockTemporalClient),
+    getTemporalClient: jest.fn().mockResolvedValue({
+        workflow: {
+            start: jest.fn().mockResolvedValue({ workflowId: "test-workflow-id" })
+        }
+    }),
     closeTemporalConnection: jest.fn().mockResolvedValue(undefined)
 }));
 
-// Mock workflow converter functions from shared package
 jest.mock("@flowmaestro/shared", () => ({
     ...jest.requireActual("@flowmaestro/shared"),
     convertFrontendToBackend: jest.fn().mockImplementation((def) => ({
@@ -116,117 +83,19 @@ jest.mock("@flowmaestro/shared", () => ({
     validateWorkflowForExecution: jest.fn().mockReturnValue({ isValid: true, errors: [] })
 }));
 
-// Import test helpers after mocks
-import {
-    authenticatedRequest,
-    closeTestServer,
-    createTestServer,
-    createTestUser,
-    expectErrorResponse,
-    expectStatus,
-    expectSuccessResponse,
-    unauthenticatedRequest,
-    DEFAULT_TEST_WORKSPACE_ID
-} from "../../../../../__tests__/helpers/fastify-test-client";
-
-// ============================================================================
-// TEST HELPERS
-// ============================================================================
-
-function createMockTrigger(
-    overrides: Partial<{
-        id: string;
-        workflow_id: string;
-        workspace_id: string;
-        name: string;
-        trigger_type: string;
-        config: object;
-        enabled: boolean;
-        temporal_schedule_id: string | null;
-    }> = {}
-) {
-    return {
-        id: overrides.id || uuidv4(),
-        workflow_id: overrides.workflow_id || uuidv4(),
-        workspace_id: overrides.workspace_id || DEFAULT_TEST_WORKSPACE_ID,
-        name: overrides.name || "Test Trigger",
-        trigger_type: overrides.trigger_type || "schedule",
-        config: overrides.config || { cron: "0 9 * * *", timezone: "UTC" },
-        enabled: overrides.enabled ?? true,
-        temporal_schedule_id: overrides.temporal_schedule_id ?? null,
-        last_triggered_at: null,
-        trigger_count: 0,
-        created_at: new Date(),
-        updated_at: new Date()
-    };
-}
-
-function createMockWorkflow(
-    overrides: Partial<{
-        id: string;
-        user_id: string;
-        workspace_id: string;
-        name: string;
-        definition: object;
-    }> = {}
-) {
-    return {
-        id: overrides.id || uuidv4(),
-        user_id: overrides.user_id || uuidv4(),
-        workspace_id: overrides.workspace_id || DEFAULT_TEST_WORKSPACE_ID,
-        name: overrides.name || "Test Workflow",
-        definition: overrides.definition || {
-            nodes: { input: { id: "input", type: "input" } },
-            edges: []
-        },
-        created_at: new Date(),
-        updated_at: new Date(),
-        deleted_at: null
-    };
-}
-
-function resetAllMocks() {
-    jest.clearAllMocks();
-
-    // Reset default behaviors
-    mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
-    mockTriggerRepo.findByWorkspaceId.mockResolvedValue([]);
-    mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
-    mockTriggerRepo.findByWorkflowId.mockResolvedValue([]);
-    mockTriggerRepo.findByType.mockResolvedValue([]);
-    mockTriggerRepo.findScheduledTriggersToProcess.mockResolvedValue([]);
-    mockTriggerRepo.create.mockImplementation((data) =>
-        Promise.resolve(createMockTrigger({ ...data, id: uuidv4() }))
-    );
-    mockTriggerRepo.update.mockImplementation((id, data) =>
-        Promise.resolve(createMockTrigger({ id, ...data }))
-    );
-    mockTriggerRepo.delete.mockResolvedValue(true);
-    mockTriggerRepo.createExecution.mockResolvedValue({ id: uuidv4() });
-    mockTriggerRepo.recordTrigger.mockResolvedValue(undefined);
-
-    mockWorkflowRepo.findById.mockResolvedValue(null);
-    mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
-    mockExecutionRepo.create.mockResolvedValue({
-        id: uuidv4(),
-        status: "pending",
-        workflow_id: uuidv4()
-    });
-}
-
 // ============================================================================
 // TESTS
 // ============================================================================
 
-describe("Trigger Routes", () => {
+describe("Trigger CRUD Operations", () => {
     let fastify: FastifyInstance;
 
     beforeAll(async () => {
-        fastify = await createTestServer();
+        fastify = await createTriggerTestServer();
     });
 
     afterAll(async () => {
-        await closeTestServer(fastify);
+        await closeTriggerTestServer(fastify);
     });
 
     beforeEach(() => {
@@ -236,7 +105,6 @@ describe("Trigger Routes", () => {
     // ========================================================================
     // LIST TRIGGERS
     // ========================================================================
-
     describe("GET /triggers", () => {
         it("should list triggers for a workflow", async () => {
             const testUser = createTestUser();
@@ -320,7 +188,6 @@ describe("Trigger Routes", () => {
     // ========================================================================
     // CREATE TRIGGER
     // ========================================================================
-
     describe("POST /triggers", () => {
         it("should create schedule trigger", async () => {
             const testUser = createTestUser();
@@ -335,7 +202,6 @@ describe("Trigger Routes", () => {
                 }
             };
 
-            // Mock workflow exists in workspace
             mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
                 createMockWorkflow({ id: workflowId })
             );
@@ -370,7 +236,6 @@ describe("Trigger Routes", () => {
                 }
             };
 
-            // Mock workflow exists in workspace
             mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
                 createMockWorkflow({ id: workflowId })
             );
@@ -388,7 +253,6 @@ describe("Trigger Routes", () => {
             });
 
             expectStatus(response, 201);
-            // Webhook triggers don't create Temporal schedules
             expect(mockSchedulerService.createScheduledTrigger).not.toHaveBeenCalled();
         });
 
@@ -404,7 +268,6 @@ describe("Trigger Routes", () => {
                 }
             };
 
-            // Mock workflow exists in workspace
             mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
                 createMockWorkflow({ id: workflowId })
             );
@@ -435,7 +298,6 @@ describe("Trigger Routes", () => {
                 enabled: false
             };
 
-            // Mock workflow exists in workspace
             mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
                 createMockWorkflow({ id: workflowId })
             );
@@ -469,7 +331,6 @@ describe("Trigger Routes", () => {
     // ========================================================================
     // GET TRIGGER BY ID
     // ========================================================================
-
     describe("GET /triggers/:id", () => {
         it("should return trigger details", async () => {
             const testUser = createTestUser();
@@ -527,7 +388,6 @@ describe("Trigger Routes", () => {
     // ========================================================================
     // DELETE TRIGGER
     // ========================================================================
-
     describe("DELETE /triggers/:id", () => {
         it("should delete trigger", async () => {
             const testUser = createTestUser();
@@ -575,7 +435,6 @@ describe("Trigger Routes", () => {
     // ========================================================================
     // UPDATE TRIGGER
     // ========================================================================
-
     describe("PUT /triggers/:id", () => {
         it("should update trigger name", async () => {
             const testUser = createTestUser();
@@ -730,200 +589,6 @@ describe("Trigger Routes", () => {
             });
 
             expectErrorResponse(response, 401);
-        });
-    });
-
-    // ========================================================================
-    // EXECUTE TRIGGER (MANUAL)
-    // ========================================================================
-
-    describe("POST /triggers/:id/execute", () => {
-        it("should execute trigger manually", async () => {
-            const testUser = createTestUser();
-            const workflow = createMockWorkflow({ user_id: testUser.id });
-            const trigger = createMockTrigger({
-                workflow_id: workflow.id,
-                trigger_type: "manual",
-                enabled: true
-            });
-
-            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
-            mockWorkflowRepo.findById.mockResolvedValue(workflow);
-
-            const response = await authenticatedRequest(fastify, testUser, {
-                method: "POST",
-                url: `/triggers/${trigger.id}/execute`,
-                payload: { inputs: { key: "value" } }
-            });
-
-            expectStatus(response, 200);
-            const body = expectSuccessResponse<{ executionId: string }>(response);
-            expect(body.data.executionId).toBeDefined();
-        });
-
-        it("should return 400 for disabled trigger", async () => {
-            const testUser = createTestUser();
-            const workflow = createMockWorkflow({ user_id: testUser.id });
-            const trigger = createMockTrigger({
-                workflow_id: workflow.id,
-                enabled: false
-            });
-
-            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
-            mockWorkflowRepo.findById.mockResolvedValue(workflow);
-
-            const response = await authenticatedRequest(fastify, testUser, {
-                method: "POST",
-                url: `/triggers/${trigger.id}/execute`
-            });
-
-            expectStatus(response, 400);
-        });
-
-        it("should return 404 for non-existent trigger", async () => {
-            const testUser = createTestUser();
-            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
-
-            const response = await authenticatedRequest(fastify, testUser, {
-                method: "POST",
-                url: `/triggers/${uuidv4()}/execute`
-            });
-
-            expectStatus(response, 404);
-        });
-
-        it("should return 404 for non-existent workflow", async () => {
-            const testUser = createTestUser();
-            const trigger = createMockTrigger({ enabled: true });
-            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
-            mockWorkflowRepo.findById.mockResolvedValue(null);
-
-            const response = await authenticatedRequest(fastify, testUser, {
-                method: "POST",
-                url: `/triggers/${trigger.id}/execute`
-            });
-
-            expectStatus(response, 404);
-        });
-    });
-
-    // ========================================================================
-    // WEBHOOK RECEIVER (PUBLIC)
-    // ========================================================================
-
-    describe("POST /webhooks/:triggerId", () => {
-        it("should process webhook and trigger workflow", async () => {
-            const triggerId = uuidv4();
-            mockWebhookService.processWebhook.mockResolvedValue({
-                success: true,
-                statusCode: 200,
-                executionId: uuidv4(),
-                message: "Webhook processed successfully"
-            });
-
-            const response = await unauthenticatedRequest(fastify, {
-                method: "POST",
-                url: `/webhooks/${triggerId}`,
-                payload: { event: "test", data: { key: "value" } }
-            });
-
-            expectStatus(response, 200);
-            const body = response.json<{ success: boolean; executionId: string }>();
-            expect(body.success).toBe(true);
-            expect(body.executionId).toBeDefined();
-        });
-
-        it("should return error for invalid trigger", async () => {
-            const triggerId = uuidv4();
-            mockWebhookService.processWebhook.mockResolvedValue({
-                success: false,
-                statusCode: 404,
-                error: "Trigger not found"
-            });
-
-            const response = await unauthenticatedRequest(fastify, {
-                method: "POST",
-                url: `/webhooks/${triggerId}`,
-                payload: {}
-            });
-
-            expectStatus(response, 404);
-        });
-
-        it("should work without authentication (public endpoint)", async () => {
-            const triggerId = uuidv4();
-            mockWebhookService.processWebhook.mockResolvedValue({
-                success: true,
-                statusCode: 200,
-                executionId: uuidv4()
-            });
-
-            // No auth token provided
-            const response = await unauthenticatedRequest(fastify, {
-                method: "POST",
-                url: `/webhooks/${triggerId}`,
-                payload: { test: true }
-            });
-
-            // Should succeed without auth
-            expectStatus(response, 200);
-        });
-    });
-
-    // ========================================================================
-    // EDGE CASES
-    // ========================================================================
-
-    describe("Edge Cases", () => {
-        it("should handle trigger with complex cron expression", async () => {
-            const testUser = createTestUser();
-            const workflowId = uuidv4();
-            const triggerData = {
-                workflowId,
-                name: "Complex Schedule",
-                triggerType: "schedule",
-                config: {
-                    cron: "0 0 1,15 * *", // 1st and 15th of each month
-                    timezone: "Europe/London"
-                }
-            };
-
-            // Mock workflow exists in workspace
-            mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
-                createMockWorkflow({ id: workflowId })
-            );
-            mockTriggerRepo.create.mockResolvedValue(
-                createMockTrigger({ config: triggerData.config })
-            );
-
-            const response = await authenticatedRequest(fastify, testUser, {
-                method: "POST",
-                url: "/triggers",
-                payload: triggerData
-            });
-
-            expectStatus(response, 201);
-        });
-
-        it("should handle trigger execution with no inputs", async () => {
-            const testUser = createTestUser();
-            const workflow = createMockWorkflow({ user_id: testUser.id });
-            const trigger = createMockTrigger({
-                workflow_id: workflow.id,
-                trigger_type: "manual",
-                enabled: true
-            });
-
-            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
-            mockWorkflowRepo.findById.mockResolvedValue(workflow);
-
-            const response = await authenticatedRequest(fastify, testUser, {
-                method: "POST",
-                url: `/triggers/${trigger.id}/execute`,
-                payload: {} // No inputs
-            });
-
-            expectStatus(response, 200);
         });
     });
 });
