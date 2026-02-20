@@ -1710,4 +1710,310 @@ describe("Form Interface Routes", () => {
             expectErrorResponse(response, 401);
         });
     });
+
+    // ========================================================================
+    // ERROR HANDLING
+    // ========================================================================
+
+    describe("Error handling", () => {
+        it("should return 500 when repository throws on list", async () => {
+            const testUser = createTestUser();
+            mockFormInterfaceRepo.findByWorkspaceId.mockRejectedValue(new Error("Database error"));
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "GET",
+                url: "/form-interfaces"
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on get", async () => {
+            const testUser = createTestUser();
+            mockFormInterfaceRepo.findByIdAndWorkspaceId.mockRejectedValue(
+                new Error("Database error")
+            );
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "GET",
+                url: `/form-interfaces/${uuidv4()}`
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on create", async () => {
+            const testUser = createTestUser();
+            mockFormInterfaceRepo.create.mockRejectedValue(new Error("Database error"));
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/form-interfaces",
+                payload: {
+                    name: "Test",
+                    slug: "test-form",
+                    title: "Test Title",
+                    targetType: "workflow",
+                    workflowId: uuidv4()
+                }
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on update", async () => {
+            const testUser = createTestUser();
+            const formId = uuidv4();
+            const formInterface = createMockFormInterface({ id: formId, userId: testUser.id });
+            mockFormInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(formInterface);
+            mockFormInterfaceRepo.updateByWorkspaceId.mockRejectedValue(
+                new Error("Database error")
+            );
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "PUT",
+                url: `/form-interfaces/${formId}`,
+                payload: { name: "Updated" }
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on delete", async () => {
+            const testUser = createTestUser();
+            const formId = uuidv4();
+            const formInterface = createMockFormInterface({ id: formId, userId: testUser.id });
+            mockFormInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(formInterface);
+            mockFormInterfaceRepo.softDeleteByWorkspaceId.mockRejectedValue(
+                new Error("Database error")
+            );
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "DELETE",
+                url: `/form-interfaces/${formId}`
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on publish", async () => {
+            const testUser = createTestUser();
+            const formId = uuidv4();
+            const formInterface = createMockFormInterface({
+                id: formId,
+                userId: testUser.id,
+                status: "draft",
+                workflowId: uuidv4()
+            });
+            mockFormInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(formInterface);
+            mockFormInterfaceRepo.publishByWorkspaceId.mockRejectedValue(
+                new Error("Database error")
+            );
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: `/form-interfaces/${formId}/publish`
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on unpublish", async () => {
+            const testUser = createTestUser();
+            const formId = uuidv4();
+            const formInterface = createMockFormInterface({
+                id: formId,
+                userId: testUser.id,
+                status: "published"
+            });
+            mockFormInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(formInterface);
+            mockFormInterfaceRepo.unpublishByWorkspaceId.mockRejectedValue(
+                new Error("Database error")
+            );
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: `/form-interfaces/${formId}/unpublish`
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on duplicate", async () => {
+            const testUser = createTestUser();
+            const formId = uuidv4();
+            const formInterface = createMockFormInterface({ id: formId, userId: testUser.id });
+            mockFormInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(formInterface);
+            mockFormInterfaceRepo.duplicateByWorkspaceId.mockRejectedValue(
+                new Error("Database error")
+            );
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: `/form-interfaces/${formId}/duplicate`
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on list submissions", async () => {
+            const testUser = createTestUser();
+            const formId = uuidv4();
+            const formInterface = createMockFormInterface({ id: formId, userId: testUser.id });
+            mockFormInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(formInterface);
+            mockSubmissionRepo.findByInterfaceId.mockRejectedValue(new Error("Database error"));
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "GET",
+                url: `/form-interfaces/${formId}/submissions`
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when GCS throws on file download", async () => {
+            const testUser = createTestUser();
+            const formId = uuidv4();
+            const submissionId = uuidv4();
+            const formInterface = createMockFormInterface({ id: formId, userId: testUser.id });
+            const submission = {
+                ...createMockSubmission({ id: submissionId, interfaceId: formId }),
+                files: [
+                    {
+                        fileName: "document.pdf",
+                        fileSize: 2048,
+                        mimeType: "application/pdf",
+                        gcsUri: "gs://test-bucket/form-submissions/doc.pdf"
+                    }
+                ]
+            };
+            mockFormInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(formInterface);
+            mockSubmissionRepo.findById.mockResolvedValue(submission);
+            mockGCSService.getSignedDownloadUrl.mockRejectedValue(new Error("GCS error"));
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "GET",
+                url: `/form-interfaces/${formId}/submissions/${submissionId}/files/0/download`
+            });
+
+            expectErrorResponse(response, 500);
+        });
+    });
+
+    // ========================================================================
+    // RESERVED SLUGS
+    // ========================================================================
+
+    describe("Reserved slugs", () => {
+        // Reserved slugs defined in create.ts
+        const reservedSlugs = [
+            "api",
+            "admin",
+            "login",
+            "logout",
+            "signup",
+            "register",
+            "settings",
+            "dashboard",
+            "workflows",
+            "agents",
+            "form-interfaces",
+            "connections",
+            "knowledge-bases",
+            "templates"
+        ];
+
+        it.each(reservedSlugs)("should reject reserved slug on create: %s", async (slug) => {
+            const testUser = createTestUser();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/form-interfaces",
+                payload: {
+                    name: "Test",
+                    slug,
+                    title: "Test Title",
+                    targetType: "workflow",
+                    workflowId: uuidv4()
+                }
+            });
+
+            expectErrorResponse(response, 400);
+        });
+    });
+
+    // ========================================================================
+    // SLUG VALIDATION
+    // ========================================================================
+
+    describe("Slug validation", () => {
+        const invalidSlugs = [
+            { slug: "a", reason: "too short (1 char)" },
+            { slug: "-test", reason: "starts with hyphen" },
+            { slug: "test-", reason: "ends with hyphen" },
+            { slug: "TEST", reason: "uppercase letters" },
+            { slug: "test_slug", reason: "underscore character" },
+            { slug: "test slug", reason: "space character" },
+            { slug: "test.slug", reason: "period character" }
+        ];
+
+        it.each(invalidSlugs)(
+            "should reject invalid slug on create: $slug ($reason)",
+            async ({ slug }) => {
+                const testUser = createTestUser();
+
+                const response = await authenticatedRequest(fastify, testUser, {
+                    method: "POST",
+                    url: "/form-interfaces",
+                    payload: {
+                        name: "Test",
+                        slug,
+                        title: "Test Title",
+                        targetType: "workflow",
+                        workflowId: uuidv4()
+                    }
+                });
+
+                expectErrorResponse(response, 400);
+            }
+        );
+
+        const validSlugs = ["ab", "test-form", "my-form-interface", "form123", "123form", "a1b2c3"];
+
+        it.each(validSlugs)("should accept valid slug on create: %s", async (slug) => {
+            const testUser = createTestUser();
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/form-interfaces",
+                payload: {
+                    name: "Test",
+                    slug,
+                    title: "Test Title",
+                    targetType: "workflow",
+                    workflowId: uuidv4()
+                }
+            });
+
+            expectStatus(response, 201);
+        });
+
+        it.each(invalidSlugs)(
+            "should reject invalid slug on update: $slug ($reason)",
+            async ({ slug }) => {
+                const testUser = createTestUser();
+                const formId = uuidv4();
+                const formInterface = createMockFormInterface({ id: formId, userId: testUser.id });
+                mockFormInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(formInterface);
+
+                const response = await authenticatedRequest(fastify, testUser, {
+                    method: "PUT",
+                    url: `/form-interfaces/${formId}`,
+                    payload: { slug }
+                });
+
+                expectErrorResponse(response, 400);
+            }
+        );
+    });
 });

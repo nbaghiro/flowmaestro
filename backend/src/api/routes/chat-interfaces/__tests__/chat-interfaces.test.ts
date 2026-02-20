@@ -1239,4 +1239,229 @@ describe("Chat Interface Routes", () => {
             expectStatus(response, 201);
         });
     });
+
+    // ========================================================================
+    // UPLOAD ASSETS
+    // ========================================================================
+
+    describe("POST /chat-interfaces/:id/assets", () => {
+        it("should return 404 for non-existent chat interface", async () => {
+            const testUser = createTestUser();
+            mockChatInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: `/chat-interfaces/${uuidv4()}/assets`,
+                payload: {},
+                headers: {
+                    "content-type": "multipart/form-data"
+                }
+            });
+
+            expectErrorResponse(response, 404);
+        });
+
+        it("should return error when no valid file is provided", async () => {
+            const testUser = createTestUser();
+            const chatInterface = createMockChatInterface({ userId: testUser.id });
+            mockChatInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(chatInterface);
+
+            // Send request without proper multipart content
+            // This throws an error in multipart parsing, resulting in 500
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: `/chat-interfaces/${chatInterface.id}/assets`,
+                payload: {},
+                headers: {
+                    "content-type": "multipart/form-data"
+                }
+            });
+
+            // Invalid multipart content results in parsing error (500)
+            expect(response.statusCode).toBeGreaterThanOrEqual(400);
+            expect(response.json().success).toBe(false);
+        });
+
+        it("should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "POST",
+                url: `/chat-interfaces/${uuidv4()}/assets`
+            });
+
+            expectStatus(response, 401);
+        });
+    });
+
+    // ========================================================================
+    // AUTHENTICATION TESTS
+    // ========================================================================
+
+    describe("Authentication requirements", () => {
+        it("GET /chat-interfaces/:id should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "GET",
+                url: `/chat-interfaces/${uuidv4()}`
+            });
+
+            expectStatus(response, 401);
+        });
+
+        it("PUT /chat-interfaces/:id should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "PUT",
+                url: `/chat-interfaces/${uuidv4()}`,
+                payload: { name: "Updated" }
+            });
+
+            expectStatus(response, 401);
+        });
+
+        it("DELETE /chat-interfaces/:id should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "DELETE",
+                url: `/chat-interfaces/${uuidv4()}`
+            });
+
+            expectStatus(response, 401);
+        });
+
+        it("POST /chat-interfaces/:id/publish should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "POST",
+                url: `/chat-interfaces/${uuidv4()}/publish`
+            });
+
+            expectStatus(response, 401);
+        });
+
+        it("POST /chat-interfaces/:id/unpublish should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "POST",
+                url: `/chat-interfaces/${uuidv4()}/unpublish`
+            });
+
+            expectStatus(response, 401);
+        });
+
+        it("POST /chat-interfaces/:id/duplicate should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "POST",
+                url: `/chat-interfaces/${uuidv4()}/duplicate`
+            });
+
+            expectStatus(response, 401);
+        });
+
+        it("GET /chat-interfaces/:id/sessions should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "GET",
+                url: `/chat-interfaces/${uuidv4()}/sessions`
+            });
+
+            expectStatus(response, 401);
+        });
+
+        it("GET /chat-interfaces/:id/sessions/:sessionId should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "GET",
+                url: `/chat-interfaces/${uuidv4()}/sessions/${uuidv4()}`
+            });
+
+            expectStatus(response, 401);
+        });
+
+        it("GET /chat-interfaces/:id/stats should require authentication", async () => {
+            const response = await unauthenticatedRequest(fastify, {
+                method: "GET",
+                url: `/chat-interfaces/${uuidv4()}/stats`
+            });
+
+            expectStatus(response, 401);
+        });
+    });
+
+    // ========================================================================
+    // ERROR HANDLING
+    // ========================================================================
+
+    describe("Error handling", () => {
+        it("should return 500 when repository throws on list", async () => {
+            const testUser = createTestUser();
+            mockChatInterfaceRepo.findByWorkspaceId.mockRejectedValue(new Error("Database error"));
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "GET",
+                url: "/chat-interfaces"
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on create", async () => {
+            const testUser = createTestUser();
+            const agentId = uuidv4();
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockAgent({ id: agentId })
+            );
+            mockChatInterfaceRepo.create.mockRejectedValue(new Error("Database error"));
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "POST",
+                url: "/chat-interfaces",
+                payload: {
+                    name: "Test",
+                    slug: "test-slug",
+                    title: "Test Title",
+                    agentId
+                }
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on update", async () => {
+            const testUser = createTestUser();
+            const chatInterface = createMockChatInterface({ userId: testUser.id });
+            mockChatInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(chatInterface);
+            mockChatInterfaceRepo.updateByWorkspaceId.mockRejectedValue(
+                new Error("Database error")
+            );
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "PUT",
+                url: `/chat-interfaces/${chatInterface.id}`,
+                payload: { name: "Updated" }
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on sessions list", async () => {
+            const testUser = createTestUser();
+            const chatInterface = createMockChatInterface({ userId: testUser.id });
+            mockChatInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(chatInterface);
+            mockSessionRepo.findByInterfaceId.mockRejectedValue(new Error("Database error"));
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "GET",
+                url: `/chat-interfaces/${chatInterface.id}/sessions`
+            });
+
+            expectErrorResponse(response, 500);
+        });
+
+        it("should return 500 when repository throws on stats", async () => {
+            const testUser = createTestUser();
+            const chatInterface = createMockChatInterface({ userId: testUser.id });
+            mockChatInterfaceRepo.findByIdAndWorkspaceId.mockResolvedValue(chatInterface);
+            mockSessionRepo.getSessionStats.mockRejectedValue(new Error("Database error"));
+
+            const response = await authenticatedRequest(fastify, testUser, {
+                method: "GET",
+                url: `/chat-interfaces/${chatInterface.id}/stats`
+            });
+
+            expectErrorResponse(response, 500);
+        });
+    });
 });
