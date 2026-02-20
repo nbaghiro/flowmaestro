@@ -524,7 +524,7 @@ jobs:
   e2e-tests:
     name: E2E Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
     runs-on: ubuntu-latest
-    needs: [setup, integration-tests]
+    needs: [setup]
     strategy:
       fail-fast: false
       matrix:
