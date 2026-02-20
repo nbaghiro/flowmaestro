@@ -263,6 +263,7 @@ detectCapabilities(provider: IProvider): DocumentCapability | null {
 ```
 
 **Content Types:**
+
 - **binary**: File-based providers (Google Drive, Dropbox, Box) - downloads raw files
 - **structured**: Page-based providers (Notion, Confluence) - converts pages to markdown
 - **mixed**: Providers supporting both (some wikis)
@@ -282,6 +283,7 @@ interface DocumentAdapter {
 ```
 
 **BinaryFileAdapter** (Google Drive, Dropbox):
+
 ```typescript
 async download(connection, fileId, mimeType) {
     // Execute provider's download operation
@@ -296,6 +298,7 @@ async download(connection, fileId, mimeType) {
 ```
 
 **StructuredContentAdapter** (Notion, Confluence):
+
 ```typescript
 async download(connection, pageId, mimeType) {
     // Fetch page content
@@ -316,16 +319,16 @@ async download(connection, pageId, mimeType) {
 
 **Location:** `backend/src/api/routes/knowledge-bases/integration/`
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/integration/providers` | GET | List providers with document capabilities |
-| `/integration/:connectionId/browse` | GET | Browse files in a provider |
-| `/integration/sources` | GET | List configured sources |
-| `/integration/sources` | POST | Create source and start import |
-| `/integration/sources/:sourceId` | PUT | Update sync settings |
-| `/integration/sources/:sourceId` | DELETE | Delete source |
-| `/integration/sources/:sourceId/sync` | POST | Trigger manual sync |
-| `/integration/import/:jobId` | GET | Get import job progress |
+| Endpoint                              | Method | Description                               |
+| ------------------------------------- | ------ | ----------------------------------------- |
+| `/integration/providers`              | GET    | List providers with document capabilities |
+| `/integration/:connectionId/browse`   | GET    | Browse files in a provider                |
+| `/integration/sources`                | GET    | List configured sources                   |
+| `/integration/sources`                | POST   | Create source and start import            |
+| `/integration/sources/:sourceId`      | PUT    | Update sync settings                      |
+| `/integration/sources/:sourceId`      | DELETE | Delete source                             |
+| `/integration/sources/:sourceId/sync` | POST   | Trigger manual sync                       |
+| `/integration/import/:jobId`          | GET    | Get import job progress                   |
 
 ### 4. Database Schema
 
@@ -350,6 +353,7 @@ CREATE TABLE flowmaestro.knowledge_base_sources (
 ```
 
 **Document Metadata Fields:**
+
 ```typescript
 // Added to knowledge_documents.metadata for integration sources
 {
@@ -432,14 +436,16 @@ export async function syncSchedulerWorkflow(input: SyncSchedulerWorkflowInput) {
         // Start import workflow as child
         await startChild("integrationImportWorkflow", {
             workflowId: `integration-import-${source.id}-scheduled-${Date.now()}`,
-            args: [{
-                sourceId: source.id,
-                knowledgeBaseId: source.knowledgeBaseId,
-                connectionId: source.connectionId,
-                provider: source.provider,
-                sourceConfig: source.sourceConfig,
-                isInitialImport: false
-            }],
+            args: [
+                {
+                    sourceId: source.id,
+                    knowledgeBaseId: source.knowledgeBaseId,
+                    connectionId: source.connectionId,
+                    provider: source.provider,
+                    sourceConfig: source.sourceConfig,
+                    isInitialImport: false
+                }
+            ],
             parentClosePolicy: ParentClosePolicy.ABANDON
         });
     }
@@ -447,6 +453,7 @@ export async function syncSchedulerWorkflow(input: SyncSchedulerWorkflowInput) {
 ```
 
 **SQL for Finding Due Sources:**
+
 ```sql
 SELECT * FROM knowledge_base_sources
 WHERE sync_enabled = true
@@ -479,21 +486,22 @@ if (
 
 ### 8. Frontend Components
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| `IntegrationFileBrowserModal` | `modals/` | Browse and select files from providers |
-| `IntegrationSourcesPanel` | `components/` | View/manage configured sources |
-| `IntegrationImportProgress` | `components/` | Show import job progress |
+| Component                     | Location      | Purpose                                |
+| ----------------------------- | ------------- | -------------------------------------- |
+| `IntegrationFileBrowserModal` | `modals/`     | Browse and select files from providers |
+| `IntegrationSourcesPanel`     | `components/` | View/manage configured sources         |
+| `IntegrationImportProgress`   | `components/` | Show import job progress               |
 
 **Store Actions:**
+
 ```typescript
 // knowledgeBaseStore.ts
-fetchIntegrationProviders(kbId)     // Get capable providers
-fetchIntegrationSources(kbId)       // Get configured sources
-createIntegrationSource(kbId, input) // Create source + start import
-updateIntegrationSource(kbId, sourceId, input) // Update sync settings
-deleteIntegrationSource(kbId, sourceId) // Delete source
-triggerSync(kbId, sourceId)         // Manual sync
+fetchIntegrationProviders(kbId); // Get capable providers
+fetchIntegrationSources(kbId); // Get configured sources
+createIntegrationSource(kbId, input); // Create source + start import
+updateIntegrationSource(kbId, sourceId, input); // Update sync settings
+deleteIntegrationSource(kbId, sourceId); // Delete source
+triggerSync(kbId, sourceId); // Manual sync
 ```
 
 ### Key Points
