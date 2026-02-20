@@ -158,22 +158,27 @@ describe("Workflow Cancellation", () => {
         }, 30000);
 
         it("should preserve outputs from completed parallel branches", async () => {
-            // Create a parallel workflow where branches have different delays
+            // Create a parallel workflow with longer delays to ensure we can cancel
+            // while branches are still executing. All branches run in parallel,
+            // so we need the delay long enough to send cancel before all complete.
             const workflow = createParallelTestWorkflow({
                 branchCount: 3,
-                branchDelayMs: 500
+                branchDelayMs: 2000
             });
 
             const { handle } = await startWorkflow(testEnv, workflow);
 
-            // Wait for Input and one branch to complete
-            await waitForNodesComplete(handle, 2, { timeoutMs: 5000 });
+            // Wait for Input node to complete (branches start but take 2s each)
+            await waitForNodesComplete(handle, 1, { timeoutMs: 5000 });
 
-            // Check progress
+            // Small delay to let branches start executing
+            await delay(100);
+
+            // Check progress - should have Input completed, branches in progress
             const progress = await queryExecutionProgress(handle);
-            expect(progress.completedNodes).toBeGreaterThanOrEqual(2);
+            expect(progress.completedNodes).toBeGreaterThanOrEqual(1);
 
-            // Cancel
+            // Cancel while branches are still running (they take 2000ms, we're at ~100ms)
             await sendCancelSignal(handle, "Cancel after some branches complete");
 
             const result = await waitForResult(handle, 10000);

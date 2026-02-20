@@ -131,8 +131,12 @@ export function createMockActivities(config: MockActivityConfig = {}) {
 
             const mockConfig = config.nodeConfigs?.[nodeId] || {};
 
-            // Simulate delay
-            const delay = mockConfig.delay ?? config.defaultDelay ?? 0;
+            // Simulate delay - check mockConfig.delay, then nodeConfig.delayMs, then defaultDelay
+            const delay =
+                mockConfig.delay ??
+                (nodeConfig.delayMs as number | undefined) ??
+                config.defaultDelay ??
+                0;
             if (delay > 0) {
                 await new Promise((resolve) => setTimeout(resolve, delay));
             }

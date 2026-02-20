@@ -7,12 +7,13 @@ This document provides a comprehensive overview of how knowledge base documents 
 1. [Overview](#overview)
 2. [Architecture Summary](#architecture-summary)
 3. [Upload Flow](#upload-flow)
-4. [Processing Workflow](#processing-workflow)
-5. [Semantic Search](#semantic-search)
-6. [Document Download](#document-download)
-7. [Database Schema](#database-schema)
-8. [Configuration](#configuration)
-9. [Performance & Scalability](#performance--scalability)
+4. [Integration Import Flow](#integration-import-flow)
+5. [Processing Workflow](#processing-workflow)
+6. [Semantic Search](#semantic-search)
+7. [Document Download](#document-download)
+8. [Database Schema](#database-schema)
+9. [Configuration](#configuration)
+10. [Performance & Scalability](#performance--scalability)
 
 ---
 
@@ -202,6 +203,307 @@ export async function uploadDocument(id: string, file: File): Promise<ApiRespons
 - File stored in GCS with user-scoped path
 - Processing happens asynchronously in background
 - Status updates: `pending` → `processing` → `ready`
+
+---
+
+## Integration Import Flow
+
+FlowMaestro supports importing documents directly from connected integration providers (Google Drive, Dropbox, Notion, etc.) with optional continuous sync.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Integration Import Architecture                                             │
+│                                                                              │
+│  ┌──────────────┐     ┌─────────────────────┐     ┌────────────────────┐    │
+│  │ File Browser │────▶│ Integration Import  │────▶│ Document Process   │    │
+│  │ Modal (React)│     │ API Routes          │     │ Workflow (Temporal)│    │
+│  └──────────────┘     └─────────────────────┘     └────────────────────┘    │
+│         │                       │                           │               │
+│         ▼                       ▼                           ▼               │
+│  ┌──────────────┐     ┌─────────────────────┐     ┌────────────────────┐    │
+│  │ Capability   │     │ Document Adapters   │     │ Sync Scheduler     │    │
+│  │ Detector     │     │ (Binary/Structured) │     │ (Temporal Cron)    │    │
+│  └──────────────┘     └─────────────────────┘     └────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 1. Provider Capability Detection
+
+**Location:** `backend/src/services/integration-documents/CapabilityDetector.ts`
+
+The system auto-detects which providers support document import by inspecting their operations:
+
+```typescript
+const DOCUMENT_OPERATIONS = {
+    list: ["listFiles", "listDriveItems", "listItems", "listPages"],
+    download: ["downloadFile", "getFile", "downloadContent"],
+    search: ["search", "searchContent", "searchFiles"],
+    getContent: ["getPage", "getDocument", "getRecord"]
+};
+
+// A provider supports document import if it has list/search AND download operations
+detectCapabilities(provider: IProvider): DocumentCapability | null {
+    const operations = provider.getOperations().map(op => op.id);
+
+    const listOp = DOCUMENT_OPERATIONS.list.find(op => operations.includes(op));
+    const downloadOp = DOCUMENT_OPERATIONS.download.find(op => operations.includes(op));
+
+    if (!listOp && !searchOp) return null;
+
+    return {
+        supportsBrowsing: !!listOp,
+        supportsSearch: !!searchOp,
+        contentType: this.detectContentType(provider), // "binary" | "structured" | "mixed"
+        listOperation: listOp,
+        downloadOperation: downloadOp
+    };
+}
+```
+
+**Content Types:**
+- **binary**: File-based providers (Google Drive, Dropbox, Box) - downloads raw files
+- **structured**: Page-based providers (Notion, Confluence) - converts pages to markdown
+- **mixed**: Providers supporting both (some wikis)
+
+### 2. Document Adapters
+
+**Location:** `backend/src/services/integration-documents/adapters/`
+
+Adapters normalize provider-specific operations to a standard interface:
+
+```typescript
+interface DocumentAdapter {
+    browse(connection, options): Promise<IntegrationBrowseResult>;
+    search(connection, query): Promise<IntegrationBrowseResult>;
+    download(connection, fileId, mimeType): Promise<IntegrationDownloadResult>;
+}
+```
+
+**BinaryFileAdapter** (Google Drive, Dropbox):
+```typescript
+async download(connection, fileId, mimeType) {
+    // Execute provider's download operation
+    const result = await this.provider.executeOperation("downloadFile", { fileId }, connection);
+
+    return {
+        buffer: Buffer.from(result.data.content, "base64"),
+        contentType: result.data.contentType,
+        filename: result.data.filename
+    };
+}
+```
+
+**StructuredContentAdapter** (Notion, Confluence):
+```typescript
+async download(connection, pageId, mimeType) {
+    // Fetch page content
+    const result = await this.provider.executeOperation("getPage", { pageId }, connection);
+
+    // Convert to Markdown
+    const markdown = this.convertNotionToMarkdown(result.data.blocks);
+
+    return {
+        buffer: Buffer.from(markdown, "utf-8"),
+        contentType: "text/markdown",
+        filename: `${result.data.title}.md`
+    };
+}
+```
+
+### 3. API Routes
+
+**Location:** `backend/src/api/routes/knowledge-bases/integration/`
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/integration/providers` | GET | List providers with document capabilities |
+| `/integration/:connectionId/browse` | GET | Browse files in a provider |
+| `/integration/sources` | GET | List configured sources |
+| `/integration/sources` | POST | Create source and start import |
+| `/integration/sources/:sourceId` | PUT | Update sync settings |
+| `/integration/sources/:sourceId` | DELETE | Delete source |
+| `/integration/sources/:sourceId/sync` | POST | Trigger manual sync |
+| `/integration/import/:jobId` | GET | Get import job progress |
+
+### 4. Database Schema
+
+**Table:** `knowledge_base_sources`
+
+```sql
+CREATE TABLE flowmaestro.knowledge_base_sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_base_id UUID NOT NULL REFERENCES flowmaestro.knowledge_bases(id),
+    connection_id UUID NOT NULL REFERENCES flowmaestro.connections(id),
+    provider VARCHAR(100) NOT NULL,
+    source_type VARCHAR(20) NOT NULL,  -- 'folder', 'file', 'search'
+    source_config JSONB NOT NULL,      -- { folderId?, fileIds?, searchQuery? }
+    sync_enabled BOOLEAN DEFAULT true,
+    sync_interval_minutes INTEGER DEFAULT 60,
+    last_synced_at TIMESTAMPTZ,
+    sync_status VARCHAR(20) DEFAULT 'pending',  -- pending, syncing, completed, failed
+    sync_error TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Document Metadata Fields:**
+```typescript
+// Added to knowledge_documents.metadata for integration sources
+{
+    integration_source_id: string;      // References knowledge_base_sources
+    integration_connection_id: string;
+    integration_provider: string;
+    integration_file_id: string;
+    integration_file_path?: string;
+    integration_last_modified?: string;
+    integration_content_hash?: string;   // For change detection
+}
+```
+
+### 5. Import Workflow
+
+**Location:** `backend/src/temporal/workflows/integration-import.ts`
+
+```typescript
+export async function integrationImportWorkflow(input: IntegrationImportWorkflowInput) {
+    // 1. List files from source
+    const files = await listIntegrationFiles({
+        connectionId: input.connectionId,
+        provider: input.provider,
+        sourceConfig: input.sourceConfig
+    });
+
+    // 2. Check existing documents (for sync)
+    const existingDocs = await checkExistingDocuments({
+        knowledgeBaseId: input.knowledgeBaseId,
+        fileIds: files.map(f => f.id)
+    });
+
+    // 3. Process each file
+    for (const file of files) {
+        // Skip unchanged files
+        const existing = existingDocs.find(d => d.integrationFileId === file.id);
+        if (existing && file.modifiedTime <= existing.lastModified) {
+            continue; // File unchanged, skip
+        }
+
+        // Download from provider
+        const downloaded = await downloadIntegrationFile({...});
+
+        // Store in GCS
+        const gcsPath = await storeDocumentFile({...});
+
+        // Create/update document record
+        const documentId = await createIntegrationDocument({...});
+
+        // Process through standard pipeline
+        await extractDocumentText({...});
+        await chunkDocumentText({...});
+        await generateAndStoreChunks({...});
+        await completeDocumentProcessing({...});
+    }
+
+    // 4. Update source sync status
+    await updateSourceSyncStatus({
+        sourceId: input.sourceId,
+        status: "completed"
+    });
+}
+```
+
+### 6. Sync Scheduler
+
+**Location:** `backend/src/temporal/workflows/sync-scheduler.ts`
+
+A cron workflow that runs every 5 minutes to check for sources needing sync:
+
+```typescript
+export async function syncSchedulerWorkflow(input: SyncSchedulerWorkflowInput) {
+    // Find sources due for sync
+    const sources = await findSourcesDueForSync(input.maxConcurrentSyncs);
+
+    for (const source of sources) {
+        // Mark as syncing
+        await updateSourceSyncStatus({ sourceId: source.id, status: "syncing" });
+
+        // Start import workflow as child
+        await startChild("integrationImportWorkflow", {
+            workflowId: `integration-import-${source.id}-scheduled-${Date.now()}`,
+            args: [{
+                sourceId: source.id,
+                knowledgeBaseId: source.knowledgeBaseId,
+                connectionId: source.connectionId,
+                provider: source.provider,
+                sourceConfig: source.sourceConfig,
+                isInitialImport: false
+            }],
+            parentClosePolicy: ParentClosePolicy.ABANDON
+        });
+    }
+}
+```
+
+**SQL for Finding Due Sources:**
+```sql
+SELECT * FROM knowledge_base_sources
+WHERE sync_enabled = true
+  AND sync_status != 'syncing'
+  AND (
+    last_synced_at IS NULL
+    OR last_synced_at + (sync_interval_minutes || ' minutes')::interval < NOW()
+  )
+LIMIT $1
+```
+
+### 7. Change Detection
+
+During sync, the system detects changed files by comparing:
+
+1. **Last Modified Time**: Provider's `modifiedTime` vs stored `integration_last_modified`
+2. **Content Hash**: Computed hash vs stored `integration_content_hash`
+
+```typescript
+// Skip if file hasn't changed
+if (
+    existingDoc.lastModified &&
+    file.modifiedTime &&
+    new Date(file.modifiedTime) <= new Date(existingDoc.lastModified)
+) {
+    results.push({ fileId: file.id, status: "skipped", action: "unchanged" });
+    continue;
+}
+```
+
+### 8. Frontend Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `IntegrationFileBrowserModal` | `modals/` | Browse and select files from providers |
+| `IntegrationSourcesPanel` | `components/` | View/manage configured sources |
+| `IntegrationImportProgress` | `components/` | Show import job progress |
+
+**Store Actions:**
+```typescript
+// knowledgeBaseStore.ts
+fetchIntegrationProviders(kbId)     // Get capable providers
+fetchIntegrationSources(kbId)       // Get configured sources
+createIntegrationSource(kbId, input) // Create source + start import
+updateIntegrationSource(kbId, sourceId, input) // Update sync settings
+deleteIntegrationSource(kbId, sourceId) // Delete source
+triggerSync(kbId, sourceId)         // Manual sync
+```
+
+### Key Points
+
+- **Generic Capability Detection**: Works with any provider that has list/download operations
+- **Adapter Pattern**: Normalizes provider-specific formats to standard interface
+- **Structured Content Conversion**: Notion/Confluence pages converted to Markdown
+- **Durable Processing**: Temporal workflows for reliability and retry
+- **Incremental Sync**: Only processes new/changed files
+- **Configurable Sync**: User controls sync interval (15min to 24h)
 
 ---
 
@@ -804,8 +1106,9 @@ CREATE TABLE flowmaestro.knowledge_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     knowledge_base_id UUID NOT NULL REFERENCES flowmaestro.knowledge_bases(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    source_type VARCHAR(50) NOT NULL,      -- 'file' or 'url'
+    source_type VARCHAR(50) NOT NULL,      -- 'file', 'url', or 'integration'
     source_url TEXT,
+    source_id UUID REFERENCES flowmaestro.knowledge_base_sources(id),  -- For integration sources
     file_path TEXT,                        -- GCS URI: gs://bucket/path
     file_type VARCHAR(50) NOT NULL,        -- pdf, docx, txt, md, html, json, csv
     file_size BIGINT,
@@ -821,6 +1124,32 @@ CREATE TABLE flowmaestro.knowledge_documents (
 
 CREATE INDEX idx_knowledge_documents_kb_id ON flowmaestro.knowledge_documents(knowledge_base_id);
 CREATE INDEX idx_knowledge_documents_status ON flowmaestro.knowledge_documents(status);
+CREATE INDEX idx_knowledge_documents_source_id ON flowmaestro.knowledge_documents(source_id);
+```
+
+### knowledge_base_sources (Integration Import)
+
+```sql
+CREATE TABLE flowmaestro.knowledge_base_sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_base_id UUID NOT NULL REFERENCES flowmaestro.knowledge_bases(id) ON DELETE CASCADE,
+    connection_id UUID NOT NULL REFERENCES flowmaestro.connections(id) ON DELETE CASCADE,
+    provider VARCHAR(100) NOT NULL,
+    source_type VARCHAR(20) NOT NULL,      -- 'folder', 'file', 'search'
+    source_config JSONB NOT NULL DEFAULT '{}',
+    sync_enabled BOOLEAN DEFAULT true,
+    sync_interval_minutes INTEGER DEFAULT 60,
+    last_synced_at TIMESTAMPTZ,
+    sync_status VARCHAR(20) DEFAULT 'pending',  -- pending, syncing, completed, failed
+    sync_error TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_kb_sources_kb_id ON flowmaestro.knowledge_base_sources(knowledge_base_id);
+CREATE INDEX idx_kb_sources_connection_id ON flowmaestro.knowledge_base_sources(connection_id);
+CREATE INDEX idx_kb_sources_sync_status ON flowmaestro.knowledge_base_sources(sync_status);
+CREATE INDEX idx_kb_sources_next_sync ON flowmaestro.knowledge_base_sources(sync_enabled, last_synced_at);
 ```
 
 ### knowledge_chunks
