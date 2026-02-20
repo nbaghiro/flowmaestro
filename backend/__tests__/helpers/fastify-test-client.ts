@@ -331,11 +331,19 @@ jest.mock("../../src/storage/repositories/WorkspaceMemberRepository", () => ({
     WorkspaceMemberRepository: jest.fn().mockImplementation(() => mockWorkspaceMemberRepo)
 }));
 
-// Mock ApiKeyRepository for public API v1 authentication
+// Mock ApiKeyRepository for public API v1 authentication and API key management
 export const mockApiKeyRepo = {
+    // Methods for public API v1 authentication
     findByHash: jest.fn(),
     updateLastUsed: jest.fn().mockResolvedValue(undefined),
-    isValid: jest.fn().mockReturnValue(true)
+    isValid: jest.fn().mockReturnValue(true),
+    // Methods for API key management routes
+    findByWorkspaceId: jest.fn().mockResolvedValue({ keys: [], total: 0 }),
+    findByIdAndWorkspaceId: jest.fn(),
+    create: jest.fn(),
+    updateByWorkspaceId: jest.fn(),
+    rotateByWorkspaceId: jest.fn(),
+    revokeByWorkspaceId: jest.fn()
 };
 
 jest.mock("../../src/storage/repositories/ApiKeyRepository", () => ({
@@ -419,6 +427,8 @@ export async function createTestServer(options: TestServerOptions = {}): Promise
         const { templateRoutes } = await import("../../src/api/routes/templates");
         const { agentTemplateRoutes } = await import("../../src/api/routes/agent-templates");
         const { folderRoutes } = await import("../../src/api/routes/folders");
+        const { checkpointRoutes } = await import("../../src/api/routes/checkpoints");
+        const { apiKeyRoutes } = await import("../../src/api/routes/api-keys");
         const { workspaceRoutes } = await import("../../src/api/routes/workspaces");
         const { threadRoutes } = await import("../../src/api/routes/threads");
         const { personaRoutes } = await import("../../src/api/routes/personas");
@@ -440,6 +450,8 @@ export async function createTestServer(options: TestServerOptions = {}): Promise
         await fastify.register(templateRoutes, { prefix: "/templates" });
         await fastify.register(agentTemplateRoutes, { prefix: "/agent-templates" });
         await fastify.register(folderRoutes);
+        await fastify.register(checkpointRoutes, { prefix: "/checkpoints" });
+        await fastify.register(apiKeyRoutes, { prefix: "/api-keys" });
         await fastify.register(workspaceRoutes);
         await fastify.register(threadRoutes, { prefix: "/threads" });
         await fastify.register(personaRoutes, { prefix: "/personas" });

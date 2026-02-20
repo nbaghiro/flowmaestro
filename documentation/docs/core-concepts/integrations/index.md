@@ -13,6 +13,32 @@ Connect FlowMaestro to your favorite tools.
 2. **Configure** — Select which accounts/resources to access
 3. **Use** — Add integration nodes to workflows or tools to agents
 
+## Integration Capabilities
+
+Integrations can be used in multiple ways:
+
+| Capability                | Description                                    | Examples                       |
+| ------------------------- | ---------------------------------------------- | ------------------------------ |
+| **Workflow Nodes**        | Use in workflow automations                    | Send email, create task        |
+| **Agent Tools**           | Give agents access to external services        | Search calendar, post to Slack |
+| **Knowledge Base Import** | Import documents with optional continuous sync | Google Drive, Dropbox, Notion  |
+
+### Document Import Integrations
+
+Some integrations support importing documents into knowledge bases:
+
+- **File storage**: Google Drive, Dropbox, OneDrive, Box
+- **Knowledge tools**: Notion, Confluence
+
+These integrations can:
+
+- Browse and select files/pages
+- Import entire folders
+- Continuously sync changes
+- Convert structured content (Notion pages) to searchable text
+
+See [Knowledge Base Documents](../knowledge-bases/documents) for details.
+
 ## Integration Types
 
 ### OAuth Integrations

@@ -12,7 +12,7 @@ interface ThemeStore {
 
 // Helper to get system preference
 const getSystemTheme = (): EffectiveTheme => {
-    if (typeof window === "undefined") return "light";
+    if (typeof window === "undefined") return "dark";
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 };
 
@@ -37,8 +37,8 @@ const applyThemeToDOM = (effectiveTheme: EffectiveTheme): void => {
 };
 
 export const useThemeStore = create<ThemeStore>((set, get) => ({
-    theme: "light",
-    effectiveTheme: "light",
+    theme: "dark",
+    effectiveTheme: "dark",
 
     setTheme: (theme: Theme) => {
         // Save to localStorage

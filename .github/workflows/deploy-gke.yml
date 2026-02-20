@@ -169,6 +169,22 @@ jobs:
           cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/static:latest
           cache-to: type=inline
 
+      # Build and push status page image
+      - name: Build and push status image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/status/Dockerfile
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/status:${{ env.IMAGE_TAG }}
+            ${{ env.ARTIFACT_REGISTRY }}/status:latest
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/status:latest
+          cache-to: type=inline
+
       # Verify External Secrets are synced
       - name: Verify External Secrets are ready
         run: |
@@ -280,7 +296,8 @@ jobs:
             ${{ env.ARTIFACT_REGISTRY }}/backend:latest=${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }} \
             ${{ env.ARTIFACT_REGISTRY }}/frontend:latest=${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }} \
             ${{ env.ARTIFACT_REGISTRY }}/marketing:latest=${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }} \
-            ${{ env.ARTIFACT_REGISTRY }}/static:latest=${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }}
+            ${{ env.ARTIFACT_REGISTRY }}/static:latest=${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }} \
+            ${{ env.ARTIFACT_REGISTRY }}/status:latest=${{ env.ARTIFACT_REGISTRY }}/status:${{ env.IMAGE_TAG }}
 
       # Deploy to GKE
       - name: Deploy to GKE
@@ -309,6 +326,10 @@ jobs:
       - name: Wait for static rollout
         run: |
           kubectl rollout status deployment/static -n flowmaestro --timeout=10m
+
+      - name: Wait for status rollout
+        run: |
+          kubectl rollout status deployment/status -n flowmaestro --timeout=5m
 
       - name: Wait for Temporal server rollout
         run: |
@@ -340,3 +361,4 @@ jobs:
           echo "  - frontend: ${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }}"
           echo "  - marketing: ${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}"
           echo "  - static: ${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }}"
+          echo "  - status: ${{ env.ARTIFACT_REGISTRY }}/status:${{ env.IMAGE_TAG }}"

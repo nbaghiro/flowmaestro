@@ -12,7 +12,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setThemeState] = useState<Theme>(() => {
-        if (typeof window === "undefined") return "light";
+        if (typeof window === "undefined") return "dark";
 
         // Check localStorage first - respect explicit user choice
         const stored = localStorage.getItem("marketing-theme") as Theme | null;
@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             return stored;
         }
 
-        // No saved preference - check system preference, default to light
+        // No saved preference - check system preference, default to dark
         const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         const initialTheme = systemPrefersDark ? "dark" : "light";
         localStorage.setItem("marketing-theme", initialTheme);

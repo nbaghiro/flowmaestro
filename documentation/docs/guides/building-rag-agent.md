@@ -46,24 +46,44 @@ Response with Citations
     - Name: "Product Documentation"
     - Description: "Company product docs and FAQs"
 
-## Step 2: Upload Documents
+## Step 2: Add Documents
 
-1. Click **Add Documents**
-2. Upload your files:
-    - PDFs, Word docs, Markdown
-    - Text files, HTML pages
-    - Or add from URLs
+You have three options for adding documents:
 
-3. Wait for processing (extract → chunk → embed)
+### Option A: Upload Files
 
-**Supported formats:**
+1. Click **Upload**
+2. Select files from your computer
+3. Wait for processing
 
-| Format   | Best For                  |
-| -------- | ------------------------- |
-| PDF      | Product manuals, policies |
-| Markdown | Technical docs, guides    |
-| HTML     | Web pages, help articles  |
-| TXT      | Plain text content        |
+### Option B: Add from URL
+
+1. Click **Add URL**
+2. Enter the web page URL
+3. FlowMaestro scrapes and processes the content
+
+### Option C: Import from Connected Apps
+
+1. Click **Import** (requires connected integrations)
+2. Select a connected app (Google Drive, Dropbox, Notion, etc.)
+3. Browse and select files or folders
+4. Enable **sync** to keep documents up-to-date automatically
+
+**Supported sources:**
+
+| Source       | Format   | Best For                          |
+| ------------ | -------- | --------------------------------- |
+| File Upload  | PDF      | Product manuals, policies         |
+| File Upload  | Markdown | Technical docs, guides            |
+| URL          | HTML     | Web pages, help articles          |
+| Google Drive | Various  | Shared team documentation         |
+| Dropbox      | Various  | Synced project files              |
+| Notion       | Pages    | Wikis, knowledge bases (markdown) |
+| Confluence   | Pages    | Company documentation (markdown)  |
+
+:::tip
+Use **integration import with sync** to keep your knowledge base automatically updated when source documents change.
+:::
 
 ## Step 3: Configure Chunking
 

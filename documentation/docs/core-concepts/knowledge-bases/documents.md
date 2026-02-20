@@ -64,6 +64,73 @@ Add web pages directly:
 - **Include subpages**: Follow links on the page
 - **Max depth**: How many levels deep to crawl
 
+### From Connected Apps
+
+Import documents from your connected integrations (Google Drive, Dropbox, Notion, etc.):
+
+1. Click **Import** (cloud icon)
+2. Select a connected app from the dropdown
+3. Browse folders or search for files
+4. Select files or choose "Import entire folder"
+5. Configure sync options (optional)
+6. Click **Import**
+
+**Supported integrations:**
+
+| Provider     | Content Type | Features                                      |
+| ------------ | ------------ | --------------------------------------------- |
+| Google Drive | Files        | Browse folders, import files, continuous sync |
+| Dropbox      | Files        | Browse folders, import files, continuous sync |
+| OneDrive     | Files        | Browse folders, import files, continuous sync |
+| Box          | Files        | Browse folders, import files, continuous sync |
+| Notion       | Pages        | Pages converted to markdown, continuous sync  |
+| Confluence   | Pages        | Pages converted to markdown, continuous sync  |
+
+**Sync options:**
+
+- **Enable sync**: Automatically check for updates
+- **Sync interval**: How often to check (15 min to 24 hours)
+- **Manual sync**: Trigger sync on-demand
+
+**Change detection:**
+
+During sync, FlowMaestro only processes files that have changed:
+
+- Compares modification timestamps
+- Computes content hashes
+- Skips unchanged files for efficiency
+
+### Via API — Integration Import
+
+```bash
+# List available providers with document capabilities
+curl -X GET https://api.flowmaestro.ai/knowledge-bases/{id}/integration/providers \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+# Browse files in a provider
+curl -X GET "https://api.flowmaestro.ai/knowledge-bases/{id}/integration/{connectionId}/browse?folderId=root" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+# Create an integration source (starts import)
+curl -X POST https://api.flowmaestro.ai/knowledge-bases/{id}/integration/sources \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "connectionId": "conn_xxx",
+    "sourceType": "folder",
+    "sourceConfig": {
+      "folderId": "folder_id",
+      "recursive": true
+    },
+    "syncEnabled": true,
+    "syncIntervalMinutes": 60
+  }'
+
+# Trigger manual sync
+curl -X POST https://api.flowmaestro.ai/knowledge-bases/{id}/integration/sources/{sourceId}/sync \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
 ## Document Processing Pipeline
 
 When you upload a document, it goes through several stages:
@@ -275,6 +342,99 @@ POST /api/knowledge-bases/{id}/documents/{docId}/reprocess
 }
 ```
 
+## Managing Integration Sources
+
+If you've imported documents from connected apps, you can manage the sources:
+
+### View Sources
+
+```bash
+GET /api/knowledge-bases/{id}/integration/sources
+
+{
+  "sources": [
+    {
+      "id": "src_123",
+      "provider": "google-drive",
+      "sourceType": "folder",
+      "sourceConfig": {
+        "folderId": "folder_abc",
+        "folderPath": "My Documents/Reports"
+      },
+      "syncEnabled": true,
+      "syncIntervalMinutes": 60,
+      "lastSyncedAt": "2024-01-15T10:30:00Z",
+      "syncStatus": "completed"
+    }
+  ]
+}
+```
+
+### Update Sync Settings
+
+```bash
+PUT /api/knowledge-bases/{id}/integration/sources/{sourceId}
+
+{
+  "syncEnabled": true,
+  "syncIntervalMinutes": 30
+}
+```
+
+### Delete Source
+
+```bash
+DELETE /api/knowledge-bases/{id}/integration/sources/{sourceId}
+```
+
+Deleting a source:
+
+- Stops automatic sync
+- Does NOT delete already-imported documents
+- Documents remain searchable in the knowledge base
+
+### Sync Status
+
+| Status      | Description                        |
+| ----------- | ---------------------------------- |
+| `pending`   | Initial import not yet started     |
+| `syncing`   | Currently checking for updates     |
+| `completed` | Last sync completed successfully   |
+| `failed`    | Last sync failed (see `syncError`) |
+
+### Import Progress
+
+Track ongoing imports:
+
+```bash
+GET /api/knowledge-bases/{id}/integration/import/{jobId}
+
+{
+  "jobId": "job_123",
+  "status": "running",
+  "total": 15,
+  "completed": 8,
+  "failed": 0,
+  "skipped": 2,
+  "newFiles": 6,
+  "updatedFiles": 2,
+  "results": [
+    {
+      "fileId": "file_1",
+      "fileName": "report.pdf",
+      "status": "completed",
+      "action": "created"
+    },
+    {
+      "fileId": "file_2",
+      "fileName": "old-report.pdf",
+      "status": "skipped",
+      "skippedReason": "File unchanged"
+    }
+  ]
+}
+```
+
 ## Error Handling
 
 ### Common Errors
@@ -321,10 +481,13 @@ POST /api/knowledge-bases/{id}/documents/{docId}/retry
 
 ## Limits
 
-| Resource                | Limit      |
-| ----------------------- | ---------- |
-| Max file size           | 100 MB     |
-| Max documents per KB    | 10,000     |
-| Max chunks per document | 10,000     |
-| Supported file types    | 8 types    |
-| URL fetch timeout       | 30 seconds |
+| Resource                   | Limit      |
+| -------------------------- | ---------- |
+| Max file size              | 100 MB     |
+| Max documents per KB       | 10,000     |
+| Max chunks per document    | 10,000     |
+| Supported file types       | 8 types    |
+| URL fetch timeout          | 30 seconds |
+| Integration sources per KB | 50         |
+| Min sync interval          | 5 minutes  |
+| Max concurrent syncs       | 10         |
