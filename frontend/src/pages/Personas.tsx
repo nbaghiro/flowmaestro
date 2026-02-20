@@ -229,7 +229,7 @@ export const Personas: React.FC = () => {
                 </div>
 
                 {/* Loading State */}
-                {isLoadingPersonas && <SkeletonGrid count={6} CardSkeleton={PersonaCardSkeleton} />}
+                {isLoadingPersonas && <SkeletonGrid count={9} CardSkeleton={PersonaCardSkeleton} />}
 
                 {/* Error State */}
                 {personasError && (

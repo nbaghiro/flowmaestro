@@ -424,7 +424,7 @@ export function FormInterfaces() {
                     title="Form Interfaces"
                     description="Create public forms that connect to your workflows and agents"
                 />
-                <SkeletonGrid count={6} CardSkeleton={FormInterfaceCardSkeleton} />
+                <SkeletonGrid count={9} CardSkeleton={FormInterfaceCardSkeleton} />
             </div>
         );
     }

@@ -494,7 +494,7 @@ export function KnowledgeBases() {
 
             {/* Loading State */}
             {loading || isLoadingFolders ? (
-                <SkeletonGrid count={6} CardSkeleton={KnowledgeBaseCardSkeleton} />
+                <SkeletonGrid count={9} CardSkeleton={KnowledgeBaseCardSkeleton} />
             ) : (
                 <>
                     {/* Folders Section */}

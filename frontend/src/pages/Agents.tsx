@@ -468,7 +468,7 @@ export function Agents() {
 
             {/* Loading State */}
             {isLoading || isLoadingFolders ? (
-                <SkeletonGrid count={6} CardSkeleton={AgentCardSkeleton} />
+                <SkeletonGrid count={9} CardSkeleton={AgentCardSkeleton} />
             ) : (
                 <>
                     {/* Folders Section */}

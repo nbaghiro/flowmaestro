@@ -426,7 +426,7 @@ export function ChatInterfacesPage() {
                     title="Chat Interfaces"
                     description="Create embeddable chat interfaces that connect to your agents"
                 />
-                <SkeletonGrid count={6} CardSkeleton={ChatInterfaceCardSkeleton} />
+                <SkeletonGrid count={9} CardSkeleton={ChatInterfaceCardSkeleton} />
             </div>
         );
     }

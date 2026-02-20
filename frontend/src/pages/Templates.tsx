@@ -276,7 +276,7 @@ export function Templates() {
 
             {/* Content */}
             {isLoading ? (
-                <SkeletonGrid count={6} CardSkeleton={TemplateCardSkeleton} />
+                <SkeletonGrid count={9} CardSkeleton={TemplateCardSkeleton} />
             ) : templatesError ? (
                 <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-red-200 dark:border-red-900 rounded-lg bg-red-50 dark:bg-red-900/20">
                     <AlertCircle className="w-12 h-12 text-red-500 mb-4" />

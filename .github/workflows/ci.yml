@@ -522,9 +522,14 @@ jobs:
   # ============================================================================
 
   e2e-tests:
-    name: E2E Tests
+    name: E2E Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
     runs-on: ubuntu-latest
-    needs: [setup]
+    needs: [setup, integration-tests]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+        total-shards: [4]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -551,8 +556,8 @@ jobs:
           key: ${{ needs.setup.outputs.cache-key }}
 
       # Testcontainers automatically detects GitHub Actions and uses Docker
-      - name: Run E2E tests
-        run: npm run test:e2e --workspace=backend
+      - name: Run E2E tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
+        run: npm run test:e2e --workspace=backend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
 
   # ============================================================================
   # GATE JOBS - Ensure all checks pass

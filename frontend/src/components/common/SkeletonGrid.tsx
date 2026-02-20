@@ -7,7 +7,7 @@ export interface SkeletonGridProps {
     className?: string;
 }
 
-export function SkeletonGrid({ count = 6, CardSkeleton, className }: SkeletonGridProps) {
+export function SkeletonGrid({ count = 9, CardSkeleton, className }: SkeletonGridProps) {
     return (
         <div
             className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4", className)}

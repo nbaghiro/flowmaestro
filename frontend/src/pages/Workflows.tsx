@@ -697,7 +697,7 @@ export function Workflows() {
 
             {/* Loading State */}
             {isLoading || isLoadingFolders ? (
-                <SkeletonGrid count={6} CardSkeleton={WorkflowCardSkeleton} />
+                <SkeletonGrid count={9} CardSkeleton={WorkflowCardSkeleton} />
             ) : (
                 <>
                     {/* Folders Section */}
