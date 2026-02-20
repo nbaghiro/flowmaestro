@@ -5,7 +5,7 @@ import type { FormInterface, FormInterfaceSubmission } from "@flowmaestro/shared
 import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
 import { PageHeader } from "../components/common/PageHeader";
-import { LoadingState } from "../components/common/Spinner";
+import { SubmissionsListSkeleton } from "../components/skeletons";
 import { getFormInterface, getFormInterfaceSubmissions } from "../lib/api";
 import { logger } from "../lib/logger";
 
@@ -64,11 +64,7 @@ export function FormInterfaceSubmissions() {
     };
 
     if (isLoading) {
-        return (
-            <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
-                <LoadingState message="Loading submissions..." />
-            </div>
-        );
+        return <SubmissionsListSkeleton />;
     }
 
     if (!formInterface) {

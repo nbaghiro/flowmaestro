@@ -28,8 +28,8 @@ import { IconPicker } from "../components/common/IconPicker";
 import { Input } from "../components/common/Input";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import { Select, SelectItem } from "../components/common/Select";
-import { LoadingState } from "../components/common/Spinner";
 import { ThemeToggle } from "../components/common/ThemeToggle";
+import { InterfaceEditorSkeleton } from "../components/skeletons";
 import { ChatInterfaceEvents } from "../lib/analytics";
 import { getChatInterface, uploadChatInterfaceAsset } from "../lib/api";
 import { logger } from "../lib/logger";
@@ -182,11 +182,7 @@ export function ChatInterfaceEditorPage() {
     };
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <LoadingState message="Loading chat interface..." />
-            </div>
-        );
+        return <InterfaceEditorSkeleton />;
     }
 
     if (!chatInterface) {

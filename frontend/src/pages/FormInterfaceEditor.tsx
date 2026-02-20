@@ -22,8 +22,8 @@ import { FormField } from "../components/common/FormField";
 import { IconPicker } from "../components/common/IconPicker";
 import { Input } from "../components/common/Input";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
-import { LoadingState } from "../components/common/Spinner";
 import { ThemeToggle } from "../components/common/ThemeToggle";
+import { InterfaceEditorSkeleton } from "../components/skeletons";
 import { FormInterfaceEvents } from "../lib/analytics";
 import { getFormInterface, uploadFormInterfaceAsset } from "../lib/api";
 import { logger } from "../lib/logger";
@@ -162,11 +162,7 @@ export function FormInterfaceEditor() {
     };
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <LoadingState message="Loading form interface..." />
-            </div>
-        );
+        return <InterfaceEditorSkeleton />;
     }
 
     if (!formInterface) {

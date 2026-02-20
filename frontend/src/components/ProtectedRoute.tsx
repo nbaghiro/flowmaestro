@@ -1,7 +1,7 @@
-import { Loader2 } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
+import { AppLayoutSkeleton } from "./skeletons";
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -25,14 +25,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
     // Show loading while auth or workspace is initializing
     if (isAuthLoading || (!isWorkspaceInitialized && isAuthenticated) || isWorkspaceLoading) {
-        return (
-            <div className="h-screen flex items-center justify-center bg-muted/30">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">Loading...</p>
-                </div>
-            </div>
-        );
+        return <AppLayoutSkeleton />;
     }
 
     if (!isAuthenticated) {
@@ -41,14 +34,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
     // Wait for workspace to be set (should always have one after initialization)
     if (!currentWorkspace) {
-        return (
-            <div className="h-screen flex items-center justify-center bg-muted/30">
-                <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                    <p className="text-sm text-muted-foreground">Loading workspace...</p>
-                </div>
-            </div>
-        );
+        return <AppLayoutSkeleton />;
     }
 
     return <>{children}</>;

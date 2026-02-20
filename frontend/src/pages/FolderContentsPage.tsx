@@ -22,8 +22,8 @@ import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
-import { LoadingState } from "../components/common/Spinner";
 import { CreateFolderDialog, FolderItemSection, MoveToFolderDialog } from "../components/folders";
+import { FolderContentsSkeleton } from "../components/skeletons";
 import { removeItemsFromFolder } from "../lib/api";
 import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
@@ -948,11 +948,7 @@ export function FolderContentsPage() {
 
     // Loading state
     if (isLoadingContents) {
-        return (
-            <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
-                <LoadingState message="Loading folder contents..." />
-            </div>
-        );
+        return <FolderContentsSkeleton />;
     }
 
     // Error state
