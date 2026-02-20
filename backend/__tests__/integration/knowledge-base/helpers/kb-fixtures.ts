@@ -118,6 +118,7 @@ export function createTestDocument(
         knowledge_base_id: knowledgeBaseId,
         name: overrides.name || "test-document.pdf",
         source_type: overrides.source_type || "file",
+        source_id: overrides.source_id !== undefined ? overrides.source_id : null,
         source_url: overrides.source_url !== undefined ? overrides.source_url : null,
         file_path:
             overrides.file_path !== undefined
