@@ -79,6 +79,54 @@ jest.mock("../../../../services/sse", () => ({
     createSSEHandler: jest.fn().mockReturnValue(mockSSEHandler)
 }));
 
+jest.mock("../../../../services/integration-documents", () => ({
+    integrationDocumentService: {
+        getProvidersWithCapabilities: jest.fn().mockResolvedValue([]),
+        browseProvider: jest.fn().mockResolvedValue({ items: [] }),
+        importDocuments: jest.fn().mockResolvedValue({ jobId: "test-job-id" })
+    },
+    capabilityDetector: {
+        getProvidersWithDocumentCapabilities: jest.fn().mockResolvedValue([])
+    },
+    CapabilityDetector: jest.fn().mockImplementation(() => ({
+        getProvidersWithDocumentCapabilities: jest.fn().mockResolvedValue([])
+    })),
+    IntegrationDocumentService: jest.fn().mockImplementation(() => ({
+        getProvidersWithCapabilities: jest.fn().mockResolvedValue([]),
+        browseProvider: jest.fn().mockResolvedValue({ items: [] }),
+        importDocuments: jest.fn().mockResolvedValue({ jobId: "test-job-id" })
+    }))
+}));
+
+jest.mock("../../../../services/EncryptionService", () => ({
+    EncryptionService: jest.fn().mockImplementation(() => ({
+        encrypt: jest.fn().mockReturnValue("encrypted"),
+        decrypt: jest.fn().mockReturnValue("decrypted")
+    })),
+    getEncryptionService: jest.fn().mockReturnValue({
+        encrypt: jest.fn().mockReturnValue("encrypted"),
+        decrypt: jest.fn().mockReturnValue("decrypted")
+    })
+}));
+
+jest.mock("../../../../storage/repositories/ConnectionRepository", () => ({
+    ConnectionRepository: jest.fn().mockImplementation(() => ({
+        findById: jest.fn().mockResolvedValue(null),
+        findByUserAndProvider: jest.fn().mockResolvedValue(null),
+        findByWorkspaceId: jest.fn().mockResolvedValue([])
+    }))
+}));
+
+jest.mock("../../../../storage/repositories/KnowledgeBaseSourceRepository", () => ({
+    KnowledgeBaseSourceRepository: jest.fn().mockImplementation(() => ({
+        findById: jest.fn().mockResolvedValue(null),
+        findByKnowledgeBaseId: jest.fn().mockResolvedValue([]),
+        create: jest.fn().mockResolvedValue({ id: "test-source-id" }),
+        update: jest.fn().mockResolvedValue(null),
+        delete: jest.fn().mockResolvedValue(true)
+    }))
+}));
+
 jest.mock("../../../../core/config", () => ({
     config: {
         jwt: {
@@ -91,6 +139,9 @@ jest.mock("../../../../core/config", () => ({
         redis: {
             host: "localhost",
             port: 6379
+        },
+        encryption: {
+            key: "test-encryption-key-32-characters!"
         }
     }
 }));
