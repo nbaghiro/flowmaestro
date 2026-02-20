@@ -45,6 +45,7 @@ import { publicFormInterfaceFilesRoutes } from "./routes/public/form-interface-f
 import { publicFormInterfaceQueryRoutes } from "./routes/public/form-interface-query";
 import { publicFormInterfaceStreamRoutes } from "./routes/public/form-interface-stream";
 import { publicFormInterfaceRoutes } from "./routes/public/form-interfaces";
+import { publicStatusRoutes } from "./routes/public/status";
 import { sandboxRoutes } from "./routes/sandbox";
 import { templateRoutes } from "./routes/templates";
 import { threadRoutes } from "./routes/threads";
@@ -227,6 +228,7 @@ export async function buildServer() {
     await fastify.register(publicChatInterfaceQueryRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicApiV1Routes, { prefix: "/api/v1" });
     await fastify.register(publicBlogRoutes, { prefix: "/public/blog" });
+    await fastify.register(publicStatusRoutes, { prefix: "/public/status" });
 
     // Blog admin routes (authenticated)
     await fastify.register(blogAdminRoutes, { prefix: "/blog" });

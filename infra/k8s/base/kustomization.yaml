@@ -23,6 +23,7 @@ resources:
   - marketing-deployment.yaml
   - documentation-deployment.yaml
   - static-deployment.yaml
+  - status-deployment.yaml
   - temporal-deployment.yaml
   # Services and Networking
   - services.yaml

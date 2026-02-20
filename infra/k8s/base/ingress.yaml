@@ -11,6 +11,7 @@ spec:
     - blog.flowmaestro.ai
     - docs.flowmaestro.ai
     - static.flowmaestro.ai
+    - status.flowmaestro.ai
     - flowmaestro.ai
 
 ---
@@ -114,6 +115,18 @@ spec:
             backend:
               service:
                 name: static-service
+                port:
+                  number: 80
+
+    # Status page
+    - host: status.flowmaestro.ai
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: status-service
                 port:
                   number: 80
 
