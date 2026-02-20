@@ -9,5 +9,5 @@
         "typeRoots": ["../node_modules/@types", "./node_modules/@types", "./__tests__/__mocks__"]
     },
     "include": ["src/**/*", "__tests__/**/*", "../shared/src/**/*"],
-    "exclude": ["node_modules", "dist"]
+    "exclude": ["node_modules", "dist", "__tests__/e2e/**/*", "__tests__/integration-real/**/*"]
 }
