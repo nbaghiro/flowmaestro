@@ -1,0 +1,38 @@
+# GitHub Release Notes Configuration
+# This file controls how GitHub auto-generates release notes from PRs
+# Reference: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+
+changelog:
+    exclude:
+        labels:
+            - "skip-changelog"
+            - "dependencies"
+            - "chore"
+    categories:
+        - title: "⚠️ Breaking Changes"
+          labels:
+              - "type: breaking"
+              - "breaking-change"
+        - title: "🚀 New Features"
+          labels:
+              - "type: feature"
+              - "feature"
+              - "enhancement"
+        - title: "🐛 Bug Fixes"
+          labels:
+              - "type: fix"
+              - "bug"
+              - "fix"
+        - title: "📚 Documentation"
+          labels:
+              - "type: docs"
+              - "documentation"
+        - title: "🏗️ Infrastructure"
+          labels:
+              - "type: infra"
+              - "infrastructure"
+              - "ci"
+              - "devops"
+        - title: "🔧 Other Changes"
+          labels:
+              - "*"

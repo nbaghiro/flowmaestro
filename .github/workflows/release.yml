@@ -1,0 +1,290 @@
+name: Release
+
+# This workflow creates a new release by:
+# 1. Validating the version format and ensuring tag doesn't exist
+# 2. Bumping package.json version and creating a git tag
+# 3. Triggering deployment and waiting for completion
+# 4. Creating a GitHub Release with auto-generated notes (only after successful deploy)
+
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: |
+                    Version to release (semver format):
+                    • MAJOR (x.0.0) - Breaking API changes
+                    • MINOR (x.Y.0) - New features, backwards-compatible
+                    • PATCH (x.y.Z) - Bug fixes
+                    • Pre-release: 1.2.0-beta.1, 2.0.0-rc.1
+                type: string
+                required: true
+            prerelease:
+                description: "Mark as pre-release?"
+                type: boolean
+                default: false
+
+env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+    # ==========================================================================
+    # VALIDATE - Check version format and availability
+    # ==========================================================================
+    validate:
+        name: Validate Version
+        runs-on: ubuntu-latest
+        outputs:
+            version: ${{ steps.validate.outputs.version }}
+            tag: ${{ steps.validate.outputs.tag }}
+            last_tag: ${{ steps.validate.outputs.last_tag }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Validate version format
+              id: validate
+              run: |
+                  VERSION="${{ inputs.version }}"
+
+                  # Validate semver format (with optional pre-release suffix)
+                  if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+                    echo "::error::Version must follow semver format (e.g., 1.2.0 or 1.2.0-beta.1)"
+                    exit 1
+                  fi
+
+                  TAG="v$VERSION"
+
+                  # Check tag doesn't already exist
+                  if git rev-parse "$TAG" >/dev/null 2>&1; then
+                    echo "::error::Tag $TAG already exists. Use a different version."
+                    exit 1
+                  fi
+
+                  # Get the last tag for changelog generation
+                  LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "tag=$TAG" >> $GITHUB_OUTPUT
+                  echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+
+                  echo "## Version Validation" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Tag:** $TAG" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Previous Tag:** ${LAST_TAG:-'(none)'}" >> $GITHUB_STEP_SUMMARY
+
+    # ==========================================================================
+    # PREPARE - Bump version, commit, and create tag
+    # ==========================================================================
+    prepare:
+        name: Prepare Release
+        needs: validate
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+
+            - name: Bump version in package.json
+              run: |
+                  npm version ${{ needs.validate.outputs.version }} --no-git-tag-version
+                  echo "Updated package.json to version ${{ needs.validate.outputs.version }}"
+
+            - name: Commit and tag
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+
+                  git add package.json package-lock.json
+                  git commit -m "chore: release ${{ needs.validate.outputs.tag }}"
+                  git tag -a "${{ needs.validate.outputs.tag }}" -m "Release ${{ needs.validate.outputs.version }}"
+
+                  git push origin HEAD:main
+                  git push origin "${{ needs.validate.outputs.tag }}"
+
+                  echo "## Release Preparation" >> $GITHUB_STEP_SUMMARY
+                  echo "- Created commit for version bump" >> $GITHUB_STEP_SUMMARY
+                  echo "- Created tag: ${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- Pushed to main branch" >> $GITHUB_STEP_SUMMARY
+
+    # ==========================================================================
+    # DEPLOY - Trigger deployment and wait for completion
+    # ==========================================================================
+    deploy:
+        name: Deploy
+        needs: [validate, prepare]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Trigger deployment workflow
+              run: |
+                  echo "Triggering deployment for ${{ needs.validate.outputs.tag }}..."
+
+                  gh workflow run deploy-gke.yml \
+                    --repo ${{ github.repository }} \
+                    -f services=all \
+                    -f skip_build=false \
+                    -f skip_migrations=false \
+                    -f skip_seed=true \
+                    -f image_tag=${{ needs.validate.outputs.tag }}
+
+                  echo "Deployment triggered, waiting for workflow to start..."
+                  sleep 15
+
+            - name: Wait for deployment to complete
+              run: |
+                  TAG="${{ needs.validate.outputs.tag }}"
+                  MAX_ATTEMPTS=30
+
+                  # Find the triggered workflow run
+                  echo "Looking for deployment workflow run..."
+                  for i in $(seq 1 $MAX_ATTEMPTS); do
+                    RUN_ID=$(gh run list \
+                      --repo ${{ github.repository }} \
+                      --workflow=deploy-gke.yml \
+                      --limit 10 \
+                      --json databaseId,status,createdAt \
+                      --jq 'map(select(.status == "in_progress" or .status == "queued" or .status == "pending")) | .[0].databaseId // empty')
+
+                    if [ -n "$RUN_ID" ]; then
+                      echo "Found deployment run: $RUN_ID"
+                      break
+                    fi
+
+                    # Also check for recently completed runs (in case it finished quickly)
+                    if [ $i -gt 5 ]; then
+                      COMPLETED_RUN=$(gh run list \
+                        --repo ${{ github.repository }} \
+                        --workflow=deploy-gke.yml \
+                        --limit 1 \
+                        --json databaseId,conclusion,createdAt \
+                        --jq '.[0] | select(.conclusion == "success") | .databaseId // empty')
+
+                      if [ -n "$COMPLETED_RUN" ]; then
+                        echo "Found completed deployment run: $COMPLETED_RUN"
+                        RUN_ID=$COMPLETED_RUN
+                        break
+                      fi
+                    fi
+
+                    echo "Waiting for workflow to start... ($i/$MAX_ATTEMPTS)"
+                    sleep 10
+                  done
+
+                  if [ -z "$RUN_ID" ]; then
+                    echo "::error::Could not find triggered deployment workflow after $MAX_ATTEMPTS attempts"
+                    exit 1
+                  fi
+
+                  # Wait for the workflow to complete
+                  echo "Monitoring deployment run $RUN_ID..."
+                  gh run watch $RUN_ID --repo ${{ github.repository }} --exit-status
+
+                  echo "## Deployment Successful" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Version:** ${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Run ID:** $RUN_ID" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Status:** Completed successfully" >> $GITHUB_STEP_SUMMARY
+
+    # ==========================================================================
+    # RELEASE - Create GitHub Release (only after successful deploy)
+    # ==========================================================================
+    release:
+        name: Create Release
+        needs: [validate, prepare, deploy]
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  ref: ${{ needs.validate.outputs.tag }}
+
+            - name: Generate release notes
+              id: notes
+              run: |
+                  TAG="${{ needs.validate.outputs.tag }}"
+                  LAST_TAG="${{ needs.validate.outputs.last_tag }}"
+
+                  echo "Generating release notes for $TAG..."
+
+                  # Use GitHub's native release notes generation (from PRs)
+                  if [ -n "$LAST_TAG" ]; then
+                    GH_NOTES=$(gh api repos/${{ github.repository }}/releases/generate-notes \
+                      -f tag_name="$TAG" \
+                      -f previous_tag_name="$LAST_TAG" \
+                      --jq '.body' 2>/dev/null || echo "")
+                  else
+                    GH_NOTES=$(gh api repos/${{ github.repository }}/releases/generate-notes \
+                      -f tag_name="$TAG" \
+                      --jq '.body' 2>/dev/null || echo "")
+                  fi
+
+                  # Get direct commits (not from PRs) since last tag
+                  if [ -n "$LAST_TAG" ]; then
+                    DIRECT_COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"- %s (%h)" --no-merges \
+                      --grep="Merge pull request" --invert-grep \
+                      --grep="^chore: release" --invert-grep | head -30 || echo "")
+                  else
+                    DIRECT_COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges \
+                      --grep="Merge pull request" --invert-grep \
+                      --grep="^chore: release" --invert-grep -30 | head -30 || echo "")
+                  fi
+
+                  # Build final release notes
+                  NOTES="$GH_NOTES"
+
+                  if [ -n "$DIRECT_COMMITS" ]; then
+                    if [ -n "$NOTES" ]; then
+                      NOTES="${NOTES}
+
+                  ### Direct Commits
+                  ${DIRECT_COMMITS}"
+                    else
+                      NOTES="### Changes
+                  ${DIRECT_COMMITS}"
+                    fi
+                  fi
+
+                  # Fallback if completely empty
+                  if [ -z "$NOTES" ]; then
+                    NOTES="Release ${{ needs.validate.outputs.version }}"
+                  fi
+
+                  # Write to file to preserve formatting
+                  echo "$NOTES" > release_notes.md
+                  echo "Release notes generated"
+
+            - name: Create GitHub Release
+              run: |
+                  PRERELEASE_FLAG=""
+                  if [ "${{ inputs.prerelease }}" == "true" ]; then
+                    PRERELEASE_FLAG="--prerelease"
+                  fi
+
+                  gh release create "${{ needs.validate.outputs.tag }}" \
+                    --repo ${{ github.repository }} \
+                    --title "${{ needs.validate.outputs.tag }}" \
+                    --notes-file release_notes.md \
+                    $PRERELEASE_FLAG
+
+                  echo "## Release Created" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Version:** ${{ needs.validate.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Tag:** ${{ needs.validate.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Pre-release:** ${{ inputs.prerelease }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "🎉 Release published successfully!" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "[View Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }})" >> $GITHUB_STEP_SUMMARY
