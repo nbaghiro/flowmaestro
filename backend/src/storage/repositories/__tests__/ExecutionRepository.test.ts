@@ -201,7 +201,7 @@ describe("ExecutionRepository", () => {
             await repository.findAll({ status: "completed" });
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("WHERE status = $1"),
+                expect.stringContaining("AND status = $1"),
                 expect.arrayContaining(["completed"])
             );
         });
@@ -296,14 +296,18 @@ describe("ExecutionRepository", () => {
     });
 
     describe("delete", () => {
-        it("should hard delete execution and return true", async () => {
+        it("should soft delete execution and return true", async () => {
             const executionId = generateId();
             mockQuery.mockResolvedValueOnce(mockAffectedRows(1));
 
             const result = await repository.delete(executionId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("DELETE FROM flowmaestro.executions"),
+                expect.stringContaining("UPDATE flowmaestro.executions"),
+                [executionId]
+            );
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("SET deleted_at = CURRENT_TIMESTAMP"),
                 [executionId]
             );
             expect(result).toBe(true);
