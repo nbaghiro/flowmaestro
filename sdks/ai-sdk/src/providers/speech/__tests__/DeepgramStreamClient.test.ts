@@ -1,14 +1,14 @@
 /**
- * Tests for ElevenLabsStreamClient
+ * Tests for DeepgramStreamClient
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { silentTestLogger, captureTestLogger } from "../../__tests__/fixtures/configs";
+import { silentTestLogger, captureTestLogger } from "../../../__tests__/fixtures/configs";
 import {
-    mockElevenLabsAudioChunk,
-    mockElevenLabsFinalChunk,
-    mockElevenLabsError
-} from "../../__tests__/fixtures/responses";
+    mockDeepgramTranscript,
+    mockDeepgramMetadata,
+    mockDeepgramError
+} from "../../../__tests__/fixtures/responses";
 
 // Track mock WebSocket instances
 let lastMockWebSocket: MockWebSocket | null = null;
@@ -89,9 +89,9 @@ vi.mock("ws", () => {
     };
 });
 
-describe("ElevenLabsStreamClient", () => {
-    let ElevenLabsStreamClient: typeof import("../ElevenLabsStreamClient").ElevenLabsStreamClient;
-    let client: import("../ElevenLabsStreamClient").ElevenLabsStreamClient;
+describe("DeepgramStreamClient", () => {
+    let DeepgramStreamClient: typeof import("../deepgram").DeepgramStreamClient;
+    let client: import("../deepgram").DeepgramStreamClient;
 
     beforeEach(async () => {
         vi.useFakeTimers();
@@ -99,11 +99,11 @@ describe("ElevenLabsStreamClient", () => {
         lastMockWebSocket = null;
 
         // Dynamic import after mock
-        const module = await import("../ElevenLabsStreamClient");
-        ElevenLabsStreamClient = module.ElevenLabsStreamClient;
+        const module = await import("../deepgram");
+        DeepgramStreamClient = module.DeepgramStreamClient;
 
-        client = new ElevenLabsStreamClient({
-            apiKey: "test-elevenlabs-key",
+        client = new DeepgramStreamClient({
+            apiKey: "test-deepgram-key",
             logger: silentTestLogger
         });
     });
@@ -119,23 +119,22 @@ describe("ElevenLabsStreamClient", () => {
             expect(client.getIsConnected()).toBe(false);
         });
 
-        it("should accept custom elevenlabs config", () => {
-            const customClient = new ElevenLabsStreamClient({
+        it("should accept custom deepgram config", async () => {
+            const customClient = new DeepgramStreamClient({
                 apiKey: "test-key",
-                elevenlabs: {
-                    voiceId: "custom-voice",
-                    modelId: "eleven_multilingual_v2",
-                    stability: 0.8,
-                    similarityBoost: 0.9
+                deepgram: {
+                    model: "nova-3",
+                    language: "es",
+                    sampleRate: 8000
                 }
             });
 
             expect(customClient).toBeDefined();
         });
 
-        it("should accept custom logger", () => {
+        it("should accept custom logger", async () => {
             const { logger } = captureTestLogger();
-            const customClient = new ElevenLabsStreamClient({
+            const customClient = new DeepgramStreamClient({
                 apiKey: "test-key",
                 logger
             });
@@ -145,9 +144,10 @@ describe("ElevenLabsStreamClient", () => {
     });
 
     describe("connect", () => {
-        it("should connect to ElevenLabs WebSocket", async () => {
+        it("should connect to Deepgram WebSocket", async () => {
             const connectPromise = client.connect();
 
+            // Get the mock WebSocket and simulate open
             const ws = lastMockWebSocket!;
             ws.simulateOpen();
 
@@ -157,24 +157,22 @@ describe("ElevenLabsStreamClient", () => {
         });
 
         it("should throw error if API key is missing", async () => {
-            const noKeyClient = new ElevenLabsStreamClient({
+            const noKeyClient = new DeepgramStreamClient({
                 apiKey: ""
             });
 
-            await expect(noKeyClient.connect()).rejects.toThrow(
-                "ElevenLabs API key not configured"
-            );
+            await expect(noKeyClient.connect()).rejects.toThrow("Deepgram API key not configured");
         });
 
-        it("should construct correct WebSocket URL", async () => {
+        it("should construct correct WebSocket URL with parameters", async () => {
             const connectPromise = client.connect();
-            const ws = lastMockWebSocket!;
 
-            expect(ws.url).toContain("wss://api.elevenlabs.io/v1/text-to-speech");
+            const ws = lastMockWebSocket!;
+            expect(ws.url).toContain("wss://api.deepgram.com/v1/listen");
             expect(ws.options).toEqual(
                 expect.objectContaining({
                     headers: expect.objectContaining({
-                        "xi-api-key": "test-elevenlabs-key"
+                        Authorization: "Token test-deepgram-key"
                     })
                 })
             );
@@ -183,33 +181,23 @@ describe("ElevenLabsStreamClient", () => {
             await connectPromise;
         });
 
-        it("should include voice ID and model in URL", async () => {
-            const customClient = new ElevenLabsStreamClient({
+        it("should include model and language in URL", async () => {
+            const customClient = new DeepgramStreamClient({
                 apiKey: "test-key",
-                elevenlabs: {
-                    voiceId: "my-voice-id",
-                    modelId: "eleven_flash_v2_5"
+                deepgram: {
+                    model: "nova-3",
+                    language: "fr"
                 }
             });
 
             const connectPromise = customClient.connect();
             const ws = lastMockWebSocket!;
 
-            expect(ws.url).toContain("my-voice-id");
-            expect(ws.url).toContain("eleven_flash_v2_5");
+            expect(ws.url).toContain("model=nova-3");
+            expect(ws.url).toContain("language=fr");
 
             ws.simulateOpen();
             await connectPromise;
-        });
-
-        it("should send initial config on connect", async () => {
-            const connectPromise = client.connect();
-            const ws = lastMockWebSocket!;
-            ws.simulateOpen();
-            await connectPromise;
-
-            // Check that initial config was sent
-            expect(ws.send).toHaveBeenCalledWith(expect.stringContaining("voice_settings"));
         });
 
         it("should call onOpen handler when connected", async () => {
@@ -232,158 +220,163 @@ describe("ElevenLabsStreamClient", () => {
 
             await expect(connectPromise).rejects.toThrow("Connection failed");
         });
-    });
 
-    describe("streamText", () => {
-        it("should send text when connected", async () => {
+        it("should start keep-alive ping interval", async () => {
             const connectPromise = client.connect();
             const ws = lastMockWebSocket!;
             ws.simulateOpen();
             await connectPromise;
 
-            // Clear initial config send
-            ws.send.mockClear();
+            // Advance time by 10 seconds
+            vi.advanceTimersByTime(10000);
 
-            client.streamText("Hello world");
+            expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ type: "KeepAlive" }));
+        });
+    });
 
-            expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ text: "Hello world" }));
+    describe("sendAudio", () => {
+        it("should send audio data when connected", async () => {
+            const connectPromise = client.connect();
+            const ws = lastMockWebSocket!;
+            ws.simulateOpen();
+            await connectPromise;
+
+            const audioData = Buffer.from("audio data");
+            client.sendAudio(audioData);
+
+            expect(ws.send).toHaveBeenCalledWith(audioData);
         });
 
-        it("should not send text when not connected", () => {
-            client.streamText("Hello");
+        it("should not send audio when not connected", () => {
+            const audioData = Buffer.from("audio data");
+            client.sendAudio(audioData);
 
             // Should not throw, just log warning
         });
-
-        it("should buffer multiple text chunks", async () => {
-            const connectPromise = client.connect();
-            const ws = lastMockWebSocket!;
-            ws.simulateOpen();
-            await connectPromise;
-
-            ws.send.mockClear();
-
-            client.streamText("Hello ");
-            client.streamText("world");
-            client.streamText("!");
-
-            expect(ws.send).toHaveBeenCalledTimes(3);
-        });
     });
 
-    describe("endText", () => {
-        it("should send empty string to signal end", async () => {
+    describe("sendBase64Audio", () => {
+        it("should convert base64 to buffer and send", async () => {
             const connectPromise = client.connect();
             const ws = lastMockWebSocket!;
             ws.simulateOpen();
             await connectPromise;
 
-            ws.send.mockClear();
+            const base64Audio = Buffer.from("audio data").toString("base64");
+            client.sendBase64Audio(base64Audio);
 
-            client.endText();
-
-            expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ text: "" }));
-        });
-
-        it("should do nothing when not connected", () => {
-            client.endText();
-
-            // Should not throw
-        });
-    });
-
-    describe("interrupt", () => {
-        it("should clear buffer and reconnect", async () => {
-            // Use real timers for this test since interrupt has async close/connect flow
-            vi.useRealTimers();
-
-            const connectPromise = client.connect();
-            const ws = lastMockWebSocket!;
-            ws.simulateOpen();
-            await connectPromise;
-
-            // Start streaming
-            client.streamText("Hello");
-
-            // Start interrupt - this will close and reconnect
-            const interruptPromise = client.interrupt();
-
-            // Allow the close to happen and connect to start
-            await new Promise((r) => setTimeout(r, 10));
-
-            // New connection should have been created
-            const newWs = lastMockWebSocket!;
-            newWs.simulateOpen();
-
-            await interruptPromise;
-
-            expect(client.getIsConnected()).toBe(true);
-
-            // Restore fake timers for other tests
-            vi.useFakeTimers();
+            expect(ws.send).toHaveBeenCalledWith(expect.any(Buffer));
         });
     });
 
     describe("close", () => {
-        it("should close WebSocket connection", async () => {
+        it("should send CloseStream message and close connection", async () => {
             const connectPromise = client.connect();
             const ws = lastMockWebSocket!;
             ws.simulateOpen();
             await connectPromise;
 
-            await client.close();
+            const closePromise = client.close();
 
+            // Advance past the 500ms wait
+            await vi.advanceTimersByTimeAsync(600);
+            await closePromise;
+
+            expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ type: "CloseStream" }));
             expect(ws.close).toHaveBeenCalled();
             expect(client.getIsConnected()).toBe(false);
         });
-    });
 
-    describe("audio chunk handling", () => {
-        it("should call onAudioChunk for audio messages", async () => {
-            const onAudioChunk = vi.fn();
-            client.setOnAudioChunk(onAudioChunk);
-
+        it("should stop keep-alive interval", async () => {
             const connectPromise = client.connect();
             const ws = lastMockWebSocket!;
             ws.simulateOpen();
             await connectPromise;
 
-            ws.simulateMessage(mockElevenLabsAudioChunk);
+            const closePromise = client.close();
+            await vi.advanceTimersByTimeAsync(600);
+            await closePromise;
 
-            expect(onAudioChunk).toHaveBeenCalledWith("SGVsbG8gV29ybGQh");
-        });
+            // Clear call history
+            ws.send.mockClear();
 
-        it("should call onComplete for final audio chunk", async () => {
-            const onComplete = vi.fn();
-            client.setOnComplete(onComplete);
+            // Advance time - no more keep-alive pings
+            vi.advanceTimersByTime(20000);
 
-            const connectPromise = client.connect();
-            const ws = lastMockWebSocket!;
-            ws.simulateOpen();
-            await connectPromise;
-
-            ws.simulateMessage(mockElevenLabsFinalChunk);
-
-            expect(onComplete).toHaveBeenCalled();
-        });
-
-        it("should still emit audio on final chunk", async () => {
-            const onAudioChunk = vi.fn();
-            client.setOnAudioChunk(onAudioChunk);
-
-            const connectPromise = client.connect();
-            const ws = lastMockWebSocket!;
-            ws.simulateOpen();
-            await connectPromise;
-
-            ws.simulateMessage(mockElevenLabsFinalChunk);
-
-            expect(onAudioChunk).toHaveBeenCalledWith("RmluYWwgY2h1bms=");
+            expect(ws.send).not.toHaveBeenCalledWith(JSON.stringify({ type: "KeepAlive" }));
         });
     });
 
-    describe("error handling", () => {
-        it("should call onError handler for error messages", async () => {
+    describe("transcript handling", () => {
+        it("should call onTranscript for final transcripts", async () => {
+            const onTranscript = vi.fn();
+            client.setOnTranscript(onTranscript);
+
+            const connectPromise = client.connect();
+            const ws = lastMockWebSocket!;
+            ws.simulateOpen();
+            await connectPromise;
+
+            ws.simulateMessage(mockDeepgramTranscript);
+
+            expect(onTranscript).toHaveBeenCalledWith("Hello, how are you?", true, false);
+        });
+
+        it("should handle interim transcripts", async () => {
+            const onTranscript = vi.fn();
+            client.setOnTranscript(onTranscript);
+
+            const connectPromise = client.connect();
+            const ws = lastMockWebSocket!;
+            ws.simulateOpen();
+            await connectPromise;
+
+            const interimTranscript = {
+                ...mockDeepgramTranscript,
+                is_final: false
+            };
+            ws.simulateMessage(interimTranscript);
+
+            expect(onTranscript).toHaveBeenCalledWith("Hello, how are you?", false, false);
+        });
+
+        it("should handle speech_final transcripts", async () => {
+            const onTranscript = vi.fn();
+            client.setOnTranscript(onTranscript);
+
+            const connectPromise = client.connect();
+            const ws = lastMockWebSocket!;
+            ws.simulateOpen();
+            await connectPromise;
+
+            const speechFinalTranscript = {
+                ...mockDeepgramTranscript,
+                speech_final: true
+            };
+            ws.simulateMessage(speechFinalTranscript);
+
+            expect(onTranscript).toHaveBeenCalledWith("Hello, how are you?", true, true);
+        });
+
+        it("should handle Metadata messages", async () => {
+            const { logger, logs } = captureTestLogger();
+            const logClient = new DeepgramStreamClient({
+                apiKey: "test-key",
+                logger
+            });
+
+            const connectPromise = logClient.connect();
+            const ws = lastMockWebSocket!;
+            ws.simulateOpen();
+            await connectPromise;
+
+            ws.simulateMessage(mockDeepgramMetadata);
+
+            const debugLogs = logs.filter((l) => l.level === "debug");
+            expect(debugLogs.some((l) => l.message === "Deepgram metadata received")).toBe(true);
+        });
+
+        it("should handle Error messages", async () => {
             const onError = vi.fn();
             client.setOnError(onError);
 
@@ -392,11 +385,33 @@ describe("ElevenLabsStreamClient", () => {
             ws.simulateOpen();
             await connectPromise;
 
-            ws.simulateMessage(mockElevenLabsError);
+            ws.simulateMessage(mockDeepgramError);
 
-            expect(onError).toHaveBeenCalledWith("Voice not found", "VOICE_NOT_FOUND");
+            expect(onError).toHaveBeenCalledWith("Invalid audio format");
         });
 
+        it("should ignore empty transcripts", async () => {
+            const onTranscript = vi.fn();
+            client.setOnTranscript(onTranscript);
+
+            const connectPromise = client.connect();
+            const ws = lastMockWebSocket!;
+            ws.simulateOpen();
+            await connectPromise;
+
+            const emptyTranscript = {
+                type: "Results",
+                channel: {
+                    alternatives: [{ transcript: "", confidence: 0 }]
+                }
+            };
+            ws.simulateMessage(emptyTranscript);
+
+            expect(onTranscript).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("error handling", () => {
         it("should call onError handler on WebSocket error", async () => {
             const onError = vi.fn();
             client.setOnError(onError);
@@ -413,7 +428,7 @@ describe("ElevenLabsStreamClient", () => {
 
         it("should handle malformed JSON messages", async () => {
             const { logger, logs } = captureTestLogger();
-            const logClient = new ElevenLabsStreamClient({
+            const logClient = new DeepgramStreamClient({
                 apiKey: "test-key",
                 logger
             });
@@ -426,22 +441,9 @@ describe("ElevenLabsStreamClient", () => {
             ws.simulateMessage("not json");
 
             const errorLogs = logs.filter((l) => l.level === "error");
-            expect(errorLogs.some((l) => l.message === "Failed to parse ElevenLabs message")).toBe(
+            expect(errorLogs.some((l) => l.message === "Failed to parse Deepgram message")).toBe(
                 true
             );
-        });
-    });
-
-    describe("updateConfig", () => {
-        it("should update voice configuration", async () => {
-            client.updateConfig({
-                voiceId: "new-voice",
-                stability: 0.9
-            });
-
-            // Config is updated internally - would affect future connections
-            // This is mainly a smoke test
-            expect(client).toBeDefined();
         });
     });
 });

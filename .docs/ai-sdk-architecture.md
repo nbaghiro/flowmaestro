@@ -16,8 +16,7 @@ sdks/ai-sdk/
 │   ├── index.ts             # Public exports
 │   ├── __tests__/           # AIClient tests + fixtures
 │   ├── capabilities/        # Capability implementations
-│   ├── providers/           # Provider implementations
-│   ├── streaming/           # WebSocket streaming clients (Deepgram, ElevenLabs)
+│   ├── providers/           # Provider implementations (incl. streaming clients)
 │   └── core/                # Shared infrastructure
 ├── package.json
 ├── tsconfig.json
@@ -175,7 +174,7 @@ const flowMaestroAuthResolver: AuthResolver = async (provider, connectionId) => 
 
 ### Realtime Streaming
 
-The `DeepgramStreamClient` and `ElevenLabsStreamClient` in `streaming/` are WebSocket-based clients for real-time audio. They're separate from providers because they're stateful (maintain persistent connections) and event-driven rather than request/response:
+The `DeepgramStreamClient` and `ElevenLabsStreamClient` are WebSocket-based clients for real-time audio, integrated into their respective provider classes. Each provider exposes both request/response methods and streaming via `createStreamClient()`:
 
 ```
 Voice Session Flow:

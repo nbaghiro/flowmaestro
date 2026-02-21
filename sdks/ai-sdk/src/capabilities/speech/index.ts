@@ -3,20 +3,20 @@
  */
 
 import { withRetry, DEFAULT_RETRY_CONFIG } from "../../core/retry";
-import { DeepgramStreamClient } from "../../streaming/DeepgramStreamClient";
-import { ElevenLabsStreamClient } from "../../streaming/ElevenLabsStreamClient";
+import { DeepgramStreamClient } from "../../providers/speech/deepgram";
+import { ElevenLabsStreamClient } from "../../providers/speech/elevenlabs";
 import type { TranscriptionRequest, TranscriptionResponse, TTSRequest, TTSResponse } from "./types";
 import type { ProviderRegistry } from "../../providers/registry";
-import type { DeepgramStreamClientConfig } from "../../streaming/DeepgramStreamClient";
-import type { ElevenLabsStreamClientConfig } from "../../streaming/ElevenLabsStreamClient";
+import type { DeepgramStreamClientConfig } from "../../providers/speech/deepgram";
+import type { ElevenLabsStreamClientConfig } from "../../providers/speech/elevenlabs";
 import type { AIProvider, AILogger, RetryConfig } from "../../types";
 
 export * from "./types";
 
-// Re-export realtime streaming clients and types
+// Re-export streaming clients and types for convenience
 export { DeepgramStreamClient, ElevenLabsStreamClient };
 export type { DeepgramStreamClientConfig, ElevenLabsStreamClientConfig };
-export * from "../../streaming/types";
+export * from "../../providers/speech/types";
 
 /**
  * Speech capability

@@ -20,6 +20,7 @@ export const PROVIDER_ENV_VARS: Record<AIProvider, string> = {
     runway: "RUNWAY_API_KEY",
     luma: "LUMA_API_KEY",
     elevenlabs: "ELEVENLABS_API_KEY",
+    deepgram: "DEEPGRAM_API_KEY",
     xai: "XAI_API_KEY"
 };
 

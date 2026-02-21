@@ -1,25 +1,36 @@
 /**
- * Deepgram real-time speech-to-text streaming client
+ * Deepgram speech provider (STT streaming)
  */
 
 import WebSocket from "ws";
-import { silentLogger } from "../core/logger";
-import { DEFAULT_DEEPGRAM_CONFIG } from "./types";
-import type {
-    DeepgramConfig,
-    DeepgramResponse,
-    TranscriptHandler,
-    ErrorHandler,
-    StreamClientConfig
+import { silentLogger } from "../../core/logger";
+import { AbstractProvider, type SpeechProvider } from "../base";
+import {
+    DEFAULT_DEEPGRAM_STREAM_CONFIG,
+    type DeepgramStreamConfig,
+    type DeepgramResponse,
+    type TranscriptHandler,
+    type StreamErrorHandler,
+    type StreamClientConfig
 } from "./types";
-import type { AILogger } from "../types";
+import type {
+    TranscriptionRequest,
+    TranscriptionResponse,
+    TTSRequest,
+    TTSResponse
+} from "../../capabilities/speech/types";
+import type { AILogger, AIProvider } from "../../types";
+
+// =============================================================================
+// Streaming Client
+// =============================================================================
 
 /**
- * Configuration for DeepgramStreamClient
+ * Configuration for Deepgram streaming client
  */
 export interface DeepgramStreamClientConfig extends StreamClientConfig {
     /** Deepgram-specific configuration */
-    deepgram?: Partial<DeepgramConfig>;
+    deepgram?: Partial<DeepgramStreamConfig>;
 }
 
 /**
@@ -29,14 +40,14 @@ export interface DeepgramStreamClientConfig extends StreamClientConfig {
 export class DeepgramStreamClient {
     private socket: WebSocket | null = null;
     private readonly apiKey: string;
-    private readonly config: DeepgramConfig;
+    private readonly config: DeepgramStreamConfig;
     private readonly logger: AILogger;
     private isConnected = false;
     private keepAliveInterval: ReturnType<typeof setInterval> | null = null;
 
     // Event handlers
     private onTranscript: TranscriptHandler | null = null;
-    private onError: ErrorHandler | null = null;
+    private onError: StreamErrorHandler | null = null;
     private onClose: (() => void) | null = null;
     private onOpen: (() => void) | null = null;
 
@@ -44,7 +55,7 @@ export class DeepgramStreamClient {
         this.apiKey = config.apiKey;
         this.logger = config.logger ?? silentLogger;
         this.config = {
-            ...DEFAULT_DEEPGRAM_CONFIG,
+            ...DEFAULT_DEEPGRAM_STREAM_CONFIG,
             ...config.deepgram
         };
     }
@@ -147,37 +158,27 @@ export class DeepgramStreamClient {
         }
     }
 
-    /**
-     * Set transcript handler
-     */
+    /** Set transcript handler */
     setOnTranscript(handler: TranscriptHandler): void {
         this.onTranscript = handler;
     }
 
-    /**
-     * Set error handler
-     */
-    setOnError(handler: ErrorHandler): void {
+    /** Set error handler */
+    setOnError(handler: StreamErrorHandler): void {
         this.onError = handler;
     }
 
-    /**
-     * Set close handler
-     */
+    /** Set close handler */
     setOnClose(handler: () => void): void {
         this.onClose = handler;
     }
 
-    /**
-     * Set open handler
-     */
+    /** Set open handler */
     setOnOpen(handler: () => void): void {
         this.onOpen = handler;
     }
 
-    /**
-     * Check if connected
-     */
+    /** Check if connected */
     getIsConnected(): boolean {
         return this.isConnected;
     }
@@ -262,5 +263,83 @@ export class DeepgramStreamClient {
             clearInterval(this.keepAliveInterval);
             this.keepAliveInterval = null;
         }
+    }
+}
+
+// =============================================================================
+// Speech Provider
+// =============================================================================
+
+/**
+ * Deepgram speech provider
+ *
+ * Supports:
+ * - Streaming STT via createStreamClient()
+ *
+ * Note: Deepgram is primarily a streaming service. For non-streaming
+ * transcription, consider using OpenAI Whisper via OpenAISpeechProvider.
+ */
+export class DeepgramSpeechProvider extends AbstractProvider implements SpeechProvider {
+    readonly provider: AIProvider = "deepgram";
+    readonly supportedModels = ["nova-2", "nova-3"];
+
+    constructor(logger: AILogger) {
+        super(logger);
+    }
+
+    supportsTranscription(): boolean {
+        // Deepgram supports transcription via streaming
+        return true;
+    }
+
+    supportsTTS(): boolean {
+        return false;
+    }
+
+    /**
+     * Check if this provider supports streaming
+     */
+    supportsStreaming(): boolean {
+        return true;
+    }
+
+    async transcribe(
+        _request: TranscriptionRequest,
+        _apiKey: string
+    ): Promise<TranscriptionResponse> {
+        // Deepgram's primary mode is streaming. For file-based transcription,
+        // users should use the streaming client or OpenAI Whisper.
+        throw new Error(
+            "Deepgram is primarily a streaming service. Use createStreamClient() for real-time transcription, or use OpenAI Whisper for file-based transcription."
+        );
+    }
+
+    async textToSpeech(_request: TTSRequest, _apiKey: string): Promise<TTSResponse> {
+        throw new Error("Deepgram does not support text-to-speech");
+    }
+
+    /**
+     * Create a streaming STT client
+     *
+     * @example
+     * ```typescript
+     * const stream = provider.createStreamClient({
+     *     apiKey: "...",
+     *     deepgram: { model: "nova-2", language: "en-US" }
+     * });
+     *
+     * stream.setOnTranscript((text, isFinal) => {
+     *     console.log(isFinal ? `Final: ${text}` : `Interim: ${text}`);
+     * });
+     *
+     * await stream.connect();
+     * stream.sendAudio(audioBuffer);
+     * ```
+     */
+    createStreamClient(config: DeepgramStreamClientConfig): DeepgramStreamClient {
+        return new DeepgramStreamClient({
+            ...config,
+            logger: config.logger ?? this.logger
+        });
     }
 }

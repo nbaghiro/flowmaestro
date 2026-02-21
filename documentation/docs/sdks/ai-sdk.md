@@ -467,17 +467,14 @@ The SDK is organized into:
 │   ├── image/        # Image generation
 │   ├── video/        # Video generation
 │   ├── vision/       # Image analysis
-│   └── speech/       # TTS/STT (request/response)
+│   └── speech/       # TTS/STT
 ├── providers/        # Provider implementations
 │   ├── text/        # OpenAI, Anthropic, Google, etc.
 │   ├── embedding/   # OpenAI, Cohere, Google
 │   ├── image/       # OpenAI, Stability, Replicate, FAL
 │   ├── video/       # Runway, Luma, Google, etc.
 │   ├── vision/      # OpenAI, Anthropic, Google
-│   └── speech/      # OpenAI, ElevenLabs
-├── streaming/        # WebSocket streaming clients
-│   ├── DeepgramStreamClient.ts   # Realtime STT
-│   └── ElevenLabsStreamClient.ts # Realtime TTS
+│   └── speech/      # OpenAI, ElevenLabs, Deepgram (incl. streaming)
 └── core/            # Shared infrastructure
     ├── auth.ts      # API key resolution
     ├── retry.ts     # Retry with backoff

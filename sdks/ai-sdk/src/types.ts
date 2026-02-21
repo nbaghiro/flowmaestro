@@ -21,6 +21,7 @@ export type AIProvider =
     | "runway"
     | "luma"
     | "elevenlabs"
+    | "deepgram"
     | "xai";
 
 /**

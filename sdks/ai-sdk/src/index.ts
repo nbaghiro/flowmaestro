@@ -147,19 +147,29 @@ export type {
 // Streaming Clients (WebSocket-based realtime audio)
 // =============================================================================
 
-export { DeepgramStreamClient, ElevenLabsStreamClient } from "./streaming/index";
-export type { DeepgramStreamClientConfig, ElevenLabsStreamClientConfig } from "./streaming/index";
+export { DeepgramStreamClient } from "./providers/speech/deepgram";
+export type { DeepgramStreamClientConfig } from "./providers/speech/deepgram";
+export { ElevenLabsStreamClient } from "./providers/speech/elevenlabs";
+export type { ElevenLabsStreamClientConfig } from "./providers/speech/elevenlabs";
 export type {
     DeepgramConfig,
     ElevenLabsConfig,
+    DeepgramStreamConfig,
+    ElevenLabsStreamConfig,
     DeepgramResponse,
     ElevenLabsResponse,
     TranscriptHandler,
     AudioChunkHandler,
     ErrorHandler,
+    StreamErrorHandler,
     StreamClientConfig
-} from "./streaming/types";
-export { DEFAULT_DEEPGRAM_CONFIG, DEFAULT_ELEVENLABS_CONFIG } from "./streaming/types";
+} from "./providers/speech/types";
+export {
+    DEFAULT_DEEPGRAM_CONFIG,
+    DEFAULT_ELEVENLABS_CONFIG,
+    DEFAULT_DEEPGRAM_STREAM_CONFIG,
+    DEFAULT_ELEVENLABS_STREAM_CONFIG
+} from "./providers/speech/types";
 
 // =============================================================================
 // Error Classes
@@ -258,3 +268,4 @@ export { GoogleVisionProvider } from "./providers/vision/google";
 
 export { OpenAISpeechProvider } from "./providers/speech/openai";
 export { ElevenLabsSpeechProvider } from "./providers/speech/elevenlabs";
+export { DeepgramSpeechProvider } from "./providers/speech/deepgram";
