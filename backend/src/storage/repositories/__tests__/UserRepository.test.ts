@@ -180,7 +180,7 @@ describe("UserRepository", () => {
             const result = await repository.findByEmailOrGoogleId(email, googleId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("WHERE email = $1 OR google_id = $2"),
+                expect.stringContaining("(email = $1 OR google_id = $2) AND deleted_at IS NULL"),
                 [email, googleId]
             );
             expect(result).not.toBeNull();
@@ -198,7 +198,7 @@ describe("UserRepository", () => {
             const result = await repository.findByEmailOrMicrosoftId(email, microsoftId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("WHERE email = $1 OR microsoft_id = $2"),
+                expect.stringContaining("(email = $1 OR microsoft_id = $2) AND deleted_at IS NULL"),
                 [email, microsoftId]
             );
             expect(result).not.toBeNull();
@@ -269,14 +269,18 @@ describe("UserRepository", () => {
     });
 
     describe("delete", () => {
-        it("should hard delete user and return true", async () => {
+        it("should soft delete user and return true", async () => {
             const userId = generateId();
             mockQuery.mockResolvedValueOnce(mockAffectedRows(1));
 
             const result = await repository.delete(userId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("DELETE FROM flowmaestro.users"),
+                expect.stringContaining("UPDATE flowmaestro.users"),
+                [userId]
+            );
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("SET deleted_at = CURRENT_TIMESTAMP"),
                 [userId]
             );
             expect(result).toBe(true);
