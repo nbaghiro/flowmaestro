@@ -17,7 +17,13 @@ on:
   workflow_dispatch:
     inputs:
       services:
-        description: "Services to deploy"
+        description: |
+          Services to deploy:
+          • all = everything (api, frontend, worker, marketing, docs, status, widget)
+          • app = api + frontend + worker
+          • marketing = marketing site only
+          • docs = documentation + status page
+          • widget = embeddable widget only
         type: choice
         options:
           - all
@@ -26,21 +32,23 @@ on:
           - docs
           - widget
         default: all
+        required: true
       skip_build:
-        description: "Skip Docker builds (restart only)"
+        description: "Skip Docker builds? (Use existing images, just restart pods)"
         type: boolean
         default: false
       skip_migrations:
-        description: "Skip database migrations"
+        description: "Skip database migrations? (Only skip if no schema changes)"
         type: boolean
         default: false
       skip_seed:
-        description: "Skip database seeding"
+        description: "Skip database seeding? (Usually skip unless adding new seed data)"
         type: boolean
-        default: false
+        default: true
       image_tag:
-        description: "Image tag (leave empty for git SHA)"
+        description: "Custom image tag (leave empty to use git SHA)"
         type: string
+        required: false
 
 env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
