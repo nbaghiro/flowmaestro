@@ -12,120 +12,613 @@ name: Deploy to GKE
 # 1. Run: fmctl secrets setup (updates GCP Secret Manager)
 # 2. ESO automatically syncs changes to K8s within 5 minutes
 # 3. Restart pods to pick up new secret values: fmctl deploy api --skip-build
-#
-# This workflow uses the unified fmctl CLI for all deployment operations.
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Deployment environment"
-        required: true
+      services:
+        description: "Services to deploy"
         type: choice
         options:
-          - production
-          - staging
-        default: staging
+          - all
+          - app
+          - marketing
+          - docs
+          - widget
+        default: all
+      skip_build:
+        description: "Skip Docker builds (restart only)"
+        type: boolean
+        default: false
+      skip_migrations:
+        description: "Skip database migrations"
+        type: boolean
+        default: false
+      skip_seed:
+        description: "Skip database seeding"
+        type: boolean
+        default: false
       image_tag:
-        description: "Docker image tag (leave empty to use git SHA)"
-        required: false
+        description: "Image tag (leave empty for git SHA)"
         type: string
 
 env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   GCP_REGION: ${{ vars.GCP_REGION || 'us-central1' }}
   GKE_CLUSTER: flowmaestro-cluster
   ARTIFACT_REGISTRY: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro
   IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
-  # Build args passed to fmctl via environment variables
-  VITE_API_URL: ${{ vars.VITE_API_URL }}
-  VITE_WS_URL: ${{ vars.VITE_WS_URL }}
-  VITE_UNSPLASH_ACCESS_KEY: ${{ vars.VITE_UNSPLASH_ACCESS_KEY }}
-  VITE_GA_MEASUREMENT_ID: ${{ vars.VITE_GA_MEASUREMENT_ID }}
-  VITE_APP_URL: ${{ vars.VITE_APP_URL }}
-  VITE_DOCS_URL: ${{ vars.VITE_DOCS_URL }}
-  VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
-  VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
 
 jobs:
-  build-and-deploy:
-    name: Build and Deploy to GKE
+  # ============================================================================
+  # SETUP - Checkout, install, authenticate
+  # ============================================================================
+  setup:
+    name: Setup
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment }}
-
-    permissions:
-      contents: read
-      id-token: write
-
+    outputs:
+      image_tag: ${{ steps.set-outputs.outputs.image_tag }}
+      services: ${{ steps.set-outputs.outputs.services }}
+      build_backend: ${{ steps.set-outputs.outputs.build_backend }}
+      build_frontend: ${{ steps.set-outputs.outputs.build_frontend }}
+      build_marketing: ${{ steps.set-outputs.outputs.build_marketing }}
+      build_documentation: ${{ steps.set-outputs.outputs.build_documentation }}
+      build_static: ${{ steps.set-outputs.outputs.build_static }}
+      build_status: ${{ steps.set-outputs.outputs.build_status }}
+      build_migrations: ${{ steps.set-outputs.outputs.build_migrations }}
     steps:
-      # Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Setup Node.js
+      - name: Set outputs based on service selection
+        id: set-outputs
+        run: |
+          echo "image_tag=${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
+          echo "services=${{ github.event.inputs.services }}" >> $GITHUB_OUTPUT
+
+          SERVICES="${{ github.event.inputs.services }}"
+          SKIP_BUILD="${{ github.event.inputs.skip_build }}"
+
+          # Default all to false
+          BUILD_BACKEND="false"
+          BUILD_FRONTEND="false"
+          BUILD_MARKETING="false"
+          BUILD_DOCUMENTATION="false"
+          BUILD_STATIC="false"
+          BUILD_STATUS="false"
+          BUILD_MIGRATIONS="false"
+
+          if [ "$SKIP_BUILD" != "true" ]; then
+            case "$SERVICES" in
+              all)
+                BUILD_BACKEND="true"
+                BUILD_FRONTEND="true"
+                BUILD_MARKETING="true"
+                BUILD_DOCUMENTATION="true"
+                BUILD_STATIC="true"
+                BUILD_STATUS="true"
+                BUILD_MIGRATIONS="true"
+                ;;
+              app)
+                BUILD_BACKEND="true"
+                BUILD_FRONTEND="true"
+                ;;
+              marketing)
+                BUILD_MARKETING="true"
+                ;;
+              docs)
+                BUILD_DOCUMENTATION="true"
+                BUILD_STATUS="true"
+                ;;
+              widget)
+                BUILD_STATIC="true"
+                ;;
+            esac
+
+            # Always build migrations if running migrations
+            if [ "${{ github.event.inputs.skip_migrations }}" != "true" ]; then
+              BUILD_MIGRATIONS="true"
+            fi
+          fi
+
+          echo "build_backend=$BUILD_BACKEND" >> $GITHUB_OUTPUT
+          echo "build_frontend=$BUILD_FRONTEND" >> $GITHUB_OUTPUT
+          echo "build_marketing=$BUILD_MARKETING" >> $GITHUB_OUTPUT
+          echo "build_documentation=$BUILD_DOCUMENTATION" >> $GITHUB_OUTPUT
+          echo "build_static=$BUILD_STATIC" >> $GITHUB_OUTPUT
+          echo "build_status=$BUILD_STATUS" >> $GITHUB_OUTPUT
+          echo "build_migrations=$BUILD_MIGRATIONS" >> $GITHUB_OUTPUT
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: "npm"
 
-      # Install dependencies and build fmctl
       - name: Install dependencies
         run: npm ci
 
       - name: Build fmctl
         run: npm run build --workspace=@flowmaestro/deploy-cli
 
-      # Authenticate to Google Cloud using Workload Identity Federation
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+      - name: Cache node_modules and fmctl
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            node_modules
+            infra/deploy-cli/dist
+          key: ${{ runner.os }}-deps-${{ github.sha }}
+
+  # ============================================================================
+  # BUILD IMAGES - Parallel matrix builds
+  # ============================================================================
+  build-backend:
+    name: Build backend
+    needs: setup
+    if: needs.setup.outputs.build_backend == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: docker/setup-buildx-action@v3
+      - run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/backend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/backend:${{ needs.setup.outputs.image_tag }}
+            ${{ env.ARTIFACT_REGISTRY }}/backend:latest
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/backend:latest
+          cache-to: type=inline
 
-      # Setup Cloud SDK
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+  build-frontend:
+    name: Build frontend
+    needs: setup
+    if: needs.setup.outputs.build_frontend == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: docker/setup-buildx-action@v3
+      - run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/frontend/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/frontend:${{ needs.setup.outputs.image_tag }}
+            ${{ env.ARTIFACT_REGISTRY }}/frontend:latest
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_WS_URL=${{ vars.VITE_WS_URL }}
+            VITE_UNSPLASH_ACCESS_KEY=${{ vars.VITE_UNSPLASH_ACCESS_KEY }}
+            VITE_POSTHOG_KEY=${{ vars.VITE_POSTHOG_KEY }}
+            VITE_POSTHOG_HOST=${{ vars.VITE_POSTHOG_HOST }}
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/frontend:latest
+          cache-to: type=inline
 
-      # Configure Docker to use gcloud as credential helper
-      - name: Configure Docker for Artifact Registry
-        run: |
-          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+  build-marketing:
+    name: Build marketing
+    needs: setup
+    if: needs.setup.outputs.build_marketing == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: docker/setup-buildx-action@v3
+      - run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/marketing/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/marketing:${{ needs.setup.outputs.image_tag }}
+            ${{ env.ARTIFACT_REGISTRY }}/marketing:latest
+          build-args: |
+            VITE_GA_MEASUREMENT_ID=${{ vars.VITE_GA_MEASUREMENT_ID }}
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_APP_URL=${{ vars.VITE_APP_URL }}
+            VITE_DOCS_URL=${{ vars.VITE_DOCS_URL }}
+            VITE_POSTHOG_KEY=${{ vars.VITE_POSTHOG_KEY }}
+            VITE_POSTHOG_HOST=${{ vars.VITE_POSTHOG_HOST }}
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/marketing:latest
+          cache-to: type=inline
 
-      # Get GKE credentials
+  build-documentation:
+    name: Build documentation
+    needs: setup
+    if: needs.setup.outputs.build_documentation == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: docker/setup-buildx-action@v3
+      - run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/documentation/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/documentation:${{ needs.setup.outputs.image_tag }}
+            ${{ env.ARTIFACT_REGISTRY }}/documentation:latest
+          build-args: |
+            VITE_POSTHOG_KEY=${{ vars.VITE_POSTHOG_KEY }}
+            VITE_POSTHOG_HOST=${{ vars.VITE_POSTHOG_HOST }}
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/documentation:latest
+          cache-to: type=inline
+
+  build-static:
+    name: Build static/widget
+    needs: setup
+    if: needs.setup.outputs.build_static == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: docker/setup-buildx-action@v3
+      - run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/static/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/static:${{ needs.setup.outputs.image_tag }}
+            ${{ env.ARTIFACT_REGISTRY }}/static:latest
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/static:latest
+          cache-to: type=inline
+
+  build-status:
+    name: Build status
+    needs: setup
+    if: needs.setup.outputs.build_status == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: docker/setup-buildx-action@v3
+      - run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/status/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/status:${{ needs.setup.outputs.image_tag }}
+            ${{ env.ARTIFACT_REGISTRY }}/status:latest
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/status:latest
+          cache-to: type=inline
+
+  build-migrations:
+    name: Build migrations
+    needs: setup
+    if: needs.setup.outputs.build_migrations == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - uses: docker/setup-buildx-action@v3
+      - run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/migrations/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/migrations:${{ needs.setup.outputs.image_tag }}
+            ${{ env.ARTIFACT_REGISTRY }}/migrations:latest
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/migrations:latest
+          cache-to: type=inline
+
+  # ============================================================================
+  # DATABASE MIGRATIONS
+  # ============================================================================
+  migrate:
+    name: Run Migrations
+    needs: [setup, build-migrations]
+    if: |
+      always() &&
+      github.event.inputs.skip_migrations != 'true' &&
+      (needs.build-migrations.result == 'success' || needs.build-migrations.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
       - name: Get GKE credentials
         run: |
           gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
             --region=${{ env.GCP_REGION }} \
-            --project=${{ vars.GCP_PROJECT_ID }}
-
-      # Set up Docker Buildx for multi-platform builds
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # Deploy using fmctl
-      # Maps environment input to fmctl env flag:
-      # - production -> prod
-      # - staging -> staging
-      - name: Deploy to GKE
+            --project=${{ env.GCP_PROJECT_ID }}
+      - name: Run database migrations
         run: |
-          ENV_FLAG="${{ github.event.inputs.environment }}"
-          if [ "$ENV_FLAG" = "production" ]; then
-            ENV_FLAG="prod"
+          echo "Running database migrations..."
+
+          # Delete any existing migration jobs
+          kubectl delete job -n flowmaestro -l component=db-migration --ignore-not-found
+
+          # Create migration job with unique timestamp
+          TIMESTAMP=$(date +%s)
+          echo "Creating migration job: db-migration-$TIMESTAMP"
+
+          # Replace placeholders and apply
+          sed "s/\${TIMESTAMP}/$TIMESTAMP/g; s/\${IMAGE_TAG}/${{ needs.setup.outputs.image_tag }}/g" \
+            infra/k8s/jobs/db-migration.yaml | kubectl apply -f -
+
+          # Wait for job to complete
+          echo "Waiting for migration job to complete..."
+          kubectl wait --for=condition=complete "job/db-migration-$TIMESTAMP" \
+            -n flowmaestro --timeout=300s
+
+          echo "Migration logs:"
+          kubectl logs "job/db-migration-$TIMESTAMP" -n flowmaestro
+
+  # ============================================================================
+  # DATABASE SEEDING
+  # ============================================================================
+  seed:
+    name: Run Seeding
+    needs: [setup, migrate]
+    if: |
+      always() &&
+      github.event.inputs.skip_seed != 'true' &&
+      (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }}
+      - name: Run database seeding
+        run: |
+          echo "Running database seeding..."
+
+          # Delete any existing seed jobs
+          kubectl delete job -n flowmaestro -l component=db-seed --ignore-not-found
+
+          # Create seed job with unique timestamp
+          TIMESTAMP=$(date +%s)
+          echo "Creating seed job: db-seed-$TIMESTAMP"
+
+          # Replace placeholders and apply
+          sed "s/\${TIMESTAMP}/$TIMESTAMP/g; s/\${IMAGE_TAG}/${{ needs.setup.outputs.image_tag }}/g" \
+            infra/k8s/jobs/db-seed.yaml | kubectl apply -f -
+
+          # Wait for job to complete
+          echo "Waiting for seed job to complete..."
+          kubectl wait --for=condition=complete "job/db-seed-$TIMESTAMP" \
+            -n flowmaestro --timeout=300s
+
+          echo "Seed logs:"
+          kubectl logs "job/db-seed-$TIMESTAMP" -n flowmaestro
+
+  # ============================================================================
+  # DEPLOY - Apply Kustomize manifests
+  # ============================================================================
+  deploy:
+    name: Deploy to GKE
+    needs: [setup, build-backend, build-frontend, build-marketing, build-documentation, build-static, build-status, build-migrations, seed]
+    if: |
+      always() &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }}
+
+      - name: Verify External Secrets
+        run: |
+          echo "Checking External Secrets Operator status..."
+
+          # Check that all ExternalSecrets are in Ready state
+          EXTERNAL_SECRETS=$(kubectl get externalsecret -n flowmaestro -o jsonpath='{.items[*].metadata.name}')
+
+          for es in $EXTERNAL_SECRETS; do
+            echo "Checking ExternalSecret: $es"
+            STATUS=$(kubectl get externalsecret $es -n flowmaestro -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
+
+            if [ "$STATUS" != "True" ]; then
+              echo "ExternalSecret $es is not ready!"
+              kubectl get externalsecret $es -n flowmaestro -o yaml
+              exit 1
+            else
+              echo "ExternalSecret $es is ready"
+            fi
+          done
+
+          # Verify app-secrets exists
+          if kubectl get secret app-secrets -n flowmaestro &> /dev/null; then
+            echo "Secret app-secrets exists"
+          else
+            echo "Secret app-secrets is missing!"
+            exit 1
           fi
 
-          npx fmctl deploy all \
-            --env "$ENV_FLAG" \
-            --tag "${{ env.IMAGE_TAG }}" \
-            --verify-secrets \
-            --migrate \
-            --seed \
-            --use-kustomize \
-            --yes
-
-      # Verify deployment
-      - name: Verify deployment
+      - name: Install kustomize
         run: |
-          echo "=== Deployment Status ==="
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Update Kustomize images
+        working-directory: infra/k8s/overlays/production
+        run: |
+          kustomize edit set image \
+            ${{ env.ARTIFACT_REGISTRY }}/backend:latest=${{ env.ARTIFACT_REGISTRY }}/backend:${{ needs.setup.outputs.image_tag }} \
+            ${{ env.ARTIFACT_REGISTRY }}/frontend:latest=${{ env.ARTIFACT_REGISTRY }}/frontend:${{ needs.setup.outputs.image_tag }} \
+            ${{ env.ARTIFACT_REGISTRY }}/marketing:latest=${{ env.ARTIFACT_REGISTRY }}/marketing:${{ needs.setup.outputs.image_tag }} \
+            ${{ env.ARTIFACT_REGISTRY }}/documentation:latest=${{ env.ARTIFACT_REGISTRY }}/documentation:${{ needs.setup.outputs.image_tag }} \
+            ${{ env.ARTIFACT_REGISTRY }}/static:latest=${{ env.ARTIFACT_REGISTRY }}/static:${{ needs.setup.outputs.image_tag }} \
+            ${{ env.ARTIFACT_REGISTRY }}/status:latest=${{ env.ARTIFACT_REGISTRY }}/status:${{ needs.setup.outputs.image_tag }}
+
+      - name: Apply Kustomize manifests
+        run: |
+          echo "Deploying to production..."
+          kubectl apply -k infra/k8s/overlays/production
+
+      - name: Wait for rollouts
+        run: |
+          SERVICES="${{ needs.setup.outputs.services }}"
+
+          # Determine which deployments to wait for
+          case "$SERVICES" in
+            all)
+              DEPLOYMENTS="api-server frontend temporal-worker marketing documentation static status temporal-server"
+              ;;
+            app)
+              DEPLOYMENTS="api-server frontend temporal-worker"
+              ;;
+            marketing)
+              DEPLOYMENTS="marketing"
+              ;;
+            docs)
+              DEPLOYMENTS="documentation status"
+              ;;
+            widget)
+              DEPLOYMENTS="static"
+              ;;
+          esac
+
+          for deployment in $DEPLOYMENTS; do
+            echo "Waiting for $deployment..."
+            kubectl rollout status deployment/$deployment -n flowmaestro --timeout=10m || true
+          done
+
+  # ============================================================================
+  # VERIFY - Check deployment status
+  # ============================================================================
+  verify:
+    name: Verify Deployment
+    needs: [setup, deploy]
+    if: always() && needs.deploy.result == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }}
+
+      - name: Deployment Status
+        run: |
+          echo "=== Pods ==="
           kubectl get pods -n flowmaestro
           echo ""
           echo "=== Services ==="
@@ -134,20 +627,20 @@ jobs:
           echo "=== Ingress ==="
           kubectl get ingress -n flowmaestro
 
-      # Output deployment info
-      - name: Deployment summary
+      - name: Summary
         run: |
-          echo "✅ Deployment completed successfully!"
+          echo "=========================================="
+          echo "  Deployment completed successfully!"
+          echo "=========================================="
           echo ""
-          echo "Environment: ${{ github.event.inputs.environment }}"
-          echo "Image Tag: ${{ env.IMAGE_TAG }}"
+          echo "Services: ${{ needs.setup.outputs.services }}"
+          echo "Image Tag: ${{ needs.setup.outputs.image_tag }}"
           echo "Namespace: flowmaestro"
           echo ""
-          echo "Images deployed:"
-          echo "  - backend: ${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }}"
-          echo "  - frontend: ${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }}"
-          echo "  - marketing: ${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}"
-          echo "  - documentation: ${{ env.ARTIFACT_REGISTRY }}/documentation:${{ env.IMAGE_TAG }}"
-          echo "  - static: ${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }}"
-          echo "  - status: ${{ env.ARTIFACT_REGISTRY }}/status:${{ env.IMAGE_TAG }}"
-          echo "  - migrations: ${{ env.ARTIFACT_REGISTRY }}/migrations:${{ env.IMAGE_TAG }}"
+          echo "Images:"
+          echo "  - backend: ${{ env.ARTIFACT_REGISTRY }}/backend:${{ needs.setup.outputs.image_tag }}"
+          echo "  - frontend: ${{ env.ARTIFACT_REGISTRY }}/frontend:${{ needs.setup.outputs.image_tag }}"
+          echo "  - marketing: ${{ env.ARTIFACT_REGISTRY }}/marketing:${{ needs.setup.outputs.image_tag }}"
+          echo "  - documentation: ${{ env.ARTIFACT_REGISTRY }}/documentation:${{ needs.setup.outputs.image_tag }}"
+          echo "  - static: ${{ env.ARTIFACT_REGISTRY }}/static:${{ needs.setup.outputs.image_tag }}"
+          echo "  - status: ${{ env.ARTIFACT_REGISTRY }}/status:${{ needs.setup.outputs.image_tag }}"
