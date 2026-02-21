@@ -7,8 +7,17 @@
 
 // Mock the database module before importing the repository
 const mockQuery = jest.fn();
+const mockClientQuery = jest.fn();
+const mockTransaction = jest.fn(
+    async (callback: (client: { query: jest.Mock }) => Promise<unknown>) => {
+        return callback({ query: mockClientQuery });
+    }
+);
 jest.mock("../../database", () => ({
-    db: { query: mockQuery }
+    db: {
+        query: mockQuery,
+        transaction: mockTransaction
+    }
 }));
 
 import { WorkspaceCreditRepository } from "../WorkspaceCreditRepository";
@@ -27,6 +36,7 @@ describe("WorkspaceCreditRepository", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockClientQuery.mockReset();
         repository = new WorkspaceCreditRepository();
     });
 
@@ -280,10 +290,10 @@ describe("WorkspaceCreditRepository", () => {
                 purchased_balance: 50
             });
 
-            // findByWorkspaceId
-            mockQuery.mockResolvedValueOnce(mockRows([mockCreditsRow]));
-            // update
-            mockQuery.mockResolvedValueOnce(mockAffectedRows(1));
+            // SELECT ... FOR UPDATE (lock query)
+            mockClientQuery.mockResolvedValueOnce(mockRows([mockCreditsRow]));
+            // UPDATE query
+            mockClientQuery.mockResolvedValueOnce(mockAffectedRows(1));
 
             const result = await repository.deductCredits(workspaceId, 150);
 
@@ -294,7 +304,7 @@ describe("WorkspaceCreditRepository", () => {
         });
 
         it("should throw error when workspace credits not found", async () => {
-            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+            mockClientQuery.mockResolvedValueOnce(mockEmptyResult());
 
             await expect(repository.deductCredits(generateId(), 100)).rejects.toThrow(
                 "Workspace credits not found"
@@ -310,7 +320,7 @@ describe("WorkspaceCreditRepository", () => {
                 purchased_balance: 0
             });
 
-            mockQuery.mockResolvedValueOnce(mockRows([mockCreditsRow]));
+            mockClientQuery.mockResolvedValueOnce(mockRows([mockCreditsRow]));
 
             await expect(repository.deductCredits(workspaceId, 100)).rejects.toThrow(
                 "Insufficient credits"

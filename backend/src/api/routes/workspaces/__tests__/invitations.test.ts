@@ -126,7 +126,10 @@ describe("Workspace Invitations", () => {
                     created_at: new Date()
                 }
             ];
-            mockInvitationRepo.findByWorkspaceId.mockResolvedValueOnce(invitations);
+            mockInvitationRepo.findByWorkspaceId.mockResolvedValueOnce({
+                invitations,
+                total: invitations.length
+            });
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
