@@ -126,7 +126,7 @@ export const SERVICES: Record<string, ServiceConfig> = {
     status: {
         name: "status",
         displayName: "Status Page",
-        deploymentName: "status-page",
+        deploymentName: "status",
         dockerFile: "infra/docker/status/Dockerfile",
         imageName: "status"
     }
