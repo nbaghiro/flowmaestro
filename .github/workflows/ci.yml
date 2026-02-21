@@ -1,865 +1,854 @@
 name: CI
 
 on:
-  pull_request:
-    branches:
-      - main
-      - develop
-  push:
-    branches:
-      - main
-      - develop
+    pull_request:
+        branches:
+            - main
+            - develop
+    push:
+        branches:
+            - main
+            - develop
 
 env:
-  NODE_VERSION: "22"
+    NODE_VERSION: "22"
 
 jobs:
-  # ============================================================================
-  # SETUP JOB - Cache dependencies for all other jobs
-  # ============================================================================
+    # ============================================================================
+    # SETUP JOB - Cache dependencies for all other jobs
+    # ============================================================================
 
-  setup:
-    name: Install Deps
-    runs-on: ubuntu-latest
-    outputs:
-      cache-key: ${{ steps.cache-key.outputs.key }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    setup:
+        name: Install Deps
+        runs-on: ubuntu-latest
+        outputs:
+            cache-key: ${{ steps.cache-key.outputs.key }}
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Generate cache key
-        id: cache-key
-        run: echo "key=node-modules-${{ hashFiles('package-lock.json') }}" >> $GITHUB_OUTPUT
+            - name: Generate cache key
+              id: cache-key
+              run: echo "key=node-modules-${{ hashFiles('package-lock.json') }}" >> $GITHUB_OUTPUT
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: "npm"
 
-      - name: Restore cached dependencies
-        id: cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ steps.cache-key.outputs.key }}
+            - name: Restore cached dependencies
+              id: cache-restore
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ steps.cache-key.outputs.key }}
 
-      - name: Install dependencies
-        if: steps.cache-restore.outputs.cache-hit != 'true'
-        run: npm ci
+            - name: Install dependencies
+              if: steps.cache-restore.outputs.cache-hit != 'true'
+              run: npm ci
 
-      - name: Save dependencies to cache
-        if: steps.cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ steps.cache-key.outputs.key }}
+            - name: Save dependencies to cache
+              if: steps.cache-restore.outputs.cache-hit != 'true'
+              uses: actions/cache/save@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ steps.cache-key.outputs.key }}
 
-  # ============================================================================
-  # LINT JOBS - Run in parallel, don't block tests
-  # ============================================================================
+    # ============================================================================
+    # LINT JOBS - Run in parallel, don't block tests
+    # ============================================================================
 
-  typecheck:
-    name: Type Check
-    runs-on: ubuntu-latest
-    needs: [setup]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    typecheck:
+        name: Type Check
+        runs-on: ubuntu-latest
+        needs: [setup]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
 
-      - name: Type check
-        run: npm run typecheck
+            - name: Type check
+              run: npm run typecheck
 
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    needs: [setup]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        needs: [setup]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
 
-      - name: Lint code
-        run: npm run lint
+            - name: Lint code
+              run: npm run lint
 
-      - name: Check code formatting
-        run: npm run format:check
+            - name: Check code formatting
+              run: npm run format:check
 
-  lint-sdk-python:
-    name: Lint SDK (Python)
-    runs-on: ubuntu-latest
-    needs: [setup]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    lint-sdk-python:
+        name: Lint SDK (Python)
+        runs-on: ubuntu-latest
+        needs: [setup]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+            - name: Setup Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
 
-      - name: Install SDK with dev dependencies
-        run: pip install -e "sdks/python[dev]"
+            - name: Install SDK with dev dependencies
+              run: pip install -e "sdks/python[dev]"
 
-      - name: Lint Python SDK
-        run: ruff check sdks/python/
+            - name: Lint Python SDK
+              run: ruff check sdks/python/
 
-      - name: Type check Python SDK
-        run: mypy sdks/python/
+            - name: Type check Python SDK
+              run: mypy sdks/python/
 
-      - name: Lint Python examples
-        run: ruff check examples/public-api/python/
+            - name: Lint Python examples
+              run: ruff check examples/public-api/python/
 
-  lint-sdk-javascript:
-    name: Lint SDK (JavaScript)
-    runs-on: ubuntu-latest
-    needs: [setup]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    lint-sdk-javascript:
+        name: Lint SDK (JavaScript)
+        runs-on: ubuntu-latest
+        needs: [setup]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
 
-      - name: Type check JavaScript SDK
-        run: npm run typecheck --workspace=@flowmaestro/sdk
+            - name: Type check JavaScript SDK
+              run: npm run typecheck --workspace=@flowmaestro/sdk
 
-  lint-sdk-widget:
-    name: Lint SDK (Widget)
-    runs-on: ubuntu-latest
-    needs: [setup]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    lint-sdk-widget:
+        name: Lint SDK (Widget)
+        runs-on: ubuntu-latest
+        needs: [setup]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
 
-      - name: Type check Widget SDK
-        run: npm run typecheck --workspace=@flowmaestro/widget
+            - name: Type check Widget SDK
+              run: npm run typecheck --workspace=@flowmaestro/widget
 
-  # ============================================================================
-  # SDK TESTS - Run SDK-specific test suites
-  # ============================================================================
+    # ============================================================================
+    # MIGRATION VALIDATION - Catch migration ordering issues before runtime
+    # ============================================================================
 
-  test-sdk-ai:
-    name: Test SDK (AI)
-    runs-on: ubuntu-latest
-    needs: [setup]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
-
-      - name: Run AI SDK tests
-        run: npm test --workspace=@flowmaestro/ai-sdk
-
-  # Summary job to ensure all SDK tests passed
-  sdk-tests-complete:
-    name: SDK Tests Complete
-    runs-on: ubuntu-latest
-    needs: [test-sdk-ai]
-    if: always()
-    steps:
-      - name: Check SDK test results
-        run: |
-          if [ "${{ needs.test-sdk-ai.result }}" != "success" ]; then
-            echo "AI SDK tests failed"
-            exit 1
-          fi
-          echo "All SDK tests passed!"
-
-  # ============================================================================
-  # MIGRATION VALIDATION - Catch migration ordering issues before runtime
-  # ============================================================================
-
-  validate-migrations:
-    name: Validate Migrations
-    runs-on: ubuntu-latest
-    needs: [setup]
-    services:
-      postgres:
-        image: pgvector/pgvector:pg15
+    validate-migrations:
+        name: Validate Migrations
+        runs-on: ubuntu-latest
+        needs: [setup]
+        services:
+            postgres:
+                image: pgvector/pgvector:pg15
+                env:
+                    POSTGRES_DB: flowmaestro
+                    POSTGRES_USER: flowmaestro
+                    POSTGRES_PASSWORD: test_password
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
         env:
-          POSTGRES_DB: flowmaestro
-          POSTGRES_USER: flowmaestro
-          POSTGRES_PASSWORD: test_password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DATABASE_URL: postgresql://flowmaestro:test_password@localhost:5432/flowmaestro
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+            DATABASE_URL: postgresql://flowmaestro:test_password@localhost:5432/flowmaestro
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
 
-      - name: Validate migration file ordering
-        run: |
-          echo "Validating migration file naming and ordering..."
-          MIGRATIONS_DIR="backend/migrations"
+            - name: Validate migration file ordering
+              run: |
+                  echo "Validating migration file naming and ordering..."
+                  MIGRATIONS_DIR="backend/migrations"
 
-          # Check directory exists
-          if [ ! -d "$MIGRATIONS_DIR" ]; then
-            echo "Error: Migrations directory not found: $MIGRATIONS_DIR"
-            exit 1
-          fi
+                  # Check directory exists
+                  if [ ! -d "$MIGRATIONS_DIR" ]; then
+                    echo "Error: Migrations directory not found: $MIGRATIONS_DIR"
+                    exit 1
+                  fi
 
-          # Get all migration files sorted by name
-          mapfile -t FILES < <(find "$MIGRATIONS_DIR" -maxdepth 1 -name "*.sql" -type f | sort)
+                  # Get all migration files sorted by name
+                  mapfile -t FILES < <(find "$MIGRATIONS_DIR" -maxdepth 1 -name "*.sql" -type f | sort)
 
-          if [ ${#FILES[@]} -eq 0 ]; then
-            echo "Warning: No migration files found"
-            exit 0
-          fi
+                  if [ ${#FILES[@]} -eq 0 ]; then
+                    echo "Warning: No migration files found"
+                    exit 0
+                  fi
 
-          echo "Found ${#FILES[@]} migration files"
+                  echo "Found ${#FILES[@]} migration files"
 
-          PREV_TIMESTAMP=""
-          PREV_FILE=""
-          ERRORS=0
+                  PREV_TIMESTAMP=""
+                  PREV_FILE=""
+                  ERRORS=0
 
-          for FILE in "${FILES[@]}"; do
-            BASENAME=$(basename "$FILE")
+                  for FILE in "${FILES[@]}"; do
+                    BASENAME=$(basename "$FILE")
 
-            # Validate naming convention: {timestamp}_{description}.sql
-            if ! [[ "$BASENAME" =~ ^[0-9]+_.+\.sql$ ]]; then
-              echo "Error: Invalid migration filename format: $BASENAME"
-              echo "  Expected format: {timestamp}_{description}.sql"
-              ERRORS=$((ERRORS + 1))
-              continue
-            fi
+                    # Validate naming convention: {timestamp}_{description}.sql
+                    if ! [[ "$BASENAME" =~ ^[0-9]+_.+\.sql$ ]]; then
+                      echo "Error: Invalid migration filename format: $BASENAME"
+                      echo "  Expected format: {timestamp}_{description}.sql"
+                      ERRORS=$((ERRORS + 1))
+                      continue
+                    fi
 
-            # Extract timestamp
-            TIMESTAMP=$(echo "$BASENAME" | cut -d'_' -f1)
+                    # Extract timestamp
+                    TIMESTAMP=$(echo "$BASENAME" | cut -d'_' -f1)
 
-            # Check for duplicate timestamps
-            if [ "$TIMESTAMP" = "$PREV_TIMESTAMP" ]; then
-              echo "Error: Duplicate timestamp found:"
-              echo "  $PREV_FILE"
-              echo "  $BASENAME"
-              ERRORS=$((ERRORS + 1))
-            fi
+                    # Check for duplicate timestamps
+                    if [ "$TIMESTAMP" = "$PREV_TIMESTAMP" ]; then
+                      echo "Error: Duplicate timestamp found:"
+                      echo "  $PREV_FILE"
+                      echo "  $BASENAME"
+                      ERRORS=$((ERRORS + 1))
+                    fi
 
-            # Check ordering (timestamps should be ascending)
-            if [ -n "$PREV_TIMESTAMP" ] && [ "$TIMESTAMP" -lt "$PREV_TIMESTAMP" ]; then
-              echo "Error: Migration ordering issue detected:"
-              echo "  $BASENAME (timestamp: $TIMESTAMP)"
-              echo "  comes after"
-              echo "  $PREV_FILE (timestamp: $PREV_TIMESTAMP)"
-              echo "  but has a lower timestamp"
-              ERRORS=$((ERRORS + 1))
-            fi
+                    # Check ordering (timestamps should be ascending)
+                    if [ -n "$PREV_TIMESTAMP" ] && [ "$TIMESTAMP" -lt "$PREV_TIMESTAMP" ]; then
+                      echo "Error: Migration ordering issue detected:"
+                      echo "  $BASENAME (timestamp: $TIMESTAMP)"
+                      echo "  comes after"
+                      echo "  $PREV_FILE (timestamp: $PREV_TIMESTAMP)"
+                      echo "  but has a lower timestamp"
+                      ERRORS=$((ERRORS + 1))
+                    fi
 
-            PREV_TIMESTAMP="$TIMESTAMP"
-            PREV_FILE="$BASENAME"
-          done
+                    PREV_TIMESTAMP="$TIMESTAMP"
+                    PREV_FILE="$BASENAME"
+                  done
 
-          if [ $ERRORS -gt 0 ]; then
-            echo ""
-            echo "Migration validation failed with $ERRORS error(s)"
-            exit 1
-          fi
+                  if [ $ERRORS -gt 0 ]; then
+                    echo ""
+                    echo "Migration validation failed with $ERRORS error(s)"
+                    exit 1
+                  fi
 
-          echo "All migration files are properly ordered"
+                  echo "All migration files are properly ordered"
 
-      - name: Create schema before migrations
-        run: |
-          PGPASSWORD=test_password psql -h localhost -U flowmaestro -d flowmaestro -c "CREATE SCHEMA IF NOT EXISTS flowmaestro;"
+            - name: Create schema before migrations
+              run: |
+                  PGPASSWORD=test_password psql -h localhost -U flowmaestro -d flowmaestro -c "CREATE SCHEMA IF NOT EXISTS flowmaestro;"
 
-      - name: Run all migrations on fresh database
-        run: npm run db:migrate --workspace=backend
+            - name: Run all migrations on fresh database
+              run: npm run db:migrate --workspace=backend
 
-  # ============================================================================
-  # TEST JOBS - Run in parallel with lint (no dependency on lint)
-  # ============================================================================
+    # ============================================================================
+    # TEST JOBS - Run in parallel with lint (no dependency on lint)
+    # ============================================================================
 
-  unit-tests:
-    name: Unit Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
-    runs-on: ubuntu-latest
-    needs: [setup]
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-        total-shards: [3]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    unit-tests:
+        name: Unit Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
+        runs-on: ubuntu-latest
+        needs: [setup]
+        strategy:
+            fail-fast: false
+            matrix:
+                shard: [1, 2, 3]
+                total-shards: [3]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
 
-      - name: Setup Python (for syntax validation tests)
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+            - name: Setup Python (for syntax validation tests)
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
 
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
 
-      # Run shared tests (small, no sharding needed) - only on first shard
-      - name: Run shared tests
-        if: matrix.shard == 1
-        run: npm run test --workspace=shared
+            # Run shared tests (small, no sharding needed) - only on first shard
+            - name: Run shared tests
+              if: matrix.shard == 1
+              run: npm run test --workspace=shared
 
-      # Run backend unit tests with sharding
-      - name: Run backend unit tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
-        run: npm run test:unit --workspace=backend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
+            # Run backend unit tests with sharding
+            - name: Run backend unit tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
+              run: npm run test:unit --workspace=backend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
 
-      # Run frontend tests with sharding
-      - name: Run frontend tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
-        run: npm run test --workspace=frontend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
+            # Run frontend tests with sharding
+            - name: Run frontend tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
+              run: npm run test --workspace=frontend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
 
-  integration-tests:
-    name: Integration Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
-    runs-on: ubuntu-latest
-    needs: [setup]
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4, 5]
-        total-shards: [5]
-    env:
-      DATABASE_URL: postgresql://flowmaestro:flowmaestro_dev_password@localhost:5432/flowmaestro
-      POSTGRES_HOST: localhost
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: flowmaestro
-      POSTGRES_PASSWORD: flowmaestro_dev_password
-      POSTGRES_DB: flowmaestro
-      TEMPORAL_ADDRESS: localhost:7233
-      REDIS_HOST: localhost
-      REDIS_PORT: 6379
-      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    integration-tests:
+        name: Integration Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
+        runs-on: ubuntu-latest
+        needs: [setup]
+        strategy:
+            fail-fast: false
+            matrix:
+                shard: [1, 2, 3, 4, 5]
+                total-shards: [5]
+        env:
+            DATABASE_URL: postgresql://flowmaestro:flowmaestro_dev_password@localhost:5432/flowmaestro
+            POSTGRES_HOST: localhost
+            POSTGRES_PORT: 5432
+            POSTGRES_USER: flowmaestro
+            POSTGRES_PASSWORD: flowmaestro_dev_password
+            POSTGRES_DB: flowmaestro
+            TEMPORAL_ADDRESS: localhost:7233
+            REDIS_HOST: localhost
+            REDIS_PORT: 6379
+            ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
 
-      - name: Install netcat for readiness checks
-        run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
+            - name: Install netcat for readiness checks
+              run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
 
-      # Start Temporal + DB infra for integration tests
-      - name: Start Temporal stack
-        run: |
-          docker volume create flowmaestro_postgres_data
-          docker volume create flowmaestro_postgres_test_data
-          docker volume create flowmaestro_mongo_test_data
-          docker volume create flowmaestro_redis_data
-          docker compose -f infra/local/docker-compose.yml up -d postgres postgres-test mongo-test redis temporal
-          echo "Waiting for Temporal and databases..."
-          for i in {1..60}; do
-            if nc -z localhost 5432 && nc -z localhost 7233 && nc -z localhost 6379; then
-              echo "Temporal stack is ready"
-              break
-            fi
-            docker compose -f infra/local/docker-compose.yml ps
-            sleep 5
-          done
+            # Start Temporal + DB infra for integration tests
+            - name: Start Temporal stack
+              run: |
+                  docker volume create flowmaestro_postgres_data
+                  docker volume create flowmaestro_postgres_test_data
+                  docker volume create flowmaestro_mongo_test_data
+                  docker volume create flowmaestro_redis_data
+                  docker compose -f infra/local/docker-compose.yml up -d postgres postgres-test mongo-test redis temporal
+                  echo "Waiting for Temporal and databases..."
+                  for i in {1..60}; do
+                    if nc -z localhost 5432 && nc -z localhost 7233 && nc -z localhost 6379; then
+                      echo "Temporal stack is ready"
+                      break
+                    fi
+                    docker compose -f infra/local/docker-compose.yml ps
+                    sleep 5
+                  done
 
-      # Run database migrations against local Postgres
-      - name: Run database migrations
-        run: npm run db:migrate --workspace=backend
+            # Run database migrations against local Postgres
+            - name: Run database migrations
+              run: npm run db:migrate --workspace=backend
 
-      # Start worker (background) for Temporal workflows
-      - name: Start Temporal worker
-        run: |
-          npm run worker:start --workspace=backend > /tmp/worker.log 2>&1 &
-          echo $! > /tmp/worker_pid
-          sleep 15
-          pid=$(cat /tmp/worker_pid)
-          if ps -p "$pid" > /dev/null; then
-            ps -fp "$pid"
-          else
-            echo "Worker exited early. Last 200 log lines:"
-            if [ -f /tmp/worker.log ]; then tail -n 200 /tmp/worker.log; fi
-            exit 1
-          fi
+            # Start worker (background) for Temporal workflows
+            - name: Start Temporal worker
+              run: |
+                  npm run worker:start --workspace=backend > /tmp/worker.log 2>&1 &
+                  echo $! > /tmp/worker_pid
+                  sleep 15
+                  pid=$(cat /tmp/worker_pid)
+                  if ps -p "$pid" > /dev/null; then
+                    ps -fp "$pid"
+                  else
+                    echo "Worker exited early. Last 200 log lines:"
+                    if [ -f /tmp/worker.log ]; then tail -n 200 /tmp/worker.log; fi
+                    exit 1
+                  fi
 
-      # Run integration tests (sharded)
-      - name: Run integration tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
-        run: npm run test:integration --workspace=backend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
+            # Run integration tests (sharded)
+            - name: Run integration tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
+              run: npm run test:integration --workspace=backend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
 
-      # Stop worker (best-effort) to keep logs clean
-      - name: Stop Temporal worker
+            # Stop worker (best-effort) to keep logs clean
+            - name: Stop Temporal worker
+              if: always()
+              run: |
+                  echo "----- Worker log -----"
+                  if [ -f /tmp/worker.log ]; then tail -n 200 /tmp/worker.log; fi
+                  echo "-----------------------------------"
+                  docker compose -f infra/local/docker-compose.yml ps || true
+                  if [ -f /tmp/worker_pid ]; then
+                    kill $(cat /tmp/worker_pid) || true
+                  fi
+
+    # ============================================================================
+    # E2E TESTS - Real database/Redis via Testcontainers
+    # ============================================================================
+
+    e2e-tests:
+        name: E2E Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
+        runs-on: ubuntu-latest
+        needs: [setup]
+        strategy:
+            fail-fast: false
+            matrix:
+                shard: [1, 2, 3, 4]
+                total-shards: [4]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
+
+            # Testcontainers automatically detects GitHub Actions and uses Docker
+            - name: Run E2E tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
+              run: npm run test:e2e --workspace=backend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
+
+    # ============================================================================
+    # SDK TESTS - Run SDK-specific test suites
+    # ============================================================================
+
+    test-sdk-ai:
+        name: Test SDK (AI)
+        runs-on: ubuntu-latest
+        needs: [setup]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
+
+            - name: Run AI SDK tests
+              run: npm test --workspace=@flowmaestro/ai-sdk
+
+    # ============================================================================
+    # GATE JOBS - Ensure all checks pass
+    # ============================================================================
+
+    # Summary job to ensure all test shards passed
+    tests-complete:
+        name: Tests Complete
+        runs-on: ubuntu-latest
+        needs: [unit-tests, integration-tests, e2e-tests, test-sdk-ai, validate-migrations]
         if: always()
-        run: |
-          echo "----- Worker log -----"
-          if [ -f /tmp/worker.log ]; then tail -n 200 /tmp/worker.log; fi
-          echo "-----------------------------------"
-          docker compose -f infra/local/docker-compose.yml ps || true
-          if [ -f /tmp/worker_pid ]; then
-            kill $(cat /tmp/worker_pid) || true
-          fi
+        steps:
+            - name: Check test results
+              run: |
+                  if [ "${{ needs.unit-tests.result }}" != "success" ]; then
+                    echo "Unit tests failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.integration-tests.result }}" != "success" ]; then
+                    echo "Integration tests failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.e2e-tests.result }}" != "success" ]; then
+                    echo "E2E tests failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.test-sdk-ai.result }}" != "success" ]; then
+                    echo "AI SDK tests failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.validate-migrations.result }}" != "success" ]; then
+                    echo "Migration validation failed"
+                    exit 1
+                  fi
+                  echo "All tests passed!"
 
-  # ============================================================================
-  # E2E TESTS - Real database/Redis via Testcontainers
-  # ============================================================================
+    # Summary job to ensure all lint checks passed
+    lint-complete:
+        name: Lint Complete
+        runs-on: ubuntu-latest
+        needs: [typecheck, lint, lint-sdk-python, lint-sdk-javascript, lint-sdk-widget]
+        if: always()
+        steps:
+            - name: Check lint results
+              run: |
+                  if [ "${{ needs.typecheck.result }}" != "success" ]; then
+                    echo "Type check failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.lint.result }}" != "success" ]; then
+                    echo "Lint failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.lint-sdk-python.result }}" != "success" ]; then
+                    echo "Python SDK lint failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.lint-sdk-javascript.result }}" != "success" ]; then
+                    echo "JavaScript SDK lint failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.lint-sdk-widget.result }}" != "success" ]; then
+                    echo "Widget SDK lint failed"
+                    exit 1
+                  fi
+                  echo "All lint checks passed!"
 
-  e2e-tests:
-    name: E2E Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
-    runs-on: ubuntu-latest
-    needs: [setup]
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-        total-shards: [4]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    build:
+        name: Build
+        runs-on: ubuntu-latest
+        needs: [setup]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
 
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
+            - name: Restore cached dependencies
+              uses: actions/cache/restore@v4
+              with:
+                  path: |
+                      node_modules
+                      frontend/node_modules
+                      backend/node_modules
+                      shared/node_modules
+                      cli/node_modules
+                      marketing/node_modules
+                      documentation/node_modules
+                      sdks/javascript/node_modules
+                      sdks/widget/node_modules
+                      sdks/ai-sdk/node_modules
+                      extensions/chrome/node_modules
+                  key: ${{ needs.setup.outputs.cache-key }}
 
-      # Testcontainers automatically detects GitHub Actions and uses Docker
-      - name: Run E2E tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
-        run: npm run test:e2e --workspace=backend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
+            - name: Build all packages
+              run: npm run build
 
-  # ============================================================================
-  # GATE JOBS - Ensure all checks pass
-  # ============================================================================
+    # ============================================================================
+    # DOCKER BUILDS - Run after build completes
+    # ============================================================================
 
-  # Summary job to ensure all test shards passed
-  tests-complete:
-    name: Tests Complete
-    runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests, e2e-tests, validate-migrations]
-    if: always()
-    steps:
-      - name: Check test results
-        run: |
-          if [ "${{ needs.unit-tests.result }}" != "success" ]; then
-            echo "Unit tests failed"
-            exit 1
-          fi
-          if [ "${{ needs.integration-tests.result }}" != "success" ]; then
-            echo "Integration tests failed"
-            exit 1
-          fi
-          if [ "${{ needs.e2e-tests.result }}" != "success" ]; then
-            echo "E2E tests failed"
-            exit 1
-          fi
-          if [ "${{ needs.validate-migrations.result }}" != "success" ]; then
-            echo "Migration validation failed"
-            exit 1
-          fi
-          echo "All tests passed!"
+    docker-build-backend:
+        name: Docker (backend)
+        runs-on: ubuntu-latest
+        needs: [build]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-  # Summary job to ensure all lint checks passed
-  lint-complete:
-    name: Lint Complete
-    runs-on: ubuntu-latest
-    needs: [typecheck, lint, lint-sdk-python, lint-sdk-javascript, lint-sdk-widget]
-    if: always()
-    steps:
-      - name: Check lint results
-        run: |
-          if [ "${{ needs.typecheck.result }}" != "success" ]; then
-            echo "Type check failed"
-            exit 1
-          fi
-          if [ "${{ needs.lint.result }}" != "success" ]; then
-            echo "Lint failed"
-            exit 1
-          fi
-          if [ "${{ needs.lint-sdk-python.result }}" != "success" ]; then
-            echo "Python SDK lint failed"
-            exit 1
-          fi
-          if [ "${{ needs.lint-sdk-javascript.result }}" != "success" ]; then
-            echo "JavaScript SDK lint failed"
-            exit 1
-          fi
-          if [ "${{ needs.lint-sdk-widget.result }}" != "success" ]; then
-            echo "Widget SDK lint failed"
-            exit 1
-          fi
-          echo "All lint checks passed!"
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
 
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [setup]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+            - name: Build backend image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: infra/docker/backend/Dockerfile
+                  platforms: linux/amd64
+                  push: false
+                  cache-from: type=gha,scope=backend
+                  cache-to: type=gha,mode=max,scope=backend
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+    docker-build-frontend:
+        name: Docker (frontend)
+        runs-on: ubuntu-latest
+        needs: [build]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Restore cached dependencies
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            node_modules
-            frontend/node_modules
-            backend/node_modules
-            shared/node_modules
-            cli/node_modules
-            marketing/node_modules
-            documentation/node_modules
-            sdks/javascript/node_modules
-            sdks/widget/node_modules
-            sdks/ai-sdk/node_modules
-            extensions/chrome/node_modules
-          key: ${{ needs.setup.outputs.cache-key }}
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
 
-      - name: Build all packages
-        run: npm run build
+            - name: Build frontend image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: infra/docker/frontend/Dockerfile
+                  platforms: linux/amd64
+                  push: false
+                  build-args: |
+                      VITE_API_URL=https://api.example.com
+                      VITE_WS_URL=wss://api.example.com
+                  cache-from: type=gha,scope=frontend
+                  cache-to: type=gha,mode=max,scope=frontend
 
-  # ============================================================================
-  # DOCKER BUILDS - Run after build completes
-  # ============================================================================
+    docker-build-marketing:
+        name: Docker (marketing)
+        runs-on: ubuntu-latest
+        needs: [build]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-  docker-build-backend:
-    name: Docker (backend)
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+            - name: Build marketing image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: infra/docker/marketing/Dockerfile
+                  platforms: linux/amd64
+                  push: false
+                  cache-from: type=gha,scope=marketing
+                  cache-to: type=gha,mode=max,scope=marketing
 
-      - name: Build backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/backend/Dockerfile
-          platforms: linux/amd64
-          push: false
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
+    docker-build-migrations:
+        name: Docker (migrations)
+        runs-on: ubuntu-latest
+        needs: [build]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-  docker-build-frontend:
-    name: Docker (frontend)
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+            - name: Build migrations image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: infra/docker/migrations/Dockerfile
+                  platforms: linux/amd64
+                  push: false
+                  cache-from: type=gha,scope=migrations
+                  cache-to: type=gha,mode=max,scope=migrations
 
-      - name: Build frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/frontend/Dockerfile
-          platforms: linux/amd64
-          push: false
-          build-args: |
-            VITE_API_URL=https://api.example.com
-            VITE_WS_URL=wss://api.example.com
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
+    docker-build-static:
+        name: Docker (static)
+        runs-on: ubuntu-latest
+        needs: [build]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-  docker-build-marketing:
-    name: Docker (marketing)
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+            - name: Build static image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: infra/docker/static/Dockerfile
+                  platforms: linux/amd64
+                  push: false
+                  cache-from: type=gha,scope=static
+                  cache-to: type=gha,mode=max,scope=static
 
-      - name: Build marketing image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/marketing/Dockerfile
-          platforms: linux/amd64
-          push: false
-          cache-from: type=gha,scope=marketing
-          cache-to: type=gha,mode=max,scope=marketing
-
-  docker-build-migrations:
-    name: Docker (migrations)
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build migrations image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/migrations/Dockerfile
-          platforms: linux/amd64
-          push: false
-          cache-from: type=gha,scope=migrations
-          cache-to: type=gha,mode=max,scope=migrations
-
-  docker-build-static:
-    name: Docker (static)
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build static image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/static/Dockerfile
-          platforms: linux/amd64
-          push: false
-          cache-from: type=gha,scope=static
-          cache-to: type=gha,mode=max,scope=static
-
-  # Summary job to ensure all Docker builds passed
-  docker-complete:
-    name: Docker Complete
-    runs-on: ubuntu-latest
-    needs:
-      - docker-build-backend
-      - docker-build-frontend
-      - docker-build-marketing
-      - docker-build-migrations
-      - docker-build-static
-    if: always()
-    steps:
-      - name: Check Docker build results
-        run: |
-          if [ "${{ needs.docker-build-backend.result }}" != "success" ]; then
-            echo "Backend Docker build failed"
-            exit 1
-          fi
-          if [ "${{ needs.docker-build-frontend.result }}" != "success" ]; then
-            echo "Frontend Docker build failed"
-            exit 1
-          fi
-          if [ "${{ needs.docker-build-marketing.result }}" != "success" ]; then
-            echo "Marketing Docker build failed"
-            exit 1
-          fi
-          if [ "${{ needs.docker-build-migrations.result }}" != "success" ]; then
-            echo "Migrations Docker build failed"
-            exit 1
-          fi
-          if [ "${{ needs.docker-build-static.result }}" != "success" ]; then
-            echo "Static Docker build failed"
-            exit 1
-          fi
-          echo "All Docker builds passed!"
+    # Summary job to ensure all Docker builds passed
+    docker-complete:
+        name: Docker Complete
+        runs-on: ubuntu-latest
+        needs:
+            - docker-build-backend
+            - docker-build-frontend
+            - docker-build-marketing
+            - docker-build-migrations
+            - docker-build-static
+        if: always()
+        steps:
+            - name: Check Docker build results
+              run: |
+                  if [ "${{ needs.docker-build-backend.result }}" != "success" ]; then
+                    echo "Backend Docker build failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.docker-build-frontend.result }}" != "success" ]; then
+                    echo "Frontend Docker build failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.docker-build-marketing.result }}" != "success" ]; then
+                    echo "Marketing Docker build failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.docker-build-migrations.result }}" != "success" ]; then
+                    echo "Migrations Docker build failed"
+                    exit 1
+                  fi
+                  if [ "${{ needs.docker-build-static.result }}" != "success" ]; then
+                    echo "Static Docker build failed"
+                    exit 1
+                  fi
+                  echo "All Docker builds passed!"
