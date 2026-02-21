@@ -36,6 +36,7 @@ Built for TypeScript developers who need both visual workflow orchestration and 
 - **[CLI](./.docs/cli.md)** - Command-line interface with OAuth device flow, interactive agent chat, and execution monitoring
 - **[JavaScript SDK](/sdks/javascript)** - Official TypeScript/JavaScript SDK with streaming support
 - **[Python SDK](/sdks/python)** - Official Python SDK with sync and async clients
+- **[AI SDK](/sdks/ai-sdk)** - Unified multi-provider AI SDK for text, embeddings, images, video, vision, and speech
 
 ### Browser Extension
 
@@ -138,7 +139,8 @@ flowmaestro/
 │   └── chrome/       # Chrome extension with sidebar UI
 ├── sdks/             # Official client SDKs
 │   ├── javascript/   # TypeScript/JavaScript SDK (@flowmaestro/sdk)
-│   └── python/       # Python SDK (flowmaestro)
+│   ├── python/       # Python SDK (flowmaestro)
+│   └── ai-sdk/       # Unified AI SDK (@flowmaestro/ai-sdk)
 ├── examples/         # SDK usage examples and mini-apps
 ├── marketing/        # Marketing website
 ├── documentation/    # Docusaurus documentation site
@@ -152,7 +154,7 @@ flowmaestro/
 
 - Frontend: React 18, Vite, TailwindCSS, React Flow
 - Backend: Fastify, Temporal, PostgreSQL, Redis
-- AI/ML: OpenAI SDK, Anthropic SDK, Google AI, Embeddings
+- AI/ML: @flowmaestro/ai-sdk (unified interface for OpenAI, Anthropic, Google, Cohere, and more)
 - Infrastructure: GKE, Cloud SQL, Memorystore, GCS
 - Deployment: Kubernetes, Pulumi, Docker
 

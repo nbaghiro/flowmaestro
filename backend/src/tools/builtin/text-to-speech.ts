@@ -7,8 +7,8 @@
 import { writeFile, mkdir, stat } from "fs/promises";
 import { join } from "path";
 import { z } from "zod";
+import { getAIClient } from "../../core/ai";
 import { createServiceLogger } from "../../core/logging";
-import { getAIClient } from "../../services/llm";
 import type { BuiltInTool, ToolExecutionContext, ToolExecutionResult } from "../types";
 
 const logger = createServiceLogger("TextToSpeechTool");

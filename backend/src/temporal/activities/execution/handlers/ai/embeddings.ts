@@ -7,8 +7,9 @@
  * Uses the unified @flowmaestro/ai SDK for all provider integrations.
  */
 
+import type { AIProvider } from "@flowmaestro/ai-sdk";
 import type { JsonObject } from "@flowmaestro/shared";
-import { getAIClient, type AIProvider } from "../../../../../services/llm";
+import { getAIClient } from "../../../../../core/ai";
 import {
     ValidationError,
     withHeartbeat,

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { VoiceClientMessage } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../core/logging";
-import { voiceSessionManager } from "../../services/ai";
+import { voiceSessionManager } from "../../services/voice";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
 

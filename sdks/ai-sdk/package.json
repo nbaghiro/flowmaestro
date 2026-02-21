@@ -1,0 +1,81 @@
+{
+    "name": "@flowmaestro/ai-sdk",
+    "version": "0.1.0",
+    "description": "Unified AI SDK for multi-provider AI operations (LLM, embeddings, image, video, vision, speech)",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "files": [
+        "dist",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "lint": "eslint src --ext .ts",
+        "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+        "ai",
+        "llm",
+        "openai",
+        "anthropic",
+        "google",
+        "cohere",
+        "embeddings",
+        "image-generation",
+        "video-generation",
+        "text-to-speech",
+        "speech-to-text",
+        "sdk",
+        "flowmaestro"
+    ],
+    "author": "FlowMaestro Team",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/flowmaestro/flowmaestro.git",
+        "directory": "sdks/ai-sdk"
+    },
+    "bugs": {
+        "url": "https://github.com/flowmaestro/flowmaestro/issues"
+    },
+    "homepage": "https://flowmaestro.io/docs/sdk/ai",
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "dependencies": {
+        "@anthropic-ai/sdk": "^0.67.0",
+        "@google/generative-ai": "^0.24.1",
+        "cohere-ai": "^7.19.0",
+        "openai": "^6.7.0",
+        "ws": "^8.18.0"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "@types/ws": "^8.18.1",
+        "@vitest/coverage-v8": "^1.2.0",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.3",
+        "vitest": "^1.2.0"
+    },
+    "peerDependencies": {
+        "typescript": ">=4.7.0"
+    },
+    "peerDependenciesMeta": {
+        "typescript": {
+            "optional": true
+        }
+    }
+}

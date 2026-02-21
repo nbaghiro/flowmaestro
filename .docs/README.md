@@ -53,6 +53,25 @@ These documents cover the main features of FlowMaestro:
 
 ---
 
+#### [ai-sdk-architecture.md](./ai-sdk-architecture.md)
+
+**AI SDK** - Unified multi-provider AI interface
+
+**Topics covered:**
+
+- Package structure and architecture layers
+- AIClient, Capabilities, Providers, Core infrastructure
+- Provider registry and API key resolution
+- FlowMaestro backend integration
+- Realtime streaming (Deepgram STT, ElevenLabs TTS)
+- Error handling classes
+- Testing and building
+- Adding new providers/capabilities
+
+**When to read:** Working with AI providers, adding new LLM/embedding/image providers, understanding AI infrastructure
+
+---
+
 #### [integrations-system.md](./integrations-system.md)
 
 **Integration System** - Provider SDK architecture for external services
@@ -234,7 +253,7 @@ iPaaS platform evaluation for replacing custom OAuth implementation
 | AI generation | [workflows.md](./workflows.md)                     | AI Workflow Generation   |
 | Memory        | [agents.md](./agents.md)                           | Memory Management        |
 | Streaming     | [agents.md](./agents.md)                           | Streaming Infrastructure |
-| LLM providers | [agents.md](./agents.md)                           | LLM Provider Integration |
+| LLM providers | [ai-sdk-architecture.md](./ai-sdk-architecture.md) | Provider implementations |
 | Tools         | [agents.md](./agents.md)                           | Tool Execution System    |
 | RAG           | [agents.md](./agents.md)                           | RAG (Knowledge Bases)    |
 | Observability | [agents.md](./agents.md)                           | Observability & Tracing  |
@@ -313,11 +332,12 @@ iPaaS platform evaluation for replacing custom OAuth implementation
 
 **New LLM Provider:**
 
-1. Read [agents.md](./agents.md) → LLM Provider Integration
-2. Implement provider client (request/response formatting)
-3. Add streaming support
-4. Update provider registry
-5. Test with agent execution
+1. Read [ai-sdk-architecture.md](./ai-sdk-architecture.md) → Adding a New Provider
+2. Create provider in `sdks/ai-sdk/src/providers/<capability>/`
+3. Implement capability interface (e.g., `TextCompletionProvider`)
+4. Register in `AIClient.registerProviders()`
+5. Add env var mapping in `core/auth.ts`
+6. Add tests and update documentation
 
 ### Debugging
 
@@ -376,9 +396,10 @@ Frontend Updates
 
 - **Frontend**: React + Vite + Zustand + TanStack Query + React Flow
 - **Backend**: Fastify + PostgreSQL + Redis + Temporal
+- **AI/ML**: @flowmaestro/ai-sdk (OpenAI, Anthropic, Google, Cohere, etc.)
 - **Infrastructure**: GCP + Kubernetes + Cloud SQL + Memorystore
 - **Observability**: OpenTelemetry + Jaeger + Cloud Monitoring
-- **Voice**: Telnyx + LiveKit
+- **Voice**: Deepgram (STT) + ElevenLabs (TTS)
 - **Real-time**: Socket.IO
 
 ---

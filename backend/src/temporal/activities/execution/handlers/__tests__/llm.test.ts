@@ -34,6 +34,7 @@ jest.mock("cohere-ai", () => ({
 }));
 
 import nock from "nock";
+import { AuthenticationError } from "@flowmaestro/ai-sdk";
 import {
     createHandlerInput,
     createTestContext,
@@ -48,7 +49,7 @@ import {
     teardownHttpMocking,
     clearHttpMocks
 } from "../../../../../../__tests__/helpers/http-mock";
-import { AuthenticationError, resetAIClient } from "../../../../../services/llm";
+import { resetAIClient } from "../../../../../core/ai";
 import { LLMNodeHandler, createLLMNodeHandler } from "../ai/llm";
 
 // Mock the connection repository
@@ -760,7 +761,7 @@ describe("LLMNodeHandler", () => {
                 );
 
             // eslint-disable-next-line @typescript-eslint/no-require-imports
-            jest.spyOn(require("../../../../../services/llm"), "getAIClient").mockReturnValue({
+            jest.spyOn(require("../../../../../core/ai"), "getAIClient").mockReturnValue({
                 text: { complete: mockComplete, stream: jest.fn() }
             });
 

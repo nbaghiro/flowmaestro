@@ -113,7 +113,7 @@ const sidebars: SidebarsConfig = {
         {
             type: "category",
             label: "SDKs",
-            items: ["sdks/javascript", "sdks/python", "sdks/widget"]
+            items: ["sdks/javascript", "sdks/python", "sdks/widget", "sdks/ai-sdk"]
         },
         {
             type: "category",

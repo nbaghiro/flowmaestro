@@ -5,9 +5,10 @@
  * Supports multiple providers: OpenAI, Cohere, Google.
  */
 
+import type { AIProvider } from "@flowmaestro/ai-sdk";
+import { getAIClient } from "../../core/ai";
 import { getLogger } from "../../core/logging";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
-import { getAIClient, type AIProvider } from "../llm";
 
 const logger = getLogger();
 

@@ -11,6 +11,7 @@
         "marketing",
         "documentation",
         "status",
+        "sdks/ai-sdk",
         "sdks/javascript",
         "sdks/widget",
         "extensions/chrome",
