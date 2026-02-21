@@ -37,3 +37,4 @@ export * from "./billing";
 export * from "./system-workflows";
 export * from "./workflow-converter";
 export * from "./status";
+export * from "./embeddings";

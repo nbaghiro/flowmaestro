@@ -221,7 +221,7 @@ export type HTTPNodeConfig = z.infer<typeof HTTPNodeConfigSchema>;
  * Code Node Configuration.
  */
 export const CodeNodeConfigSchema = z.object({
-    language: z.enum(["javascript", "python"], {
+    language: z.enum(["javascript", "python", "shell"], {
         required_error: "Programming language is required"
     }),
     code: z.string().min(1, "Code is required"),

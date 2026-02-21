@@ -6,17 +6,14 @@
  */
 
 import type { AIProvider } from "@flowmaestro/ai-sdk";
+import type { EmbeddingConfig } from "@flowmaestro/shared";
 import { getAIClient } from "../../core/ai";
 import { getLogger } from "../../core/logging";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
 
 const logger = getLogger();
 
-export interface EmbeddingConfig {
-    model: string; // e.g., "text-embedding-3-small"
-    provider: string; // e.g., "openai", "cohere", "google"
-    dimensions?: number; // Optional: reduce dimensions (OpenAI only)
-}
+export type { EmbeddingConfig };
 
 export interface EmbeddingResult {
     embeddings: number[][];

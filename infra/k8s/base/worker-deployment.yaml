@@ -117,6 +117,14 @@ spec:
             - name: TEMPORAL_NAMESPACE
               value: "default"
 
+            # Code Sandbox configuration
+            - name: CODE_SANDBOX_IMAGE
+              value: "us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/code-sandbox:latest"
+            - name: MAX_CONCURRENT_EXECUTIONS
+              value: "10"
+            - name: CODE_SESSION_TTL_MS
+              value: "600000"
+
             # Google Cloud Storage configuration (from configmap)
             - name: GCS_UPLOADS_BUCKET
               valueFrom:
@@ -139,11 +147,14 @@ spec:
                   name: gcs-config
                   key: GCS_INTERFACE_DOCS_BUCKET
 
-          # Mount Temporal certificates
+          # Mount Temporal certificates and Docker socket
           volumeMounts:
             - name: temporal-certs
               mountPath: /etc/temporal
               readOnly: true
+            # Docker socket for code sandbox container execution
+            - name: docker-socket
+              mountPath: /var/run/docker.sock
 
           resources:
             requests:
@@ -169,6 +180,9 @@ spec:
           securityContext:
             runAsNonRoot: true
             runAsUser: 1001
+            # Docker group access for code sandbox execution
+            # Note: GID 999 is typical for docker group; may vary by node OS
+            runAsGroup: 999
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: false
             capabilities:
@@ -186,6 +200,12 @@ spec:
                 path: client.pem
               - key: client-key
                 path: client-key.pem
+        # Docker socket for code sandbox execution
+        # Note: Requires Docker to be installed on the node
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket
 
       restartPolicy: Always
       terminationGracePeriodSeconds: 60

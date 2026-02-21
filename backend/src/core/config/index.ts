@@ -86,6 +86,42 @@ export const config = {
     },
 
     // ==========================================================================
+    // Code Execution Sandbox Configuration
+    // ==========================================================================
+    codeExecution: {
+        /** Docker image for code sandbox containers */
+        sandboxImage: process.env.CODE_SANDBOX_IMAGE || "flowmaestro/code-sandbox:latest",
+
+        /** Maximum concurrent code executions per worker */
+        maxConcurrentExecutions: parseInt(process.env.MAX_CONCURRENT_EXECUTIONS || "10"),
+
+        /** Session TTL in milliseconds (default: 10 minutes) */
+        sessionTtlMs: parseInt(process.env.CODE_SESSION_TTL_MS || String(10 * 60 * 1000)),
+
+        /** Default resource limits */
+        defaults: {
+            /** Memory limit in bytes (default: 256MB) */
+            memoryBytes: parseInt(
+                process.env.CODE_SANDBOX_MEMORY_BYTES || String(256 * 1024 * 1024)
+            ),
+
+            /** CPU cores limit (default: 0.5) */
+            cpuCores: parseFloat(process.env.CODE_SANDBOX_CPU_CORES || "0.5"),
+
+            /** Default execution timeout in milliseconds (default: 30s) */
+            timeoutMs: parseInt(process.env.CODE_SANDBOX_TIMEOUT_MS || "30000"),
+
+            /** Maximum PIDs per container (default: 100) */
+            maxPids: parseInt(process.env.CODE_SANDBOX_MAX_PIDS || "100"),
+
+            /** Maximum output size in bytes (default: 100KB) */
+            maxOutputBytes: parseInt(
+                process.env.CODE_SANDBOX_MAX_OUTPUT_BYTES || String(100 * 1024)
+            )
+        }
+    },
+
+    // ==========================================================================
     // JWT Authentication
     // ==========================================================================
     jwt: {

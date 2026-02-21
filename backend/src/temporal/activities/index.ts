@@ -244,3 +244,6 @@ export {
     type UpdateSourceSyncStatusInput,
     type SourceDueForSync
 } from "./integration-import";
+
+// Code execution activities (Docker sandbox)
+export { executeCode, endCodeSession, type ExecuteCodeInput } from "./code-execution";

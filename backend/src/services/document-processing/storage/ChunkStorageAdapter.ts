@@ -7,7 +7,9 @@
  * - Chat Interface (chat_interface_message_chunks)
  */
 
-import type { JsonObject } from "@flowmaestro/shared";
+import type { ChunkConfig, EmbeddingConfig, JsonObject } from "@flowmaestro/shared";
+
+export type { ChunkConfig, EmbeddingConfig };
 
 /**
  * Input for creating a chunk with embedding
@@ -26,23 +28,6 @@ export interface CreateChunkInput {
 export interface StoreChunksResult {
     chunkCount: number;
     totalTokens: number;
-}
-
-/**
- * Configuration for chunk settings
- */
-export interface ChunkConfig {
-    chunkSize: number;
-    chunkOverlap: number;
-}
-
-/**
- * Embedding configuration
- */
-export interface EmbeddingConfig {
-    model: string;
-    provider: string;
-    dimensions?: number;
 }
 
 /**

@@ -1,0 +1,33 @@
+{
+    "name": "flowmaestro-code-sandbox",
+    "version": "1.0.0",
+    "description": "Pre-installed Node.js packages for FlowMaestro code execution sandbox",
+    "private": true,
+    "dependencies": {
+        "lodash": "^4.17.21",
+        "date-fns": "^3.0.0",
+        "dayjs": "^1.11.0",
+        "uuid": "^9.0.0",
+        "crypto-js": "^4.2.0",
+        "cheerio": "^1.0.0",
+        "yaml": "^2.3.0",
+        "csv-parse": "^5.5.0",
+        "csv-stringify": "^6.4.0",
+        "papaparse": "^5.4.0",
+        "xlsx": "^0.18.0",
+        "markdown-it": "^14.0.0",
+        "turndown": "^7.1.0",
+        "sanitize-html": "^2.11.0",
+        "validator": "^13.11.0",
+        "mathjs": "^12.0.0",
+        "decimal.js": "^10.4.0",
+        "big.js": "^6.2.0",
+        "slugify": "^1.6.0",
+        "pluralize": "^8.0.0",
+        "change-case": "^5.0.0",
+        "he": "^1.2.0",
+        "jsonpath-plus": "^7.2.0",
+        "fast-xml-parser": "^4.3.0",
+        "zod": "^3.22.0"
+    }
+}

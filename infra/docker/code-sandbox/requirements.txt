@@ -1,0 +1,53 @@
+# FlowMaestro Code Sandbox - Python Dependencies
+#
+# Common packages pre-installed in the sandbox container.
+# Users can request additional packages via the `packages` parameter,
+# but pre-installing common ones reduces execution latency.
+
+# Data manipulation
+pandas>=2.0.0
+numpy>=1.24.0
+polars>=0.20.0
+
+# HTTP requests
+requests>=2.31.0
+httpx>=0.25.0
+aiohttp>=3.9.0
+
+# JSON/YAML processing
+pyyaml>=6.0
+orjson>=3.9.0
+python-dateutil>=2.8.0
+
+# Data validation
+pydantic>=2.5.0
+
+# Text processing
+regex>=2023.0.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+html5lib>=1.1
+
+# File formats
+openpyxl>=3.1.0
+xlrd>=2.0.0
+python-docx>=1.0.0
+pypdf>=3.17.0
+python-pptx>=0.6.0
+
+# Image processing (basic)
+pillow>=10.0.0
+
+# CSV/spreadsheet
+csvkit>=1.3.0
+
+# Mathematical/scientific
+scipy>=1.11.0
+sympy>=1.12
+
+# Date/time
+pendulum>=3.0.0
+arrow>=1.3.0
+
+# Markdown
+markdown>=3.5.0

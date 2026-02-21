@@ -1,0 +1,5 @@
+# Ignore everything except what we need
+*
+!Dockerfile
+!requirements.txt
+!package.json
