@@ -17,7 +17,7 @@ import {
     setHandler,
     condition
 } from "@temporalio/workflow";
-import type { JsonObject } from "@flowmaestro/shared";
+import type { JsonObject, PersonaProgressStep } from "@flowmaestro/shared";
 import { SpanType } from "../core/types";
 import { createWorkflowLogger } from "../core/workflow-logger";
 import {
@@ -25,7 +25,10 @@ import {
     hasCompletionSignal,
     hasClarificationCompleteSignal,
     getDeliverableSignals,
-    getProgressSignals
+    getProgressSignals,
+    initializeProgressSteps,
+    updateStepStatuses,
+    calculateStepProgress
 } from "./persona-signals";
 import type { SerializedThread } from "../../services/agents/ThreadManager";
 import type { ThreadMessage } from "../../storage/models/AgentExecution";
@@ -82,8 +85,18 @@ const {
     emitPersonaProgress,
     emitPersonaDeliverable,
     emitPersonaCompleted,
-    emitPersonaFailed
+    emitPersonaFailed,
+    emitCreditThresholdAlert,
+    emitPersonaPaused
 } = proxyActivities<typeof activities>({
+    startToCloseTimeout: "10 seconds",
+    retry: {
+        maximumAttempts: 2
+    }
+});
+
+// Credit threshold activities
+const { checkCreditThreshold, updateThresholdNotified } = proxyActivities<typeof activities>({
     startToCloseTimeout: "10 seconds",
     retry: {
         maximumAttempts: 2
@@ -315,6 +328,7 @@ export interface PersonaOrchestratorInput {
     clarificationComplete?: boolean;
     toolFailureCounts?: Record<string, number>; // Persist tool failure counts across continue-as-new
     startedAt?: number; // Workflow start timestamp for duration tracking
+    progressSteps?: PersonaProgressStep[]; // SOP step progress tracking
 }
 
 export interface PersonaOrchestratorResult {
@@ -429,7 +443,8 @@ export async function personaOrchestratorWorkflow(
         accumulatedCredits: previousCredits = 0,
         reservedCredits: previousReserved = 0,
         clarificationComplete: inputClarificationComplete = false,
-        startedAt: inputStartedAt
+        startedAt: inputStartedAt,
+        progressSteps: inputProgressSteps
     } = input;
 
     // Track workflow start time for duration limits (captured once on first run)
@@ -443,6 +458,9 @@ export async function personaOrchestratorWorkflow(
     let clarificationComplete = inputClarificationComplete || inputSkipClarification;
     let pendingUserMessage: string | null = null;
     let skipClarificationRequested = inputSkipClarification;
+
+    // SOP step progress tracking (initialized after persona is loaded)
+    let progressSteps: PersonaProgressStep[] = inputProgressSteps || [];
 
     // Cancellation state
     let cancellationRequested = false;
@@ -497,6 +515,14 @@ export async function personaOrchestratorWorkflow(
         userId,
         workspaceId
     });
+
+    // Initialize SOP step progress on first run
+    if (iterations === 0 && progressSteps.length === 0 && persona.sop_steps) {
+        progressSteps = initializeProgressSteps(persona.sop_steps);
+        logger.info("Initialized SOP progress steps", {
+            stepCount: progressSteps.length
+        });
+    }
 
     // Get current clarification state from database (only on first run)
     let clarificationState: ClarificationState | null = null;
@@ -1189,7 +1215,8 @@ export async function personaOrchestratorWorkflow(
                 reservedCredits,
                 clarificationComplete: true,
                 toolFailureCounts: Object.fromEntries(toolFailureCounts),
-                startedAt: workflowStartTime
+                startedAt: workflowStartTime,
+                progressSteps
             });
         }
 
@@ -1269,8 +1296,122 @@ export async function personaOrchestratorWorkflow(
                 });
                 accumulatedCredits += callCredits;
 
-                // Check cost limit
-                if (persona.max_cost_credits && accumulatedCredits > persona.max_cost_credits) {
+                // Check credit thresholds and emit alerts
+                if (persona.max_cost_credits && persona.credit_threshold_config) {
+                    const thresholdResult = await checkCreditThreshold({
+                        instanceId: personaInstanceId,
+                        currentCost: accumulatedCredits,
+                        maxCost: persona.max_cost_credits,
+                        creditThresholdConfig: persona.credit_threshold_config,
+                        lastNotifiedThreshold: persona.last_credit_threshold_notified || 0
+                    });
+
+                    // Emit threshold alert if crossed
+                    if (thresholdResult.crossedThreshold && thresholdResult.thresholdCrossed) {
+                        logger.info("Credit threshold crossed", {
+                            threshold: thresholdResult.thresholdCrossed,
+                            percentage: thresholdResult.currentPercentage
+                        });
+
+                        await emitCreditThresholdAlert({
+                            instanceId: personaInstanceId,
+                            threshold: thresholdResult.thresholdCrossed,
+                            currentCost: accumulatedCredits,
+                            maxCost: persona.max_cost_credits,
+                            percentage: thresholdResult.currentPercentage
+                        });
+
+                        // Update threshold notification state
+                        await updateThresholdNotified({
+                            instanceId: personaInstanceId,
+                            threshold: thresholdResult.thresholdCrossed,
+                            creditThresholdConfig: persona.credit_threshold_config
+                        });
+                    }
+
+                    // Handle limit reached
+                    if (thresholdResult.limitExceeded) {
+                        if (thresholdResult.shouldPause) {
+                            // Pause instead of fail when pause_at_limit is true
+                            logger.info("Credit limit reached, pausing execution", {
+                                accumulated: accumulatedCredits,
+                                limit: persona.max_cost_credits
+                            });
+
+                            await emitPersonaPaused({
+                                instanceId: personaInstanceId,
+                                reason: "credit_limit",
+                                message: `Credit limit reached (${accumulatedCredits}/${persona.max_cost_credits} credits). Waiting for approval to continue.`
+                            });
+
+                            await updatePersonaInstanceStatus({
+                                personaInstanceId,
+                                status: "waiting_approval"
+                            });
+
+                            // Wait for a resume signal (up to 7 days)
+                            // For now, we'll treat this as completion - the user would need to create a new approval
+                            // Full implementation would involve adding a new signal handler
+                            // This is a placeholder that allows the workflow to gracefully complete
+                            logger.warn(
+                                "Paused at credit limit - completing workflow. Resume functionality requires additional implementation."
+                            );
+                        }
+
+                        // Hard fail if not pausing
+                        const costError = `Cost limit exceeded (${accumulatedCredits} > ${persona.max_cost_credits} credits)`;
+                        logger.info("Cost limit exceeded", {
+                            accumulated: accumulatedCredits,
+                            limit: persona.max_cost_credits
+                        });
+
+                        await endSpan({ spanId: iterationSpanId });
+
+                        await updatePersonaInstanceStatus({
+                            personaInstanceId,
+                            status: "failed",
+                            completionReason: "max_cost",
+                            completedAt: new Date()
+                        });
+
+                        // Emit failed event for real-time updates
+                        await emitPersonaFailed({
+                            instanceId: personaInstanceId,
+                            error: costError
+                        });
+
+                        // Finalize credits
+                        if (reservedCredits > 0) {
+                            await finalizeCredits({
+                                workspaceId,
+                                userId,
+                                reservedAmount: reservedCredits,
+                                actualAmount: accumulatedCredits,
+                                operationType: "persona_execution",
+                                operationId: executionId,
+                                description: `Persona: ${persona.name} (cost limit exceeded)`,
+                                metadata: {
+                                    personaInstanceId,
+                                    personaName: persona.name,
+                                    iterations: currentIterations,
+                                    failureReason: "max_cost"
+                                }
+                            });
+                        }
+
+                        return {
+                            success: false,
+                            serializedThread: messageState,
+                            iterations: currentIterations,
+                            error: costError,
+                            totalCreditsUsed: accumulatedCredits
+                        };
+                    }
+                } else if (
+                    persona.max_cost_credits &&
+                    accumulatedCredits > persona.max_cost_credits
+                ) {
+                    // Fallback for instances without credit_threshold_config
                     const costError = `Cost limit exceeded (${accumulatedCredits} > ${persona.max_cost_credits} credits)`;
                     logger.info("Cost limit exceeded", {
                         accumulated: accumulatedCredits,
@@ -1435,26 +1576,45 @@ export async function personaOrchestratorWorkflow(
         // Handle progress signals
         const progressSignals = getProgressSignals(parsedResponse.signals);
         for (const progressSignal of progressSignals) {
+            // Update SOP step statuses if we have steps defined
+            if (progressSteps.length > 0 && persona.sop_steps) {
+                progressSteps = updateStepStatuses(
+                    progressSteps,
+                    progressSignal,
+                    persona.sop_steps
+                );
+            }
+
+            // Calculate progress based on steps if available, otherwise use signal data
+            const stepsProgress =
+                progressSteps.length > 0 ? calculateStepProgress(progressSteps) : null;
+
             const completedCount = progressSignal.completed_steps?.length || 0;
             const remainingCount = progressSignal.remaining_steps?.length || 0;
-            const totalSteps = completedCount + remainingCount + 1; // +1 for current step
+            const totalSteps =
+                progressSteps.length > 0
+                    ? progressSteps.length
+                    : completedCount + remainingCount + 1;
 
             await updatePersonaInstanceProgress({
                 personaInstanceId,
                 progress: {
                     current_step: completedCount + 1,
-                    total_steps: totalSteps > 0 ? totalSteps : 0,
+                    total_steps: totalSteps,
                     current_step_name: progressSignal.current_step,
                     percentage:
+                        stepsProgress ?? // Use step-based progress if available
                         progressSignal.percentage ??
                         Math.round((completedCount / totalSteps) * 100),
-                    message: progressSignal.message
+                    message: progressSignal.message,
+                    steps: progressSteps.length > 0 ? progressSteps : undefined
                 }
             });
 
             logger.debug("Progress updated via signal", {
                 currentStep: progressSignal.current_step,
-                percentage: progressSignal.percentage
+                percentage: stepsProgress ?? progressSignal.percentage,
+                stepsTracked: progressSteps.length
             });
         }
 

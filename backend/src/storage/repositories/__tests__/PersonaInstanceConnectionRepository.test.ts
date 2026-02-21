@@ -13,6 +13,7 @@ import {
     mockInsertReturning,
     mockEmptyResult,
     mockAffectedRows,
+    mockCountResult,
     generatePersonaInstanceConnectionRow,
     generatePersonaInstanceConnectionDetailRow,
     generateId
@@ -148,34 +149,56 @@ describe("PersonaInstanceConnectionRepository", () => {
     });
 
     describe("findByInstanceId", () => {
-        it("should return all connections for an instance", async () => {
+        it("should return all connections for an instance with pagination", async () => {
             const instanceId = generateId();
             const mockConnections = [
                 generatePersonaInstanceConnectionRow({ instance_id: instanceId }),
                 generatePersonaInstanceConnectionRow({ instance_id: instanceId })
             ];
 
-            mockQuery.mockResolvedValueOnce(mockRows(mockConnections));
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(2))
+                .mockResolvedValueOnce(mockRows(mockConnections));
 
             const result = await repository.findByInstanceId(instanceId);
 
             expect(mockQuery).toHaveBeenCalledWith(
                 expect.stringContaining("SELECT * FROM flowmaestro.persona_instance_connections"),
-                [instanceId]
+                expect.any(Array)
             );
             expect(mockQuery).toHaveBeenCalledWith(
                 expect.stringContaining("ORDER BY created_at ASC"),
                 expect.any(Array)
             );
-            expect(result).toHaveLength(2);
+            expect(result.connections).toHaveLength(2);
+            expect(result.total).toBe(2);
         });
 
         it("should return empty array when no connections", async () => {
-            mockQuery.mockResolvedValueOnce(mockEmptyResult());
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(0))
+                .mockResolvedValueOnce(mockEmptyResult());
 
             const result = await repository.findByInstanceId("instance-id");
 
-            expect(result).toEqual([]);
+            expect(result.connections).toEqual([]);
+            expect(result.total).toBe(0);
+        });
+
+        it("should support custom limit and offset", async () => {
+            const instanceId = generateId();
+
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(10))
+                .mockResolvedValueOnce(mockRows([]));
+
+            await repository.findByInstanceId(instanceId, { limit: 5, offset: 10 });
+
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("LIMIT $2 OFFSET $3"), [
+                instanceId,
+                5,
+                10
+            ]);
         });
     });
 
@@ -397,11 +420,13 @@ describe("PersonaInstanceConnectionRepository", () => {
                 granted_scopes: JSON.stringify(scopes)
             });
 
-            mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(1))
+                .mockResolvedValueOnce(mockRows([mockRow]));
 
             const result = await repository.findByInstanceId(mockRow.instance_id);
 
-            expect(result[0].granted_scopes).toEqual(scopes);
+            expect(result.connections[0].granted_scopes).toEqual(scopes);
         });
 
         it("should handle granted_scopes as array (already parsed)", async () => {
@@ -411,11 +436,13 @@ describe("PersonaInstanceConnectionRepository", () => {
                 granted_scopes: scopes as unknown as string
             };
 
-            mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(1))
+                .mockResolvedValueOnce(mockRows([mockRow]));
 
             const result = await repository.findByInstanceId(mockRow.instance_id);
 
-            expect(result[0].granted_scopes).toEqual(scopes);
+            expect(result.connections[0].granted_scopes).toEqual(scopes);
         });
 
         it("should convert created_at to Date", async () => {
@@ -424,11 +451,13 @@ describe("PersonaInstanceConnectionRepository", () => {
                 created_at: createdAt
             });
 
-            mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(1))
+                .mockResolvedValueOnce(mockRows([mockRow]));
 
             const result = await repository.findByInstanceId(mockRow.instance_id);
 
-            expect(result[0].created_at).toBeInstanceOf(Date);
+            expect(result.connections[0].created_at).toBeInstanceOf(Date);
         });
 
         it("should handle null/undefined granted_scopes", async () => {
@@ -437,11 +466,13 @@ describe("PersonaInstanceConnectionRepository", () => {
                 granted_scopes: null as unknown as string
             };
 
-            mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(1))
+                .mockResolvedValueOnce(mockRows([mockRow]));
 
             const result = await repository.findByInstanceId(mockRow.instance_id);
 
-            expect(result[0].granted_scopes).toEqual([]);
+            expect(result.connections[0].granted_scopes).toEqual([]);
         });
     });
 });

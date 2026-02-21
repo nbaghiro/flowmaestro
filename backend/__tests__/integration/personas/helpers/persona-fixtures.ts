@@ -244,6 +244,12 @@ export function createPersonaInstanceFixture(
         status: options.status || "initializing",
         max_duration_hours: 2,
         max_cost_credits: 500,
+        credit_threshold_config: {
+            thresholds: [50, 75, 90],
+            pause_at_limit: false,
+            notified_thresholds: []
+        },
+        last_credit_threshold_notified: 0,
         progress: null,
         started_at: options.status !== "initializing" ? now : null,
         completed_at: ["completed", "failed", "cancelled", "timeout"].includes(options.status || "")

@@ -49,6 +49,27 @@ export interface EmitPersonaFailedInput {
     error: string;
 }
 
+export interface EmitCreditThresholdInput {
+    instanceId: string;
+    threshold: number;
+    currentCost: number;
+    maxCost: number;
+    percentage: number;
+}
+
+export interface EmitPersonaPausedInput {
+    instanceId: string;
+    reason: "credit_limit" | "approval_required";
+    message: string;
+}
+
+export interface EmitApprovalExpiringInput {
+    instanceId: string;
+    approvalId: string;
+    expiresAt: string;
+    expiresInSeconds: number;
+}
+
 // ============================================================================
 // Event Activities
 // ============================================================================
@@ -139,5 +160,64 @@ export async function emitPersonaFailed(input: EmitPersonaFailedInput): Promise<
         timestamp: Date.now(),
         instanceId: input.instanceId,
         error: input.error
+    });
+}
+
+/**
+ * Emit event when credit threshold is crossed
+ */
+export async function emitCreditThresholdAlert(input: EmitCreditThresholdInput): Promise<void> {
+    activityLogger.info("Emitting credit threshold alert", {
+        instanceId: input.instanceId,
+        threshold: input.threshold,
+        percentage: input.percentage
+    });
+
+    await redisEventBus.publishJson(`persona:${input.instanceId}:events`, {
+        type: "persona:instance:credit_threshold",
+        timestamp: Date.now(),
+        instanceId: input.instanceId,
+        threshold: input.threshold,
+        current_cost: input.currentCost,
+        max_cost: input.maxCost,
+        percentage: input.percentage
+    });
+}
+
+/**
+ * Emit event when persona is paused
+ */
+export async function emitPersonaPaused(input: EmitPersonaPausedInput): Promise<void> {
+    activityLogger.info("Emitting persona paused event", {
+        instanceId: input.instanceId,
+        reason: input.reason
+    });
+
+    await redisEventBus.publishJson(`persona:${input.instanceId}:events`, {
+        type: "persona:instance:paused",
+        timestamp: Date.now(),
+        instanceId: input.instanceId,
+        reason: input.reason,
+        message: input.message
+    });
+}
+
+/**
+ * Emit event when approval is about to expire
+ */
+export async function emitApprovalExpiring(input: EmitApprovalExpiringInput): Promise<void> {
+    activityLogger.info("Emitting approval expiring event", {
+        instanceId: input.instanceId,
+        approvalId: input.approvalId,
+        expiresInSeconds: input.expiresInSeconds
+    });
+
+    await redisEventBus.publishJson(`persona:${input.instanceId}:events`, {
+        type: "persona:instance:approval_expiring_soon",
+        timestamp: Date.now(),
+        instanceId: input.instanceId,
+        approval_id: input.approvalId,
+        expires_at: input.expiresAt,
+        expires_in_seconds: input.expiresInSeconds
     });
 }

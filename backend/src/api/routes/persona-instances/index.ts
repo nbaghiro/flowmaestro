@@ -25,6 +25,7 @@ import {
     downloadDeliverable,
     deleteDeliverable
 } from "./deliverables";
+import { extendApprovalHandler } from "./extend-approval";
 import { getPersonaInstanceHandler } from "./get";
 import { listPersonaInstancesHandler } from "./list";
 import { sendPersonaInstanceMessageHandler } from "./message";
@@ -72,6 +73,7 @@ export async function personaInstanceRoutes(fastify: FastifyInstance) {
     fastify.get("/:id/approvals", getInstanceApprovalsHandler);
     fastify.post("/:id/approvals/:approvalId/approve", approveActionHandler);
     fastify.post("/:id/approvals/:approvalId/deny", denyActionHandler);
+    fastify.post("/:id/approvals/:approvalId/extend", extendApprovalHandler);
 
     // Real-time streaming
     await fastify.register(streamPersonaInstanceRoute);

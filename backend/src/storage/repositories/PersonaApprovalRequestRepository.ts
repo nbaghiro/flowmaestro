@@ -212,6 +212,93 @@ export class PersonaApprovalRequestRepository {
     }
 
     /**
+     * Find pending approvals that are expiring soon (for sending warnings)
+     * Returns approvals that:
+     * - Have status 'pending'
+     * - Have an expires_at that is within the warning window
+     * - Have not yet been warned (warning_sent_at is null)
+     */
+    async findExpiringSoon(
+        warningWindowMs: number
+    ): Promise<Array<PersonaApprovalRequestModel & { instance_workspace_id: string }>> {
+        const warningThreshold = new Date(Date.now() + warningWindowMs);
+
+        const result = await db.query<PersonaApprovalRequestRow & { workspace_id: string }>(
+            `SELECT par.*, pi.workspace_id
+             FROM flowmaestro.persona_approval_requests par
+             JOIN flowmaestro.persona_instances pi ON par.instance_id = pi.id
+             WHERE par.status = 'pending'
+             AND par.expires_at IS NOT NULL
+             AND par.expires_at <= $1
+             AND par.warning_sent_at IS NULL
+             ORDER BY par.expires_at ASC`,
+            [warningThreshold]
+        );
+
+        return result.rows.map((row) => ({
+            ...mapRow(row),
+            instance_workspace_id: row.workspace_id
+        }));
+    }
+
+    /**
+     * Mark an approval request as warned (warning sent)
+     */
+    async markWarned(id: string): Promise<boolean> {
+        const result = await db.query(
+            `UPDATE flowmaestro.persona_approval_requests
+             SET warning_sent_at = CURRENT_TIMESTAMP
+             WHERE id = $1 AND status = 'pending'`,
+            [id]
+        );
+
+        return (result.rowCount ?? 0) > 0;
+    }
+
+    /**
+     * Extend the expiration date of an approval request
+     * Only works for pending approvals
+     */
+    async extendExpiration(
+        id: string,
+        newExpiresAt: Date
+    ): Promise<PersonaApprovalRequestModel | null> {
+        const result = await db.query<PersonaApprovalRequestRow>(
+            `UPDATE flowmaestro.persona_approval_requests
+             SET expires_at = $2,
+                 warning_sent_at = NULL
+             WHERE id = $1 AND status = 'pending'
+             RETURNING *`,
+            [id, newExpiresAt]
+        );
+
+        return result.rows[0] ? mapRow(result.rows[0]) : null;
+    }
+
+    /**
+     * Find all expired pending approvals (for the scheduler to process)
+     */
+    async findExpiredPending(): Promise<
+        Array<PersonaApprovalRequestModel & { instance_workspace_id: string }>
+    > {
+        const result = await db.query<PersonaApprovalRequestRow & { workspace_id: string }>(
+            `SELECT par.*, pi.workspace_id
+             FROM flowmaestro.persona_approval_requests par
+             JOIN flowmaestro.persona_instances pi ON par.instance_id = pi.id
+             WHERE par.status = 'pending'
+             AND par.expires_at IS NOT NULL
+             AND par.expires_at < CURRENT_TIMESTAMP
+             ORDER BY par.expires_at ASC`,
+            []
+        );
+
+        return result.rows.map((row) => ({
+            ...mapRow(row),
+            instance_workspace_id: row.workspace_id
+        }));
+    }
+
+    /**
      * Cancel all pending approvals for an instance
      * Called when instance is cancelled
      */

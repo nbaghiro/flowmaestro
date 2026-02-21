@@ -15,7 +15,7 @@
  * ```
  */
 
-import type { DeliverableType } from "@flowmaestro/shared";
+import type { DeliverableType, PersonaProgressStep, ProgressStepStatus } from "@flowmaestro/shared";
 
 // =============================================================================
 // Signal Type Definitions
@@ -343,4 +343,240 @@ export function hasClarificationCompleteSignal(
         (s): s is ClarificationCompleteSignal => s.type === "clarification_complete" && s.ready
     );
     return clarificationSignal || null;
+}
+
+// =============================================================================
+// SOP Step Progress Tracking
+// =============================================================================
+
+/**
+ * Initialize progress steps from SOP step titles
+ *
+ * @param sopSteps - Array of SOP step titles from the persona definition
+ * @returns Array of PersonaProgressStep in pending status
+ */
+export function initializeProgressSteps(sopSteps: string[]): PersonaProgressStep[] {
+    return sopSteps.map((title, index) => ({
+        index,
+        title,
+        status: "pending" as ProgressStepStatus,
+        started_at: null,
+        completed_at: null
+    }));
+}
+
+/**
+ * Calculate string similarity using Levenshtein distance ratio
+ * Returns a value between 0 (no match) and 1 (exact match)
+ */
+function stringSimilarity(a: string, b: string): number {
+    const aLower = a.toLowerCase().trim();
+    const bLower = b.toLowerCase().trim();
+
+    if (aLower === bLower) return 1;
+
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= aLower.length; i++) {
+        matrix[i] = [i];
+    }
+    for (let j = 0; j <= bLower.length; j++) {
+        matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= aLower.length; i++) {
+        for (let j = 1; j <= bLower.length; j++) {
+            if (aLower[i - 1] === bLower[j - 1]) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1, // substitution
+                    matrix[i][j - 1] + 1, // insertion
+                    matrix[i - 1][j] + 1 // deletion
+                );
+            }
+        }
+    }
+
+    const maxLength = Math.max(aLower.length, bLower.length);
+    if (maxLength === 0) return 1;
+
+    return 1 - matrix[aLower.length][bLower.length] / maxLength;
+}
+
+/**
+ * Check if a string contains keywords from another string
+ * Returns true if there's significant keyword overlap
+ */
+function hasKeywordOverlap(signalStep: string, sopStep: string): boolean {
+    const signalWords = new Set(
+        signalStep
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((w) => w.length > 2)
+    );
+    const sopWords = sopStep
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 2);
+
+    let matches = 0;
+    for (const word of sopWords) {
+        if (signalWords.has(word)) {
+            matches++;
+        }
+    }
+
+    // At least 50% of meaningful words should match
+    return sopWords.length > 0 && matches / sopWords.length >= 0.5;
+}
+
+/**
+ * Match a progress signal step name to the closest SOP step
+ *
+ * Uses fuzzy matching to find the best match between the LLM-provided step name
+ * and the defined SOP steps.
+ *
+ * @param signalStep - Current step name from the progress signal
+ * @param sopSteps - Array of SOP step titles from the persona definition
+ * @returns Index of the best matching SOP step, or -1 if no good match
+ */
+export function matchProgressToSopStep(signalStep: string, sopSteps: string[]): number {
+    if (!signalStep || sopSteps.length === 0) {
+        return -1;
+    }
+
+    let bestMatch = -1;
+    let bestScore = 0.4; // Minimum threshold for a match
+
+    for (let i = 0; i < sopSteps.length; i++) {
+        // Try exact substring match first
+        if (
+            sopSteps[i].toLowerCase().includes(signalStep.toLowerCase()) ||
+            signalStep.toLowerCase().includes(sopSteps[i].toLowerCase())
+        ) {
+            return i;
+        }
+
+        // Try fuzzy matching
+        const similarity = stringSimilarity(signalStep, sopSteps[i]);
+        if (similarity > bestScore) {
+            bestScore = similarity;
+            bestMatch = i;
+        }
+
+        // Try keyword overlap
+        if (hasKeywordOverlap(signalStep, sopSteps[i]) && bestMatch !== i) {
+            // Keyword overlap is a strong indicator, boost the score
+            if (similarity + 0.2 > bestScore) {
+                bestScore = similarity + 0.2;
+                bestMatch = i;
+            }
+        }
+    }
+
+    return bestMatch;
+}
+
+/**
+ * Update step statuses based on a progress signal
+ *
+ * When a progress signal is received:
+ * - The current step is marked as in_progress
+ * - All previous steps that were pending or in_progress are marked as completed
+ * - Completed steps from the signal are also marked as completed
+ *
+ * @param currentSteps - Current array of PersonaProgressStep
+ * @param progressSignal - Progress signal from the LLM
+ * @param sopSteps - Array of SOP step titles for matching
+ * @returns Updated array of PersonaProgressStep
+ */
+export function updateStepStatuses(
+    currentSteps: PersonaProgressStep[],
+    progressSignal: ProgressSignal,
+    sopSteps: string[]
+): PersonaProgressStep[] {
+    const now = new Date().toISOString();
+    const steps = currentSteps.map((s) => ({ ...s })); // Deep copy
+
+    // Find the current step index
+    const currentStepIndex = matchProgressToSopStep(progressSignal.current_step, sopSteps);
+
+    // Mark completed steps from the signal
+    if (progressSignal.completed_steps) {
+        for (const completedStep of progressSignal.completed_steps) {
+            const index = matchProgressToSopStep(completedStep, sopSteps);
+            if (index >= 0 && index < steps.length) {
+                if (steps[index].status !== "completed") {
+                    steps[index].status = "completed";
+                    steps[index].completed_at = steps[index].completed_at || now;
+                    if (!steps[index].started_at) {
+                        steps[index].started_at = now; // Set start time if not set
+                    }
+                }
+            }
+        }
+    }
+
+    // If we found a matching current step
+    if (currentStepIndex >= 0 && currentStepIndex < steps.length) {
+        // Mark all previous steps as completed if they're still pending/in_progress
+        for (let i = 0; i < currentStepIndex; i++) {
+            if (steps[i].status === "pending" || steps[i].status === "in_progress") {
+                steps[i].status = "completed";
+                steps[i].completed_at = steps[i].completed_at || now;
+                if (!steps[i].started_at) {
+                    steps[i].started_at = now;
+                }
+            }
+        }
+
+        // Mark current step as in_progress
+        if (steps[currentStepIndex].status === "pending") {
+            steps[currentStepIndex].status = "in_progress";
+            steps[currentStepIndex].started_at = steps[currentStepIndex].started_at || now;
+        }
+    }
+
+    return steps;
+}
+
+/**
+ * Mark all remaining steps as completed when the task finishes
+ *
+ * @param currentSteps - Current array of PersonaProgressStep
+ * @returns Updated array with all steps completed
+ */
+export function completeAllSteps(currentSteps: PersonaProgressStep[]): PersonaProgressStep[] {
+    const now = new Date().toISOString();
+
+    return currentSteps.map((step) => {
+        if (step.status === "pending" || step.status === "in_progress") {
+            return {
+                ...step,
+                status: "completed" as ProgressStepStatus,
+                started_at: step.started_at || now,
+                completed_at: now
+            };
+        }
+        return step;
+    });
+}
+
+/**
+ * Calculate overall progress percentage from step statuses
+ *
+ * @param steps - Array of PersonaProgressStep
+ * @returns Percentage (0-100) of completed steps
+ */
+export function calculateStepProgress(steps: PersonaProgressStep[]): number {
+    if (steps.length === 0) return 0;
+
+    const completedCount = steps.filter((s) => s.status === "completed").length;
+    const inProgressCount = steps.filter((s) => s.status === "in_progress").length;
+
+    // Count in_progress steps as half complete
+    const effectiveComplete = completedCount + inProgressCount * 0.5;
+
+    return Math.round((effectiveComplete / steps.length) * 100);
 }

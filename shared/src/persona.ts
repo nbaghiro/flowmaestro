@@ -41,7 +41,8 @@ export type InputFieldType =
     | "multiselect"
     | "tags"
     | "number"
-    | "checkbox";
+    | "checkbox"
+    | "file";
 
 /**
  * Option for select/multiselect fields
@@ -69,6 +70,10 @@ export interface PersonaInputField {
         min_length?: number;
         max_length?: number;
         pattern?: string;
+        // File-specific validation
+        allowed_extensions?: string[];
+        max_file_size_bytes?: number;
+        max_files?: number;
     };
 }
 
@@ -286,12 +291,43 @@ export interface PersonaNotificationConfig {
 }
 
 /**
+ * File upload reference in additional context
+ */
+export interface PersonaFileUpload {
+    gcs_uri: string;
+    filename: string;
+    file_type: string;
+    file_size_bytes?: number;
+}
+
+/**
  * Additional context that can be provided when launching a persona task
  */
 export interface PersonaAdditionalContext {
     files?: string[];
     knowledge_bases?: string[];
-    [key: string]: string[] | string | number | boolean | undefined;
+    // File uploads by field name (e.g., { "design_files": [...], "reference_docs": [...] })
+    file_uploads?: Record<string, PersonaFileUpload[]>;
+    [key: string]:
+        | string[]
+        | string
+        | number
+        | boolean
+        | PersonaFileUpload[]
+        | Record<string, PersonaFileUpload[]>
+        | undefined;
+}
+
+/**
+ * Credit threshold configuration for a persona instance
+ */
+export interface PersonaCreditThresholdConfig {
+    /** Percentage thresholds at which to send alerts (e.g., [50, 75, 90]) */
+    thresholds: number[];
+    /** Whether to pause execution when the credit limit is reached (vs. hard fail) */
+    pause_at_limit: boolean;
+    /** Thresholds that have already been notified (to avoid duplicate alerts) */
+    notified_thresholds: number[];
 }
 
 /**
@@ -416,6 +452,7 @@ export interface PersonaInstance {
     // Configuration
     max_duration_hours: number | null;
     max_cost_credits: number | null;
+    credit_threshold_config: PersonaCreditThresholdConfig;
 
     // Progress Tracking
     progress: PersonaInstanceProgress | null;
@@ -569,9 +606,12 @@ export type PersonaWebSocketEventType =
     | "persona:instance:progress"
     | "persona:instance:approval_needed"
     | "persona:instance:approval_resolved"
+    | "persona:instance:approval_expiring_soon"
     | "persona:instance:completed"
     | "persona:instance:failed"
-    | "persona:instance:message";
+    | "persona:instance:message"
+    | "persona:instance:credit_threshold"
+    | "persona:instance:paused";
 
 /**
  * Base persona WebSocket event
@@ -649,6 +689,36 @@ export interface PersonaInstanceMessageEvent extends PersonaWebSocketEventBase {
 }
 
 /**
+ * Persona instance credit threshold reached event
+ */
+export interface PersonaInstanceCreditThresholdEvent extends PersonaWebSocketEventBase {
+    type: "persona:instance:credit_threshold";
+    threshold: number;
+    current_cost: number;
+    max_cost: number;
+    percentage: number;
+}
+
+/**
+ * Persona instance paused event (when pause_at_limit is true)
+ */
+export interface PersonaInstancePausedEvent extends PersonaWebSocketEventBase {
+    type: "persona:instance:paused";
+    reason: "credit_limit" | "approval_required";
+    message: string;
+}
+
+/**
+ * Persona instance approval expiring soon event
+ */
+export interface PersonaInstanceApprovalExpiringEvent extends PersonaWebSocketEventBase {
+    type: "persona:instance:approval_expiring_soon";
+    approval_id: string;
+    expires_at: string;
+    expires_in_seconds: number;
+}
+
+/**
  * Union type of all persona WebSocket events
  */
 export type PersonaWebSocketEvent =
@@ -657,9 +727,12 @@ export type PersonaWebSocketEvent =
     | PersonaInstanceProgressEvent
     | PersonaInstanceApprovalNeededEvent
     | PersonaInstanceApprovalResolvedEvent
+    | PersonaInstanceApprovalExpiringEvent
     | PersonaInstanceCompletedEvent
     | PersonaInstanceFailedEvent
-    | PersonaInstanceMessageEvent;
+    | PersonaInstanceMessageEvent
+    | PersonaInstanceCreditThresholdEvent
+    | PersonaInstancePausedEvent;
 
 // ============================================================================
 // PERSONA TASK TEMPLATE TYPES

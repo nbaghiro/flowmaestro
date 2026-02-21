@@ -358,7 +358,12 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
                       .filter(([_, v]) => typeof v === "string")
                       .map(([k, v]) => [k, v as string])
               )
-            : undefined
+            : undefined,
+        // Credit threshold configuration for alerts
+        credit_threshold_config: instance.credit_threshold_config,
+        last_credit_threshold_notified: instance.last_credit_threshold_notified,
+        // SOP steps for progress tracking
+        sop_steps: persona.sop_steps
     };
 
     activityLogger.info("Persona config built successfully", {

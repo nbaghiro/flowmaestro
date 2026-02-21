@@ -38,12 +38,28 @@ export {
     emitPersonaDeliverable,
     emitPersonaCompleted,
     emitPersonaFailed,
+    emitCreditThresholdAlert,
+    emitPersonaPaused,
+    emitApprovalExpiring,
     type EmitPersonaStartedInput,
     type EmitPersonaProgressInput,
     type EmitPersonaDeliverableInput,
     type EmitPersonaCompletedInput,
-    type EmitPersonaFailedInput
+    type EmitPersonaFailedInput,
+    type EmitCreditThresholdInput,
+    type EmitPersonaPausedInput,
+    type EmitApprovalExpiringInput
 } from "./events";
+
+// Credit threshold management
+export {
+    checkCreditThreshold,
+    updateThresholdNotified,
+    resetThresholdNotifications,
+    type CheckCreditThresholdInput,
+    type CheckCreditThresholdResult,
+    type UpdateThresholdNotifiedInput
+} from "./credit-threshold";
 
 // Approval handling
 export {

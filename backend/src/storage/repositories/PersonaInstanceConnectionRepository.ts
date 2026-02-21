@@ -69,17 +69,39 @@ export class PersonaInstanceConnectionRepository {
     }
 
     /**
-     * Find all connections for an instance
+     * Find all connections for an instance with pagination
      */
-    async findByInstanceId(instanceId: string): Promise<PersonaInstanceConnectionModel[]> {
+    async findByInstanceId(
+        instanceId: string,
+        options: { limit?: number; offset?: number } = {}
+    ): Promise<{ connections: PersonaInstanceConnectionModel[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.persona_instance_connections
+            WHERE instance_id = $1
+        `;
+
         const query = `
             SELECT * FROM flowmaestro.persona_instance_connections
             WHERE instance_id = $1
             ORDER BY created_at ASC
+            LIMIT $2 OFFSET $3
         `;
 
-        const result = await db.query(query, [instanceId]);
-        return result.rows.map((row) => this.mapRow(row as PersonaInstanceConnectionRow));
+        const [countResult, connectionsResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, [instanceId]),
+            db.query(query, [instanceId, limit, offset])
+        ]);
+
+        return {
+            connections: connectionsResult.rows.map((row) =>
+                this.mapRow(row as PersonaInstanceConnectionRow)
+            ),
+            total: parseInt(countResult.rows[0].count)
+        };
     }
 
     /**

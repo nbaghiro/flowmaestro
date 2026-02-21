@@ -1,7 +1,8 @@
 import type {
     PersonaCategory,
     PersonaStructuredInputs,
-    PersonaInstanceProgress
+    PersonaInstanceProgress,
+    PersonaCreditThresholdConfig
 } from "@flowmaestro/shared";
 import { db } from "../database";
 import type {
@@ -35,6 +36,8 @@ interface PersonaInstanceRow {
     status: string;
     max_duration_hours: number | string | null;
     max_cost_credits: number | string | null;
+    credit_threshold_config: PersonaCreditThresholdConfig | string;
+    last_credit_threshold_notified: number | string;
     progress: PersonaInstanceProgress | string | null;
     started_at: string | Date | null;
     completed_at: string | Date | null;
@@ -82,17 +85,24 @@ export class PersonaInstanceRepository {
             ...input.notification_config
         };
 
+        const defaultCreditThresholdConfig: PersonaCreditThresholdConfig = {
+            thresholds: [50, 75, 90],
+            pause_at_limit: false,
+            notified_thresholds: []
+        };
+
         const query = `
             INSERT INTO flowmaestro.persona_instances (
                 persona_definition_id, user_id, workspace_id,
                 task_title, task_description, additional_context,
                 structured_inputs,
-                max_duration_hours, max_cost_credits, notification_config,
+                max_duration_hours, max_cost_credits, credit_threshold_config,
+                notification_config,
                 template_id, template_variables,
                 parent_instance_id, continuation_count,
                 clarification_max_exchanges, clarification_skipped
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
             RETURNING *
         `;
 
@@ -106,6 +116,7 @@ export class PersonaInstanceRepository {
             JSON.stringify(input.structured_inputs || {}),
             input.max_duration_hours || null,
             input.max_cost_credits || null,
+            JSON.stringify(input.credit_threshold_config || defaultCreditThresholdConfig),
             JSON.stringify(defaultNotificationConfig),
             input.template_id || null,
             JSON.stringify(input.template_variables || {}),
@@ -390,6 +401,16 @@ export class PersonaInstanceRepository {
             values.push(input.max_cost_credits);
         }
 
+        if (input.credit_threshold_config !== undefined) {
+            updates.push(`credit_threshold_config = $${paramIndex++}`);
+            values.push(JSON.stringify(input.credit_threshold_config));
+        }
+
+        if (input.last_credit_threshold_notified !== undefined) {
+            updates.push(`last_credit_threshold_notified = $${paramIndex++}`);
+            values.push(input.last_credit_threshold_notified);
+        }
+
         if (input.progress !== undefined) {
             updates.push(`progress = $${paramIndex++}`);
             values.push(JSON.stringify(input.progress));
@@ -656,6 +677,18 @@ export class PersonaInstanceRepository {
                         ? parseInt(row.max_cost_credits)
                         : row.max_cost_credits
                     : null,
+            credit_threshold_config:
+                typeof row.credit_threshold_config === "string"
+                    ? JSON.parse(row.credit_threshold_config)
+                    : row.credit_threshold_config || {
+                          thresholds: [50, 75, 90],
+                          pause_at_limit: false,
+                          notified_thresholds: []
+                      },
+            last_credit_threshold_notified:
+                typeof row.last_credit_threshold_notified === "string"
+                    ? parseInt(row.last_credit_threshold_notified)
+                    : row.last_credit_threshold_notified || 0,
             progress:
                 row.progress !== null
                     ? typeof row.progress === "string"

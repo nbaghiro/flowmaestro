@@ -1,7 +1,8 @@
 import type {
     PersonaCategory,
     PersonaStructuredInputs,
-    PersonaInstanceProgress
+    PersonaInstanceProgress,
+    PersonaCreditThresholdConfig
 } from "@flowmaestro/shared";
 
 /**
@@ -80,6 +81,8 @@ export interface PersonaInstanceModel {
     // Configuration
     max_duration_hours: number | null;
     max_cost_credits: number | null;
+    credit_threshold_config: PersonaCreditThresholdConfig;
+    last_credit_threshold_notified: number;
 
     // Progress Tracking (v2)
     progress: PersonaInstanceProgress | null;
@@ -176,6 +179,7 @@ export interface CreatePersonaInstanceInput {
     additional_context?: PersonaAdditionalContext;
     max_duration_hours?: number;
     max_cost_credits?: number;
+    credit_threshold_config?: PersonaCreditThresholdConfig;
     notification_config?: Partial<PersonaNotificationConfig>;
     // Template tracking
     template_id?: string;
@@ -201,6 +205,8 @@ export interface UpdatePersonaInstanceInput {
     status?: PersonaInstanceStatus;
     max_duration_hours?: number;
     max_cost_credits?: number;
+    credit_threshold_config?: PersonaCreditThresholdConfig;
+    last_credit_threshold_notified?: number;
     // Progress tracking (v2)
     progress?: PersonaInstanceProgress;
     started_at?: Date;

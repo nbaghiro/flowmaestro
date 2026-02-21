@@ -128,6 +128,15 @@ export interface AgentConfig {
     // Autonomy settings for approval flow
     autonomy_level?: "full_auto" | "approve_high_risk" | "approve_all";
     tool_risk_overrides?: Record<string, string>;
+    // Credit threshold configuration for alerts
+    credit_threshold_config?: {
+        thresholds: number[];
+        pause_at_limit: boolean;
+        notified_thresholds: number[];
+    };
+    last_credit_threshold_notified?: number;
+    // SOP steps for progress tracking
+    sop_steps?: string[];
 }
 
 export interface LLMResponse {

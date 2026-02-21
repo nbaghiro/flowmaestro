@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
+import type { PersonaCreditThresholdConfig } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../core/logging";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
@@ -10,6 +11,10 @@ import { PersonaTaskTemplateRepository } from "../../../storage/repositories/Per
 import { ThreadRepository } from "../../../storage/repositories/ThreadRepository";
 import { getTemporalClient } from "../../../temporal/client";
 import { BadRequestError, NotFoundError } from "../../middleware";
+import {
+    validateStructuredInputs,
+    applyInputDefaults
+} from "../../schemas/persona-input-validator";
 import type { PersonaAdditionalContext } from "../../../storage/models/PersonaInstance";
 
 const logger = createServiceLogger("PersonaInstances");
@@ -19,10 +24,18 @@ const connectionGrantSchema = z.object({
     scopes: z.array(z.string()).optional()
 });
 
+const creditThresholdConfigSchema = z.object({
+    thresholds: z.array(z.number().min(0).max(100)).default([50, 75, 90]),
+    pause_at_limit: z.boolean().default(false),
+    notified_thresholds: z.array(z.number()).default([])
+});
+
 const createPersonaInstanceSchema = z.object({
     persona_slug: z.string().min(1),
     task_description: z.string().min(1).max(10000),
     task_title: z.string().max(255).optional(),
+    // Structured inputs based on persona's input_fields
+    structured_inputs: z.record(z.any()).optional(),
     additional_context: z
         .object({
             files: z.array(z.string()).optional(),
@@ -32,6 +45,8 @@ const createPersonaInstanceSchema = z.object({
         .optional(),
     max_duration_hours: z.number().positive().max(24).optional(),
     max_cost_credits: z.number().positive().max(10000).optional(),
+    // Credit threshold configuration
+    credit_threshold_config: creditThresholdConfigSchema.optional(),
     notification_config: z
         .object({
             on_approval_needed: z.boolean().optional(),
@@ -74,6 +89,35 @@ export async function createPersonaInstanceHandler(
         throw new NotFoundError(`Persona "${body.persona_slug}" not found`);
     }
 
+    // Validate structured inputs against persona's input_fields definition
+    if (persona.input_fields && persona.input_fields.length > 0) {
+        const validationResult = validateStructuredInputs(
+            persona.input_fields,
+            body.structured_inputs
+        );
+
+        if (!validationResult.success) {
+            const errorMessages = validationResult
+                .errors!.map((e) => `${e.path}: ${e.message}`)
+                .join("; ");
+            throw new BadRequestError(`Invalid structured inputs: ${errorMessages}`);
+        }
+    }
+
+    // Apply default values to structured inputs
+    const structuredInputsWithDefaults = persona.input_fields
+        ? applyInputDefaults(persona.input_fields, body.structured_inputs)
+        : body.structured_inputs;
+
+    // Build default credit threshold config if not provided
+    const defaultCreditThresholdConfig: PersonaCreditThresholdConfig = {
+        thresholds: [50, 75, 90],
+        pause_at_limit: false,
+        notified_thresholds: []
+    };
+
+    const creditThresholdConfig = body.credit_threshold_config || defaultCreditThresholdConfig;
+
     // Create persona instance
     const instanceRepo = new PersonaInstanceRepository();
     const instance = await instanceRepo.create({
@@ -82,9 +126,11 @@ export async function createPersonaInstanceHandler(
         workspace_id: workspaceId,
         task_description: body.task_description,
         task_title: body.task_title,
+        structured_inputs: structuredInputsWithDefaults,
         additional_context: body.additional_context as PersonaAdditionalContext | undefined,
         max_duration_hours: body.max_duration_hours || persona.default_max_duration_hours,
         max_cost_credits: body.max_cost_credits || persona.default_max_cost_credits,
+        credit_threshold_config: creditThresholdConfig,
         notification_config: body.notification_config,
         template_id: body.template_id,
         template_variables: body.template_variables,
