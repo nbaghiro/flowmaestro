@@ -6,7 +6,7 @@
 
 import { readFile } from "fs/promises";
 import { z } from "zod";
-import { createServiceLogger } from "../../core/logging";
+import { createServiceLogger } from "../../../core/logging";
 import type { BuiltInTool, ToolExecutionContext, ToolExecutionResult } from "../types";
 
 /**

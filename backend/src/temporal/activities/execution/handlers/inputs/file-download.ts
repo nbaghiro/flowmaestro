@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { fileDownloadTool } from "../../../../../tools/builtin/file-download";
+import { fileDownloadTool } from "../../../../../services/tools/builtin/file-download";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     FileDownloadNodeConfigSchema,
@@ -13,7 +13,7 @@ import {
     type FileDownloadNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
-import type { ToolExecutionContext } from "../../../../../tools/types";
+import type { ToolExecutionContext } from "../../../../../services/tools/types";
 
 const logger = createActivityLogger({ nodeType: "FileDownload" });
 

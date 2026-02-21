@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { screenshotCaptureTool } from "../../../../../tools/builtin/screenshot-capture";
+import { screenshotCaptureTool } from "../../../../../services/tools/builtin/screenshot-capture";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     ScreenshotCaptureNodeConfigSchema,
@@ -13,7 +13,7 @@ import {
     type ScreenshotCaptureNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
-import type { ToolExecutionContext } from "../../../../../tools/types";
+import type { ToolExecutionContext } from "../../../../../services/tools/types";
 
 const logger = createActivityLogger({ nodeType: "ScreenshotCapture" });
 

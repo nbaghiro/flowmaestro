@@ -1,6 +1,6 @@
 import { authMiddleware } from "../../middleware/auth";
 import { listBuiltInToolsHandler } from "./list-builtin";
-import type { ToolCategory } from "../../../tools";
+import type { ToolCategory } from "../../../services/tools";
 import type { FastifyInstance } from "fastify";
 
 /**

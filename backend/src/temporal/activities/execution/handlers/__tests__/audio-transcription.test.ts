@@ -7,7 +7,7 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../tools/builtin/audio-transcribe", () => ({
+jest.mock("../../../../../services/tools/builtin/audio-transcribe", () => ({
     audioTranscribeTool: {
         execute: mockExecute
     }

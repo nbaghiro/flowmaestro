@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { webSearchTool } from "../../../../../tools/builtin/web-search";
+import { webSearchTool } from "../../../../../services/tools/builtin/web-search";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     WebSearchNodeConfigSchema,
@@ -13,7 +13,7 @@ import {
     type WebSearchNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
-import type { ToolExecutionContext } from "../../../../../tools/types";
+import type { ToolExecutionContext } from "../../../../../services/tools/types";
 
 const logger = createActivityLogger({ nodeType: "WebSearch" });
 

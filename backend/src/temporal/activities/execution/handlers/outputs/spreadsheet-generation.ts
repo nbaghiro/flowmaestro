@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { spreadsheetGenerateTool } from "../../../../../tools/builtin/spreadsheet-generate";
+import { spreadsheetGenerateTool } from "../../../../../services/tools/builtin/spreadsheet-generate";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     SpreadsheetGenerationNodeConfigSchema,
@@ -13,7 +13,7 @@ import {
     type SpreadsheetGenerationNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
-import type { ToolExecutionContext } from "../../../../../tools/types";
+import type { ToolExecutionContext } from "../../../../../services/tools/types";
 
 const logger = createActivityLogger({ nodeType: "SpreadsheetGeneration" });
 

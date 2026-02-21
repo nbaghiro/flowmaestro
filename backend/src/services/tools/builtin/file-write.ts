@@ -1,16 +1,16 @@
 /**
- * File Read Tool
+ * File Write Tool
  *
- * Reads files from the execution workspace (temp directory)
+ * Writes files to the execution workspace (temp directory)
  */
 
-import { readFile, stat, access, mkdir } from "fs/promises";
-import { join, resolve, normalize } from "path";
+import { writeFile, mkdir, access, stat } from "fs/promises";
+import { join, resolve, normalize, dirname } from "path";
 import { z } from "zod";
-import { createServiceLogger } from "../../core/logging";
+import { createServiceLogger } from "../../../core/logging";
 import type { BuiltInTool, ToolExecutionContext, ToolExecutionResult } from "../types";
 
-const logger = createServiceLogger("FileReadTool");
+const logger = createServiceLogger("FileWriteTool");
 
 /**
  * Base workspace directory for file operations
@@ -44,36 +44,39 @@ function isPathWithinWorkspace(workspaceDir: string, requestedPath: string): boo
 }
 
 /**
- * Input schema for file read
+ * Input schema for file write
  */
-export const fileReadInputSchema = z.object({
-    path: z.string().min(1).max(500).describe("Path to the file to read (relative to workspace)"),
-    encoding: z.enum(["utf-8", "base64", "binary"]).default("utf-8").describe("File encoding"),
-    maxSize: z
-        .number()
-        .int()
+export const fileWriteInputSchema = z.object({
+    path: z
+        .string()
         .min(1)
-        .max(10000000) // 10MB max
-        .default(1000000) // 1MB default
-        .describe("Maximum file size in bytes")
+        .max(500)
+        .describe("Path where to write the file (relative to workspace)"),
+    content: z.string().max(10000000).describe("Content to write to the file"), // 10MB max
+    encoding: z.enum(["utf-8", "base64"]).default("utf-8").describe("File encoding"),
+    createDirectories: z
+        .boolean()
+        .default(true)
+        .describe("Create parent directories if they don't exist"),
+    overwrite: z.boolean().default(true).describe("Overwrite file if it exists")
 });
 
-export type FileReadInput = z.infer<typeof fileReadInputSchema>;
+export type FileWriteInput = z.infer<typeof fileWriteInputSchema>;
 
 /**
- * File read result
+ * File write result
  */
-export interface FileReadOutput {
+export interface FileWriteOutput {
     path: string;
-    content: string;
-    encoding: string;
+    fullPath: string;
     size: number;
+    created: boolean;
 }
 
 /**
- * Execute file read
+ * Execute file write
  */
-async function executeFileRead(
+async function executeFileWrite(
     params: Record<string, unknown>,
     context: ToolExecutionContext
 ): Promise<ToolExecutionResult> {
@@ -81,7 +84,7 @@ async function executeFileRead(
 
     try {
         // Validate input
-        const input = fileReadInputSchema.parse(params);
+        const input = fileWriteInputSchema.parse(params);
 
         // Get workspace directory
         const workspaceDir = await getWorkspaceDir(context.traceId);
@@ -89,10 +92,11 @@ async function executeFileRead(
         logger.info(
             {
                 path: input.path,
+                contentLength: input.content.length,
                 workspaceDir,
                 traceId: context.traceId
             },
-            "Reading file from workspace"
+            "Writing file to workspace"
         );
 
         // Normalize the path (remove leading slashes for relative path)
@@ -134,15 +138,21 @@ async function executeFileRead(
 
         const fullPath = join(workspaceDir, relativePath);
 
-        // Check if file exists
+        // Check if file exists and overwrite is false
+        let fileExists = false;
         try {
             await access(fullPath);
+            fileExists = true;
         } catch {
+            // File doesn't exist, which is fine
+        }
+
+        if (fileExists && !input.overwrite) {
             return {
                 success: false,
                 error: {
-                    message: `File not found: ${input.path}`,
-                    code: "FILE_NOT_FOUND",
+                    message: `File already exists: ${input.path}. Set overwrite: true to replace it.`,
+                    code: "FILE_EXISTS",
                     retryable: false
                 },
                 metadata: {
@@ -151,48 +161,41 @@ async function executeFileRead(
             };
         }
 
-        // Check file size
-        const stats = await stat(fullPath);
-        if (stats.size > input.maxSize) {
-            return {
-                success: false,
-                error: {
-                    message: `File too large: ${stats.size} bytes (max: ${input.maxSize} bytes)`,
-                    code: "FILE_TOO_LARGE",
-                    retryable: false
-                },
-                metadata: {
-                    durationMs: Date.now() - startTime
-                }
-            };
+        // Create parent directories if needed
+        if (input.createDirectories) {
+            const parentDir = dirname(fullPath);
+            await mkdir(parentDir, { recursive: true });
         }
 
-        // Read the file
-        let content: string;
+        // Convert content if base64 encoded
+        let contentToWrite: string | Buffer;
         if (input.encoding === "base64") {
-            const buffer = await readFile(fullPath);
-            content = buffer.toString("base64");
-        } else if (input.encoding === "binary") {
-            const buffer = await readFile(fullPath);
-            content = buffer.toString("binary");
+            contentToWrite = Buffer.from(input.content, "base64");
         } else {
-            content = await readFile(fullPath, "utf-8");
+            contentToWrite = input.content;
         }
 
-        const output: FileReadOutput = {
+        // Write the file
+        await writeFile(fullPath, contentToWrite);
+
+        // Get final file stats
+        const stats = await stat(fullPath);
+
+        const output: FileWriteOutput = {
             path: input.path,
-            content,
-            encoding: input.encoding,
-            size: stats.size
+            fullPath,
+            size: stats.size,
+            created: !fileExists
         };
 
         logger.info(
             {
                 path: input.path,
                 size: stats.size,
+                created: output.created,
                 traceId: context.traceId
             },
-            "File read successfully"
+            "File written successfully"
         );
 
         return {
@@ -200,16 +203,16 @@ async function executeFileRead(
             data: output,
             metadata: {
                 durationMs: Date.now() - startTime,
-                creditCost: 0 // File reads are free
+                creditCost: 0 // File writes are free within workspace
             }
         };
     } catch (error) {
-        logger.error({ err: error, traceId: context.traceId }, "File read failed");
+        logger.error({ err: error, traceId: context.traceId }, "File write failed");
 
         return {
             success: false,
             error: {
-                message: error instanceof Error ? error.message : "File read failed",
+                message: error instanceof Error ? error.message : "File write failed",
                 retryable: false
             },
             metadata: {
@@ -220,43 +223,51 @@ async function executeFileRead(
 }
 
 /**
- * File Read Tool Definition
+ * File Write Tool Definition
  */
-export const fileReadTool: BuiltInTool = {
-    name: "file_read",
-    displayName: "Read File",
+export const fileWriteTool: BuiltInTool = {
+    name: "file_write",
+    displayName: "Write File",
     description:
-        "Read a file from the execution workspace. Use this to read code files, data files, or any other files that have been created or downloaded during execution. Paths are relative to the workspace directory.",
+        "Write content to a file in the execution workspace. Use this to save code, data, reports, or any other files. Paths are relative to the workspace directory.",
     category: "file",
-    riskLevel: "low",
+    riskLevel: "medium",
     inputSchema: {
         type: "object",
         properties: {
             path: {
                 type: "string",
-                description: "Path to the file to read (relative to workspace)",
+                description: "Path where to write the file (relative to workspace)",
                 minLength: 1,
                 maxLength: 500
             },
+            content: {
+                type: "string",
+                description: "Content to write to the file",
+                maxLength: 10000000
+            },
             encoding: {
                 type: "string",
-                enum: ["utf-8", "base64", "binary"],
+                enum: ["utf-8", "base64"],
                 description: "File encoding",
                 default: "utf-8"
             },
-            maxSize: {
-                type: "number",
-                description: "Maximum file size in bytes",
-                minimum: 1,
-                maximum: 10000000,
-                default: 1000000
+            createDirectories: {
+                type: "boolean",
+                description: "Create parent directories if they don't exist",
+                default: true
+            },
+            overwrite: {
+                type: "boolean",
+                description: "Overwrite file if it exists",
+                default: true
             }
         },
-        required: ["path"]
+        required: ["path", "content"]
     },
-    zodSchema: fileReadInputSchema,
+    zodSchema: fileWriteInputSchema,
     enabledByDefault: true,
     creditCost: 0,
-    tags: ["file", "read", "filesystem"],
-    execute: executeFileRead
+    tags: ["file", "write", "filesystem", "save"],
+    execute: executeFileWrite
 };

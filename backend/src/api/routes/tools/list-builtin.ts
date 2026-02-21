@@ -1,6 +1,6 @@
 import { createServiceLogger } from "../../../core/logging";
-import { getAllBuiltInTools, getBuiltInToolsByCategory } from "../../../tools";
-import type { ToolCategory } from "../../../tools";
+import { getAllBuiltInTools, getBuiltInToolsByCategory } from "../../../services/tools";
+import type { ToolCategory } from "../../../services/tools";
 import type { FastifyRequest, FastifyReply } from "fastify";
 
 const logger = createServiceLogger("ToolsAPI");

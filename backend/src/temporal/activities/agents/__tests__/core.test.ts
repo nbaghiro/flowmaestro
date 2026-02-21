@@ -25,7 +25,7 @@ jest.mock("../../../../storage/repositories/WorkflowRepository");
 jest.mock("../../../../storage/repositories/ConnectionRepository");
 jest.mock("../../../../storage/repositories/SafetyLogRepository");
 jest.mock("../../../../core/safety/safety-pipeline");
-jest.mock("../../../../tools/validation");
+jest.mock("../../../../services/tools/validation");
 jest.mock("../../../../integrations/core/ExecutionRouter");
 jest.mock("../../../../integrations/registry");
 jest.mock("../../../../services/events/RedisEventBus");
@@ -82,12 +82,12 @@ jest.mock("../../../../core/utils/llm-rate-limiter", () => ({
 
 import type { JsonObject } from "@flowmaestro/shared";
 import { SafetyPipeline } from "../../../../core/safety/safety-pipeline";
-import { SafetyLogRepository } from "../../../../storage/repositories/SafetyLogRepository";
 import {
     validateToolInput,
     coerceToolArguments,
     createValidationErrorResponse
-} from "../../../../tools/validation";
+} from "../../../../services/tools/validation";
+import { SafetyLogRepository } from "../../../../storage/repositories/SafetyLogRepository";
 import {
     getAgentConfig,
     executeToolCall,

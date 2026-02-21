@@ -7,7 +7,7 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../tools/builtin/file-read", () => ({
+jest.mock("../../../../../services/tools/builtin/file-read", () => ({
     fileReadTool: {
         execute: mockExecute
     }

@@ -7,7 +7,7 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../tools/builtin/screenshot-capture", () => ({
+jest.mock("../../../../../services/tools/builtin/screenshot-capture", () => ({
     screenshotCaptureTool: {
         execute: mockExecute
     }

@@ -8,7 +8,7 @@
  * integrations from blocking agent execution forever.
  */
 
-import { createServiceLogger } from "../core/logging";
+import { createServiceLogger } from "../../core/logging";
 
 const logger = createServiceLogger("ToolTimeout");
 

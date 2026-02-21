@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { pdfExtractTool } from "../../../../../tools/builtin/pdf-extract";
+import { pdfExtractTool } from "../../../../../services/tools/builtin/pdf-extract";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     PdfExtractNodeConfigSchema,
@@ -13,7 +13,7 @@ import {
     type PdfExtractNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
-import type { ToolExecutionContext } from "../../../../../tools/types";
+import type { ToolExecutionContext } from "../../../../../services/tools/types";
 
 const logger = createActivityLogger({ nodeType: "PdfExtract" });
 

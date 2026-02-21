@@ -7,7 +7,7 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../tools/builtin/chart-generate", () => ({
+jest.mock("../../../../../services/tools/builtin/chart-generate", () => ({
     chartGenerateTool: {
         execute: mockExecute
     }

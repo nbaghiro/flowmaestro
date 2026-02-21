@@ -7,7 +7,7 @@
 import { writeFile, mkdir, stat } from "fs/promises";
 import { join } from "path";
 import { z } from "zod";
-import { createServiceLogger } from "../../core/logging";
+import { createServiceLogger } from "../../../core/logging";
 import type { BuiltInTool, ToolExecutionContext, ToolExecutionResult } from "../types";
 import type { ChartConfiguration, ChartType as ChartJsType, ChartItem } from "chart.js";
 

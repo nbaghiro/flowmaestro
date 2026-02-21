@@ -7,7 +7,7 @@
 import { readFile, access, constants } from "fs/promises";
 import { PSM } from "tesseract.js";
 import { z } from "zod";
-import { createServiceLogger } from "../../core/logging";
+import { createServiceLogger } from "../../../core/logging";
 import type { BuiltInTool, ToolExecutionContext, ToolExecutionResult } from "../types";
 
 const logger = createServiceLogger("OCRExtractTool");

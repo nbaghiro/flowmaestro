@@ -7,7 +7,7 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../tools/builtin/ocr-extract", () => ({
+jest.mock("../../../../../services/tools/builtin/ocr-extract", () => ({
     ocrExtractTool: {
         execute: mockExecute
     }

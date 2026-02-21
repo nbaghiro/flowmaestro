@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { fileReadTool } from "../../../../../tools/builtin/file-read";
+import { fileReadTool } from "../../../../../services/tools/builtin/file-read";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     FileReadNodeConfigSchema,
@@ -13,7 +13,7 @@ import {
     type FileReadNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
-import type { ToolExecutionContext } from "../../../../../tools/types";
+import type { ToolExecutionContext } from "../../../../../services/tools/types";
 
 const logger = createActivityLogger({ nodeType: "FileRead" });
 

@@ -27,7 +27,7 @@ jest.mock("fs/promises", () => ({
 
 // Mock the unified AI service
 const mockTranscribe = jest.fn();
-jest.mock("../../../core/ai", () => ({
+jest.mock("../../../../core/ai", () => ({
     getAIClient: jest.fn(() => ({
         speech: {
             transcribe: mockTranscribe

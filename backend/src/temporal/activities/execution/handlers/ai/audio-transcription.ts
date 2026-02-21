@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { audioTranscribeTool } from "../../../../../tools/builtin/audio-transcribe";
+import { audioTranscribeTool } from "../../../../../services/tools/builtin/audio-transcribe";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     AudioTranscriptionNodeConfigSchema,
@@ -13,7 +13,7 @@ import {
     type AudioTranscriptionNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
-import type { ToolExecutionContext } from "../../../../../tools/types";
+import type { ToolExecutionContext } from "../../../../../services/tools/types";
 
 const logger = createActivityLogger({ nodeType: "AudioTranscription" });
 

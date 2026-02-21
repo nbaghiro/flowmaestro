@@ -7,7 +7,7 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../tools/builtin/file-write", () => ({
+jest.mock("../../../../../services/tools/builtin/file-write", () => ({
     fileWriteTool: {
         execute: mockExecute
     }

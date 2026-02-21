@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { ocrExtractTool } from "../../../../../tools/builtin/ocr-extract";
+import { ocrExtractTool } from "../../../../../services/tools/builtin/ocr-extract";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     OCRExtractionNodeConfigSchema,
@@ -13,7 +13,7 @@ import {
     type OCRExtractionNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
-import type { ToolExecutionContext } from "../../../../../tools/types";
+import type { ToolExecutionContext } from "../../../../../services/tools/types";
 
 const logger = createActivityLogger({ nodeType: "OCRExtraction" });
 

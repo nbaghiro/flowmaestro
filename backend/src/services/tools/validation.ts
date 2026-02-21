@@ -8,8 +8,8 @@
 
 import { z, ZodError, ZodSchema } from "zod";
 import type { JsonObject } from "@flowmaestro/shared";
-import { createServiceLogger } from "../core/logging";
-import type { Tool } from "../storage/models/Agent";
+import { createServiceLogger } from "../../core/logging";
+import type { Tool } from "../../storage/models/Agent";
 
 const logger = createServiceLogger("ToolValidation");
 

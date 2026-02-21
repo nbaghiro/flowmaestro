@@ -5,7 +5,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { chartGenerateTool } from "../../../../../tools/builtin/chart-generate";
+import { chartGenerateTool } from "../../../../../services/tools/builtin/chart-generate";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     ChartGenerationNodeConfigSchema,
@@ -13,7 +13,7 @@ import {
     type ChartGenerationNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
-import type { ToolExecutionContext } from "../../../../../tools/types";
+import type { ToolExecutionContext } from "../../../../../services/tools/types";
 
 const logger = createActivityLogger({ nodeType: "ChartGeneration" });
 

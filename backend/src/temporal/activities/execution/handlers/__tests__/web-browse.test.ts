@@ -7,7 +7,7 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../tools/builtin/web-browse", () => ({
+jest.mock("../../../../../services/tools/builtin/web-browse", () => ({
     webBrowseTool: {
         execute: mockExecute
     }

@@ -13,11 +13,6 @@ import { SafetyPipeline } from "../../../core/safety/safety-pipeline";
 import { getLLMRateLimiter, RateLimitExceededError } from "../../../core/utils/llm-rate-limiter";
 import { ExecutionRouter } from "../../../integrations/core/ExecutionRouter";
 import { providerRegistry } from "../../../integrations/registry";
-import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
-import { AgentRepository } from "../../../storage/repositories/AgentRepository";
-import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
-import { SafetyLogRepository } from "../../../storage/repositories/SafetyLogRepository";
-import { WorkflowRepository } from "../../../storage/repositories/WorkflowRepository";
 import {
     executeWithTimeout,
     ToolTimeoutError,
@@ -25,7 +20,12 @@ import {
     coerceToolArguments,
     createValidationErrorResponse,
     executeTool
-} from "../../../tools";
+} from "../../../services/tools";
+import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
+import { AgentRepository } from "../../../storage/repositories/AgentRepository";
+import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
+import { SafetyLogRepository } from "../../../storage/repositories/SafetyLogRepository";
+import { WorkflowRepository } from "../../../storage/repositories/WorkflowRepository";
 import { activityLogger, createActivityLogger } from "../../core";
 import { emitAgentToken } from "./events";
 import {
@@ -36,10 +36,10 @@ import {
     executeUpdateWorkingMemory
 } from "./memory";
 import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../../core/safety/types";
+import type { ToolExecutionContext } from "../../../services/tools";
 import type { AgentModel, Tool } from "../../../storage/models/Agent";
 import type { ThreadMessage, ToolCall } from "../../../storage/models/AgentExecution";
 import type { KnowledgeBaseModel } from "../../../storage/models/KnowledgeBase";
-import type { ToolExecutionContext } from "../../../tools";
 import type { AgentConfig, LLMResponse } from "../../workflows/agent-orchestrator";
 
 // =============================================================================

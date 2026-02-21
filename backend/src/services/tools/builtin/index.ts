@@ -11,6 +11,7 @@
 // Import all built-in tools
 import { audioTranscribeTool } from "./audio-transcribe";
 import { chartGenerateTool } from "./chart-generate";
+import { codeExecuteTool } from "./code-execute";
 import { fileDownloadTool } from "./file-download";
 import { fileReadTool } from "./file-read";
 import { fileWriteTool } from "./file-write";
@@ -27,10 +28,6 @@ import type { BuiltInTool, ToolCategory } from "../types";
 
 /**
  * All built-in tools
- *
- * Note: code_execute and data_analyze tools have been removed as they require
- * a sandboxed code execution environment (E2B) to run safely. They can be
- * re-added when E2B integration is implemented.
  *
  * Note: Persona workflow tools (task_complete, update_progress, deliverable_create)
  * have been moved to persona-tools.ts as they are workflow control mechanisms.
@@ -50,6 +47,9 @@ export const builtInTools: BuiltInTool[] = [
     chartGenerateTool,
     spreadsheetGenerateTool,
     pdfExtractTool,
+
+    // Code tools
+    codeExecuteTool,
 
     // Media tools
     imageGenerateTool,
@@ -111,6 +111,7 @@ export function isBuiltInToolName(name: string): boolean {
 // Re-export individual tools for direct import
 export { audioTranscribeTool } from "./audio-transcribe";
 export { chartGenerateTool } from "./chart-generate";
+export { codeExecuteTool } from "./code-execute";
 export { fileDownloadTool } from "./file-download";
 export { fileReadTool } from "./file-read";
 export { fileWriteTool } from "./file-write";
@@ -129,6 +130,7 @@ export { webSearchTool } from "./web-search";
 // Re-export input types for direct use in workflows
 export type { AudioTranscribeInput } from "./audio-transcribe";
 export type { ChartGenerateInput } from "./chart-generate";
+export type { CodeExecuteInput, CodeExecuteOutput } from "./code-execute";
 export type { FileDownloadInput } from "./file-download";
 export type { FileReadInput } from "./file-read";
 export type { FileWriteInput } from "./file-write";

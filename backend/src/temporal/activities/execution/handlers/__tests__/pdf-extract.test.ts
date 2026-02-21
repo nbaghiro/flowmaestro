@@ -7,7 +7,7 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../tools/builtin/pdf-extract", () => ({
+jest.mock("../../../../../services/tools/builtin/pdf-extract", () => ({
     pdfExtractTool: {
         execute: mockExecute
     }
