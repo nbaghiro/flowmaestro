@@ -420,7 +420,7 @@ export interface PersonaInstanceDeliverableSummary {
  * Structured inputs provided when launching a persona task
  */
 export interface PersonaStructuredInputs {
-    [key: string]: string | number | boolean | string[] | undefined;
+    [key: string]: string | number | boolean | string[] | PersonaFileUpload[] | undefined;
 }
 
 /**
@@ -554,7 +554,7 @@ export interface CreatePersonaInstanceRequest {
     notification_config?: Partial<PersonaNotificationConfig>;
     // Template support
     template_id?: string;
-    template_variables?: Record<string, string | number | boolean | string[]>;
+    template_variables?: Record<string, string | number | boolean | string[] | PersonaFileUpload[]>;
     // Clarification control
     skip_clarification?: boolean;
 }

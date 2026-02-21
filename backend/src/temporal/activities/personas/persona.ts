@@ -3,14 +3,15 @@
  */
 
 import type { DeliverableType, JsonObject, PersonaInstanceProgress } from "@flowmaestro/shared";
+import { getAllToolsForUser, isBuiltInTool } from "../../../services/tools";
 import { PersonaDefinitionRepository } from "../../../storage/repositories/PersonaDefinitionRepository";
 import { PersonaInstanceConnectionRepository } from "../../../storage/repositories/PersonaInstanceConnectionRepository";
 import { PersonaInstanceDeliverableRepository } from "../../../storage/repositories/PersonaInstanceDeliverableRepository";
 import { PersonaInstanceMessageRepository } from "../../../storage/repositories/PersonaInstanceMessageRepository";
 import { PersonaInstanceRepository } from "../../../storage/repositories/PersonaInstanceRepository";
-import { getAllToolsForUser, isBuiltInTool } from "../../../tools";
 import { activityLogger } from "../../core";
 import { injectThreadMemoryTool } from "../agents/memory";
+import type { AnyTool, IntegrationTool } from "../../../services/tools";
 import type { Tool } from "../../../storage/models/Agent";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 import type { PersonaDefinitionModel } from "../../../storage/models/PersonaDefinition";
@@ -18,7 +19,6 @@ import type {
     PersonaInstanceStatus,
     PersonaInstanceCompletionReason
 } from "../../../storage/models/PersonaInstance";
-import type { AnyTool, IntegrationTool } from "../../../tools";
 import type { AgentConfig } from "../../workflows/agent-orchestrator";
 
 // =============================================================================
@@ -152,9 +152,38 @@ function buildPersonaSystemPrompt(
             prompt += `\nFiles provided: ${additionalContext.files.length}`;
         }
 
+        // Add file uploads with detailed information
+        if (additionalContext.file_uploads && typeof additionalContext.file_uploads === "object") {
+            const fileUploads = additionalContext.file_uploads as Record<
+                string,
+                Array<{ filename: string; file_type: string; gcs_uri: string }>
+            >;
+            const fields = Object.keys(fileUploads);
+
+            if (fields.length > 0) {
+                prompt += "\n\n### Uploaded Files\n";
+                for (const fieldName of fields) {
+                    const files = fileUploads[fieldName];
+                    if (Array.isArray(files) && files.length > 0) {
+                        prompt += `\n**${fieldName}:**\n`;
+                        for (const file of files) {
+                            prompt += `- ${file.filename} (${file.file_type})\n`;
+                        }
+                    }
+                }
+                prompt +=
+                    "\nNote: You can access these files' content through relevant tools when needed.";
+            }
+        }
+
         // Add any other context as key-value pairs
         for (const [key, value] of Object.entries(additionalContext)) {
-            if (key !== "knowledge_bases" && key !== "files" && value !== undefined) {
+            if (
+                key !== "knowledge_bases" &&
+                key !== "files" &&
+                key !== "file_uploads" &&
+                value !== undefined
+            ) {
                 prompt += `\n${key}: ${typeof value === "string" ? value : JSON.stringify(value)}`;
             }
         }

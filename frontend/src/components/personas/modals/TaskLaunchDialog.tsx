@@ -19,14 +19,18 @@ import {
     CheckCircle2,
     HelpCircle,
     ArrowLeft,
-    Loader2
+    Loader2,
+    Upload,
+    File,
+    Trash2
 } from "lucide-react";
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     getPersonaTemplates,
     generateFromTemplate,
-    grantPersonaInstanceConnection
+    grantPersonaInstanceConnection,
+    uploadPersonaFiles
 } from "../../../lib/api";
 import { logger } from "../../../lib/logger";
 import { usePersonaStore } from "../../../stores/personaStore";
@@ -39,7 +43,8 @@ import type {
     CreatePersonaInstanceRequest,
     PersonaInputField,
     PersonaStructuredInputs,
-    PersonaTaskTemplateSummary
+    PersonaTaskTemplateSummary,
+    PersonaFileUpload
 } from "../../../lib/api";
 
 interface TaskLaunchDialogProps {
@@ -148,11 +153,161 @@ const TagsInput: React.FC<{
     );
 };
 
+// File upload field component
+const FileField: React.FC<{
+    field: PersonaInputField;
+    value: PersonaFileUpload[] | undefined;
+    onChange: (value: PersonaFileUpload[]) => void;
+    disabled?: boolean;
+}> = ({ field, value, onChange, disabled }) => {
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const files = value || [];
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFiles = e.target.files;
+        if (!selectedFiles || selectedFiles.length === 0) return;
+
+        setIsUploading(true);
+        setUploadError(null);
+
+        try {
+            const result = await uploadPersonaFiles(Array.from(selectedFiles), {
+                fieldName: field.name,
+                allowedExtensions: field.validation?.allowed_extensions,
+                maxFileSizeBytes: field.validation?.max_file_size_bytes
+            });
+
+            if (result.success && result.data) {
+                // Convert PersonaFileUploadResult to PersonaFileUpload for storage
+                const uploadedFiles: PersonaFileUpload[] = result.data.files.map((f) => ({
+                    gcs_uri: f.gcs_uri,
+                    filename: f.filename,
+                    file_type: f.file_type,
+                    file_size_bytes: f.file_size_bytes
+                }));
+
+                const newFiles = [...files, ...uploadedFiles];
+
+                // Check max files limit
+                const maxFiles = field.validation?.max_files;
+                if (maxFiles && newFiles.length > maxFiles) {
+                    setUploadError(`Maximum ${maxFiles} files allowed`);
+                    return;
+                }
+
+                onChange(newFiles);
+            } else {
+                setUploadError(result.error || "Upload failed");
+            }
+        } catch (err) {
+            setUploadError(err instanceof Error ? err.message : "Upload failed");
+        } finally {
+            setIsUploading(false);
+            // Reset input
+            e.target.value = "";
+        }
+    };
+
+    const removeFile = (index: number) => {
+        const newFiles = files.filter((_, i) => i !== index);
+        onChange(newFiles);
+    };
+
+    const maxFiles = field.validation?.max_files;
+    const canAddMore = !maxFiles || files.length < maxFiles;
+
+    return (
+        <div className="space-y-2">
+            {/* Uploaded files list */}
+            {files.length > 0 && (
+                <div className="space-y-1.5">
+                    {files.map((file, index) => (
+                        <div
+                            key={`${file.gcs_uri}-${index}`}
+                            className="flex items-center gap-2 px-3 py-2 bg-muted/50 rounded-lg text-sm"
+                        >
+                            <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <span className="flex-1 truncate text-foreground">{file.filename}</span>
+                            <span className="text-xs text-muted-foreground">
+                                {formatFileSize(file.file_size_bytes || 0)}
+                            </span>
+                            {!disabled && (
+                                <button
+                                    type="button"
+                                    onClick={() => removeFile(index)}
+                                    className="p-1 hover:bg-muted rounded transition-colors"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-red-500" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Upload button */}
+            {canAddMore && (
+                <label
+                    className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors ${
+                        disabled || isUploading ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                >
+                    <input
+                        type="file"
+                        multiple={!maxFiles || maxFiles > 1}
+                        accept={
+                            field.validation?.allowed_extensions
+                                ?.map((ext) => `.${ext}`)
+                                .join(",") || undefined
+                        }
+                        onChange={handleFileSelect}
+                        disabled={disabled || isUploading}
+                        className="hidden"
+                    />
+                    {isUploading ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">Uploading...</span>
+                        </>
+                    ) : (
+                        <>
+                            <Upload className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                                {files.length === 0
+                                    ? field.placeholder || "Click to upload files"
+                                    : "Add more files"}
+                            </span>
+                        </>
+                    )}
+                </label>
+            )}
+
+            {/* Error message */}
+            {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
+
+            {/* File count indicator */}
+            {maxFiles && (
+                <p className="text-xs text-muted-foreground">
+                    {files.length} / {maxFiles} files
+                </p>
+            )}
+        </div>
+    );
+};
+
+// Format file size
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 // Dynamic form field renderer
 const FormField: React.FC<{
     field: PersonaInputField;
-    value: string | number | boolean | string[] | undefined;
-    onChange: (value: string | number | boolean | string[]) => void;
+    value: string | number | boolean | string[] | PersonaFileUpload[] | undefined;
+    onChange: (value: string | number | boolean | string[] | PersonaFileUpload[]) => void;
     disabled?: boolean;
 }> = ({ field, value, onChange, disabled }) => {
     const baseInputStyles =
@@ -214,7 +369,7 @@ const FormField: React.FC<{
             );
 
         case "multiselect": {
-            const selectedValues = Array.isArray(value) ? value : [];
+            const selectedValues = Array.isArray(value) ? (value as string[]) : [];
             return (
                 <div className="space-y-1.5">
                     {field.options?.map((opt) => (
@@ -245,7 +400,7 @@ const FormField: React.FC<{
         case "tags":
             return (
                 <TagsInput
-                    value={Array.isArray(value) ? value : []}
+                    value={Array.isArray(value) ? (value as string[]) : []}
                     onChange={(v) => onChange(v)}
                     placeholder={field.placeholder}
                     disabled={disabled}
@@ -264,6 +419,16 @@ const FormField: React.FC<{
                     />
                     <span className="text-foreground">{field.label}</span>
                 </label>
+            );
+
+        case "file":
+            return (
+                <FileField
+                    field={field}
+                    value={value as PersonaFileUpload[] | undefined}
+                    onChange={(v) => onChange(v)}
+                    disabled={disabled}
+                />
             );
 
         default:
@@ -287,7 +452,7 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
         null
     );
     const [templateVariables, setTemplateVariables] = useState<
-        Record<string, string | number | boolean | string[]>
+        Record<string, string | number | boolean | string[] | PersonaFileUpload[]>
     >({});
 
     // Fetch templates when dialog opens
@@ -336,7 +501,7 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
 
     // Update template variable
     const updateTemplateVariable = useCallback(
-        (name: string, value: string | number | boolean | string[]) => {
+        (name: string, value: string | number | boolean | string[] | PersonaFileUpload[]) => {
             setTemplateVariables((prev) => ({
                 ...prev,
                 [name]: value
@@ -362,7 +527,7 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
         useState<PersonaStructuredInputs>(initialInputs);
 
     const updateField = useCallback(
-        (fieldName: string, value: string | number | boolean | string[]) => {
+        (fieldName: string, value: string | number | boolean | string[] | PersonaFileUpload[]) => {
             setStructuredInputs((prev) => ({
                 ...prev,
                 [fieldName]: value
@@ -463,9 +628,41 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
                     );
                 }
 
+                // Extract file uploads from inputs and build additional_context
+                const inputs = selectedTemplate ? templateVariables : structuredInputs;
+                const fileUploads: Record<
+                    string,
+                    Array<{
+                        gcs_uri: string;
+                        filename: string;
+                        file_type: string;
+                        file_size_bytes?: number;
+                    }>
+                > = {};
+
+                // Find file fields and extract uploads
+                const fieldsToCheck = activeFields || [];
+                for (const field of fieldsToCheck) {
+                    if (field.type === "file") {
+                        const fieldValue = inputs[field.name] as PersonaFileUpload[] | undefined;
+                        if (Array.isArray(fieldValue) && fieldValue.length > 0) {
+                            fileUploads[field.name] = fieldValue.map((f) => ({
+                                gcs_uri: f.gcs_uri,
+                                filename: f.filename,
+                                file_type: f.file_type,
+                                file_size_bytes: f.file_size_bytes
+                            }));
+                        }
+                    }
+                }
+
+                // Build additional_context with file_uploads if present
+                const additionalContext =
+                    Object.keys(fileUploads).length > 0 ? { file_uploads: fileUploads } : undefined;
+
                 const request: CreatePersonaInstanceRequest = {
                     persona_slug: persona.slug,
-                    structured_inputs: selectedTemplate ? templateVariables : structuredInputs,
+                    structured_inputs: inputs,
                     task_description: taskDescription,
                     max_duration_hours: maxDurationHours,
                     max_cost_credits: maxCostCredits,
@@ -473,6 +670,8 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
                         on_approval_needed: notifyOnApproval,
                         on_completion: notifyOnCompletion
                     },
+                    // Include file uploads in additional context
+                    ...(additionalContext && { additional_context: additionalContext }),
                     // Include template info if using a template
                     ...(selectedTemplate && {
                         template_id: selectedTemplate.id,

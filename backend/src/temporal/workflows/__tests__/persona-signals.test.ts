@@ -13,6 +13,10 @@ import {
     hasCompletionSignal,
     getDeliverableSignals,
     getProgressSignals,
+    initializeProgressSteps,
+    matchProgressToSopStep,
+    updateStepStatuses,
+    calculateStepProgress,
     type PersonaWorkflowSignal,
     type ProgressSignal,
     type DeliverableSignal,
@@ -790,5 +794,356 @@ I've found some interesting insights about the market positioning of your main c
 
         // Should have 2 parse errors
         expect(result.parseErrors).toHaveLength(2);
+    });
+});
+
+// ============================================================================
+// SOP STEP TRACKING
+// ============================================================================
+
+describe("initializeProgressSteps", () => {
+    it("should initialize steps with pending status", () => {
+        const sopSteps = ["Research", "Analyze", "Write Report"];
+        const steps = initializeProgressSteps(sopSteps);
+
+        expect(steps).toHaveLength(3);
+        expect(steps[0]).toEqual({
+            index: 0,
+            title: "Research",
+            status: "pending",
+            started_at: null,
+            completed_at: null
+        });
+        expect(steps[1]).toEqual({
+            index: 1,
+            title: "Analyze",
+            status: "pending",
+            started_at: null,
+            completed_at: null
+        });
+        expect(steps[2]).toEqual({
+            index: 2,
+            title: "Write Report",
+            status: "pending",
+            started_at: null,
+            completed_at: null
+        });
+    });
+
+    it("should return empty array for empty input", () => {
+        const steps = initializeProgressSteps([]);
+        expect(steps).toEqual([]);
+    });
+
+    it("should handle single step", () => {
+        const steps = initializeProgressSteps(["Single Task"]);
+        expect(steps).toHaveLength(1);
+        expect(steps[0].status).toBe("pending");
+        expect(steps[0].title).toBe("Single Task");
+        expect(steps[0].index).toBe(0);
+    });
+});
+
+describe("matchProgressToSopStep", () => {
+    const sopSteps = [
+        "Research competitors",
+        "Analyze market trends",
+        "Write comprehensive report"
+    ];
+
+    it("should match exact step name", () => {
+        const index = matchProgressToSopStep("Research competitors", sopSteps);
+        expect(index).toBe(0);
+    });
+
+    it("should match case-insensitive", () => {
+        const index = matchProgressToSopStep("research competitors", sopSteps);
+        expect(index).toBe(0);
+    });
+
+    it("should match partial step name (substring)", () => {
+        const index = matchProgressToSopStep("Analyzing market", sopSteps);
+        expect(index).toBe(1);
+    });
+
+    it("should match using fuzzy matching for similar text", () => {
+        const index = matchProgressToSopStep("Research competitor data", sopSteps);
+        expect(index).toBe(0);
+    });
+
+    it("should return -1 for no match", () => {
+        const index = matchProgressToSopStep("Completely unrelated task", sopSteps);
+        expect(index).toBe(-1);
+    });
+
+    it("should handle empty SOP steps", () => {
+        const index = matchProgressToSopStep("Some step", []);
+        expect(index).toBe(-1);
+    });
+
+    it("should match step containing signal step", () => {
+        const index = matchProgressToSopStep("Write report", sopSteps);
+        expect(index).toBe(2);
+    });
+});
+
+describe("updateStepStatuses", () => {
+    const sopSteps = ["Step 1", "Step 2", "Step 3", "Step 4"];
+
+    it("should mark current step as in_progress", () => {
+        const currentSteps = initializeProgressSteps(sopSteps);
+        const progressSignal: ProgressSignal = {
+            type: "progress",
+            current_step: "Step 2"
+        };
+
+        const updated = updateStepStatuses(currentSteps, progressSignal, sopSteps);
+
+        // Step 1 is before current step, so it's completed
+        expect(updated[0].status).toBe("completed");
+        expect(updated[1].status).toBe("in_progress");
+        expect(updated[2].status).toBe("pending");
+        expect(updated[3].status).toBe("pending");
+    });
+
+    it("should mark first step as in_progress when starting", () => {
+        const currentSteps = initializeProgressSteps(sopSteps);
+        const progressSignal: ProgressSignal = {
+            type: "progress",
+            current_step: "Step 1"
+        };
+
+        const updated = updateStepStatuses(currentSteps, progressSignal, sopSteps);
+
+        expect(updated[0].status).toBe("in_progress");
+        expect(updated[1].status).toBe("pending");
+        expect(updated[2].status).toBe("pending");
+        expect(updated[3].status).toBe("pending");
+    });
+
+    it("should mark previous steps as completed when current step advances", () => {
+        const currentSteps = initializeProgressSteps(sopSteps);
+        const progressSignal: ProgressSignal = {
+            type: "progress",
+            current_step: "Step 3"
+        };
+
+        const updated = updateStepStatuses(currentSteps, progressSignal, sopSteps);
+
+        expect(updated[0].status).toBe("completed");
+        expect(updated[1].status).toBe("completed");
+        expect(updated[2].status).toBe("in_progress");
+        expect(updated[3].status).toBe("pending");
+    });
+
+    it("should handle completed_steps from signal", () => {
+        const currentSteps = initializeProgressSteps(sopSteps);
+        const progressSignal: ProgressSignal = {
+            type: "progress",
+            current_step: "Step 3",
+            completed_steps: ["Step 1", "Step 2"]
+        };
+
+        const updated = updateStepStatuses(currentSteps, progressSignal, sopSteps);
+
+        expect(updated[0].status).toBe("completed");
+        expect(updated[1].status).toBe("completed");
+        expect(updated[2].status).toBe("in_progress");
+    });
+
+    it("should preserve completed status", () => {
+        const currentSteps = [
+            {
+                index: 0,
+                title: "Step 1",
+                status: "completed" as const,
+                started_at: "2024-01-01",
+                completed_at: "2024-01-01"
+            },
+            {
+                index: 1,
+                title: "Step 2",
+                status: "completed" as const,
+                started_at: "2024-01-01",
+                completed_at: "2024-01-01"
+            },
+            {
+                index: 2,
+                title: "Step 3",
+                status: "in_progress" as const,
+                started_at: "2024-01-01",
+                completed_at: null
+            },
+            {
+                index: 3,
+                title: "Step 4",
+                status: "pending" as const,
+                started_at: null,
+                completed_at: null
+            }
+        ];
+        const progressSignal: ProgressSignal = {
+            type: "progress",
+            current_step: "Step 4"
+        };
+
+        const updated = updateStepStatuses(currentSteps, progressSignal, sopSteps);
+
+        expect(updated[0].status).toBe("completed");
+        expect(updated[1].status).toBe("completed");
+        expect(updated[2].status).toBe("completed");
+        expect(updated[3].status).toBe("in_progress");
+    });
+
+    it("should not change steps if signal step not matched", () => {
+        const currentSteps = initializeProgressSteps(sopSteps);
+        const progressSignal: ProgressSignal = {
+            type: "progress",
+            current_step: "Unknown step"
+        };
+
+        const updated = updateStepStatuses(currentSteps, progressSignal, sopSteps);
+
+        // All should remain pending
+        expect(updated.every((s) => s.status === "pending")).toBe(true);
+    });
+
+    it("should handle empty current steps", () => {
+        const progressSignal: ProgressSignal = {
+            type: "progress",
+            current_step: "Step 1"
+        };
+
+        const updated = updateStepStatuses([], progressSignal, sopSteps);
+        expect(updated).toEqual([]);
+    });
+});
+
+describe("calculateStepProgress", () => {
+    it("should return 0 for empty steps", () => {
+        expect(calculateStepProgress([])).toBe(0);
+    });
+
+    it("should return 0 for all pending steps", () => {
+        const steps = [
+            {
+                index: 0,
+                title: "Step 1",
+                status: "pending" as const,
+                started_at: null,
+                completed_at: null
+            },
+            {
+                index: 1,
+                title: "Step 2",
+                status: "pending" as const,
+                started_at: null,
+                completed_at: null
+            },
+            {
+                index: 2,
+                title: "Step 3",
+                status: "pending" as const,
+                started_at: null,
+                completed_at: null
+            }
+        ];
+        expect(calculateStepProgress(steps)).toBe(0);
+    });
+
+    it("should calculate progress with completed steps", () => {
+        const steps = [
+            {
+                index: 0,
+                title: "Step 1",
+                status: "completed" as const,
+                started_at: "2024-01-01",
+                completed_at: "2024-01-01"
+            },
+            {
+                index: 1,
+                title: "Step 2",
+                status: "completed" as const,
+                started_at: "2024-01-01",
+                completed_at: "2024-01-01"
+            },
+            {
+                index: 2,
+                title: "Step 3",
+                status: "in_progress" as const,
+                started_at: "2024-01-01",
+                completed_at: null
+            },
+            {
+                index: 3,
+                title: "Step 4",
+                status: "pending" as const,
+                started_at: null,
+                completed_at: null
+            }
+        ];
+        // 2 completed + 0.5 for in_progress = 2.5 / 4 = 62.5%
+        expect(calculateStepProgress(steps)).toBe(63);
+    });
+
+    it("should return 100 for all completed steps", () => {
+        const steps = [
+            {
+                index: 0,
+                title: "Step 1",
+                status: "completed" as const,
+                started_at: "2024-01-01",
+                completed_at: "2024-01-01"
+            },
+            {
+                index: 1,
+                title: "Step 2",
+                status: "completed" as const,
+                started_at: "2024-01-01",
+                completed_at: "2024-01-01"
+            },
+            {
+                index: 2,
+                title: "Step 3",
+                status: "completed" as const,
+                started_at: "2024-01-01",
+                completed_at: "2024-01-01"
+            }
+        ];
+        expect(calculateStepProgress(steps)).toBe(100);
+    });
+
+    it("should handle single in_progress step", () => {
+        const steps = [
+            {
+                index: 0,
+                title: "Step 1",
+                status: "in_progress" as const,
+                started_at: "2024-01-01",
+                completed_at: null
+            }
+        ];
+        expect(calculateStepProgress(steps)).toBe(50);
+    });
+
+    it("should handle multiple in_progress steps", () => {
+        const steps = [
+            {
+                index: 0,
+                title: "Step 1",
+                status: "in_progress" as const,
+                started_at: "2024-01-01",
+                completed_at: null
+            },
+            {
+                index: 1,
+                title: "Step 2",
+                status: "in_progress" as const,
+                started_at: "2024-01-01",
+                completed_at: null
+            }
+        ];
+        // 0.5 + 0.5 = 1 / 2 = 50%
+        expect(calculateStepProgress(steps)).toBe(50);
     });
 });

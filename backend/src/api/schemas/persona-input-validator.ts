@@ -119,9 +119,13 @@ function buildFieldSchema(field: PersonaInputField): ZodSchema {
 
         case "tags": {
             let schema = z.array(z.string());
-            if (validation.min !== undefined) {
-                schema = schema.min(validation.min, {
-                    message: `Add at least ${validation.min} tags`
+            // Apply min count validation - use validation.min if set, else 1 if required
+            const minCount =
+                validation.min !== undefined ? validation.min : field.required ? 1 : undefined;
+            if (minCount !== undefined) {
+                schema = schema.min(minCount, {
+                    message:
+                        minCount === 1 ? "Add at least one tag" : `Add at least ${minCount} tags`
                 });
             }
             if (validation.max !== undefined) {
@@ -129,9 +133,7 @@ function buildFieldSchema(field: PersonaInputField): ZodSchema {
                     message: `Add at most ${validation.max} tags`
                 });
             }
-            return field.required
-                ? schema.min(1, { message: "Add at least one tag" })
-                : schema.optional();
+            return field.required ? schema : schema.optional();
         }
 
         case "checkbox": {

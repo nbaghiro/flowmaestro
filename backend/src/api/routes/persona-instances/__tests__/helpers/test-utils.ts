@@ -36,7 +36,11 @@ export const mockPersonaApprovalRepo = {
     countPendingByWorkspaceId: jest.fn(),
     findByInstanceId: jest.fn(),
     findById: jest.fn(),
-    update: jest.fn()
+    update: jest.fn(),
+    extendExpiration: jest.fn(),
+    findExpiredPending: jest.fn(),
+    findExpiringSoon: jest.fn(),
+    markWarned: jest.fn()
 };
 
 export const mockPersonaConnectionRepo = {
@@ -179,6 +183,7 @@ export function createMockApprovalRequest(
         action_description: string;
         risk_level: string;
         status: string;
+        expires_at: Date | null;
     }> = {}
 ) {
     return {
@@ -197,7 +202,7 @@ export function createMockApprovalRequest(
         responded_at: null,
         response_note: null,
         created_at: new Date(),
-        expires_at: null
+        expires_at: overrides.expires_at ?? null
     };
 }
 

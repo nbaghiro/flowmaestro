@@ -31,6 +31,7 @@ import { listPersonaInstancesHandler } from "./list";
 import { sendPersonaInstanceMessageHandler } from "./message";
 import { skipClarificationHandler } from "./skip-clarification";
 import { streamPersonaInstanceRoute } from "./stream";
+import { uploadPersonaFilesHandler } from "./upload-files";
 
 export async function personaInstanceRoutes(fastify: FastifyInstance) {
     // All persona instance routes require authentication and workspace context
@@ -42,6 +43,9 @@ export async function personaInstanceRoutes(fastify: FastifyInstance) {
 
     // Count for badge display
     fastify.get("/count", getPersonaInstancesCountHandler);
+
+    // File uploads for persona inputs
+    fastify.post("/files", uploadPersonaFilesHandler);
 
     // CRUD operations
     fastify.post("/", createPersonaInstanceHandler);

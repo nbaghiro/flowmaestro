@@ -86,6 +86,7 @@ import type {
     PersonaInstanceProgress,
     PersonaProgressStep,
     ProgressStepStatus,
+    PersonaFileUpload,
     PersonaTaskTemplate,
     PersonaTaskTemplateSummary,
     PersonaTaskTemplateListResponse,
@@ -5991,6 +5992,74 @@ export async function createPersonaInstance(
 }
 
 /**
+ * Upload files for persona input fields
+ * Returns file references that can be included in additional_context.file_uploads
+ */
+export interface PersonaFileUploadResult {
+    gcs_uri: string;
+    filename: string;
+    file_type: string;
+    file_size_bytes: number;
+    field_name: string;
+    signed_url: string;
+}
+
+export async function uploadPersonaFiles(
+    files: File[],
+    options?: {
+        fieldName?: string;
+        allowedExtensions?: string[];
+        maxFileSizeBytes?: number;
+    }
+): Promise<{
+    success: boolean;
+    data?: { files: PersonaFileUploadResult[]; upload_batch_id: string };
+    error?: string;
+}> {
+    const token = getAuthToken();
+    const formData = new FormData();
+
+    for (const file of files) {
+        formData.append("files", file);
+    }
+
+    const queryParams = new URLSearchParams();
+    if (options?.fieldName) {
+        queryParams.set("field_name", options.fieldName);
+    }
+    if (options?.allowedExtensions) {
+        queryParams.set("allowed_extensions", options.allowedExtensions.join(","));
+    }
+    if (options?.maxFileSizeBytes) {
+        queryParams.set("max_file_size_bytes", String(options.maxFileSizeBytes));
+    }
+
+    const queryString = queryParams.toString();
+    const url = queryString
+        ? `${API_BASE_URL}/persona-instances/files?${queryString}`
+        : `${API_BASE_URL}/persona-instances/files`;
+
+    const response = await apiFetch(url, {
+        method: "POST",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+            // Note: Don't set Content-Type for FormData - browser sets it with boundary
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+            success: false,
+            error: errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        };
+    }
+
+    return response.json();
+}
+
+/**
  * Get all persona instances for the current user
  */
 export async function getPersonaInstances(params?: PersonaInstanceListParams): Promise<{
@@ -6533,7 +6602,7 @@ export async function getPersonaTemplates(slug: string): Promise<{
 export async function generateFromTemplate(
     slug: string,
     templateId: string,
-    variables: Record<string, string | number | boolean | string[]>
+    variables: Record<string, string | number | boolean | string[] | PersonaFileUpload[]>
 ): Promise<{
     success: boolean;
     data: GenerateFromTemplateResponse;
@@ -7525,6 +7594,7 @@ export type {
     PersonaInstanceProgress,
     PersonaProgressStep,
     ProgressStepStatus,
+    PersonaFileUpload,
     PersonaTaskTemplate,
     PersonaTaskTemplateSummary,
     PersonaTaskTemplateListResponse,
