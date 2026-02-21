@@ -158,11 +158,11 @@ export type {
     AudioChunkHandler,
     ErrorHandler,
     StreamClientConfig
-} from "./capabilities/speech/realtime/types";
+} from "./providers/speech/realtime/types";
 export {
     DEFAULT_DEEPGRAM_CONFIG,
     DEFAULT_ELEVENLABS_CONFIG
-} from "./capabilities/speech/realtime/types";
+} from "./providers/speech/realtime/types";
 
 // =============================================================================
 // Error Classes
