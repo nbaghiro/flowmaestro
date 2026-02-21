@@ -2,7 +2,7 @@
  * Types for realtime streaming speech clients
  */
 
-import type { AILogger } from "../../../types";
+import type { AILogger } from "../types";
 
 /**
  * Deepgram configuration for real-time streaming

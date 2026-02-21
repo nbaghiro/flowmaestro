@@ -3,12 +3,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { silentTestLogger, captureTestLogger } from "../../../../__tests__/fixtures/configs";
+import { silentTestLogger, captureTestLogger } from "../../__tests__/fixtures/configs";
 import {
     mockDeepgramTranscript,
     mockDeepgramMetadata,
     mockDeepgramError
-} from "../../../../__tests__/fixtures/responses";
+} from "../../__tests__/fixtures/responses";
 
 // Track mock WebSocket instances
 let lastMockWebSocket: MockWebSocket | null = null;

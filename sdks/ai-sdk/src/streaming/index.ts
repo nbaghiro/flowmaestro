@@ -1,5 +1,8 @@
 /**
- * Realtime speech streaming clients
+ * Realtime streaming clients for voice applications
+ *
+ * These are WebSocket-based clients for continuous audio streaming,
+ * separate from the request/response speech providers.
  */
 
 export { DeepgramStreamClient } from "./DeepgramStreamClient";

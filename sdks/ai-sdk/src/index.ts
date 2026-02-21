@@ -143,12 +143,12 @@ export type {
     TTSResponse
 } from "./capabilities/speech/types";
 
-// Re-export realtime streaming clients from speech capability
-export { DeepgramStreamClient, ElevenLabsStreamClient } from "./capabilities/speech/index";
-export type {
-    DeepgramStreamClientConfig,
-    ElevenLabsStreamClientConfig
-} from "./capabilities/speech/index";
+// =============================================================================
+// Streaming Clients (WebSocket-based realtime audio)
+// =============================================================================
+
+export { DeepgramStreamClient, ElevenLabsStreamClient } from "./streaming/index";
+export type { DeepgramStreamClientConfig, ElevenLabsStreamClientConfig } from "./streaming/index";
 export type {
     DeepgramConfig,
     ElevenLabsConfig,
@@ -158,11 +158,8 @@ export type {
     AudioChunkHandler,
     ErrorHandler,
     StreamClientConfig
-} from "./providers/speech/realtime/types";
-export {
-    DEFAULT_DEEPGRAM_CONFIG,
-    DEFAULT_ELEVENLABS_CONFIG
-} from "./providers/speech/realtime/types";
+} from "./streaming/types";
+export { DEFAULT_DEEPGRAM_CONFIG, DEFAULT_ELEVENLABS_CONFIG } from "./streaming/types";
 
 // =============================================================================
 // Error Classes

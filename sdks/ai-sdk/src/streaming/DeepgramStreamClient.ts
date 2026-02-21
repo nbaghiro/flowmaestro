@@ -3,7 +3,7 @@
  */
 
 import WebSocket from "ws";
-import { silentLogger } from "../../../core/logger";
+import { silentLogger } from "../core/logger";
 import { DEFAULT_DEEPGRAM_CONFIG } from "./types";
 import type {
     DeepgramConfig,
@@ -12,7 +12,7 @@ import type {
     ErrorHandler,
     StreamClientConfig
 } from "./types";
-import type { AILogger } from "../../../types";
+import type { AILogger } from "../types";
 
 /**
  * Configuration for DeepgramStreamClient

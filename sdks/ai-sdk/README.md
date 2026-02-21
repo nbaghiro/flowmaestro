@@ -367,7 +367,7 @@ src/
 │   ├── image/          # Image generation
 │   ├── video/          # Video generation
 │   ├── vision/         # Image analysis
-│   └── speech/         # TTS/STT + realtime streaming
+│   └── speech/         # TTS/STT (request/response)
 ├── providers/          # Provider implementations
 │   ├── text/          # OpenAI, Anthropic, Google, etc.
 │   ├── embedding/     # OpenAI, Cohere, Google
@@ -375,6 +375,9 @@ src/
 │   ├── video/         # Runway, Luma, Google, etc.
 │   ├── vision/        # OpenAI, Anthropic, Google
 │   └── speech/        # OpenAI, ElevenLabs
+├── streaming/          # WebSocket streaming clients
+│   ├── DeepgramStreamClient.ts   # Realtime STT
+│   └── ElevenLabsStreamClient.ts # Realtime TTS
 └── core/              # Shared infrastructure
     ├── auth.ts        # API key resolution
     ├── retry.ts       # Retry with backoff
