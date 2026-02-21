@@ -27,21 +27,26 @@ COPY package*.json ./
 # Copy workspace package files
 COPY backend/package*.json ./backend/
 COPY shared/package*.json ./shared/
+COPY sdks/ai-sdk/package*.json ./sdks/ai-sdk/
 
-# Install dependencies for both workspaces (skip scripts to avoid husky)
+# Install dependencies for all workspaces (skip scripts to avoid husky)
 # Note: We skip --ignore-scripts to allow native modules to build properly
-RUN npm ci --workspace=backend --workspace=shared --ignore-scripts
+RUN npm ci --workspace=backend --workspace=shared --workspace=@flowmaestro/ai-sdk --ignore-scripts
 
 # Rebuild native modules separately (skip @swc/core which can segfault on some platforms)
-RUN npm rebuild --workspace=backend --workspace=shared || true
+RUN npm rebuild --workspace=backend --workspace=shared --workspace=@flowmaestro/ai-sdk || true
 
 # Copy source code
 COPY shared/ ./shared/
+COPY sdks/ai-sdk/ ./sdks/ai-sdk/
 COPY backend/ ./backend/
 COPY tsconfig.base.json ./
 
 # Build shared package first
 RUN npm run build --workspace=shared
+
+# Build ai-sdk (required by backend)
+RUN npm run build --workspace=@flowmaestro/ai-sdk
 
 # Clean any stale build artifacts before building
 RUN rm -rf backend/dist
@@ -97,6 +102,7 @@ COPY --chown=nodejs:nodejs package*.json ./
 # Copy workspace package files
 COPY --chown=nodejs:nodejs backend/package*.json ./backend/
 COPY --chown=nodejs:nodejs shared/package*.json ./shared/
+COPY --chown=nodejs:nodejs sdks/ai-sdk/package*.json ./sdks/ai-sdk/
 
 # Fix shared package.json to point to dist instead of src for production
 # This must happen before npm ci so the exports resolve correctly
@@ -104,11 +110,16 @@ RUN sed -i 's|"main": "src/index.ts"|"main": "dist/index.js"|g' ./shared/package
     sed -i 's|"types": "src/index.ts"|"types": "dist/index.d.ts"|g' ./shared/package.json && \
     sed -i 's|"\.": "\./src/index\.ts"|".": "./dist/index.js"|g' ./shared/package.json
 
+# Fix ai-sdk package.json to point to dist instead of src for production
+RUN sed -i 's|"main": "src/index.ts"|"main": "dist/index.js"|g' ./sdks/ai-sdk/package.json && \
+    sed -i 's|"types": "src/index.ts"|"types": "dist/index.d.ts"|g' ./sdks/ai-sdk/package.json && \
+    sed -i 's|"\.": "\./src/index\.ts"|".": "./dist/index.js"|g' ./sdks/ai-sdk/package.json
+
 # Install production dependencies only (skip prepare scripts like husky)
-RUN npm ci --workspace=backend --workspace=shared --omit=dev --ignore-scripts
+RUN npm ci --workspace=backend --workspace=shared --workspace=@flowmaestro/ai-sdk --omit=dev --ignore-scripts
 
 # Rebuild native modules to ensure binaries are set up correctly
-RUN npm rebuild --workspace=backend --workspace=shared || true
+RUN npm rebuild --workspace=backend --workspace=shared --workspace=@flowmaestro/ai-sdk || true
 
 # Set Playwright browsers path to a shared location accessible by all users
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
@@ -123,13 +134,14 @@ RUN node ./backend/node_modules/playwright/cli.js install chromium || node ./nod
 # This layer changes frequently but is cheap since it's just copying files
 COPY --chown=nodejs:nodejs --from=builder /app/backend/dist ./backend/dist
 COPY --chown=nodejs:nodejs --from=builder /app/shared/dist ./shared/dist
+COPY --chown=nodejs:nodejs --from=builder /app/sdks/ai-sdk/dist ./sdks/ai-sdk/dist
 
 # Copy migrations
 COPY --chown=nodejs:nodejs backend/migrations ./backend/migrations
 
 # Only chown app-specific directories (not node_modules - Node.js can read root-owned files)
 # This is much faster than chown -R on the entire /app directory
-RUN chown -R nodejs:nodejs /app/backend /app/shared
+RUN chown -R nodejs:nodejs /app/backend /app/shared /app/sdks
 
 # Switch to non-root user
 USER nodejs

@@ -411,6 +411,10 @@ jobs:
                       extensions/chrome/node_modules
                   key: ${{ needs.setup.outputs.cache-key }}
 
+            # Build ai-sdk (required by backend tests)
+            - name: Build ai-sdk
+              run: npm run build --workspace=@flowmaestro/ai-sdk
+
             # Run shared tests (small, no sharding needed) - only on first shard
             - name: Run shared tests
               if: matrix.shard == 1
@@ -491,6 +495,10 @@ jobs:
                     sleep 5
                   done
 
+            # Build ai-sdk (required by backend/worker)
+            - name: Build ai-sdk
+              run: npm run build --workspace=@flowmaestro/ai-sdk
+
             # Run database migrations against local Postgres
             - name: Run database migrations
               run: npm run db:migrate --workspace=backend
@@ -564,6 +572,10 @@ jobs:
                       sdks/ai-sdk/node_modules
                       extensions/chrome/node_modules
                   key: ${{ needs.setup.outputs.cache-key }}
+
+            # Build ai-sdk (required by backend tests)
+            - name: Build ai-sdk
+              run: npm run build --workspace=@flowmaestro/ai-sdk
 
             # Testcontainers automatically detects GitHub Actions and uses Docker
             - name: Run E2E tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
