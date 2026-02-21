@@ -12,6 +12,7 @@ export interface ExecOptions {
     timeout?: number;
     quiet?: boolean;
     stream?: boolean; // Stream output to console in real-time
+    input?: string; // Input to pass to stdin
 }
 
 /**
@@ -50,6 +51,12 @@ export async function exec(
                     process.stderr.write(str);
                 }
             });
+        }
+
+        // Write input to stdin if provided
+        if (options.input && child.stdin) {
+            child.stdin.write(options.input);
+            child.stdin.end();
         }
 
         const timeoutId = options.timeout

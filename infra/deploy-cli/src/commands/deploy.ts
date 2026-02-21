@@ -17,13 +17,20 @@ import {
     rolloutRestart,
     waitForRollout,
     getPods,
-    validateContext
+    validateContext,
+    verifyExternalSecrets,
+    runJob,
+    checkKustomize,
+    installKustomize,
+    applyKustomize,
+    waitForRolloutStatus
 } from "../services/kubernetes";
 import { isCI, getGitSha as getCISha } from "../utils/ci";
 import {
     printSuccess,
     printError,
     printInfo,
+    printWarning,
     printSection,
     outputTable,
     type TableColumn
@@ -38,7 +45,14 @@ interface DeployOptions {
     noWait: boolean;
     timeout: number;
     yes: boolean;
+    verifySecrets: boolean;
+    migrate: boolean;
+    seed: boolean;
+    useKustomize: boolean;
 }
+
+// Additional deployments to wait for that aren't direct services
+const ADDITIONAL_DEPLOYMENTS = ["temporal-server"];
 
 export function registerDeployCommand(program: Command): void {
     program
@@ -51,6 +65,14 @@ export function registerDeployCommand(program: Command): void {
         .option("--no-wait", "Don't wait for rollout to complete", false)
         .option("--timeout <minutes>", "Rollout timeout in minutes", "10")
         .option("-y, --yes", "Skip confirmation prompts", false)
+        .option("--verify-secrets", "Verify External Secrets are synced before deploy", false)
+        .option("--migrate", "Run database migrations before deploying", false)
+        .option("--seed", "Run database seeding after migrations", false)
+        .option(
+            "--use-kustomize",
+            "Use Kustomize to apply manifests instead of rollout restart",
+            false
+        )
         .addHelpText(
             "after",
             `
@@ -67,6 +89,8 @@ Examples:
   $ fmctl deploy api worker --tag v1.2.3
   $ fmctl deploy frontend --skip-build
   $ fmctl deploy app --dry-run
+  $ fmctl deploy all --migrate --seed --verify-secrets
+  $ fmctl deploy all --use-kustomize --env staging
 `
         )
         .action(async (services: string[], opts: DeployOptions) => {
@@ -98,14 +122,26 @@ async function runDeploy(serviceNames: string[], options: DeployOptions): Promis
 
     // Determine image tag
     const tag = options.tag || getCISha() || getGitSha() || "latest";
+    const repoRoot = getRepoPath();
+
+    // Separate deployable services from job-only services
+    const deployableServices = services.filter((s) => !s.isJob);
+    const jobServices = services.filter((s) => s.isJob);
 
     // Print deployment plan
     printSection("Deployment Plan");
     printInfo(`Environment: ${chalk.cyan(env.name)} (${env.gcpProject})`);
-    printInfo(`Services: ${services.map((s) => chalk.cyan(s.displayName)).join(", ")}`);
+    printInfo(`Services: ${deployableServices.map((s) => chalk.cyan(s.displayName)).join(", ")}`);
+    if (jobServices.length > 0) {
+        printInfo(`Job images: ${jobServices.map((s) => chalk.cyan(s.displayName)).join(", ")}`);
+    }
     printInfo(`Image tag: ${chalk.cyan(tag)}`);
     printInfo(`Skip build: ${options.skipBuild ? chalk.yellow("yes") : "no"}`);
     printInfo(`Wait for rollout: ${options.noWait ? chalk.yellow("no") : "yes"}`);
+    printInfo(`Verify secrets: ${options.verifySecrets ? chalk.green("yes") : "no"}`);
+    printInfo(`Run migrations: ${options.migrate ? chalk.green("yes") : "no"}`);
+    printInfo(`Run seeding: ${options.seed ? chalk.green("yes") : "no"}`);
+    printInfo(`Use Kustomize: ${options.useKustomize ? chalk.green("yes") : "no"}`);
 
     if (options.dryRun) {
         printDryRunNotice();
@@ -132,8 +168,15 @@ async function runDeploy(serviceNames: string[], options: DeployOptions): Promis
         if (!options.skipBuild) {
             await checkDocker();
         }
+
+        if (options.useKustomize && !checkKustomize()) {
+            printWarning("kustomize not found, installing...");
+            await installKustomize();
+        }
     } else {
-        printDryRunAction("Check gcloud, kubectl, docker");
+        printDryRunAction(
+            "Check gcloud, kubectl, docker" + (options.useKustomize ? ", kustomize" : "")
+        );
     }
 
     // Verify environment and configure tools
@@ -151,6 +194,12 @@ async function runDeploy(serviceNames: string[], options: DeployOptions): Promis
         printDryRunAction("Verify environment and get cluster credentials");
     }
 
+    // Verify External Secrets if requested
+    if (options.verifySecrets) {
+        printSection("Verifying External Secrets");
+        await verifyExternalSecrets(env, options.dryRun);
+    }
+
     // Build and push images
     if (!options.skipBuild) {
         printSection("Building Images");
@@ -161,7 +210,18 @@ async function runDeploy(serviceNames: string[], options: DeployOptions): Promis
         // Track which images we've already built (for shared images like api/worker)
         const builtImages = new Set<string>();
 
-        for (const service of services) {
+        // Build all services including job images
+        const allServicesToBuild = [...services];
+
+        // If we're running migrations, make sure migrations image is built
+        if (options.migrate || options.seed) {
+            const migrationsService = SERVICES.migrations;
+            if (migrationsService && !allServicesToBuild.find((s) => s.name === "migrations")) {
+                allServicesToBuild.push(migrationsService);
+            }
+        }
+
+        for (const service of allServicesToBuild) {
             // Skip if this service shares an image with another service we're deploying
             if (service.sharesImageWith && builtImages.has(service.imageName)) {
                 printInfo(
@@ -184,35 +244,95 @@ async function runDeploy(serviceNames: string[], options: DeployOptions): Promis
                 tag,
                 buildArgs,
                 dryRun: options.dryRun,
-                repoRoot: getRepoPath()
+                repoRoot
             });
 
             builtImages.add(service.imageName);
         }
     }
 
-    // Restart deployments
-    printSection("Restarting Deployments");
-
-    for (const service of services) {
-        await rolloutRestart({
-            deploymentName: service.deploymentName,
+    // Run database migrations if requested
+    if (options.migrate) {
+        printSection("Running Database Migrations");
+        await runJob("migration", {
             env,
+            imageTag: tag,
+            repoRoot,
+            dryRun: options.dryRun,
+            timeout: 300
+        });
+    }
+
+    // Run database seeding if requested
+    if (options.seed) {
+        printSection("Running Database Seeding");
+        await runJob("seed", {
+            env,
+            imageTag: tag,
+            repoRoot,
+            dryRun: options.dryRun,
+            timeout: 300
+        });
+    }
+
+    // Deploy using Kustomize or rollout restart
+    if (options.useKustomize) {
+        printSection("Applying Kustomize Overlay");
+
+        // Map env name to overlay directory name
+        const overlayName =
+            options.env === "prod" || options.env === "production" ? "production" : options.env;
+        const overlayPath = `infra/k8s/overlays/${overlayName}`;
+
+        await applyKustomize({
+            env,
+            overlayPath,
+            registry: env.registry,
+            imageTag: tag,
+            repoRoot,
             dryRun: options.dryRun
         });
+    } else {
+        // Restart deployments
+        printSection("Restarting Deployments");
+
+        for (const service of deployableServices) {
+            if (!service.deploymentName) {
+                continue; // Skip services without deployments (like migrations)
+            }
+            await rolloutRestart({
+                deploymentName: service.deploymentName,
+                env,
+                dryRun: options.dryRun
+            });
+        }
     }
 
     // Wait for rollouts
     if (!options.noWait) {
         printSection("Waiting for Rollouts");
 
-        for (const service of services) {
+        // Wait for service deployments
+        for (const service of deployableServices) {
+            if (!service.deploymentName) {
+                continue;
+            }
             await waitForRollout({
                 deploymentName: service.deploymentName,
                 env,
                 timeout: parseInt(String(options.timeout), 10),
                 dryRun: options.dryRun
             });
+        }
+
+        // Also wait for additional deployments like temporal-server
+        for (const deploymentName of ADDITIONAL_DEPLOYMENTS) {
+            await waitForRolloutStatus(
+                deploymentName,
+                env,
+                parseInt(String(options.timeout), 10),
+                options.dryRun
+            );
         }
     }
 
@@ -222,7 +342,7 @@ async function runDeploy(serviceNames: string[], options: DeployOptions): Promis
 
         const pods = await getPods(env);
         const relevantPods = pods.filter((pod) =>
-            services.some((s) => pod.name.includes(s.deploymentName))
+            deployableServices.some((s) => s.deploymentName && pod.name.includes(s.deploymentName))
         );
 
         const columns: TableColumn[] = [
@@ -237,6 +357,17 @@ async function runDeploy(serviceNames: string[], options: DeployOptions): Promis
 
     console.log();
     printSuccess("Deployment complete!");
+
+    // Print deployment summary
+    printSection("Deployment Summary");
+    printInfo(`Environment: ${env.name}`);
+    printInfo(`Image Tag: ${tag}`);
+    printInfo(`Namespace: ${env.namespace}`);
+    console.log();
+    printInfo("Images deployed:");
+    for (const service of services) {
+        console.log(`  - ${service.imageName}: ${env.registry}/${service.imageName}:${tag}`);
+    }
 }
 
 function resolveBuildArgs(service: ServiceConfig, env: { domain: string }): Record<string, string> {
@@ -259,6 +390,10 @@ function resolveBuildArgs(service: ServiceConfig, env: { domain: string }): Reco
                     value = `https://api.${env.domain}`;
                 } else if (arg.key === "ws_url") {
                     value = `https://api.${env.domain}`;
+                } else if (arg.key === "app_url") {
+                    value = `https://app.${env.domain}`;
+                } else if (arg.key === "docs_url") {
+                    value = `https://docs.${env.domain}`;
                 } else {
                     value = arg.defaultValue || "";
                 }

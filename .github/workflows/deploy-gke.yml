@@ -9,11 +9,11 @@ name: Deploy to GKE
 # 3. ExternalSecret resources that automatically sync secrets from GCP to K8s
 #
 # To update secrets:
-# 1. Run: ./infra/scripts/setup-secrets-gcp.sh (updates GCP Secret Manager)
+# 1. Run: fmctl secrets setup (updates GCP Secret Manager)
 # 2. ESO automatically syncs changes to K8s within 5 minutes
-# 3. Restart pods to pick up new secret values: kubectl rollout restart deployment/api-server -n flowmaestro
+# 3. Restart pods to pick up new secret values: fmctl deploy api --skip-build
 #
-# This workflow verifies that all ExternalSecrets are synced before deploying.
+# This workflow uses the unified fmctl CLI for all deployment operations.
 
 on:
   workflow_dispatch:
@@ -36,6 +36,15 @@ env:
   GKE_CLUSTER: flowmaestro-cluster
   ARTIFACT_REGISTRY: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro
   IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
+  # Build args passed to fmctl via environment variables
+  VITE_API_URL: ${{ vars.VITE_API_URL }}
+  VITE_WS_URL: ${{ vars.VITE_WS_URL }}
+  VITE_UNSPLASH_ACCESS_KEY: ${{ vars.VITE_UNSPLASH_ACCESS_KEY }}
+  VITE_GA_MEASUREMENT_ID: ${{ vars.VITE_GA_MEASUREMENT_ID }}
+  VITE_APP_URL: ${{ vars.VITE_APP_URL }}
+  VITE_DOCS_URL: ${{ vars.VITE_DOCS_URL }}
+  VITE_POSTHOG_KEY: ${{ vars.VITE_POSTHOG_KEY }}
+  VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST }}
 
 jobs:
   build-and-deploy:
@@ -52,18 +61,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Setup Node.js (needed for building apps inside Docker)
+      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
           cache: "npm"
 
+      # Install dependencies and build fmctl
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build fmctl
+        run: npm run build --workspace=@flowmaestro/deploy-cli
+
       # Authenticate to Google Cloud using Workload Identity Federation
-      # These values come from Pulumi outputs after running:
-      #   pulumi config set githubRepo "owner/repo-name"
-      #   pulumi up
-      # Then add the outputs as GitHub repository variables
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -90,250 +102,25 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Build and push backend image
-      - name: Build and push backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/backend/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }}
-            ${{ env.ARTIFACT_REGISTRY }}/backend:latest
-          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/backend:latest
-          cache-to: type=inline
-
-      # Build and push frontend image
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/frontend/Dockerfile
-          platforms: linux/amd64
-          push: true
-          build-args: |
-            VITE_API_URL=${{ vars.VITE_API_URL }}
-            VITE_WS_URL=${{ vars.VITE_WS_URL }}
-            VITE_UNSPLASH_ACCESS_KEY=${{ vars.VITE_UNSPLASH_ACCESS_KEY }}
-          tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }}
-            ${{ env.ARTIFACT_REGISTRY }}/frontend:latest
-          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/frontend:latest
-          cache-to: type=inline
-
-      # Build and push marketing image
-      - name: Build and push marketing image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/marketing/Dockerfile
-          platforms: linux/amd64
-          push: true
-          build-args: |
-            VITE_GA_MEASUREMENT_ID=${{ vars.VITE_GA_MEASUREMENT_ID }}
-            VITE_API_URL=${{ vars.VITE_API_URL }}
-            VITE_APP_URL=${{ vars.VITE_APP_URL }}
-            VITE_DOCS_URL=${{ vars.VITE_DOCS_URL }}
-          tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}
-            ${{ env.ARTIFACT_REGISTRY }}/marketing:latest
-          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/marketing:latest
-          cache-to: type=inline
-
-      # Build and push migrations image (includes node-pg-migrate and tsx for seeding)
-      - name: Build and push migrations image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/migrations/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/migrations:${{ env.IMAGE_TAG }}
-            ${{ env.ARTIFACT_REGISTRY }}/migrations:latest
-          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/migrations:latest
-          cache-to: type=inline
-
-      # Build and push static image (widget JS and static assets)
-      - name: Build and push static image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/static/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }}
-            ${{ env.ARTIFACT_REGISTRY }}/static:latest
-          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/static:latest
-          cache-to: type=inline
-
-      # Build and push status page image
-      - name: Build and push status image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: infra/docker/status/Dockerfile
-          platforms: linux/amd64
-          push: true
-          build-args: |
-            VITE_API_URL=${{ vars.VITE_API_URL }}
-          tags: |
-            ${{ env.ARTIFACT_REGISTRY }}/status:${{ env.IMAGE_TAG }}
-            ${{ env.ARTIFACT_REGISTRY }}/status:latest
-          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/status:latest
-          cache-to: type=inline
-
-      # Verify External Secrets are synced
-      - name: Verify External Secrets are ready
-        run: |
-          echo "Checking External Secrets Operator status..."
-          kubectl get pods -n external-secrets-system
-
-          echo ""
-          echo "Verifying all ExternalSecrets are synced..."
-
-          # Check that all ExternalSecrets are in Ready state
-          EXTERNAL_SECRETS=$(kubectl get externalsecret -n flowmaestro -o jsonpath='{.items[*].metadata.name}')
-
-          for es in $EXTERNAL_SECRETS; do
-            echo "Checking ExternalSecret: $es"
-            STATUS=$(kubectl get externalsecret $es -n flowmaestro -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
-
-            if [ "$STATUS" != "True" ]; then
-              echo "❌ ExternalSecret $es is not ready!"
-              kubectl get externalsecret $es -n flowmaestro -o yaml
-              exit 1
-            else
-              echo "✅ ExternalSecret $es is ready"
-            fi
-          done
-
-          echo ""
-          echo "Verifying all K8s secrets exist..."
-
-          # Verify that the K8s secrets exist
-          REQUIRED_SECRETS="app-secrets"
-
-          for secret in $REQUIRED_SECRETS; do
-            if kubectl get secret $secret -n flowmaestro &> /dev/null; then
-              echo "✅ Secret $secret exists"
-            else
-              echo "❌ Secret $secret is missing!"
-              exit 1
-            fi
-          done
-
-          echo ""
-          echo "✅ All secrets are ready for deployment"
-
-      # Run database migrations before deploying new code
-      - name: Run database migrations
-        run: |
-          echo "Running database migrations..."
-
-          # Delete any existing migration jobs (clean slate)
-          kubectl delete job -n flowmaestro -l component=db-migration --ignore-not-found
-
-          # Create migration job with unique timestamp
-          TIMESTAMP=$(date +%s)
-          echo "Creating migration job: db-migration-$TIMESTAMP"
-
-          # Replace placeholders and apply
-          sed "s/\${TIMESTAMP}/$TIMESTAMP/g; s/\${IMAGE_TAG}/${{ env.IMAGE_TAG }}/g" \
-            infra/k8s/jobs/db-migration.yaml | kubectl apply -f -
-
-          # Wait for job to complete (timeout after 5 minutes)
-          echo "Waiting for migration job to complete..."
-          kubectl wait --for=condition=complete "job/db-migration-$TIMESTAMP" \
-            -n flowmaestro --timeout=300s
-
-          echo ""
-          echo "✅ Database migrations completed successfully"
-          echo ""
-          echo "Migration logs:"
-          kubectl logs "job/db-migration-$TIMESTAMP" -n flowmaestro
-
-      # Run database seeding after migrations
-      - name: Run database seeding
-        run: |
-          echo "Running database seeding..."
-
-          # Delete any existing seed jobs
-          kubectl delete job -n flowmaestro -l component=db-seed --ignore-not-found
-
-          # Create seed job with unique timestamp
-          TIMESTAMP=$(date +%s)
-          echo "Creating seed job: db-seed-$TIMESTAMP"
-
-          # Replace placeholders and apply
-          sed "s/\${TIMESTAMP}/$TIMESTAMP/g; s/\${IMAGE_TAG}/${{ env.IMAGE_TAG }}/g" \
-            infra/k8s/jobs/db-seed.yaml | kubectl apply -f -
-
-          # Wait for job to complete (timeout after 5 minutes)
-          echo "Waiting for seed job to complete..."
-          kubectl wait --for=condition=complete "job/db-seed-$TIMESTAMP" \
-            -n flowmaestro --timeout=300s
-
-          echo ""
-          echo "✅ Database seeding completed successfully"
-          echo ""
-          echo "Seed logs:"
-          kubectl logs "job/db-seed-$TIMESTAMP" -n flowmaestro
-
-      # Install kustomize
-      - name: Install kustomize
-        run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-          sudo mv kustomize /usr/local/bin/
-
-      # Update Kustomize overlay with new image tags
-      - name: Update Kustomize images
-        working-directory: infra/k8s/overlays/${{ github.event.inputs.environment }}
-        run: |
-          kustomize edit set image \
-            ${{ env.ARTIFACT_REGISTRY }}/backend:latest=${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }} \
-            ${{ env.ARTIFACT_REGISTRY }}/frontend:latest=${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }} \
-            ${{ env.ARTIFACT_REGISTRY }}/marketing:latest=${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }} \
-            ${{ env.ARTIFACT_REGISTRY }}/static:latest=${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }} \
-            ${{ env.ARTIFACT_REGISTRY }}/status:latest=${{ env.ARTIFACT_REGISTRY }}/status:${{ env.IMAGE_TAG }}
-
-      # Deploy to GKE
+      # Deploy using fmctl
+      # Maps environment input to fmctl env flag:
+      # - production -> prod
+      # - staging -> staging
       - name: Deploy to GKE
-        working-directory: infra
         run: |
-          echo "Deploying to ${{ github.event.inputs.environment }} environment..."
-          kubectl apply -k k8s/overlays/${{ github.event.inputs.environment }}
+          ENV_FLAG="${{ github.event.inputs.environment }}"
+          if [ "$ENV_FLAG" = "production" ]; then
+            ENV_FLAG="prod"
+          fi
 
-      # Wait for deployments to rollout
-      - name: Wait for API server rollout
-        run: |
-          kubectl rollout status deployment/api-server -n flowmaestro --timeout=10m
-
-      - name: Wait for Temporal worker rollout
-        run: |
-          kubectl rollout status deployment/temporal-worker -n flowmaestro --timeout=10m
-
-      - name: Wait for frontend rollout
-        run: |
-          kubectl rollout status deployment/frontend -n flowmaestro --timeout=10m
-
-      - name: Wait for marketing rollout
-        run: |
-          kubectl rollout status deployment/marketing -n flowmaestro --timeout=10m
-
-      - name: Wait for static rollout
-        run: |
-          kubectl rollout status deployment/static -n flowmaestro --timeout=10m
-
-      - name: Wait for status rollout
-        run: |
-          kubectl rollout status deployment/status -n flowmaestro --timeout=5m
-
-      - name: Wait for Temporal server rollout
-        run: |
-          kubectl rollout status deployment/temporal-server -n flowmaestro --timeout=10m
+          npx fmctl deploy all \
+            --env "$ENV_FLAG" \
+            --tag "${{ env.IMAGE_TAG }}" \
+            --verify-secrets \
+            --migrate \
+            --seed \
+            --use-kustomize \
+            --yes
 
       # Verify deployment
       - name: Verify deployment
@@ -360,5 +147,7 @@ jobs:
           echo "  - backend: ${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }}"
           echo "  - frontend: ${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }}"
           echo "  - marketing: ${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}"
+          echo "  - documentation: ${{ env.ARTIFACT_REGISTRY }}/documentation:${{ env.IMAGE_TAG }}"
           echo "  - static: ${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }}"
           echo "  - status: ${{ env.ARTIFACT_REGISTRY }}/status:${{ env.IMAGE_TAG }}"
+          echo "  - migrations: ${{ env.ARTIFACT_REGISTRY }}/migrations:${{ env.IMAGE_TAG }}"

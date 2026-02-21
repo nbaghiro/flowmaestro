@@ -13,6 +13,7 @@ export interface ServiceConfig {
     imageName: string;
     buildArgs?: BuildArg[];
     sharesImageWith?: string; // If set, skips build and uses this service's image
+    isJob?: boolean; // If true, this is a job image, not a deployment
 }
 
 export const SERVICES: Record<string, ServiceConfig> = {
@@ -82,6 +83,21 @@ export const SERVICES: Record<string, ServiceConfig> = {
                 defaultValue: ""
             },
             {
+                name: "VITE_API_URL",
+                source: "static",
+                key: "api_url"
+            },
+            {
+                name: "VITE_APP_URL",
+                source: "static",
+                key: "app_url"
+            },
+            {
+                name: "VITE_DOCS_URL",
+                source: "static",
+                key: "docs_url"
+            },
+            {
                 name: "VITE_POSTHOG_KEY",
                 source: "env",
                 key: "VITE_POSTHOG_KEY",
@@ -128,7 +144,22 @@ export const SERVICES: Record<string, ServiceConfig> = {
         displayName: "Status Page",
         deploymentName: "status",
         dockerFile: "infra/docker/status/Dockerfile",
-        imageName: "status"
+        imageName: "status",
+        buildArgs: [
+            {
+                name: "VITE_API_URL",
+                source: "static",
+                key: "api_url"
+            }
+        ]
+    },
+    migrations: {
+        name: "migrations",
+        displayName: "Database Migrations",
+        deploymentName: "", // No deployment, used for jobs only
+        dockerFile: "infra/docker/migrations/Dockerfile",
+        imageName: "migrations",
+        isJob: true // Flag to indicate this is not a deployment
     }
 };
 

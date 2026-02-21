@@ -11,6 +11,8 @@ export interface DockerBuildOptions {
     buildArgs?: Record<string, string>;
     dryRun?: boolean;
     repoRoot: string;
+    useCache?: boolean; // Enable registry caching
+    pushLatest?: boolean; // Also tag and push as :latest
 }
 
 export interface DockerPushOptions {
@@ -18,6 +20,7 @@ export interface DockerPushOptions {
     registry: string;
     tag: string;
     dryRun?: boolean;
+    pushLatest?: boolean; // Also push :latest tag
 }
 
 /**
@@ -32,6 +35,14 @@ export async function checkDocker(): Promise<void> {
     if (result.exitCode !== 0) {
         throw new Error("Docker daemon is not running. Please start Docker and try again.");
     }
+}
+
+/**
+ * Check if Docker Buildx is available
+ */
+export async function hasBuildx(): Promise<boolean> {
+    const result = await exec("docker", ["buildx", "version"]);
+    return result.exitCode === 0;
 }
 
 /**
@@ -56,20 +67,41 @@ export async function configureDockerAuth(region: string, dryRun = false): Promi
 
 /**
  * Build a Docker image
+ * Uses buildx with registry caching when available for faster CI builds
  */
 export async function buildImage(options: DockerBuildOptions): Promise<string> {
-    const { service, env, tag, buildArgs, dryRun, repoRoot } = options;
+    const { service, env, tag, buildArgs, dryRun, repoRoot, useCache = true } = options;
     const fullImageName = `${env.registry}/${service.imageName}:${tag}`;
+    const latestImageName = `${env.registry}/${service.imageName}:latest`;
 
-    const args = [
-        "build",
+    // Check if buildx is available for advanced caching
+    const buildxAvailable = await hasBuildx();
+
+    // Use buildx build for better caching support
+    const args = buildxAvailable
+        ? ["buildx", "build", "--push"] // buildx can build and push in one step
+        : ["build"];
+
+    args.push(
         "--platform",
         "linux/amd64",
         "-f",
         service.dockerFile,
         "-t",
-        fullImageName
-    ];
+        fullImageName,
+        "-t",
+        latestImageName // Also tag as latest
+    );
+
+    // Add cache configuration for faster builds (buildx only)
+    if (useCache && buildxAvailable) {
+        args.push(
+            "--cache-from",
+            `type=registry,ref=${latestImageName}`,
+            "--cache-to",
+            "type=inline"
+        );
+    }
 
     // Add build args
     if (buildArgs) {
@@ -101,11 +133,15 @@ export async function buildImage(options: DockerBuildOptions): Promise<string> {
  * Push a Docker image to registry
  */
 export async function pushImage(options: DockerPushOptions): Promise<void> {
-    const { imageName, registry, tag, dryRun } = options;
+    const { imageName, registry, tag, dryRun, pushLatest = true } = options;
     const fullImageName = `${registry}/${imageName}:${tag}`;
+    const latestImageName = `${registry}/${imageName}:latest`;
 
     if (dryRun) {
         printDryRunAction(`docker push ${fullImageName}`);
+        if (pushLatest) {
+            printDryRunAction(`docker push ${latestImageName}`);
+        }
         return;
     }
 
@@ -113,26 +149,37 @@ export async function pushImage(options: DockerPushOptions): Promise<void> {
         `Pushing ${imageName} image...`,
         async () => {
             await execOrFail("docker", ["push", fullImageName]);
+            if (pushLatest) {
+                await execOrFail("docker", ["push", latestImageName]);
+            }
         },
-        { successText: `${imageName} image pushed` }
+        { successText: `${imageName} image pushed (${tag}${pushLatest ? " + latest" : ""})` }
     );
 }
 
 /**
  * Build and push a Docker image
+ * When buildx is available, build and push happen in one step
+ * Otherwise, build and push are separate steps
  */
 export async function buildAndPush(options: DockerBuildOptions): Promise<string> {
+    const buildxAvailable = await hasBuildx();
+
+    // buildImage with buildx already pushes, so we only need to push separately
+    // when buildx is not available
     const imageName = await buildImage(options);
 
-    if (!options.dryRun) {
-        await pushImage({
-            imageName: options.service.imageName,
-            registry: options.env.registry,
-            tag: options.tag,
-            dryRun: options.dryRun
-        });
-    } else {
-        printDryRunAction(`docker push ${imageName}`);
+    if (!buildxAvailable) {
+        if (!options.dryRun) {
+            await pushImage({
+                imageName: options.service.imageName,
+                registry: options.env.registry,
+                tag: options.tag,
+                dryRun: options.dryRun
+            });
+        } else {
+            printDryRunAction(`docker push ${imageName}`);
+        }
     }
 
     return imageName;

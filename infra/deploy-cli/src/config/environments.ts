@@ -41,7 +41,10 @@ export const ENVIRONMENTS: Record<string, EnvironmentConfig> = {
 export type EnvironmentName = keyof typeof ENVIRONMENTS;
 
 export function getEnvironment(name: string): EnvironmentConfig {
-    const env = ENVIRONMENTS[name];
+    // Support aliases
+    const normalizedName = name === "production" ? "prod" : name;
+
+    const env = ENVIRONMENTS[normalizedName];
     if (!env) {
         throw new Error(
             `Unknown environment: ${name}. Valid environments: ${Object.keys(ENVIRONMENTS).join(", ")}`

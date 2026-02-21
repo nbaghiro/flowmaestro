@@ -315,3 +315,259 @@ export async function deleteResource(
 
     await execOrFail("kubectl", args);
 }
+
+/**
+ * Verify all External Secrets are synced and ready
+ */
+export async function verifyExternalSecrets(env: EnvironmentConfig, dryRun = false): Promise<void> {
+    if (dryRun) {
+        printDryRunAction("Verify External Secrets are synced");
+        return;
+    }
+
+    await withSpinner(
+        "Verifying External Secrets...",
+        async () => {
+            // Get all ExternalSecrets
+            const result = await execOrFail("kubectl", [
+                "get",
+                "externalsecret",
+                "-n",
+                env.namespace,
+                "-o",
+                "json"
+            ]);
+
+            const data = JSON.parse(result.stdout);
+            const items = data.items || [];
+
+            if (items.length === 0) {
+                throw new Error("No ExternalSecrets found in namespace");
+            }
+
+            // Check each ExternalSecret is ready
+            for (const es of items) {
+                const name = es.metadata?.name;
+                const conditions = es.status?.conditions || [];
+                const readyCondition = conditions.find((c: { type: string }) => c.type === "Ready");
+
+                if (!readyCondition || readyCondition.status !== "True") {
+                    throw new Error(
+                        `ExternalSecret ${name} is not ready. Run: kubectl get externalsecret ${name} -n ${env.namespace} -o yaml`
+                    );
+                }
+            }
+
+            // Verify required K8s secrets exist
+            // app-secrets is the main combined secret, others are category-specific
+            const requiredSecrets = ["app-secrets"];
+            for (const secret of requiredSecrets) {
+                const checkResult = await exec("kubectl", [
+                    "get",
+                    "secret",
+                    secret,
+                    "-n",
+                    env.namespace
+                ]);
+
+                if (checkResult.exitCode !== 0) {
+                    throw new Error(`Required secret ${secret} is missing`);
+                }
+            }
+        },
+        { successText: "All External Secrets verified" }
+    );
+}
+
+export interface JobOptions {
+    env: EnvironmentConfig;
+    imageTag: string;
+    repoRoot: string;
+    dryRun?: boolean;
+    timeout?: number; // in seconds
+}
+
+/**
+ * Run a Kubernetes job (e.g., migrations, seeding)
+ */
+export async function runJob(jobType: "migration" | "seed", options: JobOptions): Promise<void> {
+    const { env, imageTag, repoRoot, dryRun = false, timeout = 300 } = options;
+
+    const jobFile =
+        jobType === "migration"
+            ? "infra/k8s/jobs/db-migration.yaml"
+            : "infra/k8s/jobs/db-seed.yaml";
+    const jobLabel = jobType === "migration" ? "db-migration" : "db-seed";
+    const displayName = jobType === "migration" ? "Database Migration" : "Database Seeding";
+
+    if (dryRun) {
+        printDryRunAction(`Run ${displayName} job with image tag ${imageTag}`);
+        return;
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const jobName = `${jobLabel}-${timestamp}`;
+
+    await withSpinner(
+        `Running ${displayName}...`,
+        async () => {
+            // Delete existing jobs of this type
+            await exec("kubectl", [
+                "delete",
+                "job",
+                "-n",
+                env.namespace,
+                "-l",
+                `component=${jobLabel}`,
+                "--ignore-not-found"
+            ]);
+
+            // Read job template and replace placeholders
+            const fs = await import("fs/promises");
+            const path = await import("path");
+            const jobPath = path.join(repoRoot, jobFile);
+            let jobYaml = await fs.readFile(jobPath, "utf-8");
+
+            jobYaml = jobYaml
+                .replace(/\$\{TIMESTAMP\}/g, String(timestamp))
+                .replace(/\$\{IMAGE_TAG\}/g, imageTag);
+
+            // Apply the job
+            await execOrFail("kubectl", ["apply", "-f", "-", "-n", env.namespace], {
+                input: jobYaml
+            });
+
+            // Wait for job to complete
+            await execOrFail("kubectl", [
+                "wait",
+                "--for=condition=complete",
+                `job/${jobName}`,
+                "-n",
+                env.namespace,
+                `--timeout=${timeout}s`
+            ]);
+
+            // Get job logs
+            const logsResult = await exec("kubectl", [
+                "logs",
+                `job/${jobName}`,
+                "-n",
+                env.namespace
+            ]);
+
+            if (logsResult.stdout) {
+                console.log(`\n${displayName} logs:\n${logsResult.stdout}`);
+            }
+        },
+        { successText: `${displayName} completed successfully` }
+    );
+}
+
+/**
+ * Check if kustomize is available
+ */
+export function checkKustomize(): boolean {
+    return commandExists("kustomize");
+}
+
+/**
+ * Install kustomize if not present
+ */
+export async function installKustomize(): Promise<void> {
+    if (checkKustomize()) {
+        return;
+    }
+
+    await withSpinner(
+        "Installing kustomize...",
+        async () => {
+            // Download and install kustomize
+            await execOrFail("bash", [
+                "-c",
+                'curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash && sudo mv kustomize /usr/local/bin/'
+            ]);
+        },
+        { successText: "kustomize installed" }
+    );
+}
+
+export interface KustomizeOptions {
+    env: EnvironmentConfig;
+    overlayPath: string;
+    registry: string;
+    imageTag: string;
+    repoRoot: string;
+    dryRun?: boolean;
+}
+
+/**
+ * Apply Kubernetes manifests using Kustomize
+ */
+export async function applyKustomize(options: KustomizeOptions): Promise<void> {
+    const { env, overlayPath, registry, imageTag, repoRoot, dryRun = false } = options;
+    const path = await import("path");
+    const fullOverlayPath = path.join(repoRoot, overlayPath);
+
+    if (dryRun) {
+        printDryRunAction(`Apply Kustomize overlay at ${overlayPath} with image tag ${imageTag}`);
+        return;
+    }
+
+    await withSpinner(
+        "Applying Kustomize overlay...",
+        async () => {
+            // Update image tags in kustomization
+            await execOrFail(
+                "kustomize",
+                [
+                    "edit",
+                    "set",
+                    "image",
+                    `${registry}/backend:latest=${registry}/backend:${imageTag}`,
+                    `${registry}/frontend:latest=${registry}/frontend:${imageTag}`,
+                    `${registry}/marketing:latest=${registry}/marketing:${imageTag}`,
+                    `${registry}/documentation:latest=${registry}/documentation:${imageTag}`,
+                    `${registry}/static:latest=${registry}/static:${imageTag}`,
+                    `${registry}/status:latest=${registry}/status:${imageTag}`
+                ],
+                { cwd: fullOverlayPath }
+            );
+
+            // Apply the overlay
+            await execOrFail("kubectl", ["apply", "-k", fullOverlayPath, "-n", env.namespace]);
+        },
+        { successText: "Kustomize overlay applied" }
+    );
+}
+
+/**
+ * Wait for rollout status of a deployment
+ */
+export async function waitForRolloutStatus(
+    deploymentName: string,
+    env: EnvironmentConfig,
+    timeout = 10,
+    dryRun = false
+): Promise<void> {
+    if (dryRun) {
+        printDryRunAction(
+            `kubectl rollout status deployment/${deploymentName} -n ${env.namespace} --timeout=${timeout}m`
+        );
+        return;
+    }
+
+    await withSpinner(
+        `Waiting for ${deploymentName}...`,
+        async () => {
+            await execOrFail("kubectl", [
+                "rollout",
+                "status",
+                `deployment/${deploymentName}`,
+                "-n",
+                env.namespace,
+                `--timeout=${timeout}m`
+            ]);
+        },
+        { successText: `${deploymentName} is ready` }
+    );
+}
