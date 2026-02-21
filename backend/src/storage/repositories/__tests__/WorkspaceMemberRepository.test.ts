@@ -159,14 +159,16 @@ describe("WorkspaceMemberRepository", () => {
     });
 
     describe("findByWorkspaceId", () => {
-        it("should return all members for workspace", async () => {
+        it("should return all members for workspace with pagination", async () => {
             const workspaceId = generateId();
             const mockMembers = [
                 generateWorkspaceMemberRow({ workspace_id: workspaceId, role: "owner" }),
                 generateWorkspaceMemberRow({ workspace_id: workspaceId, role: "member" })
             ];
 
-            mockQuery.mockResolvedValueOnce(mockRows(mockMembers));
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(2))
+                .mockResolvedValueOnce(mockRows(mockMembers));
 
             const result = await repository.findByWorkspaceId(workspaceId);
 
@@ -174,20 +176,37 @@ describe("WorkspaceMemberRepository", () => {
                 expect.stringContaining("WHERE workspace_id = $1"),
                 [workspaceId]
             );
-            expect(result).toHaveLength(2);
+            expect(result.members).toHaveLength(2);
+            expect(result.total).toBe(2);
         });
 
         it("should order by created_at", async () => {
             const workspaceId = generateId();
 
-            mockQuery.mockResolvedValueOnce(mockRows([]));
+            mockQuery.mockResolvedValueOnce(mockCountResult(0)).mockResolvedValueOnce(mockRows([]));
 
             await repository.findByWorkspaceId(workspaceId);
 
             expect(mockQuery).toHaveBeenCalledWith(
                 expect.stringContaining("ORDER BY created_at ASC"),
-                [workspaceId]
+                expect.any(Array)
             );
+        });
+
+        it("should support custom limit and offset", async () => {
+            const workspaceId = generateId();
+
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(10))
+                .mockResolvedValueOnce(mockRows([]));
+
+            await repository.findByWorkspaceId(workspaceId, { limit: 5, offset: 10 });
+
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("LIMIT $2 OFFSET $3"), [
+                workspaceId,
+                5,
+                10
+            ]);
         });
     });
 

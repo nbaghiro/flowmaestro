@@ -17,6 +17,7 @@ import {
     mockInsertReturning,
     mockEmptyResult,
     mockAffectedRows,
+    mockCountResult,
     generateWorkspaceInvitationRow,
     generateId
 } from "./setup";
@@ -179,14 +180,16 @@ describe("WorkspaceInvitationRepository", () => {
     });
 
     describe("findByWorkspaceId", () => {
-        it("should return all invitations for workspace", async () => {
+        it("should return all invitations for workspace with pagination", async () => {
             const workspaceId = generateId();
             const mockInvitations = [
                 generateWorkspaceInvitationRow({ workspace_id: workspaceId }),
                 generateWorkspaceInvitationRow({ workspace_id: workspaceId })
             ];
 
-            mockQuery.mockResolvedValueOnce(mockRows(mockInvitations));
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(2))
+                .mockResolvedValueOnce(mockRows(mockInvitations));
 
             const result = await repository.findByWorkspaceId(workspaceId);
 
@@ -194,7 +197,24 @@ describe("WorkspaceInvitationRepository", () => {
                 expect.stringContaining("WHERE workspace_id = $1"),
                 [workspaceId]
             );
-            expect(result).toHaveLength(2);
+            expect(result.invitations).toHaveLength(2);
+            expect(result.total).toBe(2);
+        });
+
+        it("should support custom limit and offset", async () => {
+            const workspaceId = generateId();
+
+            mockQuery
+                .mockResolvedValueOnce(mockCountResult(10))
+                .mockResolvedValueOnce(mockRows([]));
+
+            await repository.findByWorkspaceId(workspaceId, { limit: 5, offset: 10 });
+
+            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining("LIMIT $2 OFFSET $3"), [
+                workspaceId,
+                5,
+                10
+            ]);
         });
     });
 

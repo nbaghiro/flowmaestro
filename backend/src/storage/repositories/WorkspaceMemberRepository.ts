@@ -69,15 +69,35 @@ export class WorkspaceMemberRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
     }
 
-    async findByWorkspaceId(workspaceId: string): Promise<WorkspaceMemberModel[]> {
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: { limit?: number; offset?: number } = {}
+    ): Promise<{ members: WorkspaceMemberModel[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.workspace_members
+            WHERE workspace_id = $1
+        `;
+
         const query = `
             SELECT * FROM flowmaestro.workspace_members
             WHERE workspace_id = $1
             ORDER BY created_at ASC
+            LIMIT $2 OFFSET $3
         `;
 
-        const result = await db.query<WorkspaceMemberRow>(query, [workspaceId]);
-        return result.rows.map((row) => this.mapRow(row));
+        const [countResult, membersResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, [workspaceId]),
+            db.query<WorkspaceMemberRow>(query, [workspaceId, limit, offset])
+        ]);
+
+        return {
+            members: membersResult.rows.map((row) => this.mapRow(row)),
+            total: parseInt(countResult.rows[0].count)
+        };
     }
 
     async findByWorkspaceIdWithUsers(workspaceId: string): Promise<WorkspaceMemberWithUser[]> {

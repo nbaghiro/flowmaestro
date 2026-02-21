@@ -196,58 +196,76 @@ export class WorkspaceCreditRepository {
         workspaceId: string,
         amount: number
     ): Promise<{ subscription: number; purchased: number; bonus: number }> {
-        // Deduct in order: subscription -> bonus -> purchased
-        const credits = await this.findByWorkspaceId(workspaceId);
-        if (!credits) {
-            throw new Error("Workspace credits not found");
-        }
+        // Use transaction with row locking to prevent race conditions
+        return db.transaction(async (client) => {
+            // Lock the row for update to prevent concurrent modifications
+            const lockQuery = `
+                SELECT * FROM flowmaestro.workspace_credits
+                WHERE workspace_id = $1
+                FOR UPDATE
+            `;
 
-        let remaining = amount;
-        let fromSubscription = 0;
-        let fromBonus = 0;
-        let fromPurchased = 0;
+            const lockResult = await client.query<WorkspaceCreditsRow>(lockQuery, [workspaceId]);
+            if (lockResult.rows.length === 0) {
+                throw new Error("Workspace credits not found");
+            }
 
-        // 1. Subscription credits first
-        if (credits.subscription_balance > 0 && remaining > 0) {
-            fromSubscription = Math.min(credits.subscription_balance, remaining);
-            remaining -= fromSubscription;
-        }
+            const credits = this.mapRow(lockResult.rows[0]);
 
-        // 2. Bonus credits next
-        if (credits.bonus_balance > 0 && remaining > 0) {
-            fromBonus = Math.min(credits.bonus_balance, remaining);
-            remaining -= fromBonus;
-        }
+            // Deduct in order: subscription -> bonus -> purchased
+            let remaining = amount;
+            let fromSubscription = 0;
+            let fromBonus = 0;
+            let fromPurchased = 0;
 
-        // 3. Purchased credits last
-        if (credits.purchased_balance > 0 && remaining > 0) {
-            fromPurchased = Math.min(credits.purchased_balance, remaining);
-            remaining -= fromPurchased;
-        }
+            // 1. Subscription credits first
+            if (credits.subscription_balance > 0 && remaining > 0) {
+                fromSubscription = Math.min(credits.subscription_balance, remaining);
+                remaining -= fromSubscription;
+            }
 
-        if (remaining > 0) {
-            throw new Error("Insufficient credits");
-        }
+            // 2. Bonus credits next
+            if (credits.bonus_balance > 0 && remaining > 0) {
+                fromBonus = Math.min(credits.bonus_balance, remaining);
+                remaining -= fromBonus;
+            }
 
-        // Update balances
-        const query = `
-            UPDATE flowmaestro.workspace_credits
-            SET
-                subscription_balance = subscription_balance - $2,
-                bonus_balance = bonus_balance - $3,
-                purchased_balance = purchased_balance - $4,
-                lifetime_used = lifetime_used + $5,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE workspace_id = $1
-        `;
+            // 3. Purchased credits last
+            if (credits.purchased_balance > 0 && remaining > 0) {
+                fromPurchased = Math.min(credits.purchased_balance, remaining);
+                remaining -= fromPurchased;
+            }
 
-        await db.query(query, [workspaceId, fromSubscription, fromBonus, fromPurchased, amount]);
+            if (remaining > 0) {
+                throw new Error("Insufficient credits");
+            }
 
-        return {
-            subscription: fromSubscription,
-            purchased: fromPurchased,
-            bonus: fromBonus
-        };
+            // Update balances within the same transaction
+            const updateQuery = `
+                UPDATE flowmaestro.workspace_credits
+                SET
+                    subscription_balance = subscription_balance - $2,
+                    bonus_balance = bonus_balance - $3,
+                    purchased_balance = purchased_balance - $4,
+                    lifetime_used = lifetime_used + $5,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE workspace_id = $1
+            `;
+
+            await client.query(updateQuery, [
+                workspaceId,
+                fromSubscription,
+                fromBonus,
+                fromPurchased,
+                amount
+            ]);
+
+            return {
+                subscription: fromSubscription,
+                purchased: fromPurchased,
+                bonus: fromBonus
+            };
+        });
     }
 
     async addSubscriptionCredits(

@@ -15,6 +15,7 @@ interface ExecutionRow {
     started_at: string | Date | null;
     completed_at: string | Date | null;
     created_at: string | Date;
+    deleted_at: string | Date | null;
 }
 
 export class ExecutionRepository {
@@ -38,10 +39,25 @@ export class ExecutionRepository {
     async findById(id: string): Promise<ExecutionModel | null> {
         const query = `
             SELECT * FROM flowmaestro.executions
-            WHERE id = $1
+            WHERE id = $1 AND deleted_at IS NULL
         `;
 
         const result = await db.query(query, [id]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ExecutionRow) : null;
+    }
+
+    /**
+     * Find execution by ID with workspace verification for multi-tenant isolation.
+     * Joins with workflows table to ensure the execution belongs to the specified workspace.
+     */
+    async findByIdAndWorkspaceId(id: string, workspaceId: string): Promise<ExecutionModel | null> {
+        const query = `
+            SELECT e.* FROM flowmaestro.executions e
+            INNER JOIN flowmaestro.workflows w ON e.workflow_id = w.id
+            WHERE e.id = $1 AND w.workspace_id = $2 AND e.deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
         return result.rows.length > 0 ? this.mapRow(result.rows[0] as ExecutionRow) : null;
     }
 
@@ -55,12 +71,12 @@ export class ExecutionRepository {
         const countQuery = `
             SELECT COUNT(*) as count
             FROM flowmaestro.executions
-            WHERE workflow_id = $1
+            WHERE workflow_id = $1 AND deleted_at IS NULL
         `;
 
         const query = `
             SELECT * FROM flowmaestro.executions
-            WHERE workflow_id = $1
+            WHERE workflow_id = $1 AND deleted_at IS NULL
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
         `;
@@ -85,7 +101,7 @@ export class ExecutionRepository {
 
         const query = `
             SELECT * FROM flowmaestro.executions
-            WHERE status = $1
+            WHERE status = $1 AND deleted_at IS NULL
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
         `;
@@ -142,7 +158,7 @@ export class ExecutionRepository {
         const query = `
             UPDATE flowmaestro.executions
             SET ${updates.join(", ")}
-            WHERE id = $${paramIndex}
+            WHERE id = $${paramIndex} AND deleted_at IS NULL
             RETURNING *
         `;
 
@@ -150,7 +166,26 @@ export class ExecutionRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0] as ExecutionRow) : null;
     }
 
+    /**
+     * Soft delete an execution by setting deleted_at timestamp.
+     * Execution data is preserved for audit/compliance purposes.
+     */
     async delete(id: string): Promise<boolean> {
+        const query = `
+            UPDATE flowmaestro.executions
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id]);
+        return (result.rowCount || 0) > 0;
+    }
+
+    /**
+     * Permanently delete an execution from the database.
+     * Use with caution - this removes audit trail.
+     */
+    async hardDelete(id: string): Promise<boolean> {
         const query = `
             DELETE FROM flowmaestro.executions
             WHERE id = $1
@@ -229,18 +264,20 @@ export class ExecutionRepository {
         let countQuery = `
             SELECT COUNT(*) as count
             FROM flowmaestro.executions
+            WHERE deleted_at IS NULL
         `;
 
         let query = `
             SELECT * FROM flowmaestro.executions
+            WHERE deleted_at IS NULL
         `;
 
         const countParams: unknown[] = [];
         const queryParams: unknown[] = [];
 
         if (options.status) {
-            countQuery += " WHERE status = $1";
-            query += " WHERE status = $1";
+            countQuery += " AND status = $1";
+            query += " AND status = $1";
             countParams.push(options.status);
             queryParams.push(options.status);
         }
@@ -290,7 +327,8 @@ export class ExecutionRepository {
             error: row.error,
             created_at: new Date(row.created_at),
             started_at: row.started_at ? new Date(row.started_at) : null,
-            completed_at: row.completed_at ? new Date(row.completed_at) : null
+            completed_at: row.completed_at ? new Date(row.completed_at) : null,
+            deleted_at: row.deleted_at ? new Date(row.deleted_at) : null
         };
     }
 }

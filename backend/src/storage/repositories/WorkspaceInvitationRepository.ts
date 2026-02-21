@@ -96,15 +96,35 @@ export class WorkspaceInvitationRepository {
         return result.rows.length > 0 ? this.mapRowWithDetails(result.rows[0]) : null;
     }
 
-    async findByWorkspaceId(workspaceId: string): Promise<WorkspaceInvitationModel[]> {
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: { limit?: number; offset?: number } = {}
+    ): Promise<{ invitations: WorkspaceInvitationModel[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.workspace_invitations
+            WHERE workspace_id = $1
+        `;
+
         const query = `
             SELECT * FROM flowmaestro.workspace_invitations
             WHERE workspace_id = $1
             ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3
         `;
 
-        const result = await db.query<WorkspaceInvitationRow>(query, [workspaceId]);
-        return result.rows.map((row) => this.mapRow(row));
+        const [countResult, invitationsResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, [workspaceId]),
+            db.query<WorkspaceInvitationRow>(query, [workspaceId, limit, offset])
+        ]);
+
+        return {
+            invitations: invitationsResult.rows.map((row) => this.mapRow(row)),
+            total: parseInt(countResult.rows[0].count)
+        };
     }
 
     async findPendingByWorkspaceId(workspaceId: string): Promise<WorkspaceInvitationModel[]> {

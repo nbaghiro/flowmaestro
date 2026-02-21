@@ -34,7 +34,7 @@ export class UserRepository {
     async findById(id: string): Promise<UserModel | null> {
         const query = `
             SELECT * FROM flowmaestro.users
-            WHERE id = $1
+            WHERE id = $1 AND deleted_at IS NULL
         `;
 
         const result = await db.query<UserModel>(query, [id]);
@@ -44,7 +44,7 @@ export class UserRepository {
     async findByEmail(email: string): Promise<UserModel | null> {
         const query = `
             SELECT * FROM flowmaestro.users
-            WHERE email = $1
+            WHERE email = $1 AND deleted_at IS NULL
         `;
 
         const result = await db.query<UserModel>(query, [email]);
@@ -54,7 +54,7 @@ export class UserRepository {
     async findByGoogleId(googleId: string): Promise<UserModel | null> {
         const query = `
             SELECT * FROM flowmaestro.users
-            WHERE google_id = $1
+            WHERE google_id = $1 AND deleted_at IS NULL
         `;
 
         const result = await db.query<UserModel>(query, [googleId]);
@@ -64,7 +64,7 @@ export class UserRepository {
     async findByMicrosoftId(microsoftId: string): Promise<UserModel | null> {
         const query = `
             SELECT * FROM flowmaestro.users
-            WHERE microsoft_id = $1
+            WHERE microsoft_id = $1 AND deleted_at IS NULL
         `;
 
         const result = await db.query<UserModel>(query, [microsoftId]);
@@ -74,7 +74,7 @@ export class UserRepository {
     async findByEmailOrGoogleId(email: string, googleId: string): Promise<UserModel | null> {
         const query = `
             SELECT * FROM flowmaestro.users
-            WHERE email = $1 OR google_id = $2
+            WHERE (email = $1 OR google_id = $2) AND deleted_at IS NULL
             LIMIT 1
         `;
 
@@ -85,7 +85,7 @@ export class UserRepository {
     async findByEmailOrMicrosoftId(email: string, microsoftId: string): Promise<UserModel | null> {
         const query = `
             SELECT * FROM flowmaestro.users
-            WHERE email = $1 OR microsoft_id = $2
+            WHERE (email = $1 OR microsoft_id = $2) AND deleted_at IS NULL
             LIMIT 1
         `;
 
@@ -96,7 +96,7 @@ export class UserRepository {
     async findByStripeCustomerId(stripeCustomerId: string): Promise<UserModel | null> {
         const query = `
             SELECT * FROM flowmaestro.users
-            WHERE stripe_customer_id = $1
+            WHERE stripe_customer_id = $1 AND deleted_at IS NULL
         `;
 
         const result = await db.query<UserModel>(query, [stripeCustomerId]);
@@ -191,7 +191,7 @@ export class UserRepository {
         const query = `
             UPDATE flowmaestro.users
             SET ${updates.join(", ")}
-            WHERE id = $${paramIndex}
+            WHERE id = $${paramIndex} AND deleted_at IS NULL
             RETURNING *
         `;
 
@@ -199,7 +199,26 @@ export class UserRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
     }
 
+    /**
+     * Soft delete a user by setting deleted_at timestamp.
+     * User data is preserved for audit/compliance purposes.
+     */
     async delete(id: string): Promise<boolean> {
+        const query = `
+            UPDATE flowmaestro.users
+            SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id]);
+        return (result.rowCount || 0) > 0;
+    }
+
+    /**
+     * Permanently delete a user from the database.
+     * Use for GDPR right-to-erasure compliance.
+     */
+    async hardDelete(id: string): Promise<boolean> {
         const query = `
             DELETE FROM flowmaestro.users
             WHERE id = $1
@@ -226,10 +245,60 @@ export class UserRepository {
             UPDATE flowmaestro.users
             SET password_hash = $2,
                 updated_at = NOW()
-            WHERE id = $1
+            WHERE id = $1 AND deleted_at IS NULL
         `;
 
         await db.query(query, [userId, passwordHash]);
+    }
+
+    /**
+     * Find all users with pagination and optional search.
+     * Only returns non-deleted users.
+     */
+    async findAll(
+        options: { limit?: number; offset?: number; search?: string } = {}
+    ): Promise<{ users: UserModel[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        let countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.users
+            WHERE deleted_at IS NULL
+        `;
+
+        let query = `
+            SELECT * FROM flowmaestro.users
+            WHERE deleted_at IS NULL
+        `;
+
+        const countParams: unknown[] = [];
+        const queryParams: unknown[] = [];
+
+        if (options.search) {
+            const searchCondition = " AND (email ILIKE $1 OR name ILIKE $1)";
+            countQuery += searchCondition;
+            query += searchCondition;
+            const searchPattern = `%${options.search}%`;
+            countParams.push(searchPattern);
+            queryParams.push(searchPattern);
+        }
+
+        query += ` ORDER BY created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+        queryParams.push(limit, offset);
+
+        const [countResult, usersResult] = await Promise.all([
+            db.query<{ count: string }>(
+                countQuery,
+                countParams.length > 0 ? countParams : undefined
+            ),
+            db.query<UserModel>(query, queryParams)
+        ]);
+
+        return {
+            users: usersResult.rows.map((row) => this.mapRow(row)),
+            total: parseInt(countResult.rows[0].count)
+        };
     }
 
     private mapRow(row: unknown): UserModel {
@@ -253,6 +322,7 @@ export class UserRepository {
             two_factor_secret: string | null;
             is_admin: boolean;
             stripe_customer_id: string | null;
+            deleted_at: string | Date | null;
         };
         return {
             id: r.id,
@@ -273,7 +343,8 @@ export class UserRepository {
             two_factor_phone_verified: r.two_factor_phone_verified,
             two_factor_secret: r.two_factor_secret,
             is_admin: r.is_admin ?? false,
-            stripe_customer_id: r.stripe_customer_id ?? null
+            stripe_customer_id: r.stripe_customer_id ?? null,
+            deleted_at: r.deleted_at ? new Date(r.deleted_at) : null
         };
     }
 }

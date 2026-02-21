@@ -25,14 +25,15 @@ export async function listInvitationsRoute(fastify: FastifyInstance) {
             try {
                 const invitationRepo = new WorkspaceInvitationRepository();
 
-                const invitations =
+                // findPendingByWorkspaceId returns array, findByWorkspaceId returns { invitations, total }
+                const invitationsList =
                     status === "pending"
                         ? await invitationRepo.findPendingByWorkspaceId(workspaceId)
-                        : await invitationRepo.findByWorkspaceId(workspaceId);
+                        : (await invitationRepo.findByWorkspaceId(workspaceId)).invitations;
 
                 return reply.send({
                     success: true,
-                    data: invitations.map((inv) => ({
+                    data: invitationsList.map((inv) => ({
                         id: inv.id,
                         email: inv.email,
                         role: inv.role,

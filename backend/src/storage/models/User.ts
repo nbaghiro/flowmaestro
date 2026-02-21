@@ -18,6 +18,7 @@ export interface UserModel {
     two_factor_secret: string | null;
     is_admin: boolean;
     stripe_customer_id: string | null;
+    deleted_at: Date | null;
 }
 
 export interface CreateUserInput {
