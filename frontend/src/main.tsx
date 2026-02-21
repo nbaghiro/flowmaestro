@@ -48,7 +48,14 @@ function StoreInitializer({ children }: { children: ReactNode }) {
     return <>{children}</>;
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+// Store root reference to prevent duplicate createRoot calls during HMR
+const container = document.getElementById("root")!;
+const root =
+    (window as unknown as { __REACT_ROOT__?: ReactDOM.Root }).__REACT_ROOT__ ??
+    ((window as unknown as { __REACT_ROOT__?: ReactDOM.Root }).__REACT_ROOT__ =
+        ReactDOM.createRoot(container));
+
+root.render(
     <React.StrictMode>
         <BrowserRouter>
             <QueryClientProvider client={queryClient}>
