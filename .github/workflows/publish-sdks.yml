@@ -3,10 +3,11 @@ name: Publish SDKs
 on:
   push:
     tags:
-      - "ai-v*"
       - "sdk-v*"
       - "widget-v*"
       - "python-v*"
+      - "fm-v*"
+      - "fmctl-v*"
   workflow_dispatch:
     inputs:
       package:
@@ -15,10 +16,11 @@ on:
         type: choice
         options:
           - all
-          - ai
           - sdk
           - widget
           - python
+          - fm
+          - fmctl
       dry_run:
         description: "Dry run (no actual publish)"
         required: false
@@ -37,10 +39,11 @@ jobs:
     name: Determine packages
     runs-on: ubuntu-latest
     outputs:
-      publish_ai: ${{ steps.set-packages.outputs.publish_ai }}
       publish_sdk: ${{ steps.set-packages.outputs.publish_sdk }}
       publish_widget: ${{ steps.set-packages.outputs.publish_widget }}
       publish_python: ${{ steps.set-packages.outputs.publish_python }}
+      publish_fm: ${{ steps.set-packages.outputs.publish_fm }}
+      publish_fmctl: ${{ steps.set-packages.outputs.publish_fmctl }}
     steps:
       - name: Set packages to publish
         id: set-packages
@@ -48,23 +51,26 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             PACKAGE="${{ github.event.inputs.package }}"
             if [[ "$PACKAGE" == "all" ]]; then
-              echo "publish_ai=true" >> $GITHUB_OUTPUT
               echo "publish_sdk=true" >> $GITHUB_OUTPUT
               echo "publish_widget=true" >> $GITHUB_OUTPUT
               echo "publish_python=true" >> $GITHUB_OUTPUT
+              echo "publish_fm=true" >> $GITHUB_OUTPUT
+              echo "publish_fmctl=true" >> $GITHUB_OUTPUT
             else
-              echo "publish_ai=$([[ '$PACKAGE' == 'ai' ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
               echo "publish_sdk=$([[ '$PACKAGE' == 'sdk' ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
               echo "publish_widget=$([[ '$PACKAGE' == 'widget' ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
               echo "publish_python=$([[ '$PACKAGE' == 'python' ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+              echo "publish_fm=$([[ '$PACKAGE' == 'fm' ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+              echo "publish_fmctl=$([[ '$PACKAGE' == 'fmctl' ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
             fi
           else
             # Tag-based publishing
             TAG="${{ github.ref_name }}"
-            echo "publish_ai=$([[ '$TAG' == ai-v* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
             echo "publish_sdk=$([[ '$TAG' == sdk-v* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
             echo "publish_widget=$([[ '$TAG' == widget-v* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
             echo "publish_python=$([[ '$TAG' == python-v* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+            echo "publish_fm=$([[ '$TAG' == fm-v* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+            echo "publish_fmctl=$([[ '$TAG' == fmctl-v* ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
           fi
 
   # ============================================================================
@@ -74,7 +80,7 @@ jobs:
     name: Build npm packages
     runs-on: ubuntu-latest
     needs: determine-packages
-    if: needs.determine-packages.outputs.publish_ai == 'true' || needs.determine-packages.outputs.publish_sdk == 'true' || needs.determine-packages.outputs.publish_widget == 'true'
+    if: needs.determine-packages.outputs.publish_sdk == 'true' || needs.determine-packages.outputs.publish_widget == 'true' || needs.determine-packages.outputs.publish_fm == 'true' || needs.determine-packages.outputs.publish_fmctl == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -87,10 +93,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Build @flowmaestro/ai
-        if: needs.determine-packages.outputs.publish_ai == 'true'
-        run: npm run build --workspace=@flowmaestro/ai
 
       - name: Build @flowmaestro/sdk
         if: needs.determine-packages.outputs.publish_sdk == 'true'
@@ -100,10 +102,6 @@ jobs:
         if: needs.determine-packages.outputs.publish_widget == 'true'
         run: npm run build --workspace=@flowmaestro/widget
 
-      - name: Type check @flowmaestro/ai
-        if: needs.determine-packages.outputs.publish_ai == 'true'
-        run: npm run typecheck --workspace=@flowmaestro/ai
-
       - name: Type check @flowmaestro/sdk
         if: needs.determine-packages.outputs.publish_sdk == 'true'
         run: npm run typecheck --workspace=@flowmaestro/sdk
@@ -112,43 +110,25 @@ jobs:
         if: needs.determine-packages.outputs.publish_widget == 'true'
         run: npm run typecheck --workspace=@flowmaestro/widget
 
+      - name: Build @flowmaestro/cli
+        if: needs.determine-packages.outputs.publish_fm == 'true'
+        run: npm run build --workspace=@flowmaestro/cli
+
+      - name: Type check @flowmaestro/cli
+        if: needs.determine-packages.outputs.publish_fm == 'true'
+        run: npm run typecheck --workspace=@flowmaestro/cli
+
+      - name: Build @flowmaestro/deploy-cli
+        if: needs.determine-packages.outputs.publish_fmctl == 'true'
+        run: npm run build --workspace=@flowmaestro/deploy-cli
+
+      - name: Type check @flowmaestro/deploy-cli
+        if: needs.determine-packages.outputs.publish_fmctl == 'true'
+        run: npm run typecheck --workspace=@flowmaestro/deploy-cli
+
   # ============================================================================
   # PUBLISH NPM PACKAGES
   # ============================================================================
-  publish-ai:
-    name: Publish @flowmaestro/ai
-    runs-on: ubuntu-latest
-    needs: [determine-packages, build-npm]
-    if: needs.determine-packages.outputs.publish_ai == 'true'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build package
-        run: npm run build --workspace=@flowmaestro/ai
-
-      - name: Publish (dry run)
-        if: github.event.inputs.dry_run == 'true'
-        run: npm publish --workspace=@flowmaestro/ai --access public --dry-run
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish
-        if: github.event.inputs.dry_run != 'true'
-        run: npm publish --workspace=@flowmaestro/ai --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
   publish-sdk:
     name: Publish @flowmaestro/sdk
     runs-on: ubuntu-latest
@@ -214,6 +194,74 @@ jobs:
       - name: Publish
         if: github.event.inputs.dry_run != 'true'
         run: npm publish --workspace=@flowmaestro/widget --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-fm:
+    name: Publish @flowmaestro/cli (public)
+    runs-on: ubuntu-latest
+    needs: [determine-packages, build-npm]
+    if: needs.determine-packages.outputs.publish_fm == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build --workspace=@flowmaestro/cli
+
+      - name: Publish (dry run)
+        if: github.event.inputs.dry_run == 'true'
+        run: npm publish --workspace=@flowmaestro/cli --access public --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish
+        if: github.event.inputs.dry_run != 'true'
+        run: npm publish --workspace=@flowmaestro/cli --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-fmctl:
+    name: Publish @flowmaestro/deploy-cli (private)
+    runs-on: ubuntu-latest
+    needs: [determine-packages, build-npm]
+    if: needs.determine-packages.outputs.publish_fmctl == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build --workspace=@flowmaestro/deploy-cli
+
+      - name: Publish (dry run)
+        if: github.event.inputs.dry_run == 'true'
+        run: npm publish --workspace=@flowmaestro/deploy-cli --access restricted --dry-run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish
+        if: github.event.inputs.dry_run != 'true'
+        run: npm publish --workspace=@flowmaestro/deploy-cli --access restricted
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

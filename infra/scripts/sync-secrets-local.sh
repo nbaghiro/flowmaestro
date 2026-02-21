@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+# ============================================================================
+# DEPRECATION NOTICE
+# ============================================================================
+# This script is DEPRECATED. Please use the unified deployment CLI instead:
+#
+#   npx fmctl secrets sync-local [options]
+#
+# Examples:
+#   npx fmctl secrets sync-local --env prod
+#
+# Run 'npx fmctl secrets --help' for more information.
+# ============================================================================
+
 # FlowMaestro Local Secrets Sync Script
 # Reads secret definitions from Pulumi and fetches values from GCP Secret Manager
 #
@@ -14,6 +27,10 @@
 # Usage: ./infra/scripts/sync-secrets-local.sh
 
 set -e
+
+# Print deprecation warning
+echo -e "\033[1;33m[DEPRECATED]\033[0m This script is deprecated. Use 'npx fmctl secrets sync-local' instead."
+echo ""
 
 # Colors
 RED='\033[0;31m'

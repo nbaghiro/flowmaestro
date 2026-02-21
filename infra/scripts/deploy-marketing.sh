@@ -1,10 +1,28 @@
 #!/bin/bash
 
+# ============================================================================
+# DEPRECATION NOTICE
+# ============================================================================
+# This script is DEPRECATED. Please use the unified deployment CLI instead:
+#
+#   npx fmctl deploy marketing [options]
+#
+# Examples:
+#   npx fmctl deploy marketing --env prod
+#   npx fmctl deploy marketing --tag v1.2.3
+#
+# Run 'npx fmctl deploy --help' for more information.
+# ============================================================================
+
 # Quick Marketing Site Update Script
 # Usage: ./infra/scripts/update-marketing.sh [environment]
 # Example: ./infra/scripts/update-marketing.sh prod
 
 set -e
+
+# Print deprecation warning
+echo -e "\033[1;33m[DEPRECATED]\033[0m This script is deprecated. Use 'npx fmctl deploy marketing' instead."
+echo ""
 
 # Colors
 GREEN='\033[0;32m'

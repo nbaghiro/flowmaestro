@@ -1,4 +1,19 @@
 #!/bin/bash
+
+# ============================================================================
+# DEPRECATION NOTICE
+# ============================================================================
+# This script is DEPRECATED. Please use the unified deployment CLI instead:
+#
+#   npx fmctl db migrate [options]
+#
+# Examples:
+#   npx fmctl db migrate --env local
+#   npx fmctl db migrate --env prod --yes
+#
+# Run 'npx fmctl db --help' for more information.
+# ============================================================================
+
 #
 # Database Migration Script
 #
@@ -18,6 +33,10 @@
 #
 
 set -e
+
+# Print deprecation warning
+echo -e "\033[1;33m[DEPRECATED]\033[0m This script is deprecated. Use 'npx fmctl db migrate' instead."
+echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"

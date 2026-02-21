@@ -1,11 +1,28 @@
 #!/bin/bash
 
+# ============================================================================
+# DEPRECATION NOTICE
+# ============================================================================
+# This script is DEPRECATED. Please use the unified deployment CLI instead:
+#
+#   npx fmctl deploy static [options]
+#
+# Examples:
+#   npx fmctl deploy static --env prod
+#
+# Run 'npx fmctl deploy --help' for more information.
+# ============================================================================
+
 # Quick Static Assets Update Script
 # Deploys the widget JS and other static files to static.flowmaestro.ai
 # Usage: ./infra/scripts/deploy-static.sh [environment]
 # Example: ./infra/scripts/deploy-static.sh production
 
 set -e
+
+# Print deprecation warning
+echo -e "\033[1;33m[DEPRECATED]\033[0m This script is deprecated. Use 'npx fmctl deploy static' instead."
+echo ""
 
 # Colors
 GREEN='\033[0;32m'

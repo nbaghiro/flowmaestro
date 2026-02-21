@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# ============================================================================
+# DEPRECATION NOTICE
+# ============================================================================
+# This script is DEPRECATED. Please use the unified deployment CLI instead:
+#
+#   npx fmctl secrets setup [options]
+#
+# Examples:
+#   npx fmctl secrets setup --env prod
+#   npx fmctl secrets setup --prompt-all
+#
+# Run 'npx fmctl secrets --help' for more information.
+# ============================================================================
+
 # FlowMaestro GCP Secret Manager Setup Script
 # Reads secret definitions from Pulumi config and prompts for values
 #
@@ -14,6 +28,10 @@
 #   ./infra/scripts/setup-secrets-gcp.sh -a           # Prompt for all secrets (short form)
 
 set -e
+
+# Print deprecation warning
+echo -e "\033[1;33m[DEPRECATED]\033[0m This script is deprecated. Use 'npx fmctl secrets setup' instead."
+echo ""
 
 # Parse command line arguments
 PROMPT_ALL=false

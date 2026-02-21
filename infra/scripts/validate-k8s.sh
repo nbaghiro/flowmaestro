@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# ============================================================================
+# DEPRECATION NOTICE
+# ============================================================================
+# This script is DEPRECATED. Please use the unified deployment CLI instead:
+#
+#   npx fmctl validate [options]
+#
+# Examples:
+#   npx fmctl validate --env production
+#   npx fmctl validate --env staging
+#
+# Run 'npx fmctl validate --help' for more information.
+# ============================================================================
+
 # FlowMaestro Kubernetes Manifest Validation Script
 # Validates Kubernetes manifests locally before pushing
 #
@@ -13,6 +27,10 @@
 #   ./infra/scripts/validate-k8s.sh --help       # Show help
 
 set -e
+
+# Print deprecation warning
+echo -e "\033[1;33m[DEPRECATED]\033[0m This script is deprecated. Use 'npx fmctl validate' instead."
+echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"

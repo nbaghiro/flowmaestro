@@ -1,9 +1,26 @@
 #!/bin/bash
 
+# ============================================================================
+# DEPRECATION NOTICE
+# ============================================================================
+# This script is DEPRECATED. Please use the unified deployment CLI instead:
+#
+#   npx fmctl deploy status [options]
+#
+# Examples:
+#   npx fmctl deploy status --env prod
+#
+# Run 'npx fmctl deploy --help' for more information.
+# ============================================================================
+
 # Deploy Status Page to GKE
 # Usage: ./infra/scripts/deploy-status.sh
 
 set -e
+
+# Print deprecation warning
+echo -e "\033[1;33m[DEPRECATED]\033[0m This script is deprecated. Use 'npx fmctl deploy status' instead."
+echo ""
 
 # Colors
 GREEN='\033[0;32m'

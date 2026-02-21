@@ -13,7 +13,8 @@
         "status",
         "sdks/javascript",
         "sdks/widget",
-        "extensions/chrome"
+        "extensions/chrome",
+        "infra/deploy-cli"
     ],
     "scripts": {
         "prepare": "husky",
@@ -52,7 +53,9 @@
         "docker:reset": "npm run docker:clean && npm run docker:up && sleep 5 && npm run db:migrate",
         "k8s:validate": "./infra/scripts/validate-k8s.sh production",
         "k8s:validate:staging": "./infra/scripts/validate-k8s.sh staging",
-        "k8s:validate:all": "./infra/scripts/validate-k8s.sh production && ./infra/scripts/validate-k8s.sh staging"
+        "k8s:validate:all": "./infra/scripts/validate-k8s.sh production && ./infra/scripts/validate-k8s.sh staging",
+        "deploy": "fmctl",
+        "deploy:build": "npm run build --workspace=infra/deploy-cli"
     },
     "devDependencies": {
         "@typescript-eslint/eslint-plugin": "^8.18.2",

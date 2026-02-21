@@ -1,10 +1,27 @@
 #!/bin/bash
 
+# ============================================================================
+# DEPRECATION NOTICE
+# ============================================================================
+# This script is DEPRECATED. Please use the unified deployment CLI instead:
+#
+#   npx fmctl deploy documentation [options]
+#
+# Examples:
+#   npx fmctl deploy documentation --env prod
+#
+# Run 'npx fmctl deploy --help' for more information.
+# ============================================================================
+
 # Quick Documentation Site Update Script
 # Usage: ./infra/scripts/deploy-documentation.sh [environment]
 # Example: ./infra/scripts/deploy-documentation.sh prod
 
 set -e
+
+# Print deprecation warning
+echo -e "\033[1;33m[DEPRECATED]\033[0m This script is deprecated. Use 'npx fmctl deploy documentation' instead."
+echo ""
 
 # Colors
 GREEN='\033[0;32m'

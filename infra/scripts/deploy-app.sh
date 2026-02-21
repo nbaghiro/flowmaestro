@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# ============================================================================
+# DEPRECATION NOTICE
+# ============================================================================
+# This script is DEPRECATED. Please use the unified deployment CLI instead:
+#
+#   npx fmctl deploy [services...] [options]
+#
+# Examples:
+#   npx fmctl deploy all --env prod
+#   npx fmctl deploy api worker --tag v1.2.3
+#   npx fmctl deploy frontend --skip-build
+#
+# Run 'npx fmctl deploy --help' for more information.
+# ============================================================================
+
 # FlowMaestro Application Deployment Script
 # This script deploys application updates (not infrastructure)
 # Usage: ./infra/scripts/deploy-app.sh [options]
@@ -16,6 +31,10 @@
 # Note: Marketing site deployment is handled by deploy-marketing.sh
 
 set -e
+
+# Print deprecation warning
+echo -e "\033[1;33m[DEPRECATED]\033[0m This script is deprecated. Use 'npx fmctl deploy' instead."
+echo ""
 
 # Determine repository root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
