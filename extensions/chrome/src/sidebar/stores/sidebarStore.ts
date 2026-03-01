@@ -51,7 +51,7 @@ interface SidebarState {
     isExtractingPage: boolean;
     includePageText: boolean;
     includeScreenshot: boolean;
-    setIncludePageText: (include: boolean) => void;
+    setIncludePageText: (include: boolean) => Promise<void>;
     setIncludeScreenshot: (include: boolean) => void;
     extractPageContext: () => Promise<void>;
     captureScreenshot: () => Promise<void>;
@@ -139,7 +139,13 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
     isExtractingPage: false,
     includePageText: true,
     includeScreenshot: false,
-    setIncludePageText: (include) => set({ includePageText: include }),
+    setIncludePageText: async (include) => {
+        set({ includePageText: include });
+        // When enabling page text, immediately extract page context
+        if (include) {
+            await get().extractPageContext();
+        }
+    },
     setIncludeScreenshot: (include) => set({ includeScreenshot: include }),
 
     extractPageContext: async () => {
@@ -150,12 +156,24 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
             });
 
             if (response.type === "PAGE_CONTEXT_RESULT") {
-                set({ pageContext: response.payload });
+                const pageContext = response.payload;
+                // Validate that we actually got page content
+                if (pageContext && (pageContext.text || pageContext.url)) {
+                    set({ pageContext });
+                } else {
+                    console.error("[SidebarStore] Page context result was empty");
+                    set({ pageContext: null });
+                }
             } else if (response.type === "ERROR") {
-                console.error("Failed to extract page context:", response.error);
+                console.error("[SidebarStore] Failed to extract page context:", response.error);
+                set({ pageContext: null });
+            } else {
+                console.error("[SidebarStore] Unexpected response type:", response.type);
+                set({ pageContext: null });
             }
         } catch (error) {
-            console.error("Failed to extract page context:", error);
+            console.error("[SidebarStore] Failed to extract page context:", error);
+            set({ pageContext: null });
         } finally {
             set({ isExtractingPage: false });
         }
@@ -186,14 +204,7 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
     threadId: null,
 
     sendMessage: async (content) => {
-        const {
-            selectedAgent,
-            pageContext,
-            includePageText,
-            includeScreenshot,
-            threadId,
-            messages
-        } = get();
+        const { selectedAgent, includePageText, includeScreenshot, threadId, messages } = get();
         if (!selectedAgent) return;
 
         // Add user message
@@ -206,12 +217,11 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
         set({ messages: [...messages, userMessage], isStreaming: true });
 
         try {
-            // Prepare page context if needed
+            // Prepare page context if needed - always extract fresh context
             let contextToSend: PageContext | undefined;
             if (includePageText || includeScreenshot) {
-                if (!pageContext) {
-                    await get().extractPageContext();
-                }
+                // Always extract fresh page context to ensure we have current page content
+                await get().extractPageContext();
                 contextToSend = get().pageContext || undefined;
 
                 // Remove screenshot if not requested
