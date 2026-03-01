@@ -45,8 +45,24 @@ async function getActiveTabId(senderTabId?: number): Promise<number | undefined>
     }
 
     // Otherwise, query for the active tab in the current window
-    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    return activeTab?.id;
+    try {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (activeTab?.id) {
+            return activeTab.id;
+        }
+
+        // Fallback: try lastFocusedWindow if currentWindow didn't work
+        const [fallbackTab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        if (fallbackTab?.id) {
+            return fallbackTab.id;
+        }
+
+        console.error("[ServiceWorker] No active tab found");
+        return undefined;
+    } catch (error) {
+        console.error("[ServiceWorker] Error querying tabs:", error);
+        return undefined;
+    }
 }
 
 /**
@@ -123,6 +139,7 @@ async function ensureContentScriptInjected(tabId: number): Promise<void> {
  */
 async function handleGetPageContext(tabId?: number): Promise<ExtensionMessage> {
     if (!tabId) {
+        console.error("[ServiceWorker] No tab ID provided");
         return { type: "ERROR", error: "No tab ID provided" };
     }
 
@@ -134,6 +151,7 @@ async function handleGetPageContext(tabId?: number): Promise<ExtensionMessage> {
             tab.url.startsWith("chrome://") ||
             tab.url.startsWith("chrome-extension://")
         ) {
+            console.error("[ServiceWorker] Cannot access this page type:", tab.url);
             return { type: "ERROR", error: "Cannot extract content from this page" };
         }
 
@@ -149,6 +167,7 @@ async function handleGetPageContext(tabId?: number): Promise<ExtensionMessage> {
         });
         return response;
     } catch (error) {
+        console.error("[ServiceWorker] Error getting page context:", error);
         return {
             type: "ERROR",
             error: error instanceof Error ? error.message : "Failed to get page context"
