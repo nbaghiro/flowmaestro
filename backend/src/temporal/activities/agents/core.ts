@@ -35,6 +35,7 @@ import {
     executeClearThreadMemory,
     executeUpdateWorkingMemory
 } from "./memory";
+import { readLines, readSSEData } from "./sse-stream";
 import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../../core/safety/types";
 import type { ToolExecutionContext } from "../../../services/tools";
 import type { AgentModel, Tool } from "../../../storage/models/Agent";
@@ -1103,8 +1104,9 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     }
 
     // Process streaming response
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
+    if (!response.body) {
+        throw new Error("Failed to get response reader");
+    }
     let fullContent = "";
     let toolCalls: ToolCall[] | undefined;
     // Accumulate arguments as strings during streaming, then parse at the end
@@ -1112,113 +1114,92 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
     let finishReason = "";
 
-    if (!reader) {
-        throw new Error("Failed to get response reader");
-    }
+    for await (const data of readSSEData(response.body)) {
+        if (data === "[DONE]") {
+            continue;
+        }
 
-    // Process streaming response chunks
-    let done = false;
-    while (!done) {
-        const result = await reader.read();
-        done = result.done;
-        if (done) break;
+        try {
+            const parsed = JSON.parse(data) as {
+                choices?: Array<{
+                    delta?: {
+                        content?: string;
+                        tool_calls?: Array<{
+                            index: number;
+                            id?: string;
+                            function?: {
+                                name?: string;
+                                arguments?: string;
+                            };
+                        }>;
+                    };
+                    finish_reason?: string;
+                }>;
+                usage?: {
+                    prompt_tokens: number;
+                    completion_tokens: number;
+                    total_tokens: number;
+                };
+            };
 
-        const value = result.value;
+            if (parsed.choices && parsed.choices[0]) {
+                const choice = parsed.choices[0];
+                const delta = choice.delta;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
-            if (line.startsWith("data: ")) {
-                const data = line.slice(6);
-                if (data === "[DONE]") {
-                    continue;
+                if (delta?.content && executionId) {
+                    // Emit token for streaming
+                    await emitAgentToken({ executionId, token: delta.content, threadId });
+                    fullContent += delta.content;
                 }
 
-                try {
-                    const parsed = JSON.parse(data) as {
-                        choices?: Array<{
-                            delta?: {
-                                content?: string;
-                                tool_calls?: Array<{
-                                    index: number;
-                                    id?: string;
-                                    function?: {
-                                        name?: string;
-                                        arguments?: string;
-                                    };
-                                }>;
-                            };
-                            finish_reason?: string;
-                        }>;
-                        usage?: {
-                            prompt_tokens: number;
-                            completion_tokens: number;
-                            total_tokens: number;
-                        };
-                    };
-
-                    if (parsed.choices && parsed.choices[0]) {
-                        const choice = parsed.choices[0];
-                        const delta = choice.delta;
-
-                        if (delta?.content && executionId) {
-                            // Emit token for streaming
-                            await emitAgentToken({ executionId, token: delta.content, threadId });
-                            fullContent += delta.content;
-                        }
-
-                        if (delta?.tool_calls) {
-                            // Handle tool calls (for now, we'll collect them)
-                            if (!toolCalls) {
-                                toolCalls = [];
-                            }
-                            for (const toolCall of delta.tool_calls) {
-                                if (toolCall.index !== undefined) {
-                                    if (!toolCalls[toolCall.index]) {
-                                        toolCalls[toolCall.index] = {
-                                            id: toolCall.id || "",
-                                            name: toolCall.function?.name || "",
-                                            arguments: {}
-                                        };
-                                    } else {
-                                        // Update id and name if they arrive in subsequent chunks
-                                        if (toolCall.id) {
-                                            toolCalls[toolCall.index].id = toolCall.id;
-                                        }
-                                        if (toolCall.function?.name) {
-                                            toolCalls[toolCall.index].name = toolCall.function.name;
-                                        }
-                                    }
-                                    // Accumulate arguments string fragments
-                                    if (toolCall.function?.arguments) {
-                                        if (!toolCallArgsStrings[toolCall.index]) {
-                                            toolCallArgsStrings[toolCall.index] = "";
-                                        }
-                                        toolCallArgsStrings[toolCall.index] +=
-                                            toolCall.function.arguments;
-                                    }
+                if (delta?.tool_calls) {
+                    // Handle tool calls (for now, we'll collect them)
+                    if (!toolCalls) {
+                        toolCalls = [];
+                    }
+                    for (const toolCall of delta.tool_calls) {
+                        if (toolCall.index !== undefined) {
+                            if (!toolCalls[toolCall.index]) {
+                                toolCalls[toolCall.index] = {
+                                    id: toolCall.id || "",
+                                    name: toolCall.function?.name || "",
+                                    arguments: {}
+                                };
+                            } else {
+                                // Update id and name if they arrive in subsequent chunks
+                                if (toolCall.id) {
+                                    toolCalls[toolCall.index].id = toolCall.id;
+                                }
+                                if (toolCall.function?.name) {
+                                    toolCalls[toolCall.index].name = toolCall.function.name;
                                 }
                             }
-                        }
-
-                        if (choice.finish_reason) {
-                            finishReason = choice.finish_reason;
+                            // Accumulate arguments string fragments
+                            if (toolCall.function?.arguments) {
+                                if (!toolCallArgsStrings[toolCall.index]) {
+                                    toolCallArgsStrings[toolCall.index] = "";
+                                }
+                                toolCallArgsStrings[toolCall.index] += toolCall.function.arguments;
+                            }
                         }
                     }
+                }
 
-                    if (parsed.usage) {
-                        usage = {
-                            promptTokens: parsed.usage.prompt_tokens,
-                            completionTokens: parsed.usage.completion_tokens,
-                            totalTokens: parsed.usage.total_tokens
-                        };
-                    }
-                } catch {
-                    // Skip invalid JSON lines
-                    continue;
+                if (choice.finish_reason) {
+                    finishReason = choice.finish_reason;
                 }
             }
+
+            if (parsed.usage) {
+                usage = {
+                    promptTokens: parsed.usage.prompt_tokens,
+                    completionTokens: parsed.usage.completion_tokens,
+                    totalTokens: parsed.usage.total_tokens
+                };
+            }
+        } catch {
+            // Skip invalid JSON lines
+            continue;
         }
     }
 
@@ -1334,8 +1315,9 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
     }
 
     // Process streaming response
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
+    if (!response.body) {
+        throw new Error("Failed to get response reader");
+    }
     let fullContent = "";
     let toolCalls: ToolCall[] | undefined;
     let stopReason = "";
@@ -1345,140 +1327,116 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
     let streamedOutputTokens = 0;
     let sawUsageEvent = false;
 
-    if (!reader) {
-        throw new Error("Failed to get response reader");
-    }
-
     // Track current tool use being built
     let currentToolUse: { id: string; name: string; input: string } | null = null;
 
-    // Process streaming response chunks
-    let done = false;
-    while (!done) {
-        const result = await reader.read();
-        done = result.done;
-        if (done) break;
-
-        const chunk = decoder.decode(result.value, { stream: true });
-        const lines = chunk.split("\n").filter((line) => line.trim());
-
-        for (const line of lines) {
-            if (line.startsWith("data: ")) {
-                const data = line.slice(6);
-
-                try {
-                    const parsed = JSON.parse(data) as {
-                        type: string;
-                        index?: number;
-                        delta?: {
-                            type?: string;
-                            text?: string;
-                            stop_reason?: string;
-                        };
-                        content_block?: {
-                            type: string;
-                            id?: string;
-                            name?: string;
-                            text?: string;
-                            input?: JsonObject;
-                        };
-                        usage?: {
-                            input_tokens?: number;
-                            output_tokens?: number;
-                        };
-                        message?: {
-                            usage?: {
-                                input_tokens: number;
-                                output_tokens: number;
-                            };
-                        };
+    for await (const data of readSSEData(response.body)) {
+        try {
+            const parsed = JSON.parse(data) as {
+                type: string;
+                index?: number;
+                delta?: {
+                    type?: string;
+                    text?: string;
+                    stop_reason?: string;
+                };
+                content_block?: {
+                    type: string;
+                    id?: string;
+                    name?: string;
+                    text?: string;
+                    input?: JsonObject;
+                };
+                usage?: {
+                    input_tokens?: number;
+                    output_tokens?: number;
+                };
+                message?: {
+                    usage?: {
+                        input_tokens: number;
+                        output_tokens: number;
                     };
+                };
+            };
 
-                    // Handle content block delta (streaming text)
-                    if (
-                        parsed.type === "content_block_delta" &&
-                        parsed.delta?.type === "text_delta"
-                    ) {
-                        const text = parsed.delta.text;
-                        if (text && executionId) {
-                            // Emit token immediately for streaming
-                            await emitAgentToken({ executionId, token: text, threadId });
-                            fullContent += text;
-                        }
-                    }
-
-                    // Handle content block start (for tool use)
-                    if (
-                        parsed.type === "content_block_start" &&
-                        parsed.content_block?.type === "tool_use"
-                    ) {
-                        currentToolUse = {
-                            id: parsed.content_block.id || "",
-                            name: parsed.content_block.name || "",
-                            input: ""
-                        };
-                    }
-
-                    // Handle input_json delta (for tool arguments)
-                    if (
-                        parsed.type === "content_block_delta" &&
-                        parsed.delta?.type === "input_json_delta"
-                    ) {
-                        if (currentToolUse && parsed.delta.text) {
-                            currentToolUse.input += parsed.delta.text;
-                        }
-                    }
-
-                    // Handle content block stop (finalize tool use)
-                    if (parsed.type === "content_block_stop" && currentToolUse) {
-                        if (!toolCalls) toolCalls = [];
-                        try {
-                            toolCalls.push({
-                                id: currentToolUse.id,
-                                name: currentToolUse.name,
-                                arguments: JSON.parse(currentToolUse.input)
-                            });
-                        } catch (error) {
-                            activityLogger.error(
-                                "Failed to parse Anthropic tool input JSON",
-                                error instanceof Error ? error : new Error(String(error))
-                            );
-                        }
-                        currentToolUse = null;
-                    }
-
-                    // Handle message delta (stop reason)
-                    if (parsed.type === "message_delta" && parsed.delta?.stop_reason) {
-                        stopReason = parsed.delta.stop_reason;
-                    }
-
-                    // Capture usage tokens (Anthropic streams usage on multiple event types)
-                    if (parsed.usage) {
-                        if (typeof parsed.usage.input_tokens === "number") {
-                            streamedInputTokens = parsed.usage.input_tokens;
-                        }
-                        if (typeof parsed.usage.output_tokens === "number") {
-                            streamedOutputTokens = parsed.usage.output_tokens;
-                        }
-                        sawUsageEvent = true;
-                    }
-
-                    // Also capture usage from message payloads if present
-                    if (
-                        (parsed.type === "message_start" || parsed.type === "message_stop") &&
-                        parsed.message?.usage
-                    ) {
-                        streamedInputTokens =
-                            parsed.message.usage.input_tokens ?? streamedInputTokens;
-                        streamedOutputTokens =
-                            parsed.message.usage.output_tokens ?? streamedOutputTokens;
-                        sawUsageEvent = true;
-                    }
-                } catch {
-                    // Skip invalid JSON lines
-                    continue;
+            // Handle content block delta (streaming text)
+            if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
+                const text = parsed.delta.text;
+                if (text && executionId) {
+                    // Emit token immediately for streaming
+                    await emitAgentToken({ executionId, token: text, threadId });
+                    fullContent += text;
                 }
             }
+
+            // Handle content block start (for tool use)
+            if (
+                parsed.type === "content_block_start" &&
+                parsed.content_block?.type === "tool_use"
+            ) {
+                currentToolUse = {
+                    id: parsed.content_block.id || "",
+                    name: parsed.content_block.name || "",
+                    input: ""
+                };
+            }
+
+            // Handle input_json delta (for tool arguments)
+            if (
+                parsed.type === "content_block_delta" &&
+                parsed.delta?.type === "input_json_delta"
+            ) {
+                if (currentToolUse && parsed.delta.text) {
+                    currentToolUse.input += parsed.delta.text;
+                }
+            }
+
+            // Handle content block stop (finalize tool use)
+            if (parsed.type === "content_block_stop" && currentToolUse) {
+                if (!toolCalls) toolCalls = [];
+                try {
+                    toolCalls.push({
+                        id: currentToolUse.id,
+                        name: currentToolUse.name,
+                        arguments: JSON.parse(currentToolUse.input)
+                    });
+                } catch (error) {
+                    activityLogger.error(
+                        "Failed to parse Anthropic tool input JSON",
+                        error instanceof Error ? error : new Error(String(error))
+                    );
+                }
+                currentToolUse = null;
+            }
+
+            // Handle message delta (stop reason)
+            if (parsed.type === "message_delta" && parsed.delta?.stop_reason) {
+                stopReason = parsed.delta.stop_reason;
+            }
+
+            // Capture usage tokens (Anthropic streams usage on multiple event types)
+            if (parsed.usage) {
+                if (typeof parsed.usage.input_tokens === "number") {
+                    streamedInputTokens = parsed.usage.input_tokens;
+                }
+                if (typeof parsed.usage.output_tokens === "number") {
+                    streamedOutputTokens = parsed.usage.output_tokens;
+                }
+                sawUsageEvent = true;
+            }
+
+            // Also capture usage from message payloads if present
+            if (
+                (parsed.type === "message_start" || parsed.type === "message_stop") &&
+                parsed.message?.usage
+            ) {
+                streamedInputTokens = parsed.message.usage.input_tokens ?? streamedInputTokens;
+                streamedOutputTokens = parsed.message.usage.output_tokens ?? streamedOutputTokens;
+                sawUsageEvent = true;
+            }
+        } catch {
+            // Skip invalid JSON lines
+            continue;
         }
     }
 
@@ -1575,91 +1533,74 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
     }
 
     // Process streaming response
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
+    if (!response.body) {
+        throw new Error("Failed to get response reader");
+    }
     let fullContent = "";
     let toolCalls: ToolCall[] | undefined;
     let finishReason = "";
     let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
 
-    if (!reader) {
-        throw new Error("Failed to get response reader");
-    }
-
-    let done = false;
-    while (!done) {
-        const result = await reader.read();
-        done = result.done;
-        if (done) break;
-
-        const chunk = decoder.decode(result.value, { stream: true });
-        const lines = chunk.split("\n").filter((line) => line.trim());
-
-        for (const line of lines) {
-            if (line.startsWith("data: ")) {
-                const data = line.slice(6);
-
-                try {
-                    const parsed = JSON.parse(data) as {
-                        candidates?: Array<{
-                            content?: {
-                                parts?: Array<{
-                                    text?: string;
-                                    functionCall?: {
-                                        name: string;
-                                        args: JsonObject;
-                                    };
-                                }>;
+    for await (const data of readSSEData(response.body)) {
+        try {
+            const parsed = JSON.parse(data) as {
+                candidates?: Array<{
+                    content?: {
+                        parts?: Array<{
+                            text?: string;
+                            functionCall?: {
+                                name: string;
+                                args: JsonObject;
                             };
-                            finishReason?: string;
                         }>;
-                        usageMetadata?: {
-                            promptTokenCount: number;
-                            candidatesTokenCount: number;
-                            totalTokenCount: number;
-                        };
                     };
+                    finishReason?: string;
+                }>;
+                usageMetadata?: {
+                    promptTokenCount: number;
+                    candidatesTokenCount: number;
+                    totalTokenCount: number;
+                };
+            };
 
-                    const candidate = parsed.candidates?.[0];
-                    if (candidate?.content?.parts) {
-                        for (const part of candidate.content.parts) {
-                            if (part.text) {
-                                fullContent += part.text;
-                                if (executionId) {
-                                    await emitAgentToken({
-                                        executionId,
-                                        token: part.text,
-                                        threadId
-                                    });
-                                }
-                            }
-                            if (part.functionCall) {
-                                if (!toolCalls) toolCalls = [];
-                                toolCalls.push({
-                                    id: `google-${Date.now()}-${toolCalls.length}`,
-                                    name: part.functionCall.name,
-                                    arguments: part.functionCall.args
-                                });
-                            }
+            const candidate = parsed.candidates?.[0];
+            if (candidate?.content?.parts) {
+                for (const part of candidate.content.parts) {
+                    if (part.text) {
+                        fullContent += part.text;
+                        if (executionId) {
+                            await emitAgentToken({
+                                executionId,
+                                token: part.text,
+                                threadId
+                            });
                         }
                     }
-
-                    if (candidate?.finishReason) {
-                        finishReason = candidate.finishReason;
+                    if (part.functionCall) {
+                        if (!toolCalls) toolCalls = [];
+                        toolCalls.push({
+                            id: `google-${Date.now()}-${toolCalls.length}`,
+                            name: part.functionCall.name,
+                            arguments: part.functionCall.args
+                        });
                     }
-
-                    if (parsed.usageMetadata) {
-                        usage = {
-                            promptTokens: parsed.usageMetadata.promptTokenCount,
-                            completionTokens: parsed.usageMetadata.candidatesTokenCount,
-                            totalTokens: parsed.usageMetadata.totalTokenCount
-                        };
-                    }
-                } catch {
-                    // Skip invalid JSON lines
-                    continue;
                 }
             }
+
+            if (candidate?.finishReason) {
+                finishReason = candidate.finishReason;
+            }
+
+            if (parsed.usageMetadata) {
+                usage = {
+                    promptTokens: parsed.usageMetadata.promptTokenCount,
+                    completionTokens: parsed.usageMetadata.candidatesTokenCount,
+                    totalTokens: parsed.usageMetadata.totalTokenCount
+                };
+            }
+        } catch {
+            // Skip invalid JSON lines
+            continue;
         }
     }
 
@@ -1718,90 +1659,80 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
         throw new Error(`Cohere API error: ${response.status} - ${error}`);
     }
 
-    // Process streaming response
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
+    // Process streaming response (one JSON object per line)
+    if (!response.body) {
+        throw new Error("Failed to get response reader");
+    }
     let fullContent = "";
     let toolCalls: ToolCall[] | undefined;
     let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
 
-    if (!reader) {
-        throw new Error("Failed to get response reader");
-    }
-
-    let done = false;
-    while (!done) {
-        const result = await reader.read();
-        done = result.done;
-        if (done) break;
-
-        const chunk = decoder.decode(result.value, { stream: true });
-        const lines = chunk.split("\n").filter((line) => line.trim());
-
-        for (const line of lines) {
-            try {
-                const jsonLine = line.startsWith("data: ") ? line.slice(6) : line;
-                const parsed = JSON.parse(jsonLine) as {
-                    event_type?: string;
-                    text?: string;
-                    tool_calls?: Array<{
-                        name: string;
-                        parameters: JsonObject;
-                    }>;
-                    finish_reason?: string;
+    for await (const line of readLines(response.body)) {
+        if (!line.trim()) {
+            continue;
+        }
+        try {
+            const jsonLine = line.startsWith("data: ") ? line.slice(6) : line;
+            const parsed = JSON.parse(jsonLine) as {
+                event_type?: string;
+                text?: string;
+                tool_calls?: Array<{
+                    name: string;
+                    parameters: JsonObject;
+                }>;
+                finish_reason?: string;
+                meta?: {
+                    tokens?: {
+                        input_tokens?: number;
+                        output_tokens?: number;
+                    };
+                };
+                response?: {
                     meta?: {
                         tokens?: {
                             input_tokens?: number;
                             output_tokens?: number;
                         };
                     };
-                    response?: {
-                        meta?: {
-                            tokens?: {
-                                input_tokens?: number;
-                                output_tokens?: number;
-                            };
-                        };
-                    };
                 };
+            };
 
-                if (parsed.event_type === "text-generation" && parsed.text) {
-                    fullContent += parsed.text;
-                    if (executionId) {
-                        await emitAgentToken({ executionId, token: parsed.text, threadId });
-                    }
+            if (parsed.event_type === "text-generation" && parsed.text) {
+                fullContent += parsed.text;
+                if (executionId) {
+                    await emitAgentToken({ executionId, token: parsed.text, threadId });
                 }
-
-                if (parsed.event_type === "tool-calls-generation" && parsed.tool_calls) {
-                    toolCalls = parsed.tool_calls.map((tc, idx) => ({
-                        id: `cohere-${Date.now()}-${idx}`,
-                        name: tc.name,
-                        arguments: tc.parameters
-                    }));
-                }
-
-                if (parsed.meta?.tokens) {
-                    usage = {
-                        promptTokens: parsed.meta.tokens.input_tokens || 0,
-                        completionTokens: parsed.meta.tokens.output_tokens || 0,
-                        totalTokens:
-                            (parsed.meta.tokens.input_tokens || 0) +
-                            (parsed.meta.tokens.output_tokens || 0)
-                    };
-                }
-
-                // Final token usage may arrive on stream-end response envelope
-                if (parsed.event_type === "stream-end" && parsed.response?.meta?.tokens) {
-                    const tokens = parsed.response.meta.tokens;
-                    usage = {
-                        promptTokens: tokens.input_tokens || 0,
-                        completionTokens: tokens.output_tokens || 0,
-                        totalTokens: (tokens.input_tokens || 0) + (tokens.output_tokens || 0)
-                    };
-                }
-            } catch {
-                continue;
             }
+
+            if (parsed.event_type === "tool-calls-generation" && parsed.tool_calls) {
+                toolCalls = parsed.tool_calls.map((tc, idx) => ({
+                    id: `cohere-${Date.now()}-${idx}`,
+                    name: tc.name,
+                    arguments: tc.parameters
+                }));
+            }
+
+            if (parsed.meta?.tokens) {
+                usage = {
+                    promptTokens: parsed.meta.tokens.input_tokens || 0,
+                    completionTokens: parsed.meta.tokens.output_tokens || 0,
+                    totalTokens:
+                        (parsed.meta.tokens.input_tokens || 0) +
+                        (parsed.meta.tokens.output_tokens || 0)
+                };
+            }
+
+            // Final token usage may arrive on stream-end response envelope
+            if (parsed.event_type === "stream-end" && parsed.response?.meta?.tokens) {
+                const tokens = parsed.response.meta.tokens;
+                usage = {
+                    promptTokens: tokens.input_tokens || 0,
+                    completionTokens: tokens.output_tokens || 0,
+                    totalTokens: (tokens.input_tokens || 0) + (tokens.output_tokens || 0)
+                };
+            }
+        } catch {
+            continue;
         }
     }
 
@@ -1847,38 +1778,22 @@ async function callHuggingFace(input: HuggingFaceCallInput): Promise<LLMResponse
 
     // Handle streaming response (SSE format)
     if (response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        for await (const data of readSSEData(response.body)) {
+            if (data === "[DONE]") continue;
 
-        let result = await reader.read();
-        while (!result.done) {
-            const chunk = decoder.decode(result.value, { stream: true });
-            const lines = chunk.split("\n");
+            try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content || "";
 
-            for (const line of lines) {
-                if (!line.trim() || line.startsWith(":")) continue;
-
-                if (line.startsWith("data: ")) {
-                    const data = line.slice(6);
-                    if (data === "[DONE]") continue;
-
-                    try {
-                        const parsed = JSON.parse(data);
-                        const content = parsed.choices?.[0]?.delta?.content || "";
-
-                        if (content) {
-                            fullContent += content;
-                            if (executionId) {
-                                await emitAgentToken({ executionId, token: content, threadId });
-                            }
-                        }
-                    } catch {
-                        continue;
+                if (content) {
+                    fullContent += content;
+                    if (executionId) {
+                        await emitAgentToken({ executionId, token: content, threadId });
                     }
                 }
+            } catch {
+                continue;
             }
-
-            result = await reader.read();
         }
     }
 
