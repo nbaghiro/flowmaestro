@@ -6,6 +6,7 @@ import Fastify from "fastify";
 import { config } from "../core/config";
 import { initializeLogger, shutdownLogger } from "../core/logging";
 import { initializeOTel, resolveOTelEnabled, shutdownOTel } from "../core/observability";
+import { executionEventLog } from "../services/events/ExecutionEventLog";
 import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
 import { connectRedis, redis } from "../services/redis";
@@ -100,7 +101,9 @@ export async function buildServer() {
             "X-Workspace-Id",
             "X-Requested-With",
             "Accept",
-            "Origin"
+            "Origin",
+            // Sent by EventSource when it reconnects, so the SSE relay can resume
+            "Last-Event-ID"
         ],
         // Expose headers that the frontend may need to read
         exposedHeaders: ["X-Correlation-ID"]
@@ -296,6 +299,7 @@ export async function startServer() {
             await db.close();
             await redis.quit();
             await redisEventBus.disconnect();
+            await executionEventLog.disconnect();
             process.exit(0);
         });
     });

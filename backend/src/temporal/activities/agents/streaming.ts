@@ -17,6 +17,7 @@ import type {
     ThreadStreamingEvent,
     TokensUpdatedEvent
 } from "@flowmaestro/shared";
+import { executionEventLog } from "../../../services/events/ExecutionEventLog";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { activityLogger } from "../../core";
 
@@ -162,7 +163,10 @@ export async function emitTokensUpdated(input: {
         tokenUsage: input.tokenUsage
     };
 
-    await publishWithRetry(input.threadId, event);
+    await Promise.all([
+        publishWithRetry(input.threadId, event),
+        executionEventLog.append(input.executionId, "thread:tokens:updated", { ...event })
+    ]);
 
     activityLogger.info("Tokens updated event emitted", {
         threadId: input.threadId,

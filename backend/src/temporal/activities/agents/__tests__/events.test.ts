@@ -14,6 +14,9 @@ const mockLogger = {
 
 // Mock external dependencies before imports
 jest.mock("../../../../services/events/RedisEventBus");
+jest.mock("../../../../services/events/ExecutionEventLog", () => ({
+    executionEventLog: { append: jest.fn().mockResolvedValue(undefined) }
+}));
 jest.mock("../../../../temporal/core", () => ({
     activityLogger: mockLogger,
     createActivityLogger: jest.fn(() => mockLogger)

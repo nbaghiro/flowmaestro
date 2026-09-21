@@ -181,6 +181,8 @@ async function run() {
 
                 // Disconnect from Redis
                 await redisEventBus.disconnect();
+                const { executionEventLog } = await import("../services/events/ExecutionEventLog");
+                await executionEventLog.disconnect();
                 logger.info("Redis disconnected");
 
                 // Shutdown OpenTelemetry (flushes pending telemetry)

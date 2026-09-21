@@ -58,6 +58,19 @@ jest.mock("../../../../temporal/workflows/agent-orchestrator", () => ({
     userMessageSignal: "userMessage"
 }));
 
+jest.mock("../../../../services/events/ExecutionEventLog", () => ({
+    TERMINAL_EVENT_TYPES: new Set(["completed", "error"]),
+    executionEventLog: {
+        append: jest.fn().mockResolvedValue(undefined),
+        findResumePoint: jest.fn().mockResolvedValue({ after: "0-0", exists: false }),
+        createReader: jest.fn(() => ({
+            read: jest.fn().mockResolvedValue([]),
+            close: jest.fn()
+        })),
+        disconnect: jest.fn().mockResolvedValue(undefined)
+    }
+}));
+
 // ============================================================================
 // TESTS
 // ============================================================================

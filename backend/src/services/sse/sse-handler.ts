@@ -14,8 +14,11 @@ export interface SSEHandlerConfig {
 }
 
 export interface SSEContext {
-    /** Send an SSE event to the client */
-    sendEvent: (eventType: string, data: Record<string, unknown>) => void;
+    /**
+     * Send an SSE event to the client. With an `id`, the browser sends it back as
+     * Last-Event-ID when it reconnects, so the route can resume where it left off.
+     */
+    sendEvent: (eventType: string, data: Record<string, unknown>, id?: string) => void;
     /** Send a raw SSE comment (for keep-alive) */
     sendComment: (comment: string) => void;
     /** Close the SSE connection */
@@ -100,11 +103,12 @@ export function createSSEHandler(
     }
 
     const context: SSEContext = {
-        sendEvent: (eventType: string, data: Record<string, unknown>) => {
+        sendEvent: (eventType: string, data: Record<string, unknown>, id?: string) => {
             if (disconnected) return;
 
             // Write entire SSE message in a single write call (matches original implementation)
-            const message = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
+            const idField = id ? `id: ${id}\n` : "";
+            const message = `${idField}event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
             try {
                 reply.raw.write(message);
             } catch {
@@ -152,15 +156,17 @@ export function createSSEHandler(
  * @param eventType - The event type to send
  * @param data - The event data
  * @param cleanup - Optional cleanup function to call after sending but before closing
+ * @param id - Optional SSE event id
  */
 export function sendTerminalEvent(
     sse: SSEContext,
     eventType: string,
     data: Record<string, unknown>,
-    cleanup?: () => void
+    cleanup?: () => void,
+    id?: string
 ): void {
     // Send the event first
-    sse.sendEvent(eventType, data);
+    sse.sendEvent(eventType, data, id);
 
     // Delay closing to ensure event is flushed to client (matches original 500ms delay)
     setTimeout(() => {
