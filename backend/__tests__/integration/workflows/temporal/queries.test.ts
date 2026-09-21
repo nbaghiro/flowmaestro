@@ -28,7 +28,8 @@ import {
     sendCancelSignal,
     waitForResult,
     delay,
-    type TemporalTestEnv
+    type TemporalTestEnv,
+    cancelForCleanup
 } from "./helpers";
 
 describe("Workflow Queries", () => {
@@ -64,7 +65,7 @@ describe("Workflow Queries", () => {
             expect(progress.skippedNodes).toBe(0);
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 
@@ -86,7 +87,7 @@ describe("Workflow Queries", () => {
             expect(progress.percentComplete).toBeLessThanOrEqual(100);
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 
@@ -120,7 +121,7 @@ describe("Workflow Queries", () => {
             expect(progress.currentNodes.length).toBeGreaterThanOrEqual(0);
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
     });
@@ -144,7 +145,7 @@ describe("Workflow Queries", () => {
             expect(["pending", "unknown"]).toContain(status.status);
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 
@@ -166,7 +167,7 @@ describe("Workflow Queries", () => {
             expect(status.output).toBeDefined();
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 
@@ -190,7 +191,7 @@ describe("Workflow Queries", () => {
             }
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 
@@ -209,7 +210,7 @@ describe("Workflow Queries", () => {
             expect(status.status).toBe("unknown");
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
     });
@@ -232,7 +233,7 @@ describe("Workflow Queries", () => {
             expect(Array.isArray(summary.pendingNodes)).toBe(true);
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 
@@ -254,7 +255,7 @@ describe("Workflow Queries", () => {
             expect(summary.pauseReason).toBe("Testing pause status");
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 
@@ -281,7 +282,7 @@ describe("Workflow Queries", () => {
             ).toBe(5);
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 
@@ -304,7 +305,7 @@ describe("Workflow Queries", () => {
             expect(summary.completedNodes.length).toBeGreaterThanOrEqual(1);
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
     });
@@ -329,7 +330,7 @@ describe("Workflow Queries", () => {
             expect(progress.totalNodes).toBe(6); // Input + 4 branches + Output
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 
@@ -353,7 +354,7 @@ describe("Workflow Queries", () => {
             expect(progress2.completedNodes).toBeGreaterThanOrEqual(progress1.completedNodes);
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
     });
@@ -382,7 +383,7 @@ describe("Workflow Queries", () => {
             );
 
             // Cancel to cleanup
-            await sendCancelSignal(handle, "Cleanup");
+            await cancelForCleanup(handle, "Cleanup");
             await waitForResult(handle, 10000);
         }, 30000);
 

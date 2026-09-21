@@ -5,7 +5,7 @@
  * cancellation, and pause/resume functionality.
  */
 
-import { Client } from "@temporalio/client";
+import { Client, WorkflowNotFoundError } from "@temporalio/client";
 import { TestWorkflowEnvironment } from "@temporalio/testing";
 import { Worker, Runtime } from "@temporalio/worker";
 import { nanoid } from "nanoid";
@@ -242,6 +242,20 @@ export async function runWorkflowToCompletion(
  */
 export async function sendCancelSignal(handle: WorkflowHandle, reason?: string): Promise<void> {
     await handle.signal(cancelWorkflowSignal, { reason });
+}
+
+/**
+ * Cancel a workflow started only to observe it mid-run. Fast branches can finish before
+ * the test reaches its cleanup, so an already-completed workflow is not a failure here.
+ */
+export async function cancelForCleanup(handle: WorkflowHandle, reason?: string): Promise<void> {
+    try {
+        await handle.signal(cancelWorkflowSignal, { reason });
+    } catch (error) {
+        if (!(error instanceof WorkflowNotFoundError)) {
+            throw error;
+        }
+    }
 }
 
 /**
