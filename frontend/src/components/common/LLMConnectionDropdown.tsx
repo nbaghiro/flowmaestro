@@ -6,8 +6,8 @@
  * Optionally shows thinking capability badges and toggle.
  */
 
-import { Brain, Settings, ChevronDown } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { Brain, Settings, ChevronDown, Plus } from "lucide-react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
     LLM_MODELS_BY_PROVIDER,
@@ -19,6 +19,7 @@ import {
 import { getConnections, type Connection } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
+import { ProviderConnectionDialog } from "../connections/dialogs/ProviderConnectionDialog";
 
 // Get list of provider values from the models registry
 const LLM_PROVIDER_VALUES = Object.keys(LLM_MODELS_BY_PROVIDER);
@@ -80,6 +81,7 @@ export function LLMConnectionDropdown({
 }: LLMConnectionDropdownProps) {
     const [internalConnections, setInternalConnections] = useState<Connection[]>([]);
     const [isOpen, setIsOpen] = useState(false);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -103,36 +105,57 @@ export function LLMConnectionDropdown({
     // Check if current model supports thinking
     const currentModelSupportsThinking = model ? modelSupportsThinking(model) : false;
 
+    const fetchLLMConnections = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await getConnections({ status: "active" });
+            if (response.success) {
+                const llmConnections = response.data.filter((conn) =>
+                    LLM_PROVIDER_VALUES.includes(conn.provider)
+                );
+                setInternalConnections(llmConnections);
+
+                // Auto-select first connection if none selected
+                if (autoSelectFirst && !connectionId && llmConnections.length > 0) {
+                    const firstConn = sortConnections(llmConnections)[0];
+                    const defaultModel = getDefaultModelForProvider(firstConn.provider);
+                    onSelect(firstConn.id, defaultModel, firstConn.provider);
+                }
+            }
+        } catch (error) {
+            logger.error("Failed to fetch connections", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [autoSelectFirst, connectionId]);
+
     // Fetch connections on mount if needed
     useEffect(() => {
         if (!shouldFetch) return;
-
-        const fetchLLMConnections = async () => {
-            setIsLoading(true);
-            try {
-                const response = await getConnections({ status: "active" });
-                if (response.success) {
-                    const llmConnections = response.data.filter((conn) =>
-                        LLM_PROVIDER_VALUES.includes(conn.provider)
-                    );
-                    setInternalConnections(llmConnections);
-
-                    // Auto-select first connection if none selected
-                    if (autoSelectFirst && !connectionId && llmConnections.length > 0) {
-                        const firstConn = sortConnections(llmConnections)[0];
-                        const defaultModel = getDefaultModelForProvider(firstConn.provider);
-                        onSelect(firstConn.id, defaultModel, firstConn.provider);
-                    }
-                }
-            } catch (error) {
-                logger.error("Failed to fetch connections", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         fetchLLMConnections();
     }, [shouldFetch]);
+
+    // "Add a connection" from the empty state opens the same provider dialog the
+    // workflow canvas uses, limited to LLM providers. Consumers that pass their own
+    // connections (the agent builder) read them from the connection store, which the
+    // dialog refreshes itself; the internal list is refetched here.
+    const handleAddedConnection = (provider: string, newConnectionId: string) => {
+        setIsAddDialogOpen(false);
+        onSelect(newConnectionId, getDefaultModelForProvider(provider), provider);
+        if (!externalConnections) {
+            fetchLLMConnections();
+        }
+    };
+
+    const addConnectionDialog = (
+        <ProviderConnectionDialog
+            isOpen={isAddDialogOpen}
+            onClose={() => setIsAddDialogOpen(false)}
+            defaultCategory="AI & ML"
+            includeProviders={LLM_PROVIDER_VALUES}
+            onSelect={handleAddedConnection}
+        />
+    );
 
     // Sort connections by provider order
     const sortedConnections = useMemo(() => sortConnections(connections), [connections]);
@@ -185,10 +208,17 @@ export function LLMConnectionDropdown({
     if (connections.length === 0) {
         if (variant === "compact") {
             return (
-                <div className="flex items-center gap-1.5 px-2 py-1 text-xs text-orange-600 dark:text-orange-400">
-                    <Settings className="w-3.5 h-3.5" />
-                    <span>No LLM connections</span>
-                </div>
+                <>
+                    <button
+                        type="button"
+                        onClick={() => setIsAddDialogOpen(true)}
+                        className="flex items-center gap-1.5 px-2 py-1 text-xs text-orange-600 dark:text-orange-400 hover:underline"
+                    >
+                        <Settings className="w-3.5 h-3.5" />
+                        <span>No LLM connections. Add one</span>
+                    </button>
+                    {addConnectionDialog}
+                </>
             );
         }
         return (
@@ -198,9 +228,20 @@ export function LLMConnectionDropdown({
                         {label}
                     </label>
                 )}
-                <div className="px-4 py-3 rounded-lg border border-border bg-muted text-sm text-orange-600 dark:text-orange-400">
-                    No LLM connections available. Please add a connection first.
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-lg border border-border bg-muted text-sm">
+                    <span className="text-orange-600 dark:text-orange-400">
+                        No LLM connections available yet.
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => setIsAddDialogOpen(true)}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add a connection
+                    </button>
                 </div>
+                {addConnectionDialog}
             </div>
         );
     }
