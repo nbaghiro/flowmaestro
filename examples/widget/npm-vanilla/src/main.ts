@@ -2,7 +2,7 @@ import { FlowMaestroWidget } from "@flowmaestro/widget";
 
 // Configuration - update these values
 const WIDGET_SLUG = "customer-support-agent-chat"; // Replace with your chat interface slug
-const BASE_URL = "https://api.flowmaestro.ai"; // Replace with your FlowMaestro API URL (localhost:3001 for local dev)
+const BASE_URL = "https://api.flowmaestro.ai"; // Replace with your FlowMaestro API URL (localhost:8401 for local dev)
 
 // DOM elements
 const statusReady = document.getElementById("status-ready")!;

@@ -30,7 +30,7 @@ export default function Options() {
             setAuthStateLocal(auth);
             setSettingsLocal(settingsData);
             setThemeLocal(themeData);
-            setApiBaseUrl(settingsData?.apiBaseUrl || "http://localhost:3001");
+            setApiBaseUrl(settingsData?.apiBaseUrl || "http://localhost:8401");
             applyTheme(themeData);
         }
         load();

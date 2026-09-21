@@ -55,7 +55,7 @@ export const SolutionHero: React.FC<SolutionHeroProps> = ({ solution }) => {
                     className="flex flex-col sm:flex-row gap-4 justify-center"
                 >
                     <a
-                        href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                        href={import.meta.env.VITE_APP_URL || "http://localhost:8400"}
                         className="px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200 shadow-lg"
                     >
                         Start Building Free

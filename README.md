@@ -94,9 +94,9 @@ npm run dev:frontend
 
 Access the application:
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:3001
-- **Temporal UI**: http://localhost:8088
+- **Frontend**: http://localhost:8400
+- **Backend API**: http://localhost:8401
+- **Temporal UI**: http://localhost:8405
 
 See [Deployment Guide](./.docs/deployment-guide.md) for production setup.
 

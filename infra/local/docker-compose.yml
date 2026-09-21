@@ -13,7 +13,7 @@ services:
             TZ: UTC
             PGTZ: UTC
         ports:
-            - "5432:5432"
+            - "8402:5432"
         volumes:
             - postgres_data:/var/lib/postgresql/data
             - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -37,7 +37,7 @@ services:
             TZ: UTC
             PGTZ: UTC
         ports:
-            - "5433:5432"
+            - "8411:5432"
         volumes:
             - postgres_test_data:/var/lib/postgresql/data
             - ./postgres/init-test-db.sql:/docker-entrypoint-initdb.d/init.sql
@@ -58,7 +58,7 @@ services:
             MONGO_INITDB_ROOT_PASSWORD: test_password
             MONGO_INITDB_DATABASE: test_database
         ports:
-            - "27017:27017"
+            - "8412:27017"
         volumes:
             - mongo_test_data:/data/db
             - ./mongodb/init-test-db.js:/docker-entrypoint-initdb.d/init-test-db.js:ro
@@ -75,7 +75,7 @@ services:
         image: redis:7-alpine
         container_name: flowmaestro-redis
         ports:
-            - "6379:6379"
+            - "8403:6379"
         volumes:
             - redis_data:/data
         healthcheck:
@@ -101,7 +101,7 @@ services:
             - POSTGRES_SEEDS=postgres
             - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
         ports:
-            - "7233:7233"
+            - "8404:7233"
         volumes:
             - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
         networks:
@@ -115,9 +115,9 @@ services:
             - temporal
         environment:
             - TEMPORAL_ADDRESS=temporal:7233
-            - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+            - TEMPORAL_CORS_ORIGINS=http://localhost:8400
         ports:
-            - "8088:8080"
+            - "8405:8080"
         networks:
             - flowmaestro
 
@@ -142,7 +142,7 @@ services:
             postgres:
                 condition: service_healthy
         ports:
-            - "8080:8080"
+            - "8410:8080"
         environment:
             ADMINER_DEFAULT_SERVER: postgres
         networks:

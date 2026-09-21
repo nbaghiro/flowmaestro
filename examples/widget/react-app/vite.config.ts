@@ -4,6 +4,6 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
     plugins: [react()],
     server: {
-        port: 5174 // Different port to avoid conflict with main FlowMaestro dev server
+        port: 8414 // FlowMaestro 84xx block, see infra/local/README.md
     }
 });

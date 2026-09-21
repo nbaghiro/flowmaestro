@@ -115,7 +115,7 @@ import { logger } from "./logger";
 // Re-export types for use in components
 export type { JsonObject };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8401";
 
 /**
  * Enhanced fetch wrapper that captures correlation IDs for logging

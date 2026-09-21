@@ -924,19 +924,19 @@ const handleAction = async (): Promise<void> => {
 ### Frontend (.env)
 
 ```
-VITE_API_URL=http://localhost:3001
-VITE_WS_URL=http://localhost:3001
+VITE_API_URL=http://localhost:8401
+VITE_WS_URL=http://localhost:8401
 ```
 
 ### Backend (.env)
 
 ```
 NODE_ENV=development
-PORT=3001
-DATABASE_URL=postgresql://user:password@localhost:5432/flowmaestro
-REDIS_URL=redis://localhost:6379
+PORT=8401
+DATABASE_URL=postgresql://user:password@localhost:8402/flowmaestro
+REDIS_URL=redis://localhost:8403
 JWT_SECRET=your-secret-key
-TEMPORAL_ADDRESS=localhost:7233
+TEMPORAL_ADDRESS=localhost:8404
 ```
 
 ---

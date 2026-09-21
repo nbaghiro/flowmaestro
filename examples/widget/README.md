@@ -133,7 +133,7 @@ When using the script tag, pass options via `data-*` attributes:
 ```bash
 cd script-tag
 npx serve .
-# Open http://localhost:3000/basic.html or /advanced.html
+# Open http://localhost:8400/basic.html or /advanced.html
 ```
 
 ### npm Vanilla Example
@@ -151,7 +151,7 @@ npm run dev
 cd react-app
 npm install
 npm run dev
-# Open http://localhost:5174
+# Open http://localhost:8414
 ```
 
 ## Programmatic Control
@@ -229,6 +229,6 @@ When testing against a local FlowMaestro instance:
 cd /path/to/flowmaestro
 npm run dev
 
-# The widget URL will be: http://localhost:3000/widget/{slug}.js
-# The base URL for npm package: http://localhost:3000
+# The widget URL will be: http://localhost:8400/widget/{slug}.js
+# The base URL for npm package: http://localhost:8400
 ```

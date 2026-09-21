@@ -9,7 +9,7 @@ import type { StatusResponse } from "@flowmaestro/shared";
 // Default to localhost for development, production URL for builds
 const API_URL =
     import.meta.env.VITE_API_URL ||
-    (import.meta.env.DEV ? "http://localhost:3001" : "https://api.flowmaestro.ai");
+    (import.meta.env.DEV ? "http://localhost:8401" : "https://api.flowmaestro.ai");
 
 /**
  * Fetch aggregated status from the API

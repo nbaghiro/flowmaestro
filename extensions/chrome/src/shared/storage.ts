@@ -44,7 +44,7 @@ export async function clearAuthState(): Promise<void> {
 export async function getSettings(): Promise<ExtensionSettings> {
     const result = await chrome.storage.local.get(STORAGE_KEYS.SETTINGS);
     const defaultSettings: ExtensionSettings = {
-        apiBaseUrl: "http://localhost:3001",
+        apiBaseUrl: "http://localhost:8401",
         permissions: {
             sitePermissions: {},
             blockedDomains: ["accounts.google.com", "login.microsoftonline.com", "auth0.com"],

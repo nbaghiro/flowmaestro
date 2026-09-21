@@ -12,7 +12,7 @@ export const CaseStudyContent: React.FC<CaseStudyContentProps> = ({ caseStudy })
     const ref = React.useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
-    const appUrl = import.meta.env.VITE_APP_URL || "http://localhost:3000";
+    const appUrl = import.meta.env.VITE_APP_URL || "http://localhost:8400";
 
     const handleCtaClick = () => {
         CaseStudiesEvents.ctaClicked({

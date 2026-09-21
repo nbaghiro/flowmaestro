@@ -40,7 +40,7 @@ export const SolutionCTA: React.FC<SolutionCTAProps> = ({ solution }) => {
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <a
-                            href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                            href={import.meta.env.VITE_APP_URL || "http://localhost:8400"}
                             onClick={() => handleCtaClick("get_started")}
                             className="group px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg"
                         >

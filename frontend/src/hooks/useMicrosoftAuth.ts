@@ -2,7 +2,7 @@ import { useState } from "react";
 import { logger } from "../lib/logger";
 
 // Determine API URL - fallback to localhost if not set
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8401";
 const MICROSOFT_AUTH_URL = `${API_URL}/auth/microsoft`;
 
 /**

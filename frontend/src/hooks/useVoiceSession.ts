@@ -308,7 +308,7 @@ export function useVoiceSession(config: UseVoiceSessionConfig): UseVoiceSessionR
             // Create WebSocket connection
             const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
             const wsHost =
-                import.meta.env.VITE_API_URL?.replace(/^https?:\/\//, "") || "localhost:3001";
+                import.meta.env.VITE_API_URL?.replace(/^https?:\/\//, "") || "localhost:8401";
             const workspaceId = getCurrentWorkspaceId();
             if (!workspaceId) {
                 setError("No workspace selected");

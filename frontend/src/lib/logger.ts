@@ -158,7 +158,7 @@ class FrontendLogger {
             level: (import.meta.env.VITE_LOG_LEVEL as LogLevel) || "info",
             flushIntervalMs: 5000,
             maxBatchSize: 50,
-            apiEndpoint: `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/logs`,
+            apiEndpoint: `${import.meta.env.VITE_API_URL || "http://localhost:8401"}/logs`,
             enableConsole: import.meta.env.DEV
         };
 

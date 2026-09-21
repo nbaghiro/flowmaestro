@@ -234,7 +234,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
 
             {/* CTA Button */}
             <a
-                href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                href={import.meta.env.VITE_APP_URL || "http://localhost:8400"}
                 onClick={() => onCtaClick(plan.name, selectedCredits)}
                 className={`w-full py-3 rounded-lg font-semibold text-center transition-all duration-200 ${
                     plan.popular

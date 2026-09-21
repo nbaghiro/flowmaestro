@@ -66,7 +66,7 @@ declare global {
 
     // Get API URL from data attribute, or fallback to script origin
     // In production: script and API are on same domain, so fallback works
-    // In development: use data-api-url to point to backend (e.g., http://localhost:3001)
+    // In development: use data-api-url to point to backend (e.g., http://localhost:8401)
     const baseUrl = currentScript.dataset.apiUrl || src.replace(/\/widget\/[^/]+\.js.*$/, "");
 
     // Get app URL from data attribute (for embed iframe), defaults to baseUrl

@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "dev": "docusaurus start --port 5555",
+        "dev": "docusaurus start --port 8408",
         "build": "docusaurus build",
         "serve": "docusaurus serve",
         "clear": "docusaurus clear",

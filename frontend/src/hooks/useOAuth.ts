@@ -2,7 +2,7 @@ import { useState } from "react";
 import { logger } from "../lib/logger";
 import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8401";
 
 /**
  * OAuth 1.0a providers that require a different flow
