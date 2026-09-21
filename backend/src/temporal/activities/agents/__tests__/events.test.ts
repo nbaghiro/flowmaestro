@@ -17,6 +17,13 @@ jest.mock("../../../../services/events/RedisEventBus");
 jest.mock("../../../../services/events/ExecutionEventLog", () => ({
     executionEventLog: { append: jest.fn().mockResolvedValue(undefined) }
 }));
+jest.mock("../../../../storage/repositories/AgentExecutionRepository", () => {
+    const update = jest.fn().mockResolvedValue(undefined);
+    return {
+        AgentExecutionRepository: jest.fn().mockImplementation(() => ({ update })),
+        __executionUpdate: update
+    };
+});
 jest.mock("../../../../temporal/core", () => ({
     activityLogger: mockLogger,
     createActivityLogger: jest.fn(() => mockLogger)
@@ -485,6 +492,27 @@ describe("Agent Event Activities", () => {
     });
 
     describe("emitAgentExecutionFailed", () => {
+        it("should record the failure on the execution row", async () => {
+            const { __executionUpdate } = jest.requireMock(
+                "../../../../storage/repositories/AgentExecutionRepository"
+            ) as { __executionUpdate: jest.Mock };
+
+            await emitAgentExecutionFailed({
+                executionId: "exec-1",
+                threadId: "thread-1",
+                error: "Insufficient credits"
+            });
+
+            expect(__executionUpdate).toHaveBeenCalledWith(
+                "exec-1",
+                expect.objectContaining({
+                    status: "failed",
+                    error: "Insufficient credits",
+                    completed_at: expect.any(Date)
+                })
+            );
+        });
+
         it("should emit execution failed event", async () => {
             await emitAgentExecutionFailed({
                 executionId: "exec-1",

@@ -10,6 +10,7 @@ import type {
 } from "@flowmaestro/shared";
 import { executionEventLog } from "../../../services/events/ExecutionEventLog";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
+import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { createActivityLogger } from "../../core";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 
@@ -394,6 +395,23 @@ export async function emitAgentExecutionFailed(
     input: EmitAgentExecutionFailedInput
 ): Promise<void> {
     const { executionId, threadId, error, threadOnly } = input;
+
+    // Record the failure on the execution itself. Every failure exit of the orchestrator
+    // goes through this emitter and nothing else updates the row, so without this the
+    // execution stays "running" in the database forever.
+    try {
+        await new AgentExecutionRepository().update(executionId, {
+            status: "failed",
+            error,
+            completed_at: new Date()
+        });
+    } catch (updateError) {
+        logger.error(
+            "Failed to record execution failure",
+            updateError instanceof Error ? updateError : new Error(String(updateError)),
+            { executionId }
+        );
+    }
 
     const tasks: Promise<void>[] = [];
 
