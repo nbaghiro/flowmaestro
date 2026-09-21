@@ -436,6 +436,9 @@ export async function agentOrchestratorWorkflow(
 
     const maxIterations = agent.max_iterations || 100;
     let currentIterations = iterations;
+    // A run started by continue-as-new begins at the iteration that triggered it; the
+    // threshold check below must not fire again on that first pass.
+    const continuedFromIteration = iterations;
     const CONTINUE_AS_NEW_THRESHOLD = 50;
 
     // Main agent loop (ReAct pattern)
@@ -464,7 +467,11 @@ export async function agentOrchestratorWorkflow(
         const iterationSpanId = iterationContext.spanId;
 
         // Continue-as-new every 50 iterations to prevent history bloat
-        if (currentIterations > 0 && currentIterations % CONTINUE_AS_NEW_THRESHOLD === 0) {
+        if (
+            currentIterations > 0 &&
+            currentIterations !== continuedFromIteration &&
+            currentIterations % CONTINUE_AS_NEW_THRESHOLD === 0
+        ) {
             logger.info("Continue-as-new triggered", { iteration: currentIterations });
 
             // Save incremental messages before continue-as-new

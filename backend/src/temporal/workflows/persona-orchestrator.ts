@@ -30,10 +30,10 @@ import {
     updateStepStatuses,
     calculateStepProgress
 } from "./persona-signals";
+import type { LLMResponse } from "./agent-orchestrator";
 import type { SerializedThread } from "../../services/agents/ThreadManager";
 import type { ThreadMessage } from "../../storage/models/AgentExecution";
 import type * as activities from "../activities";
-import type { LLMResponse } from "./agent-orchestrator";
 
 // Proxy activities with longer timeouts for background work
 const {
@@ -993,6 +993,9 @@ export async function personaOrchestratorWorkflow(
 
     const maxIterations = persona.max_iterations || 100;
     let currentIterations = iterations;
+    // A run started by continue-as-new begins at the iteration that triggered it; the
+    // threshold check below must not fire again on that first pass.
+    const continuedFromIteration = iterations;
     const CONTINUE_AS_NEW_THRESHOLD = 50;
     const PROGRESS_UPDATE_INTERVAL = 5;
 
@@ -1175,7 +1178,11 @@ export async function personaOrchestratorWorkflow(
         }
 
         // Continue-as-new every 50 iterations
-        if (currentIterations > 0 && currentIterations % CONTINUE_AS_NEW_THRESHOLD === 0) {
+        if (
+            currentIterations > 0 &&
+            currentIterations !== continuedFromIteration &&
+            currentIterations % CONTINUE_AS_NEW_THRESHOLD === 0
+        ) {
             logger.info("Continue-as-new triggered", { iteration: currentIterations });
 
             const unsavedMessages = getUnsavedMessages(messageState);
