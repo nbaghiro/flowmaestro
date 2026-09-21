@@ -23,27 +23,12 @@ import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { DeliverableCard } from "../components/personas/cards/DeliverableCard";
 import { ClarifyingPhaseUI } from "../components/personas/clarification";
 import { ContinueWorkDialog } from "../components/personas/modals/ContinueWorkDialog";
+import { PERSONA_CATEGORIES } from "../components/personas/personaCategories";
 import { usePersonaStream } from "../hooks/usePersonaStream";
 import { useToast } from "../hooks/useToast";
 import { PersonaEvents } from "../lib/analytics";
 import { usePersonaStore } from "../stores/personaStore";
-import type {
-    PersonaCategory,
-    PersonaInstanceMessage,
-    PersonaProgressStep,
-    ProgressStepStatus
-} from "../lib/api";
-
-const categoryIcons: Record<PersonaCategory, string> = {
-    research: "🔍",
-    content: "✍️",
-    development: "💻",
-    data: "📊",
-    operations: "⚙️",
-    business: "📈",
-    proposals: "📝",
-    healthcare: "🩺"
-};
+import type { PersonaInstanceMessage, PersonaProgressStep, ProgressStepStatus } from "../lib/api";
 
 const statusConfig: Record<
     string,
@@ -379,7 +364,7 @@ export const PersonaInstanceView: React.FC = () => {
                                         className="w-10 h-10 rounded-full"
                                     />
                                 ) : currentInstance.persona?.category ? (
-                                    categoryIcons[currentInstance.persona.category]
+                                    PERSONA_CATEGORIES[currentInstance.persona.category].icon
                                 ) : (
                                     "🤖"
                                 )}
@@ -546,7 +531,8 @@ export const PersonaInstanceView: React.FC = () => {
                                                     className="w-8 h-8 rounded-full"
                                                 />
                                             ) : currentInstance.persona?.category ? (
-                                                categoryIcons[currentInstance.persona.category]
+                                                PERSONA_CATEGORIES[currentInstance.persona.category]
+                                                    .icon
                                             ) : (
                                                 "🤖"
                                             )}

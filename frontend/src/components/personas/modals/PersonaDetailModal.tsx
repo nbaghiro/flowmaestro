@@ -28,7 +28,8 @@ import {
 import React, { useState } from "react";
 import { usePersonaStore } from "../../../stores/personaStore";
 import { AvatarPickerPopup } from "../AvatarPickerPopup";
-import type { PersonaDefinition, PersonaCategory } from "../../../lib/api";
+import { PersonaCategoryBadge } from "../PersonaCategoryBadge";
+import type { PersonaDefinition } from "../../../lib/api";
 
 interface PersonaDetailModalProps {
     persona: PersonaDefinition;
@@ -36,28 +37,6 @@ interface PersonaDetailModalProps {
     onClose: () => void;
     onLaunch: () => void;
 }
-
-const categoryColors: Record<PersonaCategory, string> = {
-    research: "bg-blue-500/10 text-blue-500",
-    content: "bg-purple-500/10 text-purple-500",
-    development: "bg-green-500/10 text-green-500",
-    data: "bg-orange-500/10 text-orange-500",
-    operations: "bg-slate-500/10 text-slate-500",
-    business: "bg-indigo-500/10 text-indigo-500",
-    proposals: "bg-amber-500/10 text-amber-500",
-    healthcare: "bg-teal-500/10 text-teal-500"
-};
-
-const categoryLabels: Record<PersonaCategory, string> = {
-    research: "Research & Analysis",
-    content: "Content Creation",
-    development: "Development",
-    data: "Data & Analytics",
-    operations: "Operations",
-    business: "Business Intelligence",
-    proposals: "Proposals & Bids",
-    healthcare: "Healthcare & Life Sciences"
-};
 
 // Universal agent capabilities that all personas have
 const agentCapabilities = [
@@ -204,11 +183,10 @@ export const PersonaDetailModal: React.FC<PersonaDetailModalProps> = ({
                                 </h2>
                             </div>
                             <div className="flex items-center gap-2 mb-3">
-                                <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${categoryColors[persona.category]}`}
-                                >
-                                    {categoryLabels[persona.category]}
-                                </span>
+                                <PersonaCategoryBadge
+                                    category={persona.category}
+                                    className="px-2.5"
+                                />
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
                                     <Zap className="w-3 h-3" />
                                     Autonomous Agent

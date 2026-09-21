@@ -21,24 +21,14 @@ import {
 } from "lucide-react";
 import React from "react";
 import { usePersonaStore } from "../../../stores/personaStore";
-import type { PersonaDefinitionSummary, PersonaCategory } from "../../../lib/api";
+import { PersonaCategoryBadge } from "../PersonaCategoryBadge";
+import type { PersonaDefinitionSummary } from "../../../lib/api";
 
 interface PersonaCardProps {
     persona: PersonaDefinitionSummary;
     onClick: () => void;
     onLaunch: () => void;
 }
-
-const categoryColors: Record<PersonaCategory, string> = {
-    research: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-    content: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
-    development: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-    data: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
-    operations: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300",
-    business: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
-    proposals: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-    healthcare: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300"
-};
 
 // Map deliverable types to unique icons
 function getDeliverableIcon(deliverable: string): React.ReactNode {
@@ -152,11 +142,7 @@ export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onClick, onLa
                 )}
                 <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground leading-tight">{persona.name}</h3>
-                    <span
-                        className={`inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full ${categoryColors[persona.category]}`}
-                    >
-                        {persona.category}
-                    </span>
+                    <PersonaCategoryBadge category={persona.category} className="mt-1" />
                 </div>
             </div>
 

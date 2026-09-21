@@ -259,7 +259,9 @@ describe("Personas Page", () => {
 
             renderPersonas();
 
-            expect(screen.getByText(/research & analysis/i)).toBeInTheDocument();
+            expect(
+                screen.getByRole("heading", { name: /research & analysis/i })
+            ).toBeInTheDocument();
         });
     });
 

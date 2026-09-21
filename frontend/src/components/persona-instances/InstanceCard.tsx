@@ -1,23 +1,13 @@
 import { Clock, DollarSign, AlertCircle, CheckCircle, XCircle, Loader2, Play } from "lucide-react";
 import React from "react";
-import type { PersonaInstanceSummary, PersonaCategory } from "../../lib/api";
+import { PERSONA_CATEGORIES } from "../personas/personaCategories";
+import type { PersonaInstanceSummary } from "../../lib/api";
 
 interface InstanceCardProps {
     instance: PersonaInstanceSummary;
     onClick: () => void;
     onCancel?: () => void;
 }
-
-const categoryIcons: Record<PersonaCategory, string> = {
-    research: "🔍",
-    content: "✍️",
-    development: "💻",
-    data: "📊",
-    operations: "⚙️",
-    business: "📈",
-    proposals: "📝",
-    healthcare: "🩺"
-};
 
 const statusConfig: Record<
     string,
@@ -130,7 +120,7 @@ export const InstanceCard: React.FC<InstanceCardProps> = ({ instance, onClick, o
                             className="w-8 h-8 rounded-full"
                         />
                     ) : instance.persona?.category ? (
-                        categoryIcons[instance.persona.category]
+                        PERSONA_CATEGORIES[instance.persona.category].icon
                     ) : (
                         "🤖"
                     )}

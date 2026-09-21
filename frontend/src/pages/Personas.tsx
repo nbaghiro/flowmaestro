@@ -6,33 +6,17 @@ import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { PersonaCard } from "../components/personas/cards/PersonaCard";
 import { PersonaDetailModal } from "../components/personas/modals/PersonaDetailModal";
 import { TaskLaunchDialog } from "../components/personas/modals/TaskLaunchDialog";
+import {
+    PERSONA_CATEGORIES,
+    PERSONA_CATEGORY_ORDER
+} from "../components/personas/personaCategories";
 import { PersonaCardSkeleton } from "../components/skeletons";
 import { PersonaEvents } from "../lib/analytics";
 import { getPersona } from "../lib/api";
 import { usePersonaStore } from "../stores/personaStore";
 import type { PersonaDefinition, PersonaDefinitionSummary, PersonaCategory } from "../lib/api";
 
-const categoryOrder: PersonaCategory[] = [
-    "research",
-    "content",
-    "development",
-    "data",
-    "operations",
-    "business",
-    "proposals",
-    "healthcare"
-];
-
-const categoryLabels: Record<PersonaCategory, string> = {
-    research: "Research & Analysis",
-    content: "Content Creation",
-    development: "Software Development",
-    data: "Data & Analytics",
-    operations: "Operations & Support",
-    business: "Business Intelligence",
-    proposals: "Proposals & Bids",
-    healthcare: "Healthcare & Life Sciences"
-};
+const categoryOrder = PERSONA_CATEGORY_ORDER;
 
 export const Personas: React.FC = () => {
     const navigate = useNavigate();
@@ -224,7 +208,7 @@ export const Personas: React.FC = () => {
                             { value: "all", label: "All Categories" },
                             ...categoryOrder.map((cat) => ({
                                 value: cat,
-                                label: categoryLabels[cat]
+                                label: PERSONA_CATEGORIES[cat].label
                             }))
                         ]}
                         className="w-52 whitespace-nowrap"
@@ -266,7 +250,7 @@ export const Personas: React.FC = () => {
                         return (
                             <section key={category} className="mb-10">
                                 <h2 className="text-lg font-semibold text-foreground mb-4 uppercase tracking-wide">
-                                    {categoryLabels[category]}
+                                    {PERSONA_CATEGORIES[category].label}
                                 </h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {personas.map((persona) => (
