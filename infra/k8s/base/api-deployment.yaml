@@ -166,11 +166,21 @@ spec:
               cpu: 2000m
               memory: 2Gi
 
+          # Cold starts on a busy Autopilot node can take over a minute while the
+          # other deployments are rolling. Give the process up to 3 minutes to start
+          # listening before the liveness probe is allowed to restart it.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 36
+
           livenessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
