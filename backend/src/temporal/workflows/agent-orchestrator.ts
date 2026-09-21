@@ -620,7 +620,16 @@ export async function agentOrchestratorWorkflow(
                 });
             }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Unknown LLM error";
+            // A failed activity surfaces as "Activity task failed"; the provider's message
+            // (for example a 429 from OpenAI) is on the cause, which is what users need to see.
+            const cause =
+                error instanceof Error ? (error as Error & { cause?: unknown }).cause : undefined;
+            const errorMessage =
+                cause instanceof Error && cause.message
+                    ? cause.message
+                    : error instanceof Error
+                      ? error.message
+                      : "Unknown LLM error";
             logger.error(
                 "LLM call failed",
                 error instanceof Error ? error : new Error(errorMessage)

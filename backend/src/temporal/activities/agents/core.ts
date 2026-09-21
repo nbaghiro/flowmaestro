@@ -367,6 +367,26 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
         }
     }
 
+    // No usable connection was given: prefer an active connection for this provider in the
+    // workspace, which is what the builder shows as selected, over the platform key.
+    if (!apiKey && workspaceId) {
+        const [candidate] = await connectionRepo.findByProviderInWorkspace(
+            workspaceId,
+            actualProvider
+        );
+        if (candidate) {
+            const connection = await connectionRepo.findByIdWithData(candidate.id);
+            const connectionData = connection?.data;
+            if (connectionData && "api_key" in connectionData && connectionData.api_key) {
+                apiKey = connectionData.api_key;
+                activityLogger.info("Using workspace connection for provider", {
+                    provider: actualProvider,
+                    connectionId: candidate.id
+                });
+            }
+        }
+    }
+
     // If no connection or API key, try environment variables
     if (!apiKey) {
         switch (actualProvider) {
