@@ -1,0 +1,383 @@
+# Render production stack.
+#
+# Create the stack once with:
+#   pulumi stack init nbaghiro-org/render-prod
+# then set the two provider credentials (never commit them in plain text):
+#   pulumi config set --secret render:apiKey <render-api-key>
+#   pulumi config set render:ownerId tea-xxxxxxxxxxxxxxxxxxxx
+# and the secret values with:
+#   ./infra/scripts/export-secrets-to-pulumi.sh --stack nbaghiro-org/render-prod
+#
+# Every key below is documented next to its placeholder. Keys marked "secret"
+# must be set with `pulumi config set --secret`, which stores them encrypted in
+# Pulumi Cloud, so this file only ever holds ciphertext for them.
+config:
+  # Platform switch read by index.ts
+  flowmaestro-infrastructure:platform: render
+  # Shared application settings (same keys as the GCP stack)
+  flowmaestro-infrastructure:appName: flowmaestro
+  flowmaestro-infrastructure:environment: production
+  flowmaestro-infrastructure:domain: flowmaestro.ai
+  flowmaestro-infrastructure:temporalNamespace: default
+  # Secret definitions: copy the JSON array from Pulumi.production.yaml
+  # (flowmaestro-infrastructure:secrets). The list is the source of truth for
+  # which ENV_VARs exist, their category and which process receives them.
+  # flowmaestro-infrastructure:secrets: '[...]'
+
+  # Secret values (secret): an object keyed by ENV_VAR, filled by
+  # infra/scripts/export-secrets-to-pulumi.sh. Example of setting one by hand:
+  #   pulumi config set --secret --path "secretValues.RESEND_API_KEY" -- "<value>"
+  # flowmaestro-infrastructure:secretValues: {}
+
+  # Optional secrets (secret)
+  #   gcsServiceAccountJson: contents of the GCS service account key file,
+  #     mounted into api and worker at /etc/secrets/gcs-service-account.json
+  #   temporalCloudApiKey: only when render.temporalMode is "cloud"
+  # flowmaestro-infrastructure:gcsServiceAccountJson: ""
+  # flowmaestro-infrastructure:temporalCloudApiKey: ""
+
+  # Render platform settings. Defaults are in src/platforms/render/config.ts;
+  # only keys that differ need to be listed.
+  flowmaestro-infrastructure:render:
+    # frankfurt | ohio | oregon | singapore | virginia
+    region: oregon
+    # The Render project "FlowMaestro" and its "Production" environment were
+    # created in the dashboard. Pulumi attaches every resource to this
+    # environment and never creates a project. Ids from
+    # `render projects list -o json` and `render environments list -o json`.
+    projectId: prj-dao6phegekts73b3qrmg
+    environmentId: evm-dao6phegekts73b3qrn0
+    projectName: FlowMaestro
+    # Backend image published by the GHCR workflow (public package)
+    image: ghcr.io/nbaghiro/flowmaestro-backend
+    # Set to the git sha to deploy, e.g. via
+    #   pulumi config set --path render.imageTag $(git rev-parse --short HEAD)
+    imageTag: latest
+    # Instance plans: starter (512 MB), standard (2 GB), pro (4 GB), ...
+    apiPlan: starter
+    workerPlan: starter
+    temporalPlan: starter
+    temporalUiEnabled: false
+    temporalUiPlan: starter
+    # Postgres: basic_256mb | basic_1gb | basic_4gb | pro_4gb ...; version 15
+    postgresPlan: basic_256mb
+    postgresVersion: "15"
+    # Key Value: free (25 MB, no persistence) | starter | standard ...
+    keyvaluePlan: free
+    keyvalueMaxMemoryPolicy: allkeys_lru
+    # self-hosted: a private service running temporalio/auto-setup
+    # cloud: no service; set temporalCloudAddress, temporalCloudNamespace
+    #        and the temporalCloudApiKey secret
+    temporalMode: self-hosted
+    temporalImage: docker.io/temporalio/auto-setup
+    temporalImageTag: "1.23.0"
+    temporalDbName: temporal
+    temporalVisibilityDbName: temporal_visibility
+    temporalHistoryShards: 4
+    # temporalCloudAddress: <namespace>.<account>.tmprl.cloud:7233
+    # temporalCloudNamespace: <namespace>.<account>
+
+    # Static sites are built by Render from the repository (needs the
+    # Render GitHub app installed on the repository)
+    repoUrl: https://github.com/nbaghiro/flowmaestro
+    branch: main
+    staticSitesEnabled: true
+    # Extra build-time variables for the sites (public values only)
+    staticSiteEnv:
+      VITE_GA_MEASUREMENT_ID: ""
+      VITE_POSTHOG_KEY: ""
+      VITE_POSTHOG_HOST: ""
+    # Leave false until the DNS records from `pulumi stack output outputs`
+    # (dnsRecords) exist; then set true and run `pulumi up` again
+    customDomainsEnabled: false
+    # GCS buckets stay on GCP; names from the production stack outputs
+    gcsUploadsBucket: flowmaestro-uploads-flowmaestro-prod
+    gcsArtifactsBucket: flowmaestro-artifacts-flowmaestro-prod
+    gcsKnowledgeDocsBucket: flowmaestro-knowledge-docs-flowmaestro-prod
+    gcsInterfaceDocsBucket: flowmaestro-interface-docs-flowmaestro-prod
+  # Provider credentials (bridged provider namespace). ownerId is the
+  # workspace id from `render workspace current`.
+  # render:apiKey: (secret) set with `pulumi config set --secret render:apiKey ...`
+  render:ownerId: tea-d9an6ofavr4c73alddjg
+  flowmaestro-infrastructure:secrets: |
+    [
+      {"name":"jwt-secret","envVar":"JWT_SECRET","category":"core","deployments":["api"],"required":true,"description":"JWT signing secret for authentication"},
+      {"name":"encryption-key","envVar":"ENCRYPTION_KEY","category":"core","deployments":["api","worker"],"required":true,"description":"AES-256 encryption key for sensitive data"},
+      {"name":"resend-api-key","envVar":"RESEND_API_KEY","category":"service","deployments":["api"],"required":true,"description":"Resend email service API key"},
+      {"name":"openai-api-key","envVar":"OPENAI_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"OpenAI API key for GPT models"},
+      {"name":"anthropic-api-key","envVar":"ANTHROPIC_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Anthropic API key for Claude models"},
+      {"name":"google-api-key","envVar":"GOOGLE_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Google AI API key for Gemini models"},
+      {"name":"cohere-api-key","envVar":"COHERE_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Cohere API key"},
+      {"name":"huggingface-api-key","envVar":"HUGGINGFACE_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Hugging Face API key"},
+      {"name":"xai-api-key","envVar":"XAI_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"x.ai (Grok) API key for Grok models"},
+      {"name":"deepgram-api-key","envVar":"DEEPGRAM_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Deepgram API key for real-time speech-to-text"},
+      {"name":"elevenlabs-api-key","envVar":"ELEVENLABS_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"ElevenLabs API key for text-to-speech"},
+      {"name":"slack-client-id","envVar":"SLACK_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Slack OAuth client ID"},
+      {"name":"slack-client-secret","envVar":"SLACK_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Slack OAuth client secret"},
+      {"name":"google-client-id","envVar":"GOOGLE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Google OAuth client ID"},
+      {"name":"google-client-secret","envVar":"GOOGLE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Google OAuth client secret"},
+      {"name":"notion-client-id","envVar":"NOTION_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Notion OAuth client ID"},
+      {"name":"notion-client-secret","envVar":"NOTION_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Notion OAuth client secret"},
+      {"name":"airtable-client-id","envVar":"AIRTABLE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Airtable OAuth client ID"},
+      {"name":"airtable-client-secret","envVar":"AIRTABLE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Airtable OAuth client secret"},
+      {"name":"hubspot-client-id","envVar":"HUBSPOT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"HubSpot OAuth client ID"},
+      {"name":"hubspot-client-secret","envVar":"HUBSPOT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"HubSpot OAuth client secret"},
+      {"name":"github-client-id","envVar":"GITHUB_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"GitHub OAuth client ID"},
+      {"name":"github-client-secret","envVar":"GITHUB_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"GitHub OAuth client secret"},
+      {"name":"linear-client-id","envVar":"LINEAR_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Linear OAuth client ID"},
+      {"name":"linear-client-secret","envVar":"LINEAR_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Linear OAuth client secret"},
+      {"name":"figma-client-id","envVar":"FIGMA_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Figma OAuth client ID"},
+      {"name":"figma-client-secret","envVar":"FIGMA_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Figma OAuth client secret"},
+      {"name":"microsoft-client-id","envVar":"MICROSOFT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Microsoft OAuth client ID (OneDrive, Excel, Teams, etc.)"},
+      {"name":"microsoft-client-secret","envVar":"MICROSOFT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Microsoft OAuth client secret"},
+      {"name":"meta-app-id","envVar":"META_APP_ID","category":"oauth","deployments":["api"],"required":false,"description":"Meta Platform App ID (WhatsApp, Instagram, Messenger)"},
+      {"name":"meta-app-secret","envVar":"META_APP_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Meta Platform App Secret"},
+      {"name":"meta-client-token","envVar":"META_CLIENT_TOKEN","category":"oauth","deployments":["api"],"required":false,"description":"Meta Platform Client Token"},
+      {"name":"meta-webhook-verify-token","envVar":"META_WEBHOOK_VERIFY_TOKEN","category":"oauth","deployments":["api"],"required":false,"description":"Meta Webhook verification token"},
+      {"name":"zendesk-client-id","envVar":"ZENDESK_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Zendesk OAuth client ID"},
+      {"name":"zendesk-client-secret","envVar":"ZENDESK_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Zendesk OAuth client secret"},
+      {"name":"apollo-client-id","envVar":"APOLLO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Apollo.io OAuth client ID"},
+      {"name":"apollo-client-secret","envVar":"APOLLO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Apollo.io OAuth client secret"},
+      {"name":"jira-client-id","envVar":"JIRA_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Jira Cloud OAuth client ID"},
+      {"name":"jira-client-secret","envVar":"JIRA_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Jira Cloud OAuth client secret"},
+      {"name":"shopify-client-id","envVar":"SHOPIFY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Shopify OAuth client ID"},
+      {"name":"shopify-client-secret","envVar":"SHOPIFY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Shopify OAuth client secret"},
+      {"name":"typeform-client-id","envVar":"TYPEFORM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Typeform OAuth client ID"},
+      {"name":"typeform-client-secret","envVar":"TYPEFORM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Typeform OAuth client secret"},
+      {"name":"dropbox-client-id","envVar":"DROPBOX_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Dropbox OAuth client ID"},
+      {"name":"dropbox-client-secret","envVar":"DROPBOX_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Dropbox OAuth client secret"},
+      {"name":"box-client-id","envVar":"BOX_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Box OAuth client ID"},
+      {"name":"box-client-secret","envVar":"BOX_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Box OAuth client secret"},
+      {"name":"twitter-client-id","envVar":"TWITTER_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"X (Twitter) OAuth 2.0 client ID"},
+      {"name":"twitter-client-secret","envVar":"TWITTER_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"X (Twitter) OAuth 2.0 client secret"},
+      {"name":"reddit-client-id","envVar":"REDDIT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Reddit OAuth2 application client ID"},
+      {"name":"reddit-client-secret","envVar":"REDDIT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Reddit OAuth2 application client secret"},
+      {"name":"discord-client-id","envVar":"DISCORD_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Discord OAuth2 client ID"},
+      {"name":"discord-client-secret","envVar":"DISCORD_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Discord OAuth2 client secret"},
+      {"name":"discord-bot-token","envVar":"DISCORD_BOT_TOKEN","category":"oauth","deployments":["api","worker"],"required":false,"description":"Discord bot token for server operations (send messages, manage webhooks)"},
+      {"name":"asana-client-id","envVar":"ASANA_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Asana OAuth client ID"},
+      {"name":"asana-client-secret","envVar":"ASANA_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Asana OAuth client secret"},
+      {"name":"monday-client-id","envVar":"MONDAY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Monday.com OAuth client ID"},
+      {"name":"monday-client-secret","envVar":"MONDAY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Monday.com OAuth client secret"},
+      {"name":"evernote-consumer-key","envVar":"EVERNOTE_CONSUMER_KEY","category":"oauth","deployments":["api"],"required":false,"description":"Evernote OAuth 1.0a consumer key"},
+      {"name":"evernote-consumer-secret","envVar":"EVERNOTE_CONSUMER_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Evernote OAuth 1.0a consumer secret"},
+      {"name":"twilio-account-sid","envVar":"TWILIO_ACCOUNT_SID","category":"service","deployments":["api"],"required":false,"description":"Twilio Account SID"},
+      {"name":"twilio-auth-token","envVar":"TWILIO_AUTH_TOKEN","category":"service","deployments":["api"],"required":false,"description":"Twilio Auth Token"},
+      {"name":"twilio-phone-number","envVar":"TWILIO_PHONE_NUMBER","category":"service","deployments":["api"],"required":false,"description":"Twilio Phone Number"},
+      {"name":"pypi-api-token","envVar":"PYPI_API_TOKEN","category":"service","deployments":[],"required":false,"description":"PyPI API token for publishing Python SDK"},
+      {"name":"npm-token","envVar":"NPM_TOKEN","category":"service","deployments":[],"required":false,"description":"npm token for publishing JavaScript SDKs"},
+      {"name":"tiktok-client-id","envVar":"TIKTOK_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"TikTok OAuth client ID"},
+      {"name":"tiktok-client-secret","envVar":"TIKTOK_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"TikTok OAuth client secret"},
+      {"name":"pinterest-client-id","envVar":"PINTEREST_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Pinterest OAuth client ID"},
+      {"name":"pinterest-client-secret","envVar":"PINTEREST_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Pinterest OAuth client secret"},
+      {"name":"hellosign-client-id","envVar":"HELLOSIGN_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"HelloSign (Dropbox Sign) OAuth client ID"},
+      {"name":"hellosign-client-secret","envVar":"HELLOSIGN_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"HelloSign (Dropbox Sign) OAuth client secret"},
+      {"name":"docusign-client-id","envVar":"DOCUSIGN_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"DocuSign OAuth client ID"},
+      {"name":"docusign-client-secret","envVar":"DOCUSIGN_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"DocuSign OAuth client secret"},
+      {"name":"pandadoc-client-id","envVar":"PANDADOC_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"PandaDoc OAuth client ID"},
+      {"name":"pandadoc-client-secret","envVar":"PANDADOC_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"PandaDoc OAuth client secret"},
+      {"name":"surveymonkey-client-id","envVar":"SURVEYMONKEY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"SurveyMonkey OAuth client ID"},
+      {"name":"surveymonkey-client-secret","envVar":"SURVEYMONKEY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"SurveyMonkey OAuth client secret"},
+      {"name":"buffer-client-id","envVar":"BUFFER_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Buffer OAuth client ID"},
+      {"name":"buffer-client-secret","envVar":"BUFFER_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Buffer OAuth client secret"},
+      {"name":"hootsuite-client-id","envVar":"HOOTSUITE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Hootsuite OAuth client ID"},
+      {"name":"hootsuite-client-secret","envVar":"HOOTSUITE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Hootsuite OAuth client secret"},
+      {"name":"calendly-client-id","envVar":"CALENDLY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Calendly OAuth client ID"},
+      {"name":"calendly-client-secret","envVar":"CALENDLY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Calendly OAuth client secret"},
+      {"name":"calcom-client-id","envVar":"CALCOM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Cal.com OAuth client ID"},
+      {"name":"calcom-client-secret","envVar":"CALCOM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Cal.com OAuth client secret"},
+      {"name":"clickup-client-id","envVar":"CLICKUP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"ClickUp OAuth client ID"},
+      {"name":"clickup-client-secret","envVar":"CLICKUP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"ClickUp OAuth client secret"},
+      {"name":"klaviyo-client-id","envVar":"KLAVIYO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Klaviyo OAuth client ID"},
+      {"name":"klaviyo-client-secret","envVar":"KLAVIYO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Klaviyo OAuth client secret"},
+      {"name":"gitlab-client-id","envVar":"GITLAB_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"GitLab OAuth client ID"},
+      {"name":"gitlab-client-secret","envVar":"GITLAB_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"GitLab OAuth client secret"},
+      {"name":"bitbucket-client-id","envVar":"BITBUCKET_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Bitbucket OAuth client ID"},
+      {"name":"bitbucket-client-secret","envVar":"BITBUCKET_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Bitbucket OAuth client secret"},
+      {"name":"salesforce-client-id","envVar":"SALESFORCE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Salesforce OAuth client ID"},
+      {"name":"salesforce-client-secret","envVar":"SALESFORCE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Salesforce OAuth client secret"},
+      {"name":"linkedin-client-id","envVar":"LINKEDIN_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"LinkedIn OAuth client ID"},
+      {"name":"linkedin-client-secret","envVar":"LINKEDIN_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"LinkedIn OAuth client secret"},
+      {"name":"pipedrive-client-id","envVar":"PIPEDRIVE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Pipedrive OAuth client ID"},
+      {"name":"pipedrive-client-secret","envVar":"PIPEDRIVE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Pipedrive OAuth client secret"},
+      {"name":"close-client-id","envVar":"CLOSE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Close CRM OAuth client ID"},
+      {"name":"close-client-secret","envVar":"CLOSE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Close CRM OAuth client secret"},
+      {"name":"intercom-client-id","envVar":"INTERCOM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Intercom OAuth client ID"},
+      {"name":"intercom-client-secret","envVar":"INTERCOM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Intercom OAuth client secret"},
+      {"name":"mailchimp-client-id","envVar":"MAILCHIMP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Mailchimp OAuth client ID"},
+      {"name":"mailchimp-client-secret","envVar":"MAILCHIMP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Mailchimp OAuth client secret"},
+      {"name":"quickbooks-client-id","envVar":"QUICKBOOKS_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"QuickBooks OAuth client ID"},
+      {"name":"quickbooks-client-secret","envVar":"QUICKBOOKS_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"QuickBooks OAuth client secret"},
+      {"name":"freshbooks-client-id","envVar":"FRESHBOOKS_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"FreshBooks OAuth client ID"},
+      {"name":"freshbooks-client-secret","envVar":"FRESHBOOKS_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"FreshBooks OAuth client secret"},
+      {"name":"workday-client-id","envVar":"WORKDAY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Workday OAuth client ID"},
+      {"name":"workday-client-secret","envVar":"WORKDAY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Workday OAuth client secret"},
+      {"name":"rippling-client-id","envVar":"RIPPLING_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Rippling OAuth client ID"},
+      {"name":"rippling-client-secret","envVar":"RIPPLING_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Rippling OAuth client secret"},
+      {"name":"bamboohr-client-id","envVar":"BAMBOOHR_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"BambooHR OAuth client ID"},
+      {"name":"bamboohr-client-secret","envVar":"BAMBOOHR_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"BambooHR OAuth client secret"},
+      {"name":"amazon-seller-central-client-id","envVar":"AMAZON_SELLER_CENTRAL_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Amazon Seller Central OAuth client ID (Login with Amazon)"},
+      {"name":"amazon-seller-central-client-secret","envVar":"AMAZON_SELLER_CENTRAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Amazon Seller Central OAuth client secret (Login with Amazon)"},
+      {"name":"paypal-client-id","envVar":"PAYPAL_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"PayPal OAuth client ID"},
+      {"name":"paypal-client-secret","envVar":"PAYPAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"PayPal OAuth client secret"},
+      {"name":"canva-client-id","envVar":"CANVA_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Canva OAuth client ID"},
+      {"name":"canva-client-secret","envVar":"CANVA_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Canva OAuth client secret"},
+      {"name":"miro-client-id","envVar":"MIRO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Miro OAuth client ID"},
+      {"name":"miro-client-secret","envVar":"MIRO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Miro OAuth client secret"},
+      {"name":"confluence-client-id","envVar":"CONFLUENCE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Confluence OAuth client ID"},
+      {"name":"confluence-client-secret","envVar":"CONFLUENCE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Confluence OAuth client secret"},
+      {"name":"helpscout-client-id","envVar":"HELPSCOUT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Help Scout OAuth client ID"},
+      {"name":"helpscout-client-secret","envVar":"HELPSCOUT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Help Scout OAuth client secret"},
+      {"name":"livechat-client-id","envVar":"LIVECHAT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"LiveChat OAuth client ID"},
+      {"name":"livechat-client-secret","envVar":"LIVECHAT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"LiveChat OAuth client secret"},
+      {"name":"drift-client-id","envVar":"DRIFT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Drift OAuth client ID"},
+      {"name":"drift-client-secret","envVar":"DRIFT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Drift OAuth client secret"},
+      {"name":"zoom-client-id","envVar":"ZOOM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Zoom OAuth client ID"},
+      {"name":"zoom-client-secret","envVar":"ZOOM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Zoom OAuth client secret"},
+      {"name":"sap-client-id","envVar":"SAP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"SAP OAuth client ID"},
+      {"name":"sap-client-secret","envVar":"SAP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"SAP OAuth client secret"},
+      {"name":"netsuite-client-id","envVar":"NETSUITE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"NetSuite OAuth client ID"},
+      {"name":"netsuite-client-secret","envVar":"NETSUITE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"NetSuite OAuth client secret"},
+      {"name":"xero-client-id","envVar":"XERO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Xero OAuth client ID"},
+      {"name":"xero-client-secret","envVar":"XERO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Xero OAuth client secret"},
+      {"name":"sage-client-id","envVar":"SAGE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Sage OAuth client ID"},
+      {"name":"sage-client-secret","envVar":"SAGE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Sage OAuth client secret"},
+      {"name":"adp-client-id","envVar":"ADP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"ADP OAuth client ID"},
+      {"name":"adp-client-secret","envVar":"ADP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"ADP OAuth client secret"},
+      {"name":"gusto-client-id","envVar":"GUSTO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Gusto OAuth client ID"},
+      {"name":"gusto-client-secret","envVar":"GUSTO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Gusto OAuth client secret"},
+      {"name":"etsy-client-id","envVar":"ETSY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Etsy OAuth client ID (API key)"},
+      {"name":"etsy-client-secret","envVar":"ETSY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Etsy OAuth client secret"},
+      {"name":"squarespace-client-id","envVar":"SQUARESPACE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Squarespace OAuth client ID"},
+      {"name":"squarespace-client-secret","envVar":"SQUARESPACE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Squarespace OAuth client secret"},
+      {"name":"ebay-client-id","envVar":"EBAY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"eBay OAuth client ID"},
+      {"name":"ebay-client-secret","envVar":"EBAY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"eBay OAuth client secret"},
+      {"name":"gorgias-client-id","envVar":"GORGIAS_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Gorgias OAuth client ID"},
+      {"name":"gorgias-client-secret","envVar":"GORGIAS_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Gorgias OAuth client secret"},
+      {"name":"zoho-crm-client-id","envVar":"ZOHO_CRM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Zoho CRM OAuth client ID"},
+      {"name":"zoho-crm-client-secret","envVar":"ZOHO_CRM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Zoho CRM OAuth client secret"},
+      {"name":"bill-com-client-id","envVar":"BILL_COM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Bill.com OAuth client ID"},
+      {"name":"bill-com-client-secret","envVar":"BILL_COM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Bill.com OAuth client secret"},
+      {"name":"ramp-client-id","envVar":"RAMP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Ramp OAuth client ID"},
+      {"name":"ramp-client-secret","envVar":"RAMP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Ramp OAuth client secret"},
+      {"name":"front-client-id","envVar":"FRONT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Front OAuth client ID"},
+      {"name":"front-client-secret","envVar":"FRONT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Front OAuth client secret"},
+      {"name":"ringcentral-client-id","envVar":"RINGCENTRAL_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"RingCentral OAuth client ID"},
+      {"name":"ringcentral-client-secret","envVar":"RINGCENTRAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"RingCentral OAuth client secret"},
+      {"name":"constantcontact-client-id","envVar":"CONSTANTCONTACT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Constant Contact OAuth client ID"},
+      {"name":"constantcontact-client-secret","envVar":"CONSTANTCONTACT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Constant Contact OAuth client secret"},
+      {"name":"stripe-secret-key","envVar":"STRIPE_SECRET_KEY","category":"service","deployments":["api"],"required":false,"description":"Stripe API secret key"},
+      {"name":"stripe-webhook-secret","envVar":"STRIPE_WEBHOOK_SECRET","category":"service","deployments":["api"],"required":false,"description":"Stripe webhook signing secret"},
+      {"name":"stripe-publishable-key","envVar":"STRIPE_PUBLISHABLE_KEY","category":"service","deployments":[],"required":false,"description":"Stripe publishable key (for frontend)"},
+      {"name":"stripe-price-pro-monthly","envVar":"STRIPE_PRICE_PRO_MONTHLY","category":"service","deployments":["api"],"required":false,"description":"Stripe Price ID for Pro monthly subscription"},
+      {"name":"stripe-price-pro-annual","envVar":"STRIPE_PRICE_PRO_ANNUAL","category":"service","deployments":["api"],"required":false,"description":"Stripe Price ID for Pro annual subscription"},
+      {"name":"stripe-price-team-monthly","envVar":"STRIPE_PRICE_TEAM_MONTHLY","category":"service","deployments":["api"],"required":false,"description":"Stripe Price ID for Team monthly subscription"},
+      {"name":"stripe-price-team-annual","envVar":"STRIPE_PRICE_TEAM_ANNUAL","category":"service","deployments":["api"],"required":false,"description":"Stripe Price ID for Team annual subscription"},
+      {"name":"stripe-price-credits-starter","envVar":"STRIPE_PRICE_CREDITS_STARTER","category":"service","deployments":["api"],"required":false,"description":"Stripe Price ID for Starter credit pack"},
+      {"name":"stripe-price-credits-growth","envVar":"STRIPE_PRICE_CREDITS_GROWTH","category":"service","deployments":["api"],"required":false,"description":"Stripe Price ID for Growth credit pack"},
+      {"name":"stripe-price-credits-scale","envVar":"STRIPE_PRICE_CREDITS_SCALE","category":"service","deployments":["api"],"required":false,"description":"Stripe Price ID for Scale credit pack"},
+      {"name":"stripe-price-credits-enterprise","envVar":"STRIPE_PRICE_CREDITS_ENTERPRISE","category":"service","deployments":["api"],"required":false,"description":"Stripe Price ID for Enterprise credit pack"}
+    ]
+  flowmaestro-infrastructure:secretValues:
+    JWT_SECRET:
+      secure: AAABAOCsMqj0U/L6ov0VLe9hZJvGGEHlUkVh1xOYXCdTKW4pqIJHcpS4HG2rAvcLcBLl9y7XUyEm/PRZr1qlQGlOyQ==
+    ENCRYPTION_KEY:
+      secure: AAABAOHfvPRrcov9MPXO5qQdmuL2fY9AzQyZY+9Qzj1ZNu7ez7NgL1Ek0VurMyTVlYbmvVhDQDX0qGwIvxJjhPiJp16TLNA36TJ8e4wlCquHGqnLxvF4puxOqqOl4OTi
+    RESEND_API_KEY:
+      secure: AAABAHZnr939DOdNU9Di2EQQ/K3ZW8ySi5PUCdS1gSsLMBwnl3vvn0xK8gX3I5TosLrvG9ki5IagtTHncinsdsfK5SE=
+    OPENAI_API_KEY:
+      secure: AAABAEQXAwHd0HBC+NZDMyCWMzwxxUUuUe52/IYszN51GJR+qJzoSYcj4lPKA8c2i37zhje66x9iaXr/p3/mJzHjLQlXQ73/bMmgj73kZvNz0tBhlcvOX5Qf/GIdLoMyWOMTrE86YPZyc4rZs9lVD4dLbPyCK2W3noe3X0q/HJMZsuddaW77ejEe8PqzhoKPnkMawmb8HrZKmtbiZtkg5HTEgbmO1vCgnz7bXNdd3+KN4AA72mcn+e6F3p3YBOyw2ZpDTQ==
+    ANTHROPIC_API_KEY:
+      secure: AAABAOnA3NPzMqltTP8VuYxqqiG3Hm3ss2ZS2AINXgayOg+mAT/nXzswGxQWAF3bNPSWsFA718XLg4CFw8/dIsJECxXOktCx5rejO8RIQsq3Ul0F16HBHgSBQ0I3kclaKthCquwfpBX6daiP4s3g/CLNGTiZpxbfmmLEEBtZmEjnYes5mpdtT0I7/gI=
+    GOOGLE_API_KEY:
+      secure: AAABAHsslszmhhxCYaWYIo8QLjwHTESz3qb9o7ojiDVMd6xvGytl2+bXym/4Rsx0x0a2vYHNoorhidVDZEgr7JsagD23bVxMLmI=
+    COHERE_API_KEY:
+      secure: AAABAKidCN1oprXxNsqkbcxKBA4mESwkwEoQ1h+OptGDDRywMhfpZAHAkN/+EcSqIlxBtNppQUErzydZSzHnehEIU49oCimz
+    HUGGINGFACE_API_KEY:
+      secure: AAABACVIV/wQoxeO1PotsRqU+fWuQBRu4/Aa5/vv8j9XgpG0fvWfVcqBinyVxUl/r+EQWTI160CGm2KOwfzvFNItCXyP
+    SLACK_CLIENT_ID:
+      secure: AAABAMWBQ0Fbohsb7/lhiTBDhsl/OuXg85uO3qMVzSh4mqLN7n/BGx7Gki1ISqE4n0F44DhdVaBaZKs=
+    SLACK_CLIENT_SECRET:
+      secure: AAABAL5Ec1tF5uDt+8/xRtL5Zdt1boT23LI5ThtGlTLtIBQAECqqT9XV2dGlGyP1EveG3O5bxaZSv0SzJPBrog==
+    GOOGLE_CLIENT_ID:
+      secure: AAABAHMVEr02jFS5trlIWD/hA5PxHTPpEWTOv6ImRYKQ5uQJvIkwOdC1FKMe0jTAKuJifFFMz9mrvPXpsg0c+YdZsH2V6JxAaXE5e9rEQ+nWnFarDPIveFSX3wy1XSsUvHFpXB43IUE=
+    GOOGLE_CLIENT_SECRET:
+      secure: AAABABSdWIVir9dY7vHHvbOGOyzVQG8IH7Bb5sJwNzkufjyGexQ7iZDfLr77KUnOwhPxXMNjLAwZ/RJ/oLUfc7DQVg==
+    NOTION_CLIENT_ID:
+      secure: AAABAGWbPqfBiAxQT+RU+Ri9276kiTVdHkrXvACJMBkFQUq3fhAl65dgRuvphmnKqp4MFDWI1gV42OIOs2bv6DoVkFg=
+    NOTION_CLIENT_SECRET:
+      secure: AAABAOXMQ2x/4orvnfqLJ6gjgztZMsMbNRhCoLBRNSjAdkQdf0xYuEbrzocIAsz5TQ0l3M8pT5JVLWERaXqnM10KTBCTjLSgKWBWYmxjUqXTkQ==
+    AIRTABLE_CLIENT_ID:
+      secure: AAABAC2/QIIPDxHNKlYnSedOEQa63XfwwagOGJCdnRdZj7TMtxfMTpfYebNaBjWzbYsd+ivU6Mw3miY+pKxmGircGMM=
+    AIRTABLE_CLIENT_SECRET:
+      secure: AAABAM9ckJiOmbp2dG8UkMHQrc0qPcH4Rl5ievSbgmeIR99/EuhDF4NkipS+NontZw8xhn8I9yMMqjAOkJ9vCtQickXpaUVxOZPo/q5qXhyhu4l2+h3j/U76cJA/abr6
+    HUBSPOT_CLIENT_ID:
+      secure: AAABAFof55ey4y/GO68leBAm6K4J9tZFp9WsDlWZpMQ2p6Zvs2F5h4D8AQ20M3hnZqQd+SSjQJkBzDIvQ/HJqPMyWaI=
+    HUBSPOT_CLIENT_SECRET:
+      secure: AAABAHEt77W3nni33HSIvF11QIs1Ocz2fp+y6NeswvkLdQ2kmvHOY9XiMl4DHYD8z5qOH8vFDK3D6tjpdcRtU1d4m4I=
+    GITHUB_CLIENT_ID:
+      secure: AAABALJoY62b+BeyvdxxIvqvxIzKUFfxEUAwe13gCbfDQxYskWAXUwXxBbI04GW9lP3f+Q==
+    GITHUB_CLIENT_SECRET:
+      secure: AAABALYSNHFcYILLxztHHvE5G11ER0i0coqBqsc2kUoT6Jxr+IBq6IdPoqyp+9UWn0/N33nCtm3Br18FO6HUwowjYmzYI5oV
+    LINEAR_CLIENT_ID:
+      secure: AAABAMaRz80GMtaIAuT+NhTCywCaKIjINaWnprVxBhXqWVNUMnPtStdbwMHDOxscg0g1ybIacCZ7VUaTngDY3w==
+    LINEAR_CLIENT_SECRET:
+      secure: AAABAL/l9SlZbeXwggpJEJHHfHr8NU3VoIzNC3TRddKmZ3olvzFuD3WBLGs7rkWlrW6jnkB0m1lujtpkCe8tYg==
+    FIGMA_CLIENT_ID:
+      secure: AAABAOXTAathjD4ieosdaVmKm7tebqv1dBVOuU/FSFxPKzjwzoxvZvSko3vDRUdFN1Jz0pPa
+    FIGMA_CLIENT_SECRET:
+      secure: AAABAM9X3w7gg55x6c0H4D2lk6imsybhUPBdb3jWg4Zjez4II8sMV+lUbgT1V3EfRZFc7SSSeg7uvmQspD8=
+    MICROSOFT_CLIENT_ID:
+      secure: AAABAG4EaFLILM6GCpPJ2kwJ1nQUuIo2F0AfhRrMqSg3Z+EMKSKI+4BYSCwRQpz9UdpuFDQe4TU5bbQ4a/WCNuCSZ+o=
+    MICROSOFT_CLIENT_SECRET:
+      secure: AAABAC3RhraloAbfJHdvCkb2rdOPwbccepFI2m/UwbkWHsE52ib9QmSaSvX9BhrKKMjG4WDrmF/QtINGp8eyyff7Sm8G1os4
+    META_APP_ID:
+      secure: AAABAO9EJUQuHePeeT9fGliqP+5i3Lnh6buLIGEYvB2aAv/mw4iYpUGqBKYZyRy6
+    META_APP_SECRET:
+      secure: AAABAL4fBBRMhIJlhCvcB2Bc1xuOdjK/gr3RaJBnNyeIC80DHtipYNYugJb/4KZUwkvfFtWF9HpE46jy4ZAWVw==
+    META_CLIENT_TOKEN:
+      secure: AAABAKz20FBLZc3/worjLL1BY15pj0DgAAbepr4f9PQyiHer+xs087Udi4s+WphP3S901Z+FYM9pjTMm++hgUQ==
+    META_WEBHOOK_VERIFY_TOKEN:
+      secure: AAABAEYSSVh7MElJ2xdPewMe6lep9cBzMkOE8qDdD4cCy3ilGygMi+GEjw==
+    ZENDESK_CLIENT_ID:
+      secure: AAABAPqgphra2opCSNR5Ka1m/88UO7wzfmeAVjPdhrAmZO4niYk0fB4DKw==
+    ZENDESK_CLIENT_SECRET:
+      secure: AAABAFJSucYiIP+lofJpXUgAJ8JRZWTxtQUozkf3MYcD3aQLlCGdJ9SoIq9MPLdA/MXBDBA+tzr/z7lcDbe+bp1fZw/xpN5v6Zdhm406PohM7rT78PLbya58ovv9YONp
+    APOLLO_CLIENT_ID:
+      secure: AAABAE4km9u/2EL9Lscd7kTj8PnZHUWZI/uyqF+RHtCq1Xo5S5YJL0q8GNnkwe97oHsVMPbcO9TlFiHwCNBi3dviMsb0LqpnB344
+    APOLLO_CLIENT_SECRET:
+      secure: AAABAJ+/bG+muQTsdw44KwZKhO7B1OdGQkMVSB9YWExhf8XKGGJxVSkOfMpeoKQONaikzFBdtBPr8N3XR7ij9CuKwwd6WVikUa28
+    JIRA_CLIENT_ID:
+      secure: AAABALQKzjts/VerHADbxr9eev8mSKauYTijslclAeWVBEYDRzFduxhzQw==
+    JIRA_CLIENT_SECRET:
+      secure: AAABAAPgODOwepOVfv0mn3bnhAvgGTUN8j4WAD5Z1klRHcDazUmNCKjC7g==
+    SHOPIFY_CLIENT_ID:
+      secure: AAABAEU6kwX8wYGJZSWxxAV+6UNG7QZ5ORGHIA+/41AQbsxUDFObdnG28qTdfYURyR04rcCTq6gYeDqMxSrItQ==
+    SHOPIFY_CLIENT_SECRET:
+      secure: AAABAKZn/IU15Ye+wmmO2C+8cFnw3TDrXmdOjcsip/dxQIKzQwXcj70tkTNzd3xyBhFJFIHgntLOpeMiCWA5p50yEIxKJw==
+    TYPEFORM_CLIENT_ID:
+      secure: AAABADbn/6ff2o5nL5KIxO0dJq5e65yx7BI543BlPdy6b3Z7/p3BU8VcQxbw2E2moAnkck8RB4ieXeAVyPdH0xblykIwKVtjn1r1fQ==
+    TYPEFORM_CLIENT_SECRET:
+      secure: AAABAJIG5oHRwCCXRkB15qEBHESUBtuMYMAJ0TDc/2T5ZuOm2JIuVysYqEHUDelXEO8JPt3CqeSJZznq3Z8/Mlt2taZGRb35ws2R2A==
+    DROPBOX_CLIENT_ID:
+      secure: AAABANkHprYnXuhtc5Rrewf3/j7s7+xZtXsUu3CO/9Ckz/9haFdXu2VHPkxx0tM=
+    DROPBOX_CLIENT_SECRET:
+      secure: AAABACrgtkmhwdrEtDlAudLNI4zapz35AZthuMdKVPSSz2VLLv/ylLCBv4qiACw=
+    BOX_CLIENT_ID:
+      secure: AAABAFpHKyOnkQ/Nngn7ATTSEZ+4lhe31Apspx4v7dVxGWKSy0zW8eH1YTe/ui0EfuSxk7jhn/iQXSwZ22HVug==
+    BOX_CLIENT_SECRET:
+      secure: AAABADP0RmW/TyxXpbfUIckDcHy1v/hXzU0h3Npp8CECZNejI5pjQr/cV250GzBw61yNoS7ii8OC5qBWn0frZw==
+    DISCORD_CLIENT_ID:
+      secure: AAABANlD0VFdn2A0Rk9D1ehiW62V+uxJ5Ix5jZJ2TFmEJbhfetJMG4vLVtT8P1LzoEgR
+    DISCORD_CLIENT_SECRET:
+      secure: AAABALgjaMSr/W7qV/kEBYw3dKSbyUzFAvBuYnck+ERf8xKAXvH4j1+NR9A7KQuInAsU+bJBivhqN2wrrUvk6w==
+    DISCORD_BOT_TOKEN:
+      secure: AAABAEc0Sc2XMheYnPFlANpVVb3yxFa2HjesKTTwqgZ+5fDtw/7BXZ0zdLJqWz79jfIYObbhxzAAS4LmwpFiGRl6sjMtV/XxvOdEs+Cwd0CGB4UxzH+T9hXjmXCcZSMVaoQ9aRzhHd0=
+    TWILIO_ACCOUNT_SID:
+      secure: AAABALZGguX7od3+XlUXZZw14X1++SrTLkMqY41f73GQae3QEcUgDD30de/Qdu83LrMFhy+Y8ebd6agYX7isugfr
+    TWILIO_AUTH_TOKEN:
+      secure: AAABAFd/zOBLLmwplPvPGCw1BBlXbDV3k0Ygqt3ylL3HB5o82jhSxFyjS4bdr31a8sC+zqIXkc5n8x5lrNH+LA==
+    TWILIO_PHONE_NUMBER:
+      secure: AAABAN3zRYJE/6PuwdD+hX56/eYOSq/TdME37RmT1ZiV7MwBBqU8xQ7HAIs=
+  flowmaestro-infrastructure:gcsServiceAccountJson:
+    secure: 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

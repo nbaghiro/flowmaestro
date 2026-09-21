@@ -1,6 +1,6 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
-import { infrastructureConfig, resourceName, resourceLabels } from "../utils/config";
+import { infrastructureConfig, resourceName, resourceLabels } from "../../utils/config";
 import { network, privateVpcConnection } from "./networking";
 
 // Create Cloud SQL PostgreSQL instance

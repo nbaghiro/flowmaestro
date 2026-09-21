@@ -1,6 +1,6 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
-import { infrastructureConfig, resourceName, resourceLabels } from "../utils/config";
+import { infrastructureConfig, resourceName, resourceLabels } from "../../utils/config";
 import { network, subnet } from "./networking";
 import {
     knowledgeDocsBucket,
@@ -10,6 +10,12 @@ import {
 } from "./storage";
 
 // Create GKE cluster (Autopilot or Standard mode based on config)
+// Monitoring, live setting since 2026-09-21: metric packages reduced to SYSTEM_COMPONENTS and
+// the External Secrets refresh raised to 1h to cut Cloud Monitoring and Secret Manager costs
+// (see .docs/audits/private/plans/13-gcp-cost-squeeze.md). This resource does not declare
+// monitoringConfig, so the provider leaves the live value alone on `pulumi up`; if monitoring is
+// ever declared here, set enableComponents to ["SYSTEM_COMPONENTS"] only. Managed Service for
+// Prometheus cannot be disabled on Autopilot clusters.
 export const cluster = new gcp.container.Cluster(
     resourceName("cluster"),
     {

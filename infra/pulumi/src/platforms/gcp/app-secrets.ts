@@ -1,53 +1,17 @@
 import * as gcp from "@pulumi/gcp";
 import * as k8s from "@pulumi/kubernetes";
 import * as pulumi from "@pulumi/pulumi";
-import { infrastructureConfig, resourceName } from "../utils/config";
+import {
+    secretDefinitions,
+    type DeploymentTarget,
+    type SecretCategory,
+    type SecretDefinition
+} from "../../app/secrets";
+import { infrastructureConfig, resourceName } from "../../utils/config";
 import { cluster, kubeconfig } from "./gke-cluster";
 
-// =============================================================================
-// Secret Definition Schema
-// =============================================================================
-
-export type SecretCategory = "core" | "oauth" | "llm" | "service";
-export type DeploymentTarget = "api" | "worker";
-
-export interface SecretDefinition {
-    name: string; // e.g., "resend-api-key" (kebab-case)
-    envVar: string; // e.g., "RESEND_API_KEY" (SCREAMING_SNAKE_CASE)
-    category: SecretCategory;
-    deployments: DeploymentTarget[];
-    required: boolean;
-    description?: string;
-}
-
-// =============================================================================
-// Read Secret Definitions from Pulumi Config
-// =============================================================================
-
-const config = new pulumi.Config();
-
-// Parse secrets from config - expects array of SecretDefinition objects
-function parseSecretsConfig(): SecretDefinition[] {
-    const secretsJson = config.get("secrets");
-    if (!secretsJson) {
-        pulumi.log.warn(
-            "No secrets defined in Pulumi config. Set flowmaestro-infrastructure:secrets"
-        );
-        return [];
-    }
-
-    try {
-        const parsed = JSON.parse(secretsJson);
-        if (!Array.isArray(parsed)) {
-            throw new Error("secrets config must be a JSON array");
-        }
-        return parsed as SecretDefinition[];
-    } catch (error) {
-        throw new Error(`Failed to parse secrets config: ${error}`);
-    }
-}
-
-export const secretDefinitions = parseSecretsConfig();
+export { secretDefinitions };
+export type { DeploymentTarget, SecretCategory, SecretDefinition };
 
 // =============================================================================
 // Create Kubernetes Provider
@@ -147,7 +111,7 @@ for (const [category, group] of Object.entries(secretsByCategory)) {
                 namespace: "flowmaestro"
             },
             spec: {
-                refreshInterval: "5m",
+                refreshInterval: "1h",
                 secretStoreRef: {
                     name: "gcp-secret-manager",
                     kind: "ClusterSecretStore"

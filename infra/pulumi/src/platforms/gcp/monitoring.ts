@@ -1,6 +1,6 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
-import { infrastructureConfig, resourceName } from "../utils/config";
+import { infrastructureConfig, resourceName } from "../../utils/config";
 
 // Create notification channel for alerts (email)
 export const emailNotificationChannel = new gcp.monitoring.NotificationChannel(
@@ -62,31 +62,6 @@ export const dbCpuAlert = new gcp.monitoring.AlertPolicy(resourceName("db-cpu"),
                 ],
                 comparison: "COMPARISON_GT",
                 thresholdValue: 0.8,
-                duration: "300s"
-            }
-        }
-    ],
-    notificationChannels: [emailNotificationChannel.id],
-    enabled: true
-});
-
-// Alert policy: Redis memory utilization
-export const redisMemoryAlert = new gcp.monitoring.AlertPolicy(resourceName("redis-memory"), {
-    displayName: "Redis Memory Utilization High",
-    combiner: "OR",
-    conditions: [
-        {
-            displayName: "Memory utilization > 90%",
-            conditionThreshold: {
-                filter: pulumi.interpolate`resource.type="redis_instance" AND resource.labels.instance_id="${resourceName("redis")}" AND metric.type="redis.googleapis.com/stats/memory/usage_ratio"`,
-                aggregations: [
-                    {
-                        alignmentPeriod: "300s",
-                        perSeriesAligner: "ALIGN_MEAN"
-                    }
-                ],
-                comparison: "COMPARISON_GT",
-                thresholdValue: 0.9,
                 duration: "300s"
             }
         }
@@ -194,29 +169,6 @@ export const dashboard = new gcp.monitoring.Dashboard(resourceName("dashboard"),
                 {
                     width: 6,
                     height: 4,
-                    yPos: 4,
-                    widget: {
-                        title: "Redis Memory Usage",
-                        xyChart: {
-                            dataSets: [
-                                {
-                                    timeSeriesQuery: {
-                                        timeSeriesFilter: {
-                                            filter: 'resource.type="redis_instance" AND metric.type="redis.googleapis.com/stats/memory/usage_ratio"',
-                                            aggregation: {
-                                                alignmentPeriod: "60s",
-                                                perSeriesAligner: "ALIGN_MEAN"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                },
-                {
-                    width: 6,
-                    height: 4,
                     xPos: 6,
                     yPos: 4,
                     widget: {
@@ -250,7 +202,6 @@ export const monitoringOutputs = {
     emailNotificationChannelId: emailNotificationChannel.id,
     apiErrorRateAlertId: apiErrorRateAlert.id,
     dbCpuAlertId: dbCpuAlert.id,
-    redisMemoryAlertId: redisMemoryAlert.id,
     apiUptimeCheckId: apiUptimeCheck.id,
     frontendUptimeCheckId: frontendUptimeCheck.id,
     dashboardId: dashboard.id

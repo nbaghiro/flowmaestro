@@ -1,5 +1,5 @@
 import * as gcp from "@pulumi/gcp";
-import { infrastructureConfig } from "../utils/config";
+import { infrastructureConfig } from "../../utils/config";
 
 /**
  * Enable Google Cloud APIs for FlowMaestro

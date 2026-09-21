@@ -14,5 +14,6 @@
         "esModuleInterop": true,
         "skipLibCheck": true
     },
-    "files": ["index.ts"]
+    "include": ["index.ts", "src/**/*.ts"],
+    "exclude": ["node_modules", "bin", "sdks"]
 }

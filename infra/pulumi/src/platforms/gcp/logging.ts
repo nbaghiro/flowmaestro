@@ -1,6 +1,6 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
-import { infrastructureConfig, resourceName } from "../utils/config";
+import { infrastructureConfig, resourceName } from "../../utils/config";
 
 /**
  * Google Cloud Logging Infrastructure for FlowMaestro

@@ -1,6 +1,6 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
-import { infrastructureConfig, resourceName, resourceLabels } from "../utils/config";
+import { infrastructureConfig, resourceName, resourceLabels } from "../../utils/config";
 
 // Note: Frontend and marketing are served from Kubernetes, not Cloud Storage
 // This file creates buckets for user-uploaded files and assets

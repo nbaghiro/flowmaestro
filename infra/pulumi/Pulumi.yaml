@@ -4,3 +4,10 @@ runtime:
   name: nodejs
   options:
     typescript: true
+packages:
+  render:
+    source: pulumi/pulumi/terraform-provider
+    version: 1.4.0
+    parameters:
+      - render-oss/render
+      - 1.8.0

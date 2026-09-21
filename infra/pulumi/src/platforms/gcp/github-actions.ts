@@ -1,6 +1,6 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
-import { infrastructureConfig } from "../utils/config";
+import { infrastructureConfig } from "../../utils/config";
 import { iamApi } from "./google-apis";
 
 /**

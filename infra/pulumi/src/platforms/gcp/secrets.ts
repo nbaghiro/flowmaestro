@@ -1,6 +1,6 @@
 import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
-import { infrastructureConfig, resourceName } from "../utils/config";
+import { infrastructureConfig, resourceName } from "../../utils/config";
 
 // Helper function to create a secret
 function createSecret(name: string, secretData: pulumi.Output<string> | string) {
