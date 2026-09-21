@@ -253,12 +253,19 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             onError: (error: string) => {
                 logger.error("SSE error", undefined, { error });
 
+                // Show the failure in the thread instead of leaving it silent.
                 const store = useAgentStore.getState();
                 const currentMessages = store.threadMessages[threadId] || [];
-                setThreadMessages(
-                    threadId,
-                    currentMessages.filter((m) => m.id !== streamingMessageId)
-                );
+                const failureMessage: ThreadMessage = {
+                    id: `error-${executionId}-${Date.now()}`,
+                    role: "assistant",
+                    content: `The agent could not respond: ${error}`,
+                    timestamp: new Date().toISOString()
+                };
+                setThreadMessages(threadId, [
+                    ...currentMessages.filter((m) => m.id !== streamingMessageId),
+                    failureMessage
+                ]);
 
                 streamingContentRef.current = "";
                 setIsSending(false);
