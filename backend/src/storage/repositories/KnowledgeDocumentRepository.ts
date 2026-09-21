@@ -204,6 +204,10 @@ export class KnowledgeDocumentRepository {
         if (errorMessage !== undefined) {
             updates.push(`error_message = $${paramIndex++}`);
             values.push(errorMessage);
+        } else if (status === "processing" || status === "ready") {
+            // A new processing run or a successful one supersedes any earlier failure,
+            // otherwise the stale error keeps showing next to a ready document.
+            updates.push("error_message = NULL");
         }
 
         updates.push("updated_at = CURRENT_TIMESTAMP");
