@@ -168,9 +168,9 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                     return newContent;
                 });
 
-                if (isSending) {
-                    setIsSending(false);
-                }
+                // Unconditional so the effect does not depend on isSending: re-running it
+                // would close and reopen the stream mid-response and lose tokens.
+                setIsSending(false);
             },
             onMessage: (message: ThreadMessage) => {
                 logger.debug("Received message", { message });
@@ -287,7 +287,6 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         currentExecutionStatus,
         thread.id,
         agent.id,
-        isSending,
         setExecutionStatus,
         addMessageToThread,
         updateThreadMessage,
