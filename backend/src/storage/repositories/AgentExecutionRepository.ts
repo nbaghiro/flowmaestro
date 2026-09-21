@@ -12,7 +12,8 @@ import {
 
 interface AgentExecutionRow {
     id: string;
-    agent_id: string;
+    agent_id: string | null;
+    persona_instance_id: string | null;
     user_id: string;
     thread_id: string;
     status: string;
@@ -44,15 +45,16 @@ export class AgentExecutionRepository {
     async create(input: CreateAgentExecutionInput): Promise<AgentExecutionModel> {
         const query = `
             INSERT INTO flowmaestro.agent_executions (
-                agent_id, user_id, thread_id, status, thread_history,
+                agent_id, persona_instance_id, user_id, thread_id, status, thread_history,
                 iterations, tool_calls_count, metadata
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
         `;
 
         const values = [
-            input.agent_id,
+            input.agent_id ?? null,
+            input.persona_instance_id ?? null,
             input.user_id,
             input.thread_id,
             input.status || "running",
@@ -362,6 +364,8 @@ export class AgentExecutionRepository {
     private mapExecutionRow(row: AgentExecutionRow): AgentExecutionModel {
         return {
             ...row,
+            agent_id: row.agent_id ?? null,
+            persona_instance_id: row.persona_instance_id ?? null,
             status: row.status as AgentExecutionStatus,
             thread_history:
                 typeof row.thread_history === "string"

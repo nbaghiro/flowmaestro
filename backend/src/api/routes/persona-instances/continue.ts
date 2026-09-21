@@ -108,14 +108,14 @@ export async function continuePersonaInstanceHandler(
         const thread = await threadRepo.create({
             user_id: userId,
             workspace_id: workspaceId,
-            agent_id: persona.id,
+            persona_instance_id: newInstance.id,
             title: `${persona.name}: Continuation #${continuationCount}`
         });
 
         // Create an execution record
         const executionRepo = new AgentExecutionRepository();
         const execution = await executionRepo.create({
-            agent_id: persona.id,
+            persona_instance_id: newInstance.id,
             user_id: userId,
             thread_id: thread.id,
             status: "running",

@@ -13,7 +13,8 @@ interface ThreadRow {
     id: string;
     user_id: string;
     workspace_id: string;
-    agent_id: string;
+    agent_id: string | null;
+    persona_instance_id: string | null;
     title: string | null;
     status: ThreadStatus;
     metadata: JsonObject | string;
@@ -31,16 +32,17 @@ export class ThreadRepository {
     async create(input: CreateThreadInput): Promise<ThreadModel> {
         const query = `
             INSERT INTO flowmaestro.threads (
-                user_id, workspace_id, agent_id, title, status, metadata
+                user_id, workspace_id, agent_id, persona_instance_id, title, status, metadata
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `;
 
         const values = [
             input.user_id,
             input.workspace_id,
-            input.agent_id,
+            input.agent_id ?? null,
+            input.persona_instance_id ?? null,
             input.title || null,
             input.status || "active",
             JSON.stringify(input.metadata || {})
@@ -339,7 +341,8 @@ export class ThreadRepository {
             id: row.id,
             user_id: row.user_id,
             workspace_id: row.workspace_id,
-            agent_id: row.agent_id,
+            agent_id: row.agent_id ?? null,
+            persona_instance_id: row.persona_instance_id ?? null,
             title: row.title,
             status: row.status,
             metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata,

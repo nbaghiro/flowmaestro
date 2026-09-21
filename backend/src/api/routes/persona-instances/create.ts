@@ -188,7 +188,7 @@ export async function createPersonaInstanceHandler(
         const thread = await threadRepo.create({
             user_id: userId,
             workspace_id: workspaceId,
-            agent_id: persona.id, // Use persona ID as agent ID for thread association
+            persona_instance_id: instance.id,
             title:
                 body.task_title || `${persona.name}: ${body.task_description.substring(0, 50)}...`
         });
@@ -196,7 +196,7 @@ export async function createPersonaInstanceHandler(
         // Create an execution record
         const executionRepo = new AgentExecutionRepository();
         const execution = await executionRepo.create({
-            agent_id: persona.id, // Use persona ID as agent ID for execution tracking
+            persona_instance_id: instance.id,
             user_id: userId,
             thread_id: thread.id,
             status: "running",

@@ -145,7 +145,15 @@ export async function threadsV1Routes(fastify: FastifyInstance): Promise<void> {
                 return sendNotFound(reply, "Thread", threadId);
             }
 
-            // Get the agent associated with this thread
+            // Get the agent associated with this thread; persona threads have none
+            if (!thread.agent_id) {
+                return sendError(
+                    reply,
+                    400,
+                    "validation_error",
+                    "Thread belongs to a persona instance and cannot receive agent messages"
+                );
+            }
             const agent = await agentRepo.findById(thread.agent_id);
             if (!agent) {
                 return sendError(reply, 500, "internal_error", "Agent not found for thread");

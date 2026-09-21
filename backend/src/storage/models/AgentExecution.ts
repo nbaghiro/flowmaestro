@@ -22,7 +22,10 @@ export interface ThreadMessage {
 
 export interface AgentExecutionModel {
     id: string;
-    agent_id: string;
+    /** Owning agent; null when the execution belongs to a persona instance. */
+    agent_id: string | null;
+    /** Owning persona instance; null when the execution belongs to an agent. */
+    persona_instance_id: string | null;
     user_id: string;
     thread_id: string; // Thread this execution belongs to
     status: AgentExecutionStatus;
@@ -49,7 +52,9 @@ export interface AgentMessageModel {
 }
 
 export interface CreateAgentExecutionInput {
-    agent_id: string;
+    /** Exactly one of agent_id and persona_instance_id must be set. */
+    agent_id?: string;
+    persona_instance_id?: string;
     user_id: string;
     thread_id: string; // Required: execution must belong to a thread
     status?: AgentExecutionStatus;

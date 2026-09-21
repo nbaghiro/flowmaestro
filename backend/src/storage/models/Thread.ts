@@ -6,7 +6,10 @@ export interface ThreadModel {
     id: string;
     user_id: string;
     workspace_id: string;
-    agent_id: string;
+    /** Owning agent; null when the thread belongs to a persona instance. */
+    agent_id: string | null;
+    /** Owning persona instance; null when the thread belongs to an agent. */
+    persona_instance_id: string | null;
     title: string | null;
     status: ThreadStatus;
     metadata: JsonObject;
@@ -20,7 +23,9 @@ export interface ThreadModel {
 export interface CreateThreadInput {
     user_id: string;
     workspace_id: string;
-    agent_id: string;
+    /** Exactly one of agent_id and persona_instance_id must be set. */
+    agent_id?: string;
+    persona_instance_id?: string;
     title?: string;
     status?: ThreadStatus;
     metadata?: JsonObject;
