@@ -1,0 +1,6 @@
+# Lint settings for the Python examples. They are documentation-style scripts, so only
+# real errors are enforced; the line length matches the SDK and the repo's Prettier width.
+line-length = 100
+
+[lint]
+select = ["E", "F"]

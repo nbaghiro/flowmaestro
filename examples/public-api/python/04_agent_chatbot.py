@@ -38,7 +38,9 @@ def show_history(client, thread_id: str) -> None:
                 time_str = datetime.fromisoformat(
                     msg["created_at"].replace("Z", "+00:00")
                 ).strftime("%H:%M:%S")
-                content = msg["content"][:100] + "..." if len(msg["content"]) > 100 else msg["content"]
+                content = msg["content"]
+                if len(content) > 100:
+                    content = content[:100] + "..."
                 print(f"[{time_str}] {role}: {content}")
         print("-----------------------\n")
     except Exception:
