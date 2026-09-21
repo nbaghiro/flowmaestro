@@ -42,8 +42,9 @@ export interface UpdatePersonaInstanceStatusInput {
     personaInstanceId: string;
     status: PersonaInstanceStatus;
     completionReason?: PersonaInstanceCompletionReason;
-    startedAt?: Date;
-    completedAt?: Date;
+    /** Dates arrive as ISO strings when passed from a workflow; both forms are accepted. */
+    startedAt?: Date | string;
+    completedAt?: Date | string;
     iterationCount?: number;
     accumulatedCostCredits?: number;
     progress?: PersonaInstanceProgress;
@@ -443,12 +444,13 @@ export async function updatePersonaInstanceStatus(
         personaInstanceId,
         status,
         completionReason,
-        startedAt,
-        completedAt,
         iterationCount,
         accumulatedCostCredits,
         progress
     } = input;
+    // Temporal serialises Date arguments to ISO strings, so rebuild them here.
+    const startedAt = input.startedAt ? new Date(input.startedAt) : undefined;
+    const completedAt = input.completedAt ? new Date(input.completedAt) : undefined;
 
     activityLogger.info("Updating persona instance status", {
         personaInstanceId,
