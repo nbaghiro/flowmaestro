@@ -250,7 +250,8 @@ export class PersonaDefinitionRepository {
             data: [],
             operations: [],
             business: [],
-            proposals: []
+            proposals: [],
+            healthcare: []
         };
 
         for (const row of result.rows) {

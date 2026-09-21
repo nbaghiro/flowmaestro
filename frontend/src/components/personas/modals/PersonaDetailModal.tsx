@@ -44,7 +44,8 @@ const categoryColors: Record<PersonaCategory, string> = {
     data: "bg-orange-500/10 text-orange-500",
     operations: "bg-slate-500/10 text-slate-500",
     business: "bg-indigo-500/10 text-indigo-500",
-    proposals: "bg-amber-500/10 text-amber-500"
+    proposals: "bg-amber-500/10 text-amber-500",
+    healthcare: "bg-teal-500/10 text-teal-500"
 };
 
 const categoryLabels: Record<PersonaCategory, string> = {
@@ -54,7 +55,8 @@ const categoryLabels: Record<PersonaCategory, string> = {
     data: "Data & Analytics",
     operations: "Operations",
     business: "Business Intelligence",
-    proposals: "Proposals & Bids"
+    proposals: "Proposals & Bids",
+    healthcare: "Healthcare & Life Sciences"
 };
 
 // Universal agent capabilities that all personas have

@@ -113,7 +113,8 @@ export const usePersonaStore = create<PersonaStore>((set, get) => ({
         data: [],
         operations: [],
         business: [],
-        proposals: []
+        proposals: [],
+        healthcare: []
     },
     currentPersona: null,
     isLoadingPersonas: false,

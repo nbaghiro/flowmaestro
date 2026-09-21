@@ -101,7 +101,8 @@ function createPersonaStoreState(overrides?: {
         data: [],
         operations: [],
         business: [],
-        proposals: []
+        proposals: [],
+        healthcare: []
     };
 
     return {
@@ -230,7 +231,8 @@ describe("Personas Page", () => {
                 data: [],
                 operations: [],
                 business: [],
-                proposals: []
+                proposals: [],
+                healthcare: []
             };
 
             resetStores({ personasByCategory, isLoadingPersonas: false });
@@ -249,7 +251,8 @@ describe("Personas Page", () => {
                 data: [],
                 operations: [],
                 business: [],
-                proposals: []
+                proposals: [],
+                healthcare: []
             };
 
             resetStores({ personasByCategory, isLoadingPersonas: false });
@@ -282,7 +285,8 @@ describe("Personas Page", () => {
                 data: [],
                 operations: [],
                 business: [],
-                proposals: []
+                proposals: [],
+                healthcare: []
             };
 
             resetStores({ personasByCategory, isLoadingPersonas: false });
@@ -316,7 +320,8 @@ describe("Personas Page", () => {
                 data: [],
                 operations: [],
                 business: [],
-                proposals: []
+                proposals: [],
+                healthcare: []
             };
 
             resetStores({ personasByCategory, isLoadingPersonas: false });
@@ -340,7 +345,8 @@ describe("Personas Page", () => {
                 data: [],
                 operations: [],
                 business: [],
-                proposals: []
+                proposals: [],
+                healthcare: []
             };
 
             resetStores({ personasByCategory, isLoadingPersonas: false });
@@ -366,7 +372,8 @@ describe("Personas Page", () => {
                 data: [],
                 operations: [],
                 business: [],
-                proposals: []
+                proposals: [],
+                healthcare: []
             };
 
             resetStores({ personasByCategory, isLoadingPersonas: false });
@@ -391,7 +398,8 @@ describe("Personas Page", () => {
                 data: [],
                 operations: [],
                 business: [],
-                proposals: []
+                proposals: [],
+                healthcare: []
             };
 
             resetStores({ personasByCategory, isLoadingPersonas: false });
@@ -414,7 +422,8 @@ describe("Personas Page", () => {
                 data: [],
                 operations: [],
                 business: [],
-                proposals: []
+                proposals: [],
+                healthcare: []
             };
 
             resetStores({ personasByCategory, isLoadingPersonas: false });

@@ -36,7 +36,8 @@ const categoryColors: Record<PersonaCategory, string> = {
     data: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
     operations: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300",
     business: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
-    proposals: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+    proposals: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+    healthcare: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300"
 };
 
 // Map deliverable types to unique icons

@@ -163,7 +163,8 @@ function createEmptyPersonasByCategory() {
         data: [],
         operations: [],
         business: [],
-        proposals: []
+        proposals: [],
+        healthcare: []
     };
 }
 

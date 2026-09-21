@@ -17,7 +17,8 @@ export type PersonaCategory =
     | "data"
     | "operations"
     | "business"
-    | "proposals";
+    | "proposals"
+    | "healthcare";
 
 /**
  * Status of a persona definition

@@ -19,7 +19,8 @@ const categoryOrder: PersonaCategory[] = [
     "data",
     "operations",
     "business",
-    "proposals"
+    "proposals",
+    "healthcare"
 ];
 
 const categoryLabels: Record<PersonaCategory, string> = {
@@ -29,7 +30,8 @@ const categoryLabels: Record<PersonaCategory, string> = {
     data: "Data & Analytics",
     operations: "Operations & Support",
     business: "Business Intelligence",
-    proposals: "Proposals & Bids"
+    proposals: "Proposals & Bids",
+    healthcare: "Healthcare & Life Sciences"
 };
 
 export const Personas: React.FC = () => {
@@ -92,7 +94,8 @@ export const Personas: React.FC = () => {
             data: [],
             operations: [],
             business: [],
-            proposals: []
+            proposals: [],
+            healthcare: []
         };
 
         for (const category of categoryOrder) {

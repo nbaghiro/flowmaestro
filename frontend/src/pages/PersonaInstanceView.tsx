@@ -41,7 +41,8 @@ const categoryIcons: Record<PersonaCategory, string> = {
     data: "📊",
     operations: "⚙️",
     business: "📈",
-    proposals: "📝"
+    proposals: "📝",
+    healthcare: "🩺"
 };
 
 const statusConfig: Record<
