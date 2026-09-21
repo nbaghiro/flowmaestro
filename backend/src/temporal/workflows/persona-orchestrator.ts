@@ -562,8 +562,14 @@ export async function personaOrchestratorWorkflow(
     if (iterations === 0) {
         logger.info("Checking credits for persona execution");
 
-        // Personas are long-running, estimate higher credit usage
-        const estimatedCredits = Math.ceil(persona.max_iterations * 15 * 1.2);
+        // Reserve the instance's own budget: the run is stopped by the cost limit check
+        // before it can exceed max_cost_credits, so a larger reservation only blocks
+        // workspaces that could afford the run. Fall back to an iteration-based estimate
+        // when no budget is set.
+        const estimatedCredits =
+            persona.max_cost_credits && persona.max_cost_credits > 0
+                ? Math.ceil(persona.max_cost_credits)
+                : Math.ceil(persona.max_iterations * 15 * 1.2);
 
         const allowed = await shouldAllowExecution({
             workspaceId,
