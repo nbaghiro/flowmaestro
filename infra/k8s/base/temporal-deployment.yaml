@@ -91,7 +91,7 @@ spec:
 
           resources:
             requests:
-              cpu: 500m
+              cpu: 250m
               memory: 512Mi
             limits:
               cpu: 2000m
@@ -135,7 +135,7 @@ metadata:
     app: flowmaestro
     component: temporal-ui
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: flowmaestro
@@ -258,7 +258,7 @@ spec:
     kind: Deployment
     name: temporal-server
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 2
   metrics:
     - type: Resource
       resource:
@@ -266,12 +266,6 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 75
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 600  # 10 minutes

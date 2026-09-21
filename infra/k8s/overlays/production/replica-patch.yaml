@@ -49,4 +49,4 @@ metadata:
   name: temporal-ui
   namespace: flowmaestro
 spec:
-  replicas: 1
+  replicas: 0

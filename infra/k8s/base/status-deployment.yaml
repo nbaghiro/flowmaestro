@@ -98,7 +98,7 @@ spec:
     kind: Deployment
     name: status
   minReplicas: 1
-  maxReplicas: 2
+  maxReplicas: 1
   metrics:
     - type: Resource
       resource:

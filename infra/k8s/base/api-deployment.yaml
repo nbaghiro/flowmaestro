@@ -119,15 +119,9 @@ spec:
 
             # Redis credentials (from infrastructure secret)
             - name: REDIS_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: redis-credentials
-                  key: host
+              value: redis # in-cluster Redis (redis-deployment.yaml)
             - name: REDIS_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: redis-credentials
-                  key: port
+              value: "6379"
 
             # Temporal configuration
             # Use FQDN to ensure reliable DNS resolution for gRPC connections
@@ -166,7 +160,7 @@ spec:
 
           resources:
             requests:
-              cpu: 500m
+              cpu: 250m
               memory: 512Mi
             limits:
               cpu: 2000m
@@ -226,7 +220,7 @@ spec:
     kind: Deployment
     name: api-server
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 2
   metrics:
     - type: Resource
       resource:
@@ -234,12 +228,6 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
   behavior:
     scaleDown:
       stabilizationWindowSeconds: 300

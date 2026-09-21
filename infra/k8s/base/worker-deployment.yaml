@@ -18,6 +18,14 @@ spec:
         app: flowmaestro
         component: temporal-worker
     spec:
+      # Spot pods: about 60 to 91 percent cheaper; Temporal retries activities after preemption.
+      nodeSelector:
+        cloud.google.com/gke-spot: "true"
+      tolerations:
+        - key: cloud.google.com/gke-spot
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
       serviceAccountName: flowmaestro-sa
       containers:
         - name: temporal-worker
@@ -99,15 +107,9 @@ spec:
 
             # Redis credentials (from infrastructure secret)
             - name: REDIS_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: redis-credentials
-                  key: host
+              value: redis # in-cluster Redis (redis-deployment.yaml)
             - name: REDIS_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: redis-credentials
-                  key: port
+              value: "6379"
 
             # Temporal configuration
             # Use Kubernetes-injected service IP to bypass DNS resolution issues
@@ -158,7 +160,7 @@ spec:
 
           resources:
             requests:
-              cpu: 1000m
+              cpu: 500m
               memory: 1Gi
             limits:
               cpu: 4000m
@@ -222,7 +224,7 @@ spec:
     kind: Deployment
     name: temporal-worker
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 1
   metrics:
     - type: Resource
       resource:
