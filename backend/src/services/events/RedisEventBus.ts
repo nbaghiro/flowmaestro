@@ -27,6 +27,9 @@ export class RedisEventBus {
         this.publisher = new Redis({
             host: config.redis.host,
             port: config.redis.port,
+            username: config.redis.username,
+            password: config.redis.password,
+            tls: config.redis.tls ? {} : undefined,
             lazyConnect: true,
             retryStrategy: (times) => {
                 const delay = Math.min(times * 50, 2000);
@@ -38,6 +41,9 @@ export class RedisEventBus {
         this.subscriber = new Redis({
             host: config.redis.host,
             port: config.redis.port,
+            username: config.redis.username,
+            password: config.redis.password,
+            tls: config.redis.tls ? {} : undefined,
             lazyConnect: true,
             retryStrategy: (times) => {
                 const delay = Math.min(times * 50, 2000);

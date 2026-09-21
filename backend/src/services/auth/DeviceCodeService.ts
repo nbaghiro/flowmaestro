@@ -48,12 +48,7 @@ class DeviceCodeService {
     private isConnected: boolean = false;
 
     constructor() {
-        this.redis = createClient({
-            socket: {
-                host: config.redis.host,
-                port: config.redis.port
-            }
-        });
+        this.redis = createClient({ url: config.redis.url });
 
         this.redis.on("error", (err) => {
             logger.error({ error: err }, "Redis error in DeviceCodeService");
@@ -98,7 +93,7 @@ class DeviceCodeService {
 
         // Build verification URLs
         // Use appUrl for the frontend (where user logs in)
-        const baseUrl = config.appUrl || "http://localhost:3000";
+        const baseUrl = config.appUrl || "http://localhost:8400";
         const verificationUri = `${baseUrl}/device`;
         const verificationUriComplete = `${verificationUri}?code=${userCode}`;
 

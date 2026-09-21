@@ -9,12 +9,7 @@ export class RateLimiter {
     private isConnected: boolean = false;
 
     constructor() {
-        this.redis = createClient({
-            socket: {
-                host: config.redis.host,
-                port: config.redis.port
-            }
-        });
+        this.redis = createClient({ url: config.redis.url });
 
         this.redis.on("error", (err) => {
             logger.error({ error: err }, "Redis error");

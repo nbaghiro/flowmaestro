@@ -1,5 +1,6 @@
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 import { config } from "../core/config";
+import { postgresSslOption, PostgresSslMode } from "../core/config/connection-urls";
 import { createServiceLogger } from "../core/logging";
 
 const logger = createServiceLogger("Database");
@@ -10,6 +11,7 @@ interface DatabaseConfig {
     database: string;
     user: string;
     password: string;
+    sslMode?: PostgresSslMode;
     max?: number;
     idleTimeoutMillis?: number;
     connectionTimeoutMillis?: number;
@@ -26,6 +28,7 @@ class Database {
             database: dbConfig.database,
             user: dbConfig.user,
             password: dbConfig.password,
+            ssl: postgresSslOption(dbConfig.sslMode),
             max: dbConfig.max || 20,
             idleTimeoutMillis: dbConfig.idleTimeoutMillis || 30000,
             connectionTimeoutMillis: dbConfig.connectionTimeoutMillis || 10000,
@@ -47,6 +50,7 @@ class Database {
                 database: config.database.database,
                 user: config.database.user,
                 password: config.database.password,
+                sslMode: config.database.sslMode,
                 max: config.database.poolSize
             };
             Database.instance = new Database(dbConfig);

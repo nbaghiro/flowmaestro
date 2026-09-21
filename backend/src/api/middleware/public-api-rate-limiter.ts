@@ -16,12 +16,7 @@ let isConnected = false;
 
 async function getRedisClient(): Promise<ReturnType<typeof createClient>> {
     if (!redisClient) {
-        redisClient = createClient({
-            socket: {
-                host: config.redis.host,
-                port: config.redis.port
-            }
-        });
+        redisClient = createClient({ url: config.redis.url });
 
         redisClient.on("error", (err) => {
             logger.error({ error: err }, "Redis rate limiter error");

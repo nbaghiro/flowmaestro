@@ -6,7 +6,7 @@ import http from "http";
 import os from "os";
 import path from "path";
 import { createWorkerLogger } from "../core/logging";
-import { initializeOTel, shutdownOTel } from "../core/observability";
+import { initializeOTel, resolveOTelEnabled, shutdownOTel } from "../core/observability";
 import { createOTelActivityInterceptor } from "./activities/interceptors";
 import { createRuntimeLogger } from "./core";
 
@@ -36,7 +36,7 @@ async function run() {
     initializeOTel({
         serviceName: "flowmaestro-worker",
         serviceVersion: "1.0.0",
-        enabled: process.env.NODE_ENV === "production"
+        enabled: resolveOTelEnabled()
     });
     logger.info("OpenTelemetry SDK initialized");
 
@@ -130,7 +130,7 @@ async function run() {
     );
 
     // Health check HTTP server for Kubernetes liveness/readiness probes
-    const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || "9090", 10);
+    const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || "8406", 10);
     let isReady = true; // Track readiness state
 
     const healthServer: http.Server = http.createServer((req, res) => {

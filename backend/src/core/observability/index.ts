@@ -6,7 +6,7 @@
  */
 
 // OTel SDK initialization
-export { initializeOTel, shutdownOTel, isOTelEnabled } from "./otel";
+export { initializeOTel, shutdownOTel, isOTelEnabled, resolveOTelEnabled } from "./otel";
 export type { OTelConfig } from "./otel";
 
 // Span helpers

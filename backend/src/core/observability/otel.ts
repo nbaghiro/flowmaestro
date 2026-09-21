@@ -26,6 +26,36 @@ const GCP_OTLP_ENDPOINT = "telemetry.googleapis.com:443";
 /** SDK instance for cleanup on shutdown */
 let sdk: NodeSDK | null = null;
 
+/**
+ * Decide whether OTel export should run.
+ *
+ * `OTEL_ENABLED=true|false` is explicit and wins. When it is unset, export runs
+ * only in production, which is the historical behavior on GKE. Hosted platforms
+ * without GCP credentials set `OTEL_ENABLED=false`.
+ */
+export function resolveOTelEnabled(): boolean {
+    const flag = (process.env.OTEL_ENABLED || "").trim().toLowerCase();
+    if (flag === "true" || flag === "1") {
+        return true;
+    }
+    if (flag === "false" || flag === "0") {
+        return false;
+    }
+    return process.env.NODE_ENV === "production";
+}
+
+/**
+ * OTLP gRPC endpoint. `OTEL_EXPORTER_OTLP_ENDPOINT` overrides the GCP default,
+ * with or without a scheme.
+ */
+function resolveOTelEndpoint(): string {
+    const override = (process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "").trim();
+    if (!override) {
+        return `https://${GCP_OTLP_ENDPOINT}`;
+    }
+    return /^[a-z]+:\/\//i.test(override) ? override : `https://${override}`;
+}
+
 export interface OTelConfig {
     /** Service name for resource identification */
     serviceName: string;
@@ -53,7 +83,7 @@ export function initializeOTel(config: OTelConfig): NodeSDK {
     const {
         serviceName,
         serviceVersion = "1.0.0",
-        enabled = process.env.NODE_ENV === "production",
+        enabled = resolveOTelEnabled(),
         metricExportIntervalMs = 60000
     } = config;
 
@@ -63,20 +93,22 @@ export function initializeOTel(config: OTelConfig): NodeSDK {
         return null as unknown as NodeSDK;
     }
 
+    const endpoint = resolveOTelEndpoint();
+
     logger.info(
-        { serviceName, serviceVersion, endpoint: GCP_OTLP_ENDPOINT },
-        "Initializing OpenTelemetry with GCP OTLP endpoint"
+        { serviceName, serviceVersion, endpoint },
+        "Initializing OpenTelemetry with OTLP endpoint"
     );
 
     // Trace exporter - uses ADC automatically via gRPC
     const traceExporter = new OTLPTraceExporter({
-        url: `https://${GCP_OTLP_ENDPOINT}`,
+        url: endpoint,
         credentials: credentials.createSsl()
     });
 
     // Metrics exporter
     const metricExporter = new OTLPMetricExporter({
-        url: `https://${GCP_OTLP_ENDPOINT}`,
+        url: endpoint,
         credentials: credentials.createSsl()
     });
 

@@ -5,7 +5,7 @@ import websocket from "@fastify/websocket";
 import Fastify from "fastify";
 import { config } from "../core/config";
 import { initializeLogger, shutdownLogger } from "../core/logging";
-import { initializeOTel, shutdownOTel } from "../core/observability";
+import { initializeOTel, resolveOTelEnabled, shutdownOTel } from "../core/observability";
 import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
 import { connectRedis, redis } from "../services/redis";
@@ -153,7 +153,7 @@ export async function buildServer() {
     initializeOTel({
         serviceName: "flowmaestro-api",
         serviceVersion: "1.0.0",
-        enabled: config.env === "production"
+        enabled: resolveOTelEnabled()
     });
     fastify.log.info("OpenTelemetry initialized for distributed tracing");
 

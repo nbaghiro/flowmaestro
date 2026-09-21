@@ -1,9 +1,28 @@
 import path from "path";
 import dotenv from "dotenv";
+import {
+    buildRedisUrl,
+    normalizePostgresSslMode,
+    parseDatabaseUrl,
+    parseRedisUrl
+} from "./connection-urls";
 
 // Load .env from project root
 // When compiled, this will be in dist/, so we go up to backend/, then to project root
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+
+// Hosted platforms provide one URL per backing service. Individual variables win
+// when set, so self-managed deployments keep their existing behavior.
+const databaseUrl = parseDatabaseUrl(process.env.DATABASE_URL);
+const redisUrl = parseRedisUrl(process.env.REDIS_URL);
+
+const redisParts = {
+    host: process.env.REDIS_HOST || redisUrl.host || "localhost",
+    port: parseInt(process.env.REDIS_PORT || "") || redisUrl.port || 6379,
+    username: process.env.REDIS_USERNAME || redisUrl.username,
+    password: process.env.REDIS_PASSWORD || redisUrl.password,
+    tls: process.env.REDIS_TLS ? process.env.REDIS_TLS === "true" : redisUrl.tls === true
+};
 
 /**
  * Centralized Configuration
@@ -52,19 +71,24 @@ export const config = {
     // ==========================================================================
     // Service URLs
     // ==========================================================================
-    apiUrl: process.env.API_URL || "http://localhost:3001",
-    appUrl: process.env.APP_URL || "http://localhost:3000",
-    marketingUrl: process.env.MARKETING_URL || "http://localhost:5173",
+    apiUrl: process.env.API_URL || "http://localhost:8401",
+    appUrl: process.env.APP_URL || "http://localhost:8400",
+    marketingUrl: process.env.MARKETING_URL || "http://localhost:8407",
 
     // ==========================================================================
     // Database Configuration (PostgreSQL)
     // ==========================================================================
+    // Resolution order per field: POSTGRES_* variable, then DATABASE_URL, then default.
     database: {
-        host: process.env.POSTGRES_HOST || "localhost",
-        port: parseInt(process.env.POSTGRES_PORT || "5432"),
-        database: process.env.POSTGRES_DB || "flowmaestro",
-        user: process.env.POSTGRES_USER || "flowmaestro",
-        password: process.env.POSTGRES_PASSWORD || "flowmaestro_dev_password",
+        host: process.env.POSTGRES_HOST || databaseUrl.host || "localhost",
+        port: parseInt(process.env.POSTGRES_PORT || "") || databaseUrl.port || 5432,
+        database: process.env.POSTGRES_DB || databaseUrl.database || "flowmaestro",
+        user: process.env.POSTGRES_USER || databaseUrl.user || "flowmaestro",
+        password:
+            process.env.POSTGRES_PASSWORD || databaseUrl.password || "flowmaestro_dev_password",
+        // POSTGRES_SSL: disable | require | verify-full. Falls back to ?sslmode= on DATABASE_URL.
+        // Unset means no TLS, which is right for private networks (GKE, Render internal URLs).
+        sslMode: normalizePostgresSslMode(process.env.POSTGRES_SSL) || databaseUrl.sslMode,
         // Pool size - keep low for small CloudSQL instances (db-g1-small has ~25-50 max connections)
         // temporal-server uses 10-20+ connections, so app services need to share the rest
         poolSize: parseInt(process.env.POSTGRES_POOL_SIZE || "5")
@@ -73,16 +97,22 @@ export const config = {
     // ==========================================================================
     // Redis Configuration
     // ==========================================================================
+    // Resolution order per field: REDIS_* variable, then REDIS_URL, then default.
+    // `url` is the effective URL rebuilt from the resolved parts, for clients that take one.
     redis: {
-        host: process.env.REDIS_HOST || "localhost",
-        port: parseInt(process.env.REDIS_PORT || "6379")
+        host: redisParts.host,
+        port: redisParts.port,
+        username: redisParts.username,
+        password: redisParts.password,
+        tls: redisParts.tls,
+        url: buildRedisUrl(redisParts)
     },
 
     // ==========================================================================
     // Temporal Configuration
     // ==========================================================================
     temporal: {
-        address: process.env.TEMPORAL_ADDRESS || "localhost:7233"
+        address: process.env.TEMPORAL_ADDRESS || "localhost:8404"
     },
 
     // ==========================================================================
@@ -134,8 +164,8 @@ export const config = {
     // ==========================================================================
     cors: {
         origin: [
-            process.env.APP_URL || "http://localhost:3000",
-            process.env.MARKETING_URL || "http://localhost:5173"
+            process.env.APP_URL || "http://localhost:8400",
+            process.env.MARKETING_URL || "http://localhost:8407"
         ],
         credentials: true
     },
@@ -307,7 +337,7 @@ export const config = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
             redirectUri:
                 process.env.GOOGLE_OAUTH_REDIRECT_URI ||
-                `${process.env.API_URL || "http://localhost:3001"}/oauth/google/callback`
+                `${process.env.API_URL || "http://localhost:8401"}/oauth/google/callback`
         },
 
         // Slack
