@@ -779,14 +779,14 @@ describe("Credit Orchestration Integration Tests", () => {
             );
 
             expect((result as OrchestratorResult).success).toBe(false);
-            // Note: The current workflow orchestrator implementation does not release
-            // credits when the first node fails gracefully. The workflow returns from
-            // the "if (finalSummary.failed > 0)" branch without credit handling.
-            // This test verifies the actual behavior.
 
-            // Credits should have been reserved at the start
+            // Credits are reserved at the start and, because no node completed, the whole
+            // reservation is released when the run ends with failed nodes. A reservation
+            // left behind here would block later runs on the workspace.
             expect(mockReserveCredits).toHaveBeenCalled();
-            expect(creditState.reserved).toBeGreaterThan(0);
+            expect(mockReleaseCredits).toHaveBeenCalled();
+            expect(mockFinalizeCredits).not.toHaveBeenCalled();
+            expect(creditState.reserved).toBe(0);
         });
 
         it("should update credit balance correctly after finalization", async () => {
