@@ -26,22 +26,22 @@ const CATEGORY_INFO: Record<
     research: {
         label: "Research",
         description: "Search and browse the web for information",
-        color: "bg-purple-900/30 text-purple-400"
+        color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
     },
     extract: {
         label: "Extract",
         description: "Get content from files, images, and audio",
-        color: "bg-cyan-900/30 text-cyan-400"
+        color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400"
     },
     generate: {
         label: "Generate",
         description: "Create images, documents, charts, and audio",
-        color: "bg-pink-900/30 text-pink-400"
+        color: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400"
     },
     store: {
         label: "Store",
         description: "Save and download files",
-        color: "bg-orange-900/30 text-orange-400"
+        color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
     }
 };
 

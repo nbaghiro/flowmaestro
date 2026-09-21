@@ -859,9 +859,9 @@ function ConnectionCard({ connection, onSelect, providerLogoUrl }: ConnectionCar
     };
 
     const methodColors: Record<string, string> = {
-        oauth2: "bg-purple-900/30 text-purple-400",
-        api_key: "bg-blue-900/30 text-blue-400",
-        mcp: "bg-indigo-900/30 text-indigo-400",
+        oauth2: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+        api_key: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+        mcp: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
         basic_auth: "bg-muted text-muted-foreground",
         custom: "bg-muted text-muted-foreground"
     };
