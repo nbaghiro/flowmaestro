@@ -34,7 +34,7 @@ const DEFAULT_PANELS: Record<PanelId, PanelConfig> = {
         order: 1
     },
     chat: {
-        state: "collapsed",
+        state: "expanded",
         width: 0, // flex-1, no fixed width
         minWidth: 400,
         order: 2

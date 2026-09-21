@@ -42,7 +42,7 @@ const DEFAULT_PANELS = {
         order: 1
     },
     chat: {
-        state: "collapsed" as PanelState,
+        state: "expanded" as PanelState,
         width: 0,
         minWidth: 400,
         order: 2
@@ -82,7 +82,7 @@ describe("agentBuilderLayoutStore", () => {
 
             expect(state.panels.navigation.state).toBe("collapsed");
             expect(state.panels.config.state).toBe("expanded");
-            expect(state.panels.chat.state).toBe("collapsed");
+            expect(state.panels.chat.state).toBe("expanded");
         });
 
         it("has correct initial panel widths", () => {
