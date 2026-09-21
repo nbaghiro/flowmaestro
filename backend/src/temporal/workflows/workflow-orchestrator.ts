@@ -386,6 +386,32 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
     // Credit tracking state
     let reservedCredits = 0;
     let accumulatedCredits = 0;
+
+    // Every exit from a run that reserved credits must settle them, otherwise the
+    // reservation stays on the workspace and blocks later runs.
+    const settleCreditsAfterFailure = async (): Promise<void> => {
+        if (skipCreditCheck || !workspaceId || reservedCredits <= 0) {
+            return;
+        }
+        if (accumulatedCredits > 0) {
+            await finalizeCredits({
+                workspaceId,
+                userId: userId || null,
+                reservedAmount: reservedCredits,
+                actualAmount: accumulatedCredits,
+                operationType: "workflow_execution",
+                operationId: executionId,
+                description: `Workflow (failed): ${workflowDefinition.name || "Unnamed"}`
+            });
+            logger.info("Credits finalized for partial execution", {
+                actual: accumulatedCredits
+            });
+        } else {
+            await releaseCredits({ workspaceId, amount: reservedCredits });
+            logger.info("Credits released due to failure", { released: reservedCredits });
+        }
+        reservedCredits = 0;
+    };
     const nodeCredits: Map<string, number> = new Map();
 
     // Create WORKFLOW_RUN span for entire workflow execution
@@ -837,6 +863,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                     completedNodeCount: finalSummary.completed
                 }
             });
+            await settleCreditsAfterFailure();
 
             return {
                 success: false,
@@ -862,6 +889,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                 error: new Error(errorMessage),
                 attributes: { failureReason: "output_validation_failed" }
             });
+            await settleCreditsAfterFailure();
 
             return { success: false, outputs: finalOutputs, error: errorMessage };
         }
