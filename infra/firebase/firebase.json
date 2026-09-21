@@ -1,0 +1,84 @@
+{
+    "hosting": [
+        {
+            "target": "app",
+            "public": "../../frontend/dist",
+            "ignore": ["firebase.json", "**/.*"],
+            "rewrites": [{ "source": "**", "destination": "/index.html" }],
+            "headers": [
+                {
+                    "source": "/index.html",
+                    "headers": [
+                        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+                    ]
+                },
+                {
+                    "source": "**/*.@(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)",
+                    "headers": [
+                        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+                    ]
+                },
+                {
+                    "source": "**",
+                    "headers": [
+                        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+                        { "key": "X-Content-Type-Options", "value": "nosniff" },
+                        { "key": "Referrer-Policy", "value": "no-referrer-when-downgrade" }
+                    ]
+                }
+            ]
+        },
+        {
+            "target": "marketing",
+            "public": "../../marketing/dist",
+            "ignore": ["firebase.json", "**/.*"],
+            "rewrites": [{ "source": "**", "destination": "/index.html" }],
+            "headers": [
+                {
+                    "source": "/index.html",
+                    "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+                },
+                {
+                    "source": "**/*.@(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)",
+                    "headers": [
+                        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+                    ]
+                }
+            ]
+        },
+        {
+            "target": "docs",
+            "public": "../../documentation/build",
+            "ignore": ["firebase.json", "**/.*"],
+            "cleanUrls": true
+        },
+        {
+            "target": "status",
+            "public": "../../status/dist",
+            "ignore": ["firebase.json", "**/.*"],
+            "rewrites": [{ "source": "**", "destination": "/index.html" }]
+        },
+        {
+            "target": "static",
+            "public": "static-public",
+            "ignore": ["firebase.json", "**/.*"],
+            "rewrites": [{ "source": "/widget/**", "destination": "/widget/widget.js" }],
+            "headers": [
+                {
+                    "source": "/widget/**",
+                    "headers": [
+                        { "key": "Access-Control-Allow-Origin", "value": "*" },
+                        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" },
+                        {
+                            "key": "Access-Control-Allow-Headers",
+                            "value": "Origin, Content-Type, Accept"
+                        },
+                        { "key": "Content-Type", "value": "application/javascript" },
+                        { "key": "Cache-Control", "value": "public, max-age=3600" },
+                        { "key": "X-Content-Type-Options", "value": "nosniff" }
+                    ]
+                }
+            ]
+        }
+    ]
+}

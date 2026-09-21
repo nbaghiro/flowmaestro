@@ -1,0 +1,14 @@
+{
+    "projects": { "default": "flowmaestro-prod" },
+    "targets": {
+        "flowmaestro-prod": {
+            "hosting": {
+                "app": ["flowmaestro-app"],
+                "marketing": ["flowmaestro-www"],
+                "docs": ["flowmaestro-docs"],
+                "status": ["flowmaestro-status"],
+                "static": ["flowmaestro-static"]
+            }
+        }
+    }
+}
