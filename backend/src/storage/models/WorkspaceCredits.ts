@@ -20,6 +20,15 @@ export interface CreateWorkspaceCreditsInput {
     subscription_balance?: number;
     purchased_balance?: number;
     bonus_balance?: number;
+    /** End of the current subscription period; free workspaces are refreshed after it. */
+    subscription_expires_at?: Date;
+}
+
+/** One workspace reset by WorkspaceCreditRepository.refreshFreeSubscriptions. */
+export interface FreeSubscriptionRefresh {
+    workspaceId: string;
+    subscriptionBefore: number;
+    availableBefore: number;
 }
 
 export interface UpdateWorkspaceCreditsInput {

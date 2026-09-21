@@ -5,7 +5,8 @@ import {
     CreateWorkspaceCreditsInput,
     UpdateWorkspaceCreditsInput,
     CreditTransactionModel,
-    CreateCreditTransactionInput
+    CreateCreditTransactionInput,
+    FreeSubscriptionRefresh
 } from "../models/WorkspaceCredits";
 
 interface WorkspaceCreditsRow {
@@ -46,9 +47,10 @@ export class WorkspaceCreditRepository {
     async create(input: CreateWorkspaceCreditsInput): Promise<WorkspaceCreditsModel> {
         const query = `
             INSERT INTO flowmaestro.workspace_credits (
-                workspace_id, subscription_balance, purchased_balance, bonus_balance
+                workspace_id, subscription_balance, purchased_balance, bonus_balance,
+                subscription_expires_at
             )
-            VALUES ($1, $2, $3, $4)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
         `;
 
@@ -56,7 +58,8 @@ export class WorkspaceCreditRepository {
             input.workspace_id,
             input.subscription_balance || 0,
             input.purchased_balance || 0,
-            input.bonus_balance || 0
+            input.bonus_balance || 0,
+            input.subscription_expires_at ?? null
         ];
 
         const result = await db.query<WorkspaceCreditsRow>(query, values);
@@ -284,6 +287,52 @@ export class WorkspaceCreditRepository {
         `;
 
         await db.query(query, [workspaceId, amount, expiresAt]);
+    }
+
+    /**
+     * Reset the subscription balance of every free workspace whose period has
+     * elapsed (or was never set) to `amount`, starting a new one-month period.
+     * The update is a single statement over locked rows, so concurrent api replicas
+     * cannot apply it twice. Returns the affected workspaces with the balances
+     * before the reset, for transaction records.
+     */
+    async refreshFreeSubscriptions(amount: number): Promise<FreeSubscriptionRefresh[]> {
+        const query = `
+            WITH due AS (
+                SELECT
+                    c.workspace_id,
+                    c.subscription_balance AS subscription_before,
+                    c.subscription_balance + c.purchased_balance + c.bonus_balance - c.reserved
+                        AS available_before
+                FROM flowmaestro.workspace_credits c
+                JOIN flowmaestro.workspaces w ON w.id = c.workspace_id
+                WHERE w.type = 'free'
+                  AND w.deleted_at IS NULL
+                  AND (c.subscription_expires_at IS NULL OR c.subscription_expires_at <= NOW())
+                FOR UPDATE OF c SKIP LOCKED
+            )
+            UPDATE flowmaestro.workspace_credits c
+            SET
+                subscription_balance = $1,
+                subscription_expires_at = NOW() + INTERVAL '1 month',
+                lifetime_allocated = lifetime_allocated + $1,
+                updated_at = CURRENT_TIMESTAMP
+            FROM due
+            WHERE c.workspace_id = due.workspace_id
+            RETURNING c.workspace_id, due.subscription_before, due.available_before
+        `;
+
+        const result = await db.query<{
+            workspace_id: string;
+            subscription_before: number;
+            available_before: number;
+        }>(query, [amount]);
+
+        return result.rows.map((row) => ({
+            workspaceId: row.workspace_id,
+            subscriptionBefore: Number(row.subscription_before),
+            availableBefore: Number(row.available_before)
+        }));
     }
 
     async addPurchasedCredits(workspaceId: string, amount: number): Promise<void> {

@@ -67,6 +67,39 @@ describe("CreditService", () => {
         service = new CreditService();
     });
 
+    describe("refreshFreeWorkspaceCredits", () => {
+        it("resets due free workspaces and records a transaction for each", async () => {
+            mockRepo.refreshFreeSubscriptions = jest.fn().mockResolvedValue([
+                { workspaceId: "ws-1", subscriptionBefore: 10, availableBefore: 25 },
+                { workspaceId: "ws-2", subscriptionBefore: 0, availableBefore: 0 }
+            ]);
+
+            const count = await service.refreshFreeWorkspaceCredits();
+
+            expect(count).toBe(2);
+            expect(mockRepo.refreshFreeSubscriptions).toHaveBeenCalledWith(250);
+            expect(mockRepo.createTransaction).toHaveBeenCalledTimes(2);
+            expect(mockRepo.createTransaction).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    workspace_id: "ws-1",
+                    amount: 250,
+                    balance_before: 25,
+                    balance_after: 265,
+                    transaction_type: "subscription"
+                })
+            );
+        });
+
+        it("does nothing when no workspace is due", async () => {
+            mockRepo.refreshFreeSubscriptions = jest.fn().mockResolvedValue([]);
+
+            const count = await service.refreshFreeWorkspaceCredits();
+
+            expect(count).toBe(0);
+            expect(mockRepo.createTransaction).not.toHaveBeenCalled();
+        });
+    });
+
     describe("getBalance", () => {
         it("should return balance from repository", async () => {
             const balance = createMockBalance();

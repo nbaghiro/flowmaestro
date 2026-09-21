@@ -1,3 +1,4 @@
+import { WORKSPACE_LIMITS } from "@flowmaestro/shared";
 import type {
     CreditBalance,
     CreditEstimate,
@@ -354,6 +355,33 @@ export class CreditService {
         });
 
         logger.info({ workspaceId, amount }, "Subscription credits added");
+    }
+
+    /**
+     * Give every free workspace whose monthly period has elapsed its plan allowance
+     * again. Paid plans are refreshed by the Stripe renewal webhook; free workspaces
+     * have no renewal event, so the scheduler calls this periodically.
+     * Returns the number of workspaces refreshed.
+     */
+    async refreshFreeWorkspaceCredits(): Promise<number> {
+        const amount = WORKSPACE_LIMITS.free.monthly_credits;
+        const refreshed = await this.creditRepo.refreshFreeSubscriptions(amount);
+
+        for (const entry of refreshed) {
+            await this.creditRepo.createTransaction({
+                workspace_id: entry.workspaceId,
+                amount,
+                balance_before: entry.availableBefore,
+                balance_after: entry.availableBefore - entry.subscriptionBefore + amount,
+                transaction_type: "subscription",
+                description: `Monthly free plan credits (${amount} credits)`
+            });
+        }
+
+        if (refreshed.length > 0) {
+            logger.info({ count: refreshed.length, amount }, "Free workspace credits refreshed");
+        }
+        return refreshed.length;
     }
 
     /**

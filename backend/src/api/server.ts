@@ -13,6 +13,7 @@ import { connectRedis, redis } from "../services/redis";
 import { voiceSessionManager } from "../services/voice";
 import { webhookDispatcher } from "../services/webhooks";
 import { eventBridge } from "../services/websocket/EventBridge";
+import { freeCreditRefreshScheduler } from "../services/workspace/FreeCreditRefreshScheduler";
 import { db } from "../storage/database";
 import { getTemporalClient, closeTemporalConnection } from "../temporal/client";
 import { errorHandler, requestContextMiddleware } from "./middleware";
@@ -164,6 +165,10 @@ export async function buildServer() {
     credentialRefreshScheduler.start();
     fastify.log.info("Credential refresh scheduler started");
 
+    // Start the monthly credit refresh for free workspaces
+    freeCreditRefreshScheduler.start();
+    fastify.log.info("Free credit refresh scheduler started");
+
     // Start webhook retry processor for failed webhook deliveries
     webhookDispatcher.startRetryProcessor(30000); // Check every 30 seconds
     fastify.log.info("Webhook retry processor started");
@@ -283,6 +288,7 @@ export async function startServer() {
 
             // Stop credential refresh scheduler
             credentialRefreshScheduler.stop();
+            freeCreditRefreshScheduler.stop();
 
             // Stop webhook retry processor
             webhookDispatcher.stopRetryProcessor();

@@ -51,11 +51,15 @@ export class WorkspaceService {
             accepted_at: new Date()
         });
 
-        // Initialize credits (100 free credits for new workspaces)
+        // Initialize credits with the free plan's monthly allowance and a one-month
+        // period; FreeCreditRefreshScheduler resets the balance when the period ends.
         const limits = WORKSPACE_LIMITS["free"];
+        const periodEnd = new Date();
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
         await this.creditRepo.create({
             workspace_id: workspace.id,
-            subscription_balance: limits.monthly_credits
+            subscription_balance: limits.monthly_credits,
+            subscription_expires_at: periodEnd
         });
 
         logger.info({ workspaceId: workspace.id }, "Workspace credits initialized");
