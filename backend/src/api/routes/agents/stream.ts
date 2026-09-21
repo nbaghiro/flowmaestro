@@ -6,6 +6,7 @@ import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { createSSEHandler, sendTerminalEvent } from "../../../services/sse";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { NotFoundError } from "../../middleware";
+import type { AgentExecutionModel } from "../../../storage/models/AgentExecution";
 
 const logger = createServiceLogger("SSEStream");
 
@@ -234,5 +235,51 @@ export async function streamAgentHandler(
         status: execution.status
     });
 
+    // A client that (re)connects after the run already finished, for example because the
+    // api pod was replaced mid-stream during a deploy, would otherwise wait forever: the
+    // terminal event was published before it subscribed. The orchestrator stores the
+    // terminal status before publishing, so re-read the record now that the
+    // subscriptions are in place and replay the terminal event from it.
+    const current = await executionRepo.findById(executionId);
+    if (current?.status === "completed") {
+        const finalMessage = await findFinalAssistantMessage(executionRepo, current);
+        logger.info({ executionId }, "Replaying completed event for a finished execution");
+        sendTerminalEvent(
+            sse,
+            "completed",
+            { finalMessage, iterations: current.iterations, executionId },
+            unsubscribeAll
+        );
+    } else if (current?.status === "failed" || current?.status === "cancelled") {
+        logger.info(
+            { executionId, status: current.status },
+            "Replaying error event for a finished execution"
+        );
+        sendTerminalEvent(
+            sse,
+            "error",
+            { error: current.error || `Execution ${current.status}`, executionId },
+            unsubscribeAll
+        );
+    }
+
     logger.info({ executionId }, "Stream handler initialized");
+}
+
+async function findFinalAssistantMessage(
+    executionRepo: AgentExecutionRepository,
+    execution: AgentExecutionModel
+): Promise<string> {
+    const fromHistory = [...execution.thread_history]
+        .reverse()
+        .find((message) => message.role === "assistant" && message.content);
+    if (fromHistory) {
+        return fromHistory.content;
+    }
+
+    const stored = await executionRepo.getMessages(execution.id);
+    const fromStored = [...stored]
+        .reverse()
+        .find((message) => message.role === "assistant" && message.content);
+    return fromStored?.content ?? "";
 }

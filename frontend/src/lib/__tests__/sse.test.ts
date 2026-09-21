@@ -745,9 +745,33 @@ describe("SSE streaming", () => {
             };
 
             streamAgentExecution("agent-123", "exec-456", callbacks);
+            MockEventSource.instances[0].readyState = MockEventSource.CLOSED;
             MockEventSource.instances[0].triggerError();
 
             expect(callbacks.onError).toHaveBeenCalledWith("Stream connection failed");
+        });
+
+        it("does not report a dropped connection the browser is reconnecting", () => {
+            const callbacks = {
+                onError: vi.fn()
+            };
+
+            streamAgentExecution("agent-123", "exec-456", callbacks);
+            MockEventSource.instances[0].readyState = MockEventSource.CONNECTING;
+            MockEventSource.instances[0].triggerError();
+
+            expect(callbacks.onError).not.toHaveBeenCalled();
+        });
+
+        it("ignores the browser's own error event on the error listener", () => {
+            const callbacks = {
+                onError: vi.fn()
+            };
+
+            streamAgentExecution("agent-123", "exec-456", callbacks);
+            MockEventSource.instances[0].dispatchEvent("error");
+
+            expect(callbacks.onError).not.toHaveBeenCalled();
         });
 
         it("ignores onerror after intentional close", () => {

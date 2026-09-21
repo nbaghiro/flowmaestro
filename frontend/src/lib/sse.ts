@@ -347,9 +347,17 @@ export function streamAgentExecution(
         }
     });
 
+    // Only a server-sent error event carries data. The browser fires a plain "error"
+    // event (no data) when the connection drops, for example when the api pod is
+    // replaced during a deploy, and then reconnects on its own; that case is handled
+    // by onerror below.
     eventSource.addEventListener("error", (event) => {
+        const raw = (event as MessageEvent).data;
+        if (typeof raw !== "string") {
+            return;
+        }
         try {
-            const data = JSON.parse((event as MessageEvent).data) as {
+            const data = JSON.parse(raw) as {
                 error: string;
                 executionId: string;
             };
@@ -363,11 +371,18 @@ export function streamAgentExecution(
         }
     });
 
+    // A dropped connection is only a failure once the browser has given up
+    // (readyState CLOSED). While it is reconnecting, the server replays the
+    // execution's terminal event on the new connection if the run has finished.
     eventSource.onerror = () => {
-        if (intentionallyClosed || eventSource.readyState === EventSource.CLOSED) {
+        if (intentionallyClosed) {
             return;
         }
-        callbacks.onError?.("Stream connection failed");
+        if (eventSource.readyState === EventSource.CLOSED) {
+            callbacks.onError?.("Stream connection failed");
+            return;
+        }
+        logger.warn("Agent stream interrupted, waiting for reconnect", { executionId });
     };
 
     return () => {
