@@ -5,6 +5,7 @@ import {
     KnowledgeChunkRepository
 } from "../../../storage/repositories";
 import { getTemporalClient } from "../../../temporal/client";
+import { TASK_QUEUES } from "../../../temporal/core/constants";
 import { authMiddleware } from "../../middleware";
 
 export async function reprocessDocumentRoute(fastify: FastifyInstance) {
@@ -69,7 +70,7 @@ export async function reprocessDocumentRoute(fastify: FastifyInstance) {
             const workflowId = `process-document-${document.id}-${Date.now()}`; // Unique ID for retry
 
             await client.workflow.start("processDocumentWorkflow", {
-                taskQueue: "orchestrator-queue",
+                taskQueue: TASK_QUEUES.ORCHESTRATOR,
                 workflowId,
                 args: [
                     {

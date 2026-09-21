@@ -9,6 +9,7 @@ import type {
 import { validateWorkflowForExecution } from "@flowmaestro/shared";
 import { WorkflowRepository, ExecutionRepository } from "../../../storage/repositories";
 import { getTemporalClient } from "../../../temporal/client";
+import { TASK_QUEUES } from "../../../temporal/core/constants";
 import { orchestratorWorkflow } from "../../../temporal/workflows/workflow-orchestrator";
 import { authMiddleware, workspaceContextMiddleware } from "../../middleware";
 
@@ -122,7 +123,7 @@ export async function executeWorkflowRoute(fastify: FastifyInstance) {
                 const temporalClient = await getTemporalClient();
 
                 await temporalClient.workflow.start(orchestratorWorkflow, {
-                    taskQueue: "workflow-orchestrator",
+                    taskQueue: TASK_QUEUES.ORCHESTRATOR,
                     workflowId: `workflow-${execution.id}`,
                     args: [
                         {
