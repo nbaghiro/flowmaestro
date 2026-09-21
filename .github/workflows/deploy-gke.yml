@@ -14,6 +14,11 @@ name: Deploy to GKE
 # 3. Restart pods to pick up new secret values: fmctl deploy api --skip-build
 
 on:
+    # Deploys automatically once CI has passed on main; manual dispatch keeps the options below.
+    workflow_run:
+        workflows: ["CI"]
+        types: [completed]
+        branches: [main]
     workflow_dispatch:
         inputs:
             services:
@@ -64,6 +69,7 @@ jobs:
     setup:
         name: Setup
         runs-on: ubuntu-latest
+        if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
         outputs:
             image_tag: ${{ steps.set-outputs.outputs.image_tag }}
             services: ${{ steps.set-outputs.outputs.services }}
@@ -84,7 +90,7 @@ jobs:
                   echo "image_tag=${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
                   echo "services=${{ github.event.inputs.services }}" >> $GITHUB_OUTPUT
 
-                  SERVICES="${{ github.event.inputs.services }}"
+                  SERVICES="${{ github.event.inputs.services || 'all' }}"
                   SKIP_BUILD="${{ github.event.inputs.skip_build }}"
 
                   # Default all to false
@@ -403,6 +409,7 @@ jobs:
         needs: [setup, build-migrations]
         if: |
             always() &&
+            needs.setup.result == 'success' &&
             github.event.inputs.skip_migrations != 'true' &&
             (needs.build-migrations.result == 'success' || needs.build-migrations.result == 'skipped')
         runs-on: ubuntu-latest
@@ -455,6 +462,8 @@ jobs:
         needs: [setup, migrate]
         if: |
             always() &&
+            needs.setup.result == 'success' &&
+            github.event_name == 'workflow_dispatch' &&
             github.event.inputs.skip_seed != 'true' &&
             (needs.migrate.result == 'success' || needs.migrate.result == 'skipped')
         runs-on: ubuntu-latest
@@ -518,6 +527,7 @@ jobs:
             ]
         if: |
             always() &&
+            needs.setup.result == 'success' &&
             !contains(needs.*.result, 'failure') &&
             !contains(needs.*.result, 'cancelled')
         runs-on: ubuntu-latest
