@@ -438,15 +438,15 @@ jobs:
                 shard: [1, 2, 3, 4, 5]
                 total-shards: [5]
         env:
-            DATABASE_URL: postgresql://flowmaestro:flowmaestro_dev_password@localhost:5432/flowmaestro
+            DATABASE_URL: postgresql://flowmaestro:flowmaestro_dev_password@localhost:8402/flowmaestro
             POSTGRES_HOST: localhost
-            POSTGRES_PORT: 5432
+            POSTGRES_PORT: 8402
             POSTGRES_USER: flowmaestro
             POSTGRES_PASSWORD: flowmaestro_dev_password
             POSTGRES_DB: flowmaestro
-            TEMPORAL_ADDRESS: localhost:7233
+            TEMPORAL_ADDRESS: localhost:8404
             REDIS_HOST: localhost
-            REDIS_PORT: 6379
+            REDIS_PORT: 8403
             ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
         steps:
             - name: Checkout code
@@ -487,7 +487,7 @@ jobs:
                   docker compose -f infra/local/docker-compose.yml up -d postgres postgres-test mongo-test redis temporal
                   echo "Waiting for Temporal and databases..."
                   for i in {1..60}; do
-                    if nc -z localhost 5432 && nc -z localhost 7233 && nc -z localhost 6379; then
+                    if nc -z localhost 8402 && nc -z localhost 8404 && nc -z localhost 8403; then
                       echo "Temporal stack is ready"
                       break
                     fi

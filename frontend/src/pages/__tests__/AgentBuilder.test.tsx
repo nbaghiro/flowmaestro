@@ -222,7 +222,9 @@ describe("AgentBuilder Page", () => {
             renderAgentBuilder();
 
             await waitFor(() => {
-                expect(screen.getByText("My Custom Agent")).toBeInTheDocument();
+                // The name appears in the page header and, with the chat panel open by
+                // default, in the chat header as well.
+                expect(screen.getAllByText("My Custom Agent").length).toBeGreaterThan(0);
             });
         });
 
