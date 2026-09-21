@@ -168,6 +168,26 @@ These documents cover the main features of FlowMaestro:
 
 ---
 
+#### [testing/manual-testing-plan.md](./testing/manual-testing-plan.md)
+
+**Manual Testing Plan** - Comprehensive QA testing plan
+
+**Topics covered:**
+
+- Linear-compatible project structure (Epics → Stories → Tasks)
+- Workflow node testing (AI, Input, Output, Logic, Utility, Integration)
+- Agent tools testing
+- Knowledge Base testing
+- Connections & OAuth testing
+- Triggers & Executions testing
+- End-to-End business scenarios
+- UI/Frontend testing
+- Test data requirements
+
+**When to read:** Planning QA testing cycles, onboarding QA testers, tracking test coverage
+
+---
+
 ### Real-Time & Communication
 
 #### [voice-calls.md](./voice-calls.md)
