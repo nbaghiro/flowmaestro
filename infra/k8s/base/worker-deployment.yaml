@@ -149,14 +149,11 @@ spec:
                   name: gcs-config
                   key: GCS_INTERFACE_DOCS_BUCKET
 
-          # Mount Temporal certificates and Docker socket
+          # Mount Temporal certificates
           volumeMounts:
             - name: temporal-certs
               mountPath: /etc/temporal
               readOnly: true
-            # Docker socket for code sandbox container execution
-            - name: docker-socket
-              mountPath: /var/run/docker.sock
 
           resources:
             requests:
@@ -202,12 +199,6 @@ spec:
                 path: client.pem
               - key: client-key
                 path: client-key.pem
-        # Docker socket for code sandbox execution
-        # Note: Requires Docker to be installed on the node
-        - name: docker-socket
-          hostPath:
-            path: /var/run/docker.sock
-            type: Socket
 
       restartPolicy: Always
       terminationGracePeriodSeconds: 60
