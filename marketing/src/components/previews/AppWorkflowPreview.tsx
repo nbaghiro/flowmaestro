@@ -92,7 +92,7 @@ export const AppWorkflowPreview: React.FC = () => (
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <PixelMark size={24} variant="monogram" />
+                <PixelMark size={24} />
                 <span style={{ color: "#9b9ba3", fontSize: 13 }}>Workflows</span>
                 <span style={{ color: "#4a4a52" }}>/</span>
                 <span style={{ fontWeight: 600, fontSize: 14 }}>PR summaries to Slack</span>

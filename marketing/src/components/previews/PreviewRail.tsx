@@ -49,7 +49,7 @@ export const PreviewRail: React.FC<PreviewRailProps> = ({
 }) => (
     <nav className="rail">
         <div className="ws">
-            <PixelMark size={24} variant="monogram" />
+            <PixelMark size={24} />
             Personal Workspace
             {chevron && (
                 <IconChevronDown size={12} color="#6f6f78" strokeWidth={2.5} className="ml-auto" />

@@ -81,7 +81,7 @@ export const Footer: React.FC = () => {
                 >
                     <div className="flex flex-col gap-3 sm:col-span-2 lg:col-span-1">
                         <span className="flex items-center gap-2 font-bold">
-                            <PixelMark size={24} variant="monogram" />
+                            <PixelMark size={24} />
                             FlowMaestro
                         </span>
                         <p className="text-dim text-[13px] leading-normal max-w-[220px]">
