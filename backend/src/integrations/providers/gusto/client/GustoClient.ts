@@ -66,6 +66,7 @@ export class GustoClient extends BaseAPIClient {
             reqConfig.headers["Authorization"] = `Bearer ${this.accessToken}`;
             reqConfig.headers["Content-Type"] = "application/json";
             reqConfig.headers["Accept"] = "application/json";
+            reqConfig.headers["X-Gusto-API-Version"] = "2026-06-15";
             return reqConfig;
         });
     }
