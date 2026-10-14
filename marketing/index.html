@@ -1,35 +1,49 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" class="dark">
     <head>
         <meta charset="UTF-8" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#0b0b0d" />
         <meta
             name="description"
-            content="FlowMaestro - Enterprise Workflow Automation, Simplified. Build powerful workflows without code."
+            content="Describe the work. Keep the automation. FlowMaestro turns a chat into workflows, agents and personas, with 110+ integrations, durable runs and one credit meter."
         />
-        <title>FlowMaestro - Enterprise Workflow Automation</title>
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="FlowMaestro" />
+        <meta property="og:title" content="FlowMaestro: workflows, agents and personas" />
+        <meta
+            property="og:description"
+            content="Describe the work. Keep the automation. 110+ integrations, durable runs, one credit meter."
+        />
+        <meta property="og:image" content="/og.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="FlowMaestro: workflows, agents and personas" />
+        <meta
+            name="twitter:description"
+            content="Describe the work. Keep the automation. 110+ integrations, durable runs, one credit meter."
+        />
+        <meta name="twitter:image" content="/og.png" />
+        <title>FlowMaestro: workflows, agents and personas</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+            rel="stylesheet"
+        />
     </head>
     <body>
-        <!-- Initialize theme before React loads to prevent flash -->
+        <!-- The site is dark only. Keep the class on the root before React loads. -->
         <script>
-            (function() {
-                // Clean up old theme key to avoid conflicts
-                if (localStorage.getItem('theme')) {
-                    localStorage.removeItem('theme');
-                }
-                // Check for explicit user preference
-                var theme = localStorage.getItem('marketing-theme');
-                if (!theme) {
-                    // No saved preference - check system preference, default to light
-                    var systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    theme = systemPrefersDark ? 'dark' : 'light';
-                    localStorage.setItem('marketing-theme', theme);
-                }
-                if (theme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                } else {
-                    document.documentElement.classList.remove('dark');
+            (function () {
+                document.documentElement.classList.add("dark");
+                try {
+                    localStorage.removeItem("theme");
+                    localStorage.setItem("marketing-theme", "dark");
+                } catch (e) {
+                    /* storage unavailable */
                 }
             })();
         </script>

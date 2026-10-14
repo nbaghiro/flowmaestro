@@ -1,580 +1,526 @@
-import { motion } from "framer-motion";
-import {
-    Check,
-    Users,
-    Zap,
-    Building2,
-    Shield,
-    FileText,
-    Download,
-    Cloud,
-    Key,
-    Database,
-    EyeOff,
-    ListOrdered,
-    LayoutDashboard,
-    FileCheck,
-    Bot
-} from "lucide-react";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { CREDIT_PACKS, SUBSCRIPTION_PLANS } from "@flowmaestro/shared";
+import type { SubscriptionPlan } from "@flowmaestro/shared";
 import { Footer } from "../components/Footer";
+import { Reveal } from "../components/home/Reveal";
+import { Tile } from "../components/home/Tile";
 import { Navigation } from "../components/Navigation";
-import { PricingEvents } from "../lib/analytics";
+import { EngagementEvents, PricingEvents } from "../lib/analytics";
+import { BOOK_DEMO_URL } from "../lib/links";
+import { cn } from "../lib/utils";
+import "../styles/home.css";
+import "../styles/pricing.css";
 
-// Credit tier breakpoints for labels
-const CREDIT_TIERS = [
-    { value: 5000, label: "5k" },
-    { value: 25000, label: "25k" },
-    { value: 50000, label: "50k" },
-    { value: 100000, label: "100k" },
-    { value: 250000, label: "250k" },
-    { value: 500000, label: "500k" },
-    { value: 1000000, label: "1M" }
+const PLANS: SubscriptionPlan[] = [
+    SUBSCRIPTION_PLANS.free,
+    SUBSCRIPTION_PLANS.pro,
+    SUBSCRIPTION_PLANS.team
 ];
 
-// Min and max credit values for the slider
-const MIN_CREDITS = 5000;
-const MAX_CREDITS = 1000000;
+// The estimator slider runs from the free allowance to well past the Team plan on a log scale.
+const MIN_CREDITS = 250;
+const MAX_CREDITS = 100000;
+const TICKS = [250, 1000, 5000, 25000, 100000];
 
-// Convert slider position (0-100) to credit value with non-linear scaling
-const sliderToCredits = (sliderValue: number): number => {
-    // Use logarithmic scale for better UX across wide range
-    const minLog = Math.log(MIN_CREDITS);
-    const maxLog = Math.log(MAX_CREDITS);
-    const scale = (maxLog - minLog) / 100;
-    const credits = Math.exp(minLog + scale * sliderValue);
+const ENTERPRISE_POINTS = [
+    "Role based access control",
+    "SCIM and SAML",
+    "Admin dashboard",
+    "Audit logs",
+    "Custom data retention",
+    "Regular security reports",
+    "Data exports",
+    "Incognito mode",
+    "AI model access control",
+    "Virtual private cloud",
+    "Flow queuing",
+    "Dedicated support"
+];
 
-    // Round to nice numbers
-    if (credits < 10000) return Math.round(credits / 1000) * 1000;
-    if (credits < 100000) return Math.round(credits / 5000) * 5000;
-    if (credits < 500000) return Math.round(credits / 10000) * 10000;
-    return Math.round(credits / 50000) * 50000;
-};
-
-// Convert credit value to slider position (0-100)
-const creditsToSlider = (credits: number): number => {
-    const minLog = Math.log(MIN_CREDITS);
-    const maxLog = Math.log(MAX_CREDITS);
-    return ((Math.log(credits) - minLog) / (maxLog - minLog)) * 100;
-};
-
-// Get slider position for a tier (for tick marks)
-const getTierSliderPosition = (tierValue: number): number => {
-    return creditsToSlider(tierValue);
-};
-
-// Price calculation based on credits
-const calculatePrice = (
-    basePrice: number,
-    baseCredits: number,
-    selectedCredits: number
-): number => {
-    if (selectedCredits <= baseCredits) return basePrice;
-    const additionalCredits = selectedCredits - baseCredits;
-    // $5 per 10k additional credits
-    const additionalCost = Math.ceil(additionalCredits / 10000) * 5;
-    return basePrice + additionalCost;
-};
-
-interface PlanFeature {
-    text: string;
-    included: boolean;
-}
-
-interface PricingPlan {
-    name: string;
-    tagline: string;
-    basePrice: number;
-    baseCredits: number;
-    icon: React.ReactNode;
-    color: string;
-    borderColor: string;
-    features: PlanFeature[];
-    cta: string;
-    popular?: boolean;
-}
-
-const plans: PricingPlan[] = [
+const FAQ: { q: string; a: string }[] = [
     {
-        name: "Free",
-        tagline: "Get started for free",
-        basePrice: 0,
-        baseCredits: 5000,
-        icon: <Zap className="w-5 h-5" />,
-        color: "bg-amber-500",
-        borderColor: "border-amber-500/50",
-        cta: "Start Free",
-        features: [
-            { text: "5k credits/month", included: true },
-            { text: "1 Builder", included: true },
-            { text: "3 Active Workflows", included: true },
-            { text: "1 Parallel Execution", included: true },
-            { text: "5 Agent Sessions/day", included: true },
-            { text: "Community Discord", included: true },
-            { text: "All 220+ Integrations", included: true }
-        ]
+        q: "What does a credit pay for?",
+        a: "Model calls are metered by tokens, with a minimum of 25 credits per call. Tool calls and agent turns cost 15 credits, agent memory 25, and routing 30 to 50. Triggers, conditions, loops, merges, delays, variables and outputs are free."
     },
     {
-        name: "Solo",
-        tagline: "For power users",
-        basePrice: 29,
-        baseCredits: 25000,
-        icon: <Users className="w-5 h-5 text-background" />,
-        color: "bg-foreground",
-        borderColor: "border-foreground/50",
-        cta: "Start Trial",
-        popular: true,
-        features: [
-            { text: "25k+ credits/month", included: true },
-            { text: "Everything in Free, plus:", included: true },
-            { text: "Unlimited Workflows", included: true },
-            { text: "3 Parallel Executions", included: true },
-            { text: "Unlimited Agent Sessions", included: true },
-            { text: "Custom Triggers & Webhooks", included: true },
-            { text: "Version History (30 days)", included: true },
-            { text: "Email Support", included: true },
-            { text: "Use Your Own LLM Keys", included: true }
-        ]
+        q: "What happens when I run out?",
+        a: "A run that would exceed your balance does not start. It fails with an insufficient credits error until you add a pack or the plan refreshes."
     },
     {
-        name: "Team",
-        tagline: "For growing teams",
-        basePrice: 99,
-        baseCredits: 50000,
-        icon: <Building2 className="w-5 h-5" />,
-        color: "bg-pink-500",
-        borderColor: "border-pink-500/50",
-        cta: "Start Trial",
-        features: [
-            { text: "50k+ credits/month", included: true },
-            { text: "Everything in Solo, plus:", included: true },
-            { text: "Up to 10 Builders", included: true },
-            { text: "10 Parallel Executions", included: true },
-            { text: "Shared Workflow Library", included: true },
-            { text: "Team Permissions & Roles", included: true },
-            { text: "Execution Analytics", included: true },
-            { text: "Version History (Unlimited)", included: true },
-            { text: "Priority Support", included: true },
-            { text: "Custom Integrations (coming soon)", included: true }
-        ]
+        q: "Do unused credits roll over?",
+        a: "Plan credits reset at the start of each billing period. Credit packs are added to your purchased balance and are not reset."
+    },
+    {
+        q: "Is there a trial?",
+        a: "Pro and Team start with a 14-day trial. The Free plan needs no card."
+    },
+    {
+        q: "Can I change plans later?",
+        a: "Yes. Upgrade, downgrade or cancel from the workspace billing settings at any time."
+    },
+    {
+        q: "Do you bill annually?",
+        a: "Yes. Pro is $290 a year and Team is $990 a year, which is two months free compared with monthly billing."
     }
 ];
 
-interface PricingCardProps {
-    plan: PricingPlan;
-    selectedCredits: number;
-    isAnnual: boolean;
-    onCtaClick: (planName: string, creditAmount: number) => void;
+function sliderToCredits(position: number): number {
+    const minLog = Math.log(MIN_CREDITS);
+    const maxLog = Math.log(MAX_CREDITS);
+    const raw = Math.exp(minLog + ((maxLog - minLog) * position) / 100);
+    if (raw < 1000) return Math.round(raw / 50) * 50;
+    if (raw < 10000) return Math.round(raw / 250) * 250;
+    return Math.round(raw / 1000) * 1000;
 }
 
-const PricingCard: React.FC<PricingCardProps> = ({
-    plan,
-    selectedCredits,
-    isAnnual,
-    onCtaClick
-}) => {
-    const monthlyPrice = calculatePrice(plan.basePrice, plan.baseCredits, selectedCredits);
-    const displayPrice = isAnnual ? Math.round(monthlyPrice * 0.8) : monthlyPrice;
-    const creditsDisplay =
-        selectedCredits >= 1000000 ? `${selectedCredits / 1000000}M` : `${selectedCredits / 1000}k`;
+function creditsToSlider(credits: number): number {
+    const minLog = Math.log(MIN_CREDITS);
+    const maxLog = Math.log(MAX_CREDITS);
+    return ((Math.log(credits) - minLog) / (maxLog - minLog)) * 100;
+}
+
+function formatTick(credits: number): string {
+    return credits >= 1000 ? `${credits / 1000}k` : String(credits);
+}
+
+function dollars(cents: number): string {
+    return `$${Math.round(cents / 100).toLocaleString("en-US")}`;
+}
+
+function limitLabel(value: number): string {
+    return value < 0 ? "Unlimited" : value.toLocaleString("en-US");
+}
+
+const PACK_UNITS = CREDIT_PACKS.map((pack) => ({
+    units: pack.credits / 1000,
+    cents: pack.priceInCents
+}));
+
+/** Cheapest combination of packs that covers `extra` credits, in cents. */
+function packCostCents(extra: number): number {
+    const units = Math.ceil(extra / 1000);
+    const best: number[] = new Array<number>(units + 1).fill(Number.POSITIVE_INFINITY);
+    best[0] = 0;
+    for (let u = 1; u <= units; u++) {
+        for (const pack of PACK_UNITS) {
+            const candidate = best[Math.max(0, u - pack.units)] + pack.cents;
+            if (candidate < best[u]) best[u] = candidate;
+        }
+    }
+    return best[units];
+}
+
+interface Estimate {
+    extra: number;
+    packCents: number;
+    totalCents: number;
+}
+
+function estimate(plan: SubscriptionPlan, credits: number, annual: boolean): Estimate {
+    const base = annual ? plan.annualPriceCents / 12 : plan.monthlyPriceCents;
+    const extra = Math.max(0, credits - plan.monthlyCredits);
+    const packCents = extra > 0 ? packCostCents(extra) : 0;
+    return { extra, packCents, totalCents: base + packCents };
+}
+
+const Eyebrow: React.FC<{ children: React.ReactNode; bright?: boolean }> = ({
+    children,
+    bright
+}) => (
+    <p
+        className={cn(
+            "font-mono text-[11px] tracking-[0.08em] uppercase",
+            bright ? "text-foreground" : "text-dim"
+        )}
+    >
+        {children}
+    </p>
+);
+
+interface PlanCardProps {
+    plan: SubscriptionPlan;
+    annual: boolean;
+    onCta: (plan: SubscriptionPlan) => void;
+}
+
+const PlanCard: React.FC<PlanCardProps> = ({ plan, annual, onCta }) => {
+    const highlight = plan.slug === "pro";
+    const free = plan.monthlyPriceCents === 0;
+    const price = annual ? plan.annualPriceCents : plan.monthlyPriceCents;
+    const period = free ? "" : annual ? " /year" : " /month";
+    const note = free
+        ? "no card required"
+        : annual
+          ? `${dollars(plan.annualPriceCents / 12)} a month, billed yearly`
+          : `or ${dollars(plan.annualPriceCents)} a year`;
+    const features = plan.features.filter((feature) => !/credits\/month/.test(feature));
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`relative rounded-2xl bg-card backdrop-blur-sm border ${
-                plan.popular ? plan.borderColor : "border-border"
-            } p-6 flex flex-col h-full`}
-        >
-            {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="px-3 py-1 text-xs font-medium bg-foreground text-background rounded-full">
-                        Most Popular
-                    </span>
-                </div>
-            )}
-
-            {/* Plan Icon & Name */}
-            <div className="mb-4">
-                <div
-                    className={`w-10 h-10 rounded-lg ${plan.color} flex items-center justify-center mb-3`}
-                >
-                    {plan.icon}
-                </div>
-                <h3 className="text-xl font-bold text-foreground">{plan.name}</h3>
-                <p className="text-sm text-muted-foreground">{plan.tagline}</p>
-            </div>
-
-            {/* Price */}
-            <div className="mb-6">
-                {plan.basePrice === 0 ? (
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold text-foreground">Free</span>
-                    </div>
-                ) : (
-                    <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold text-foreground">${displayPrice}</span>
-                        <span className="text-muted-foreground">/ month</span>
-                    </div>
-                )}
-                <p className="text-sm text-muted-foreground mt-1">
-                    {creditsDisplay}+ credits/month
+        <Reveal className="span2">
+            <Tile className="flex flex-col gap-[14px] h-full" style={{ padding: "32px 24px" }}>
+                <Eyebrow bright={highlight}>{plan.name}</Eyebrow>
+                <p className="text-[40px] font-bold tracking-[-0.03em] leading-none">
+                    {dollars(price)}
+                    {period && <span className="text-sm text-dim font-medium">{period}</span>}
                 </p>
-            </div>
-
-            {/* Features */}
-            <ul className="space-y-3 mb-6 flex-grow">
-                {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                        <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground">{feature.text}</span>
-                    </li>
-                ))}
-            </ul>
-
-            {/* CTA Button */}
-            <a
-                href={import.meta.env.VITE_APP_URL || "http://localhost:8400"}
-                onClick={() => onCtaClick(plan.name, selectedCredits)}
-                className={`w-full py-3 rounded-lg font-semibold text-center transition-all duration-200 ${
-                    plan.popular
-                        ? "bg-foreground text-background hover:opacity-90"
-                        : "bg-secondary text-foreground hover:bg-accent border border-border"
-                }`}
-            >
-                {plan.cta}
-            </a>
-        </motion.div>
+                <p className="text-sm text-muted-foreground">
+                    {plan.monthlyCredits.toLocaleString("en-US")} credits a month · {note}
+                </p>
+                <ul className="m-0 pl-[18px] text-body text-sm leading-[1.8] list-disc">
+                    {features.map((feature) => (
+                        <li key={feature}>{feature}</li>
+                    ))}
+                </ul>
+                <a
+                    href={BOOK_DEMO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => onCta(plan)}
+                    className={cn("btn mt-auto w-full", highlight ? "btn-solid" : "btn-ghost")}
+                >
+                    Book a demo
+                </a>
+            </Tile>
+        </Reveal>
     );
 };
 
+const LIMIT_ROWS: { label: string; value: (plan: SubscriptionPlan) => string }[] = [
+    { label: "Credits a month", value: (plan) => plan.monthlyCredits.toLocaleString("en-US") },
+    { label: "Workflows", value: (plan) => limitLabel(plan.limits.maxWorkflows) },
+    { label: "Agents", value: (plan) => limitLabel(plan.limits.maxAgents) },
+    { label: "Knowledge bases", value: (plan) => limitLabel(plan.limits.maxKnowledgeBases) },
+    { label: "Indexed chunks", value: (plan) => limitLabel(plan.limits.maxKbChunks) },
+    { label: "Members", value: (plan) => limitLabel(plan.limits.maxMembers) },
+    { label: "Connections", value: (plan) => limitLabel(plan.limits.maxConnections) },
+    { label: "Execution history", value: (plan) => `${plan.limits.executionHistoryDays} days` },
+    { label: "Trial", value: (plan) => (plan.trialDays > 0 ? `${plan.trialDays} days` : "None") }
+];
+
 export const PricingPage: React.FC = () => {
-    const [sliderValue, setSliderValue] = React.useState(() => creditsToSlider(25000)); // Default to 25k
-    const [isAnnual, setIsAnnual] = React.useState(false);
-    const hasTrackedPageView = useRef(false);
-    const lastTrackedCredits = useRef<number | null>(null);
+    const [annual, setAnnual] = useState(false);
+    const [slider, setSlider] = useState(() => creditsToSlider(5000));
+    const credits = sliderToCredits(slider);
+    const viewed = useRef(false);
+    const lastTracked = useRef<number | null>(null);
 
-    const selectedCredits = sliderToCredits(sliderValue);
-
-    // Track page view
     useEffect(() => {
-        if (!hasTrackedPageView.current) {
+        if (!viewed.current) {
             PricingEvents.pageViewed();
-            hasTrackedPageView.current = true;
+            viewed.current = true;
         }
     }, []);
 
-    // Track credit slider changes (debounced)
     useEffect(() => {
-        if (lastTrackedCredits.current === null) {
-            lastTrackedCredits.current = selectedCredits;
+        if (lastTracked.current === null) {
+            lastTracked.current = credits;
             return;
         }
-        if (lastTrackedCredits.current === selectedCredits) return;
-
+        if (lastTracked.current === credits) return;
         const timer = setTimeout(() => {
-            const price = calculatePrice(29, 25000, selectedCredits); // Use Solo plan as reference
             PricingEvents.creditSliderMoved({
-                selectedCreditAmount: selectedCredits,
-                estimatedPrice: price
+                selectedCreditAmount: credits,
+                estimatedPrice: estimate(SUBSCRIPTION_PLANS.pro, credits, false).totalCents / 100
             });
-            lastTrackedCredits.current = selectedCredits;
+            lastTracked.current = credits;
         }, 500);
-
         return () => clearTimeout(timer);
-    }, [selectedCredits]);
+    }, [credits]);
 
-    const handlePricingCtaClick = (planName: string, creditAmount: number) => {
-        PricingEvents.pricingCtaClicked({ planName, creditAmount });
+    const toggle = (next: boolean): void => {
+        setAnnual(next);
+        PricingEvents.annualToggled({ isAnnual: next });
     };
 
-    const handleContactSalesClick = () => {
-        PricingEvents.billingContactClicked();
+    const handleCta = (plan: SubscriptionPlan): void => {
+        PricingEvents.pricingCtaClicked({ planName: plan.name, creditAmount: credits });
+        EngagementEvents.demoRequested({ referringPage: `pricing_${plan.slug}` });
     };
 
     return (
-        <div className="min-h-screen bg-background text-foreground relative">
-            {/* Full-page background pattern */}
-            <div className="fixed inset-0 grid-pattern opacity-50 pointer-events-none" />
-            <div className="relative z-10">
-                <Navigation />
-
-                {/* Hero Section */}
-                <section className="relative pt-24 sm:pt-32 pb-8 px-4 sm:px-6 lg:px-8">
-                    <div className="relative z-10 max-w-5xl mx-auto text-center">
-                        <motion.div
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6 }}
-                        >
-                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4">
-                                Pricing that scales
-                                <span className="gradient-text"> with you</span>
-                            </h1>
-                            <p className="text-xl text-muted-foreground">
-                                Easy to start, easy to grow
-                            </p>
-                        </motion.div>
-                    </div>
-                </section>
-
-                {/* Billing Toggle */}
-                <section className="relative px-4 sm:px-6 lg:px-8 pb-8">
-                    <div className="max-w-5xl mx-auto">
-                        <div className="flex justify-center items-center gap-3">
+        <div className="lp min-h-screen bg-background text-foreground">
+            <Navigation />
+            <main>
+                <section className="relative pt-[150px] pb-[56px]">
+                    <div
+                        className="absolute inset-0 grid-pattern pointer-events-none [mask-image:radial-gradient(ellipse_60%_70%_at_50%_30%,#000_20%,transparent_100%)]"
+                        aria-hidden="true"
+                    />
+                    <div className="wrap relative flex flex-col items-center text-center">
+                        <span className="chip font-mono">Free · Pro · Team</span>
+                        <h1 className="mt-5 text-[44px] md:text-[64px] font-bold tracking-[-0.03em] leading-[1.02]">
+                            Pay for what runs.
+                        </h1>
+                        <p className="lead mt-4 max-w-[560px]">
+                            Every plan has all the building blocks and all 110+ integrations.
+                            Credits meter model calls, tool calls and agent turns. Triggers,
+                            conditions and loops are free.
+                        </p>
+                        <div className="tabs" role="tablist" aria-label="Billing period">
                             <button
-                                onClick={() => {
-                                    setIsAnnual(false);
-                                    PricingEvents.annualToggled({ isAnnual: false });
-                                }}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                    !isAnnual
-                                        ? "bg-foreground text-background"
-                                        : "text-muted-foreground hover:text-foreground"
-                                }`}
+                                type="button"
+                                role="tab"
+                                aria-selected={!annual}
+                                className={cn("tab", !annual && "on")}
+                                onClick={() => toggle(false)}
                             >
                                 Monthly
                             </button>
                             <button
-                                onClick={() => {
-                                    setIsAnnual(true);
-                                    PricingEvents.annualToggled({ isAnnual: true });
-                                }}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                                    isAnnual
-                                        ? "bg-foreground text-background"
-                                        : "text-muted-foreground hover:text-foreground"
-                                }`}
+                                type="button"
+                                role="tab"
+                                aria-selected={annual}
+                                className={cn("tab", annual && "on")}
+                                onClick={() => toggle(true)}
                             >
-                                Annually
-                                <span className="px-2 py-0.5 text-xs font-bold bg-green-500 text-white rounded-full">
-                                    20% OFF
-                                </span>
+                                Annual
+                                <span className="ml-2 text-[12px] opacity-70">2 months free</span>
                             </button>
                         </div>
                     </div>
                 </section>
 
-                {/* Credit Slider */}
-                <section className="relative px-4 sm:px-6 lg:px-8 pb-12">
-                    <div className="max-w-5xl mx-auto">
-                        <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-4 sm:p-8">
-                            <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 mb-6">
-                                <span className="text-sm sm:text-base text-muted-foreground">
-                                    I need
-                                </span>
-                                <span className="text-2xl sm:text-4xl font-bold text-foreground font-mono">
-                                    {selectedCredits.toLocaleString()}
-                                </span>
-                                <span className="text-sm sm:text-base text-muted-foreground">
-                                    credits per month
-                                </span>
-                            </div>
-
-                            {/* Slider */}
-                            <div className="relative">
-                                <input
-                                    type="range"
-                                    min={0}
-                                    max={100}
-                                    step={0.5}
-                                    value={sliderValue}
-                                    onChange={(e) => setSliderValue(Number(e.target.value))}
-                                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
-                                />
-
-                                {/* Tick marks with absolute positioning */}
-                                <div className="relative mt-2 h-6">
-                                    {CREDIT_TIERS.map((tier) => {
-                                        const position = getTierSliderPosition(tier.value);
-                                        const isActive =
-                                            Math.abs(selectedCredits - tier.value) <
-                                            tier.value * 0.1;
-                                        // Show only key tiers on mobile (5k, 50k, 250k, 1M)
-                                        const showOnMobile = [
-                                            5000, 50000, 250000, 1000000
-                                        ].includes(tier.value);
-                                        return (
-                                            <button
-                                                key={tier.value}
-                                                onClick={() =>
-                                                    setSliderValue(creditsToSlider(tier.value))
-                                                }
-                                                className={`absolute text-xs font-mono transition-colors -translate-x-1/2 ${
-                                                    isActive
-                                                        ? "text-foreground font-semibold"
-                                                        : "text-muted-foreground hover:text-foreground"
-                                                } ${showOnMobile ? "" : "hidden sm:block"}`}
-                                                style={{ left: `${position}%` }}
-                                            >
-                                                {tier.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Pricing Cards */}
-                <section className="relative px-4 sm:px-6 lg:px-8 pb-24">
-                    <div className="max-w-5xl mx-auto">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {plans.map((plan) => (
-                                <PricingCard
-                                    key={plan.name}
+                <section className="sec">
+                    <div className="wrap">
+                        <div className="bento">
+                            {PLANS.map((plan) => (
+                                <PlanCard
+                                    key={plan.slug}
                                     plan={plan}
-                                    selectedCredits={selectedCredits}
-                                    isAnnual={isAnnual}
-                                    onCtaClick={handlePricingCtaClick}
+                                    annual={annual}
+                                    onCta={handleCta}
                                 />
                             ))}
-                        </div>
 
-                        {/* Enterprise Card */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="mt-8 rounded-2xl bg-card backdrop-blur-sm border border-border p-8"
-                        >
-                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
-                                <div>
-                                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mb-3">
-                                        <Building2 className="w-5 h-5 text-foreground" />
+                            <Reveal className="span6">
+                                <Tile
+                                    className="flex flex-col gap-5"
+                                    style={{ padding: "28px 24px" }}
+                                >
+                                    <div className="flex flex-wrap items-end justify-between gap-3">
+                                        <div>
+                                            <Eyebrow>Estimate</Eyebrow>
+                                            <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.02em]">
+                                                How many credits a month?
+                                            </h2>
+                                        </div>
+                                        <p className="font-mono text-[28px] font-medium leading-none">
+                                            {credits.toLocaleString("en-US")}
+                                            <span className="text-sm text-dim"> credits</span>
+                                        </p>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-foreground">
-                                        Enterprise
-                                    </h3>
-                                    <p className="text-muted-foreground">Teams looking to scale</p>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-3xl font-bold text-foreground">
-                                        Custom Pricing
-                                    </span>
-                                </div>
-                            </div>
+                                    <div>
+                                        <input
+                                            type="range"
+                                            className="range"
+                                            min={0}
+                                            max={100}
+                                            step={0.5}
+                                            value={slider}
+                                            onChange={(event) =>
+                                                setSlider(Number(event.target.value))
+                                            }
+                                            aria-label="Credits per month"
+                                        />
+                                        <div className="relative mt-2 h-5">
+                                            {TICKS.map((tick) => {
+                                                const left = creditsToSlider(tick);
+                                                const shift =
+                                                    left === 0
+                                                        ? "translate-x-0"
+                                                        : left === 100
+                                                          ? "-translate-x-full"
+                                                          : "-translate-x-1/2";
+                                                const active =
+                                                    Math.abs(credits - tick) < tick * 0.1;
+                                                return (
+                                                    <button
+                                                        key={tick}
+                                                        type="button"
+                                                        className={cn(
+                                                            "absolute font-mono text-[11px] transition-colors",
+                                                            shift,
+                                                            active
+                                                                ? "text-foreground"
+                                                                : "text-dim hover:text-foreground"
+                                                        )}
+                                                        style={{ left: `${left}%` }}
+                                                        onClick={() => setSlider(left)}
+                                                    >
+                                                        {formatTick(tick)}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-3">
+                                        {PLANS.map((plan) => {
+                                            const result = estimate(plan, credits, annual);
+                                            return (
+                                                <div
+                                                    key={plan.slug}
+                                                    className="rounded-xl border border-line bg-sunken p-4"
+                                                >
+                                                    <Eyebrow>{plan.name}</Eyebrow>
+                                                    <p className="mt-2 text-[26px] font-bold tracking-[-0.03em] leading-none">
+                                                        {dollars(result.totalCents)}
+                                                        <span className="text-xs text-dim font-medium">
+                                                            {" "}
+                                                            /month
+                                                        </span>
+                                                    </p>
+                                                    <p className="mt-2 text-xs text-muted-foreground leading-[1.5]">
+                                                        {result.extra > 0
+                                                            ? `${plan.monthlyCredits.toLocaleString("en-US")} included, ${result.extra.toLocaleString("en-US")} from packs (${dollars(result.packCents)})`
+                                                            : "Covered by the plan"}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-xs text-dim">
+                                        Packs at list price, rounded up to whole packs. Annual plans
+                                        are shown per month.
+                                    </p>
+                                </Tile>
+                            </Reveal>
 
-                            <p className="text-muted-foreground mb-6">
-                                Everything included in Team, plus:
-                            </p>
+                            <Reveal className="span6">
+                                <Tile style={{ padding: "28px 24px" }}>
+                                    <Eyebrow>Limits</Eyebrow>
+                                    <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.02em]">
+                                        Every limit, side by side.
+                                    </h2>
+                                    <div className="mt-5 overflow-x-auto">
+                                        <table className="limits">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">
+                                                        <span className="sr-only">Limit</span>
+                                                    </th>
+                                                    {PLANS.map((plan) => (
+                                                        <th key={plan.slug} scope="col">
+                                                            {plan.name}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {LIMIT_ROWS.map((row) => (
+                                                    <tr key={row.label}>
+                                                        <td>{row.label}</td>
+                                                        {PLANS.map((plan) => (
+                                                            <td key={plan.slug}>
+                                                                {row.value(plan)}
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Tile>
+                            </Reveal>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 mb-8">
-                                <div className="flex items-center gap-3">
-                                    <Shield className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Role Based Access Control
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Key className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        SCIM/SAML Support
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <LayoutDashboard className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Admin Dashboard
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <FileText className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Audit Logs
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Database className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Custom Data Retention
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <FileCheck className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Regular Security Reports
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Download className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Data Exports
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <EyeOff className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Incognito Mode
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Bot className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        AI Model Access Control
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Cloud className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Virtual Private Cloud
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <ListOrdered className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Flow Queuing
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Users className="w-4 h-4 text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                        Dedicated Support
-                                    </span>
-                                </div>
-                            </div>
+                            <Reveal className="span3">
+                                <Tile
+                                    className="flex flex-col gap-4 h-full"
+                                    style={{ padding: "28px 24px" }}
+                                >
+                                    <Eyebrow>Credit packs</Eyebrow>
+                                    <h2 className="text-[22px] font-semibold tracking-[-0.02em]">
+                                        Top up when you need to.
+                                    </h2>
+                                    <ul className="m-0 p-0 list-none flex flex-col">
+                                        {CREDIT_PACKS.map((pack) => (
+                                            <li
+                                                key={pack.id}
+                                                className="flex items-center justify-between gap-3 py-3 text-sm border-t border-line first:border-t-0"
+                                            >
+                                                <span>
+                                                    <span className="font-semibold">
+                                                        {pack.credits.toLocaleString("en-US")}{" "}
+                                                        credits
+                                                    </span>
+                                                    <span className="text-dim">
+                                                        {" "}
+                                                        · {pack.label}
+                                                    </span>
+                                                </span>
+                                                <span className="flex items-center gap-2">
+                                                    {pack.savingsPercent > 0 && (
+                                                        <span className="chip font-mono text-[10px]">
+                                                            save {pack.savingsPercent}%
+                                                        </span>
+                                                    )}
+                                                    <span className="font-mono">
+                                                        {dollars(pack.priceInCents)}
+                                                    </span>
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <p className="mt-auto text-xs text-muted-foreground leading-[1.5]">
+                                        Plan credits reset every billing period. Packs are added to
+                                        your purchased balance and are not reset.
+                                    </p>
+                                </Tile>
+                            </Reveal>
 
-                            <a
-                                href="https://cal.com/naib-baghirov-o5surn/30min"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={handleContactSalesClick}
-                                className="block w-full py-3 rounded-lg font-semibold text-center bg-foreground text-background hover:opacity-90 transition-all duration-200"
-                            >
-                                Contact Sales
-                            </a>
-                        </motion.div>
+                            <Reveal className="span3">
+                                <Tile
+                                    className="flex flex-col gap-4 h-full"
+                                    style={{ padding: "28px 24px" }}
+                                >
+                                    <Eyebrow>Enterprise</Eyebrow>
+                                    <h2 className="text-[22px] font-semibold tracking-[-0.02em]">
+                                        Custom pricing. Everything in Team, plus:
+                                    </h2>
+                                    <ul className="m-0 p-0 list-none grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-body">
+                                        {ENTERPRISE_POINTS.map((point) => (
+                                            <li key={point} className="flex items-start gap-2">
+                                                <span
+                                                    className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-foreground"
+                                                    aria-hidden="true"
+                                                />
+                                                {point}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <a
+                                        href={BOOK_DEMO_URL}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={() => PricingEvents.billingContactClicked()}
+                                        className="btn btn-ghost mt-auto w-full"
+                                    >
+                                        Contact sales
+                                    </a>
+                                </Tile>
+                            </Reveal>
+                        </div>
                     </div>
                 </section>
 
-                <Footer />
-            </div>
-
-            {/* Custom slider styles */}
-            <style>{`
-                .slider::-webkit-slider-thumb {
-                    -webkit-appearance: none;
-                    appearance: none;
-                    width: 20px;
-                    height: 20px;
-                    border-radius: 50%;
-                    background: #3b82f6;
-                    cursor: pointer;
-                    border: 3px solid white;
-                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-                }
-
-                .slider::-moz-range-thumb {
-                    width: 20px;
-                    height: 20px;
-                    border-radius: 50%;
-                    background: #3b82f6;
-                    cursor: pointer;
-                    border: 3px solid white;
-                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-                }
-            `}</style>
+                <section className="sec" id="faq">
+                    <div className="wrap">
+                        <Reveal>
+                            <h2 className="h2">Questions</h2>
+                        </Reveal>
+                        <div className="mx-auto flex max-w-[720px] flex-col gap-[10px]">
+                            {FAQ.map((item) => (
+                                <Reveal key={item.q}>
+                                    <details className="faq">
+                                        <summary>{item.q}</summary>
+                                        <p>{item.a}</p>
+                                    </details>
+                                </Reveal>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            </main>
+            <Footer />
         </div>
     );
 };

@@ -2,7 +2,6 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Search, ArrowRight, GitBranch, Bot, Loader2, AlertCircle, Eye, Copy } from "lucide-react";
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
 import {
     ALL_PROVIDERS,
     TEMPLATE_CATEGORY_META,
@@ -26,6 +25,7 @@ import {
     getTemplateCategories,
     getAgentTemplateCategories
 } from "../lib/api";
+import { BOOK_DEMO_URL } from "../lib/links";
 import { cn } from "../lib/utils";
 import type { WorkflowDefinition } from "../components/WorkflowCanvasPreview";
 
@@ -47,13 +47,14 @@ interface WorkflowCardProps {
 
 const WorkflowCard: React.FC<WorkflowCardProps> = ({ template, onTemplateClick }) => {
     const category = TEMPLATE_CATEGORY_META[template.category];
-    const appUrl = import.meta.env.VITE_APP_URL || "https://app.flowmaestro.ai";
 
     if (!category) return null;
 
     return (
         <a
-            href={`${appUrl}/templates`}
+            href={BOOK_DEMO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={() => onTemplateClick(template.id, template.name, template.category)}
             className={cn(
                 "block bg-card rounded-xl border border-stroke",
@@ -136,7 +137,6 @@ interface AgentCardProps {
 
 const AgentCard: React.FC<AgentCardProps> = ({ template, onTemplateClick }) => {
     const category = TEMPLATE_CATEGORY_META[template.category];
-    const appUrl = import.meta.env.VITE_APP_URL || "https://app.flowmaestro.ai";
 
     if (!category) return null;
 
@@ -152,7 +152,9 @@ const AgentCard: React.FC<AgentCardProps> = ({ template, onTemplateClick }) => {
 
     return (
         <a
-            href={`${appUrl}/templates`}
+            href={BOOK_DEMO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             onClick={() => onTemplateClick(template.id, template.name, template.category)}
             className={cn(
                 "block bg-card rounded-xl border border-stroke",
@@ -624,21 +626,14 @@ export const TemplatesPage: React.FC = () => {
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                 <a
-                                    href={
-                                        import.meta.env.VITE_APP_URL || "https://app.flowmaestro.ai"
-                                    }
+                                    href={BOOK_DEMO_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className="btn-primary inline-flex items-center justify-center gap-2"
                                 >
-                                    Build Custom{" "}
-                                    {templateType === "workflow" ? "Workflow" : "Agent"}
+                                    Book a demo
                                     <ArrowRight className="w-4 h-4" />
                                 </a>
-                                <Link
-                                    to="/contact"
-                                    className="btn-secondary inline-flex items-center justify-center"
-                                >
-                                    Talk to Sales
-                                </Link>
                             </div>
                         </motion.div>
                     </div>

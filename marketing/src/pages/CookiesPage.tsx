@@ -211,48 +211,20 @@ export const CookiesPage: React.FC = () => {
                                 </h2>
                                 <p>
                                     You can manage cookies through your browser settings. Here are
-                                    links to cookie management instructions for popular browsers:
+                                    where to find cookie settings in popular browsers:
                                 </p>
                                 <ul className="list-disc pl-6 mt-2 space-y-1">
                                     <li>
-                                        <a
-                                            href="https://support.google.com/chrome/answer/95647"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary-400 hover:text-primary-300"
-                                        >
-                                            Google Chrome
-                                        </a>
+                                        <span className="text-foreground">Google Chrome</span>
                                     </li>
                                     <li>
-                                        <a
-                                            href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary-400 hover:text-primary-300"
-                                        >
-                                            Mozilla Firefox
-                                        </a>
+                                        <span className="text-foreground">Mozilla Firefox</span>
                                     </li>
                                     <li>
-                                        <a
-                                            href="https://support.apple.com/guide/safari/manage-cookies-sfri11471/mac"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary-400 hover:text-primary-300"
-                                        >
-                                            Safari
-                                        </a>
+                                        <span className="text-foreground">Safari</span>
                                     </li>
                                     <li>
-                                        <a
-                                            href="https://support.microsoft.com/en-us/windows/manage-cookies-in-microsoft-edge-view-allow-block-delete-and-use-168dab11-0753-043d-7c16-ede5947fc64d"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary-400 hover:text-primary-300"
-                                        >
-                                            Microsoft Edge
-                                        </a>
+                                        <span className="text-foreground">Microsoft Edge</span>
                                     </li>
                                 </ul>
                             </section>
@@ -279,12 +251,7 @@ export const CookiesPage: React.FC = () => {
                                 </p>
                                 <p className="mt-2">
                                     <strong>Email:</strong>{" "}
-                                    <a
-                                        href="mailto:privacy@flowmaestro.ai"
-                                        className="text-primary-400 hover:text-primary-300"
-                                    >
-                                        privacy@flowmaestro.ai
-                                    </a>
+                                    <span className="text-foreground">privacy@flowmaestro.ai</span>
                                 </p>
                             </section>
                         </div>

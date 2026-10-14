@@ -185,13 +185,7 @@ export const PrivacyPage: React.FC = () => {
                                 </ul>
                                 <p className="mt-4">
                                     To exercise these rights, contact us at{" "}
-                                    <a
-                                        href="mailto:privacy@flowmaestro.ai"
-                                        className="text-primary-400 hover:text-primary-300"
-                                    >
-                                        privacy@flowmaestro.ai
-                                    </a>
-                                    .
+                                    <span className="text-foreground">privacy@flowmaestro.ai</span>.
                                 </p>
                             </section>
 
@@ -253,12 +247,7 @@ export const PrivacyPage: React.FC = () => {
                                 </p>
                                 <p className="mt-2">
                                     <strong>Email:</strong>{" "}
-                                    <a
-                                        href="mailto:privacy@flowmaestro.ai"
-                                        className="text-primary-400 hover:text-primary-300"
-                                    >
-                                        privacy@flowmaestro.ai
-                                    </a>
+                                    <span className="text-foreground">privacy@flowmaestro.ai</span>
                                 </p>
                             </section>
                         </div>

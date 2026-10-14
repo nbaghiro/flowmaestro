@@ -12,10 +12,10 @@ import {
     CheckCircle
 } from "lucide-react";
 import React, { useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
 import { OtherPagesEvents } from "../lib/analytics";
+import { BOOK_DEMO_URL } from "../lib/links";
 
 interface SecurityFeature {
     icon: React.ElementType;
@@ -481,18 +481,14 @@ export const SecurityPage: React.FC = () => {
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                 <a
-                                    href="mailto:security@flowmaestro.ai"
+                                    href={BOOK_DEMO_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className="btn-primary inline-flex items-center justify-center gap-2"
                                 >
                                     <Shield className="w-4 h-4" />
-                                    Contact Security Team
+                                    Book a security review
                                 </a>
-                                <Link
-                                    to="/contact"
-                                    className="btn-secondary inline-flex items-center justify-center gap-2"
-                                >
-                                    Request Security Review
-                                </Link>
                             </div>
                         </motion.div>
                     </div>

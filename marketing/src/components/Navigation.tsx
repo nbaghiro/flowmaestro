@@ -1,41 +1,102 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Menu, Moon, Sun, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
-import { COMPANY_NAV_ITEMS, RESOURCES_NAV_ITEMS } from "../data/navigation";
 import { SOLUTION_NAV_ITEMS } from "../data/solutions";
-import { useTheme } from "../hooks/useTheme";
-import { AuthLinkEvents, NavigationEvents, OtherPagesEvents } from "../lib/analytics";
+import { EngagementEvents, NavigationEvents } from "../lib/analytics";
+import { BOOK_DEMO_URL } from "../lib/links";
+import { PixelMark } from "./brand/PixelMark";
 import { Dropdown } from "./common/Dropdown";
+import type { DropdownItem } from "./common/Dropdown";
 
-const ThemeToggle: React.FC<{ onToggle?: (newTheme: "light" | "dark") => void }> = ({
-    onToggle
-}) => {
-    const { theme, toggleTheme } = useTheme();
+const desktopLink =
+    "text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap";
+const mobileLink = "block py-4 text-lg font-medium text-foreground border-b border-border";
 
-    const handleToggle = () => {
-        const newTheme = theme === "light" ? "dark" : "light";
-        toggleTheme();
-        onToggle?.(newTheme);
-    };
+interface MobileGroupProps {
+    label: string;
+    items: DropdownItem[];
+    onNavigate: () => void;
+}
+
+const MobileGroup: React.FC<MobileGroupProps> = ({ label, items, onNavigate }) => {
+    const [open, setOpen] = React.useState(false);
+    const itemClass =
+        "flex items-center gap-3 py-3 text-muted-foreground hover:text-foreground transition-colors";
 
     return (
-        <button
-            onClick={handleToggle}
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary"
-            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-        >
-            {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-        </button>
+        <div>
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border"
+                aria-expanded={open}
+            >
+                {label}
+                <ChevronDown
+                    className={`w-5 h-5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+                />
+            </button>
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="py-2 pl-4 space-y-1">
+                            {items.map((item) => {
+                                const content = (
+                                    <>
+                                        {item.icon && <item.icon className="w-5 h-5" />}
+                                        <div>
+                                            <div className="text-base font-medium">
+                                                {item.label}
+                                            </div>
+                                            {item.description && (
+                                                <div className="text-sm text-muted-foreground">
+                                                    {item.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                );
+                                return item.href.startsWith("http") ? (
+                                    <a
+                                        key={item.href}
+                                        href={item.href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={onNavigate}
+                                        className={itemClass}
+                                    >
+                                        {content}
+                                    </a>
+                                ) : (
+                                    <Link
+                                        key={item.href}
+                                        to={item.href}
+                                        onClick={onNavigate}
+                                        className={itemClass}
+                                    >
+                                        {content}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
     );
 };
 
 export const Navigation: React.FC = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-    const [isSolutionsExpanded, setIsSolutionsExpanded] = React.useState(false);
-    const [isCompanyExpanded, setIsCompanyExpanded] = React.useState(false);
-    const [isResourcesExpanded, setIsResourcesExpanded] = React.useState(false);
-    const { theme, toggleTheme } = useTheme();
+
+    const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
     const handleMobileMenuToggle = () => {
         const newState = !isMobileMenuOpen;
@@ -43,33 +104,15 @@ export const Navigation: React.FC = () => {
         NavigationEvents.navMenuToggled({ isOpen: newState });
     };
 
-    const handleThemeToggle = (newTheme: "light" | "dark") => {
-        NavigationEvents.themeToggled({ newTheme });
-    };
-
-    const handleLoginClick = () => {
-        AuthLinkEvents.loginLinkClicked({ referringPage: window.location.pathname });
-    };
-
-    const handleGetStartedClick = () => {
-        AuthLinkEvents.getStartedClicked({
-            referringPage: window.location.pathname,
-            ctaVariant: "nav_header"
-        });
+    const handleDemoClick = () => {
+        EngagementEvents.demoRequested({ referringPage: window.location.pathname });
     };
 
     const handleNavLinkClick = (menuItem: string) => {
         NavigationEvents.navLinkClicked({ menuItem, isDropdown: false });
     };
 
-    const handleDocsClick = () => {
-        OtherPagesEvents.docsLinkClicked({
-            referringPage: window.location.pathname,
-            docSection: undefined
-        });
-    };
-
-    // Close mobile menu on route change
+    // Close the mobile menu when the viewport grows past the breakpoint
     React.useEffect(() => {
         const handleResize = () => {
             if (window.innerWidth >= 768) {
@@ -80,13 +123,9 @@ export const Navigation: React.FC = () => {
         return () => window.removeEventListener("resize", handleResize);
     }, []);
 
-    // Prevent body scroll when mobile menu is open
+    // Prevent body scroll when the mobile menu is open
     React.useEffect(() => {
-        if (isMobileMenuOpen) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "";
-        }
+        document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
         return () => {
             document.body.style.overflow = "";
         };
@@ -94,112 +133,75 @@ export const Navigation: React.FC = () => {
 
     return (
         <>
-            <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
-                        {/* Logo */}
-                        <div className="flex items-center">
-                            <a
-                                href="/"
-                                className="flex items-center gap-2 text-foreground font-semibold text-lg"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="32"
-                                    height="32"
-                                    viewBox="0 0 32 32"
-                                >
-                                    <rect
-                                        width="32"
-                                        height="32"
-                                        rx="6"
-                                        className="fill-foreground"
-                                    />
-                                    <text
-                                        x="16"
-                                        y="21"
-                                        fontFamily="Arial, sans-serif"
-                                        fontSize="13"
-                                        fontWeight="bold"
-                                        className="fill-background"
-                                        textAnchor="middle"
-                                    >
-                                        FM
-                                    </text>
-                                </svg>
-                                FlowMaestro
-                            </a>
-                        </div>
+            <nav className="fixed top-0 left-0 right-0 z-50 border-b border-line bg-background/75 backdrop-blur-md">
+                <div className="max-w-[1120px] mx-auto px-6 flex items-center justify-between gap-6 h-16">
+                    <a
+                        href="/"
+                        className="flex items-center gap-2.5 text-foreground font-bold text-[17px]"
+                    >
+                        <PixelMark size={24} />
+                        FlowMaestro
+                    </a>
 
-                        {/* Desktop Navigation Links */}
-                        <div className="hidden md:flex items-center gap-8">
-                            <Dropdown label="Solutions" items={SOLUTION_NAV_ITEMS} />
-                            <Link
-                                to="/integrations"
-                                onClick={() => handleNavLinkClick("Integrations")}
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                Integrations
-                            </Link>
-                            <Dropdown label="Company" items={COMPANY_NAV_ITEMS} />
-                            <Dropdown label="Resources" items={RESOURCES_NAV_ITEMS} />
-                            <a
-                                href={import.meta.env.VITE_DOCS_URL}
-                                onClick={() => {
-                                    handleNavLinkClick("Docs");
-                                    handleDocsClick();
-                                }}
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                Docs
-                            </a>
-                            <Link
-                                to="/pricing"
-                                onClick={() => handleNavLinkClick("Pricing")}
-                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                Pricing
-                            </Link>
-                        </div>
+                    <div className="hidden md:flex items-center gap-6">
+                        <a
+                            href="/#product"
+                            onClick={() => handleNavLinkClick("Product")}
+                            className={desktopLink}
+                        >
+                            Product
+                        </a>
+                        <Dropdown label="Solutions" items={SOLUTION_NAV_ITEMS} />
+                        <Link
+                            to="/integrations"
+                            onClick={() => handleNavLinkClick("Integrations")}
+                            className={desktopLink}
+                        >
+                            Integrations
+                        </Link>
+                        <Link
+                            to="/templates"
+                            onClick={() => handleNavLinkClick("Templates")}
+                            className={desktopLink}
+                        >
+                            Templates
+                        </Link>
+                        <Link
+                            to="/pricing"
+                            onClick={() => handleNavLinkClick("Pricing")}
+                            className={desktopLink}
+                        >
+                            Pricing
+                        </Link>
+                    </div>
 
-                        {/* Auth Buttons + Theme Toggle + Mobile Menu Toggle */}
-                        <div className="flex items-center gap-2">
-                            <ThemeToggle onToggle={handleThemeToggle} />
-                            <a
-                                href={import.meta.env.VITE_APP_URL}
-                                onClick={handleLoginClick}
-                                className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-2"
-                            >
-                                Log In
-                            </a>
-                            <a
-                                href={import.meta.env.VITE_APP_URL}
-                                onClick={handleGetStartedClick}
-                                className="hidden sm:block px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
-                            >
-                                Get Started
-                            </a>
-
-                            {/* Mobile Menu Button */}
-                            <button
-                                onClick={handleMobileMenuToggle}
-                                className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
-                                aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-                            >
-                                {isMobileMenuOpen ? (
-                                    <X className="w-6 h-6" />
-                                ) : (
-                                    <Menu className="w-6 h-6" />
-                                )}
-                            </button>
-                        </div>
+                    <div className="flex items-center gap-2.5">
+                        <a
+                            href={BOOK_DEMO_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={handleDemoClick}
+                            className="hidden sm:inline-flex items-center h-[38px] px-4 rounded-xl text-sm font-semibold bg-foreground text-background hover:opacity-90 transition-opacity"
+                        >
+                            Book a demo
+                        </a>
+                        <button
+                            type="button"
+                            onClick={handleMobileMenuToggle}
+                            className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                            aria-expanded={isMobileMenuOpen}
+                        >
+                            {isMobileMenuOpen ? (
+                                <X className="w-6 h-6" />
+                            ) : (
+                                <Menu className="w-6 h-6" />
+                            )}
+                        </button>
                     </div>
                 </div>
             </nav>
 
-            {/* Mobile Menu Overlay */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <motion.div
@@ -211,228 +213,53 @@ export const Navigation: React.FC = () => {
                     >
                         <div className="pt-20 px-6 pb-6 h-full overflow-y-auto">
                             <nav className="space-y-1">
-                                {/* Solutions Expandable Section */}
-                                <div>
-                                    <button
-                                        onClick={() => setIsSolutionsExpanded(!isSolutionsExpanded)}
-                                        className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border"
-                                    >
-                                        Solutions
-                                        <ChevronDown
-                                            className={`w-5 h-5 transition-transform duration-200 ${
-                                                isSolutionsExpanded ? "rotate-180" : ""
-                                            }`}
-                                        />
-                                    </button>
-                                    <AnimatePresence>
-                                        {isSolutionsExpanded && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: "auto", opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.2 }}
-                                                className="overflow-hidden"
-                                            >
-                                                <div className="py-2 pl-4 space-y-1">
-                                                    {SOLUTION_NAV_ITEMS.map((item) => (
-                                                        <Link
-                                                            key={item.href}
-                                                            to={item.href}
-                                                            onClick={() =>
-                                                                setIsMobileMenuOpen(false)
-                                                            }
-                                                            className="flex items-center gap-3 py-3 text-muted-foreground hover:text-foreground transition-colors"
-                                                        >
-                                                            {item.icon && (
-                                                                <item.icon className="w-5 h-5" />
-                                                            )}
-                                                            <div>
-                                                                <div className="text-base font-medium">
-                                                                    {item.label}
-                                                                </div>
-                                                                {item.description && (
-                                                                    <div className="text-sm text-muted-foreground">
-                                                                        {item.description}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </Link>
-                                                    ))}
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-
-                                {/* Other Nav Items */}
+                                <a
+                                    href="/#product"
+                                    onClick={closeMobileMenu}
+                                    className={mobileLink}
+                                >
+                                    Product
+                                </a>
+                                <MobileGroup
+                                    label="Solutions"
+                                    items={SOLUTION_NAV_ITEMS}
+                                    onNavigate={closeMobileMenu}
+                                />
                                 <Link
                                     to="/integrations"
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="block py-4 text-lg font-medium text-foreground border-b border-border"
+                                    onClick={closeMobileMenu}
+                                    className={mobileLink}
                                 >
                                     Integrations
                                 </Link>
-                                {/* Company Expandable Section */}
-                                <div>
-                                    <button
-                                        onClick={() => setIsCompanyExpanded(!isCompanyExpanded)}
-                                        className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border"
-                                    >
-                                        Company
-                                        <ChevronDown
-                                            className={`w-5 h-5 transition-transform duration-200 ${
-                                                isCompanyExpanded ? "rotate-180" : ""
-                                            }`}
-                                        />
-                                    </button>
-                                    <AnimatePresence>
-                                        {isCompanyExpanded && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: "auto", opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.2 }}
-                                                className="overflow-hidden"
-                                            >
-                                                <div className="py-2 pl-4 space-y-1">
-                                                    {COMPANY_NAV_ITEMS.map((item) => (
-                                                        <Link
-                                                            key={item.href}
-                                                            to={item.href}
-                                                            onClick={() =>
-                                                                setIsMobileMenuOpen(false)
-                                                            }
-                                                            className="flex items-center gap-3 py-3 text-muted-foreground hover:text-foreground transition-colors"
-                                                        >
-                                                            {item.icon && (
-                                                                <item.icon className="w-5 h-5" />
-                                                            )}
-                                                            <div>
-                                                                <div className="text-base font-medium">
-                                                                    {item.label}
-                                                                </div>
-                                                                {item.description && (
-                                                                    <div className="text-sm text-muted-foreground">
-                                                                        {item.description}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </Link>
-                                                    ))}
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-
-                                {/* Resources Expandable Section */}
-                                <div>
-                                    <button
-                                        onClick={() => setIsResourcesExpanded(!isResourcesExpanded)}
-                                        className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border"
-                                    >
-                                        Resources
-                                        <ChevronDown
-                                            className={`w-5 h-5 transition-transform duration-200 ${
-                                                isResourcesExpanded ? "rotate-180" : ""
-                                            }`}
-                                        />
-                                    </button>
-                                    <AnimatePresence>
-                                        {isResourcesExpanded && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: "auto", opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                transition={{ duration: 0.2 }}
-                                                className="overflow-hidden"
-                                            >
-                                                <div className="py-2 pl-4 space-y-1">
-                                                    {RESOURCES_NAV_ITEMS.map((item) => (
-                                                        <Link
-                                                            key={item.href}
-                                                            to={item.href}
-                                                            onClick={() =>
-                                                                setIsMobileMenuOpen(false)
-                                                            }
-                                                            className="flex items-center gap-3 py-3 text-muted-foreground hover:text-foreground transition-colors"
-                                                        >
-                                                            {item.icon && (
-                                                                <item.icon className="w-5 h-5" />
-                                                            )}
-                                                            <div>
-                                                                <div className="text-base font-medium">
-                                                                    {item.label}
-                                                                </div>
-                                                                {item.description && (
-                                                                    <div className="text-sm text-muted-foreground">
-                                                                        {item.description}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </Link>
-                                                    ))}
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                                <a
-                                    href={import.meta.env.VITE_DOCS_URL}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="block py-4 text-lg font-medium text-foreground border-b border-border"
+                                <Link
+                                    to="/templates"
+                                    onClick={closeMobileMenu}
+                                    className={mobileLink}
                                 >
-                                    Docs
-                                </a>
+                                    Templates
+                                </Link>
                                 <Link
                                     to="/pricing"
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="block py-4 text-lg font-medium text-foreground border-b border-border"
+                                    onClick={closeMobileMenu}
+                                    className={mobileLink}
                                 >
                                     Pricing
                                 </Link>
                             </nav>
 
-                            {/* Mobile Theme Toggle */}
-                            <div className="mt-6 flex items-center justify-between py-4 border-b border-border">
-                                <span className="text-foreground font-medium">Theme</span>
-                                <button
+                            <div className="mt-6">
+                                <a
+                                    href={BOOK_DEMO_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     onClick={() => {
-                                        const newTheme = theme === "light" ? "dark" : "light";
-                                        toggleTheme();
-                                        handleThemeToggle(newTheme);
+                                        handleDemoClick();
+                                        closeMobileMenu();
                                     }}
-                                    className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-md text-foreground"
+                                    className="block w-full py-3 text-center bg-foreground text-background font-semibold rounded-xl hover:opacity-90 transition-opacity"
                                 >
-                                    {theme === "light" ? (
-                                        <>
-                                            <Moon className="w-4 h-4" /> Dark
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sun className="w-4 h-4" /> Light
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-
-                            {/* Mobile Auth Buttons */}
-                            <div className="mt-6 space-y-3">
-                                <a
-                                    href={import.meta.env.VITE_APP_URL}
-                                    onClick={handleLoginClick}
-                                    className="block w-full py-3 text-center text-foreground border border-border rounded-lg hover:bg-secondary transition-colors"
-                                >
-                                    Log In
-                                </a>
-                                <a
-                                    href={import.meta.env.VITE_APP_URL}
-                                    onClick={handleGetStartedClick}
-                                    className="block w-full py-3 text-center bg-foreground text-background font-medium rounded-lg hover:opacity-90 transition-opacity"
-                                >
-                                    Get Started
+                                    Book a demo
                                 </a>
                             </div>
                         </div>

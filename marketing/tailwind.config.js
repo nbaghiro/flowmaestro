@@ -4,6 +4,11 @@ export default {
     content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
     theme: {
         extend: {
+            fontFamily: {
+                sans: ["Inter", "system-ui", "sans-serif"],
+                serif: ["Inter", "system-ui", "sans-serif"],
+                mono: ['"IBM Plex Mono"', "ui-monospace", "Menlo", "monospace"]
+            },
             colors: {
                 // CSS variable-based colors matching frontend app
                 border: "hsl(var(--border))",
@@ -30,7 +35,17 @@ export default {
                 card: {
                     DEFAULT: "hsl(var(--card))",
                     foreground: "hsl(var(--card-foreground))"
-                }
+                },
+                // Black language steps that have no HSL token
+                sunken: "#0e0e12",
+                raised: "#161619",
+                line: "#1f1f25",
+                edge: "#4a4a52",
+                body: "#c6c6cc",
+                dim: "#6f6f78",
+                ok: "#34d399",
+                warn: "#fbbf24",
+                danger: "#f87171"
             },
             borderRadius: {
                 lg: "var(--radius)",

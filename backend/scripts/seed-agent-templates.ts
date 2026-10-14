@@ -1,12 +1,21 @@
 /**
  * Seed Script for Agent Templates
  *
- * Populates the agent_templates table with 65 pre-built agent templates
- * across 8 categories: marketing, sales, operations, engineering, support,
- * ecommerce, hr, finance
+ * Populates the agent_templates table with 104 pre-built agent templates
+ * across 9 categories: marketing, sales, operations, engineering, support,
+ * ecommerce, hr, finance, healthcare
  *
  * These templates are browsable in the /templates library and should NOT
  * duplicate the starter patterns in frontend/src/lib/agentPatterns.ts
+ *
+ * Tool naming (see backend/src/services/tools and the agent-templates copy route):
+ * - type "builtin": a built-in tool name from backend/src/services/tools/builtin
+ *   (web_search, web_browse, pdf_extract, file_read, file_write, spreadsheet_generate, ...).
+ *   The copy route carries these over to the new agent.
+ * - type "mcp": an integration operation named <provider>_<operationId> as the provider's
+ *   getMCPTools() exposes it (slack_sendMessage, google_sheets_appendValues, ...), with
+ *   `provider` set to the registry key (slack, google-sheets, ...). These need a workspace
+ *   connection, so the copy route skips them and the user adds them from the agent page.
  *
  * Run with: npx tsx backend/scripts/seed-agent-templates.ts
  */
@@ -18,16 +27,29 @@ import { Pool } from "pg";
 // Load .env from backend root
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-// Agent tool type
+// Agent tool type (matches AgentTemplateTool in shared/src/agent-template.ts)
 interface AgentTemplateTool {
     name: string;
     description: string;
-    type: "workflow" | "function" | "knowledge_base" | "agent";
+    type: "workflow" | "function" | "knowledge_base" | "agent" | "mcp" | "builtin";
     provider?: string;
 }
 
+// Matches AGENT_TEMPLATE_CATEGORIES in shared/src/agent-template.ts and the
+// valid_agent_template_category CHECK constraint (migrations 0049 and 0068)
+type AgentTemplateCategory =
+    | "marketing"
+    | "sales"
+    | "operations"
+    | "engineering"
+    | "support"
+    | "ecommerce"
+    | "hr"
+    | "finance"
+    | "healthcare";
+
 // Agent template data structure
-interface AgentTemplateData {
+export interface AgentTemplateData {
     name: string;
     description: string;
     system_prompt: string;
@@ -36,18 +58,33 @@ interface AgentTemplateData {
     temperature: number;
     max_tokens: number;
     available_tools: AgentTemplateTool[];
-    category: string;
+    category: AgentTemplateCategory;
     tags: string[];
     required_integrations: string[];
     featured?: boolean;
 }
 
 // ============================================================================
+// HEALTHCARE SAFETY BLOCK
+// ============================================================================
+
+// Copied verbatim from backend/scripts/seed-personas.ts so the healthcare agent templates
+// and the healthcare personas state the same boundaries. Keep the two in step.
+const HEALTHCARE_SAFETY_BLOCK = `## Safety boundaries (apply to every task)
+- You support administrative, research, and educational work for healthcare professionals. You do not diagnose, recommend treatment for an individual, or interpret an individual's results. If part of a task asks for that, decline that part, say why, and continue with the rest.
+- Never request, accept, store, or reproduce protected health information (PHI). PHI is health information combined with any HIPAA safe-harbor identifier: names, dates other than year, medical record, account, claim or member numbers, addresses below state level, phone, fax, email, SSN, device or vehicle identifiers, URLs, IP addresses, biometric identifiers, photos, or any other unique code. FlowMaestro does not operate under a HIPAA business associate agreement.
+- Before reading any uploaded file or pasted data, scan it for identifiers. If it appears to contain PHI, stop, do not summarise or quote the content, tell the user which field or file is affected, and ask for aggregated or de-identified data instead.
+- Work only from public sources, the user's own policies, templates and contracts, and aggregate data. Do not open mailboxes, ticketing systems, EHRs, patient portals, or payer portals even when a connection has been granted.
+- Cite every regulatory, payer, or clinical statement with its source URL and its effective or publication date. Separate what the source says from your interpretation.
+- State uncertainty plainly. When sources conflict, when a policy may have changed since publication, or when a question needs a licensed professional (clinician, certified coder, attorney, compliance officer, regulatory affairs), say so and name the reviewer.
+- End every deliverable with a "Review required" section naming who must review it before use and what they should check.`;
+
+// ============================================================================
 // AGENT TEMPLATE DEFINITIONS
 // Non-duplicating with starter patterns (agentPatterns.ts)
 // ============================================================================
 
-const agentTemplates: AgentTemplateData[] = [
+export const agentTemplates: AgentTemplateData[] = [
     // ========================================================================
     // MARKETING (3 templates)
     // ========================================================================
@@ -57,7 +94,7 @@ const agentTemplates: AgentTemplateData[] = [
             "Analyzes marketing campaign metrics across channels to provide data-driven insights and optimization recommendations.",
         category: "marketing",
         tags: ["analytics", "campaigns", "ROI", "optimization"],
-        required_integrations: ["hubspot", "google_sheets"],
+        required_integrations: ["hubspot", "google-sheets"],
         featured: true,
         model: "gpt-4o",
         provider: "openai",
@@ -112,16 +149,10 @@ const agentTemplates: AgentTemplateData[] = [
 - Suggest specific tests to validate hypotheses`,
         available_tools: [
             {
-                name: "hubspot_get_campaigns",
-                description: "Retrieve campaign performance data from HubSpot",
-                type: "function",
-                provider: "hubspot"
-            },
-            {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Read campaign data from Google Sheets",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -196,9 +227,9 @@ Brand Consistency Score: [1-10]
 - Balance consistency with appropriate flexibility`,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share edited content for team review",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -209,7 +240,7 @@ Brand Consistency Score: [1-10]
             "Gathers and analyzes competitive intelligence to identify market trends, competitor strategies, and opportunities.",
         category: "marketing",
         tags: ["competitive analysis", "market research", "intelligence", "strategy"],
-        required_integrations: ["slack", "google_sheets"],
+        required_integrations: ["slack", "google-sheets"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -293,16 +324,16 @@ Sources:
 - Maintain ethical research standards`,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share competitive updates with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "google_sheets_append",
+                name: "google_sheets_appendValues",
                 description: "Log competitive intelligence to tracking sheet",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -396,9 +427,9 @@ Feedback:
 - Every objection is information`,
         available_tools: [
             {
-                name: "slack_send_dm",
+                name: "slack_sendMessage",
                 description: "Send coaching tips to individual reps",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -494,15 +525,15 @@ CLOSING
 \`\`\``,
         available_tools: [
             {
-                name: "hubspot_get_contact",
+                name: "hubspot_getContact",
                 description: "Retrieve prospect information for customization",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share demo script with sales team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -604,15 +635,15 @@ Recommendations:
 \`\`\``,
         available_tools: [
             {
-                name: "hubspot_get_deals",
+                name: "hubspot_listDeals",
                 description: "Retrieve deal data for analysis",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share analysis with sales leadership",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -704,9 +735,9 @@ Numbered steps with:
 Provide complete SOP in markdown with clear sections and numbered steps.`,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share SOP draft for review",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -717,7 +748,7 @@ Provide complete SOP in markdown with clear sections and numbered steps.`,
             "Analyzes business processes to identify inefficiencies, bottlenecks, and opportunities for automation or optimization.",
         category: "operations",
         tags: ["process improvement", "optimization", "efficiency", "automation"],
-        required_integrations: ["slack", "google_sheets"],
+        required_integrations: ["slack", "google-sheets"],
         featured: false,
         model: "claude-sonnet-4-5-20250929",
         provider: "anthropic",
@@ -811,16 +842,16 @@ Month 2: [Actions]
 \`\`\``,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share improvement recommendations",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Read process metrics and data",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -830,7 +861,7 @@ Month 2: [Actions]
             "Helps evaluate and compare vendors through structured scoring, RFP analysis, and due diligence frameworks.",
         category: "operations",
         tags: ["vendor management", "procurement", "evaluation", "RFP"],
-        required_integrations: ["google_sheets", "slack"],
+        required_integrations: ["google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -931,21 +962,21 @@ Recommendation: [Proceed / Needs clarification / Do not proceed]
 - Misaligned product roadmap`,
         available_tools: [
             {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Read vendor data and requirements",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "google_sheets_append",
+                name: "google_sheets_appendValues",
                 description: "Log evaluation scores",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share evaluation summary with stakeholders",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -1047,9 +1078,9 @@ Risk Assessment:
 \`\`\``,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share architecture review with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -1161,9 +1192,9 @@ Recommendations:
 \`\`\``,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share security findings with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -1301,9 +1332,9 @@ After implementing all: [New metrics]
 \`\`\``,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share performance recommendations",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -1408,21 +1439,21 @@ is resolved to your satisfaction. Here's my direct contact: [info]"
 \`\`\``,
         available_tools: [
             {
-                name: "hubspot_get_contact",
+                name: "hubspot_getContact",
                 description: "Review customer history and value",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "hubspot_create_ticket",
+                name: "hubspot_createTicket",
                 description: "Create escalation ticket with full context",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Alert team about critical escalations",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -1528,9 +1559,9 @@ Priority: [High/Medium/Low]
 - Content coverage percentage`,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share content updates with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -1541,7 +1572,7 @@ Priority: [High/Medium/Low]
             "Analyzes customer feedback from surveys, reviews, and support interactions to extract actionable insights.",
         category: "support",
         tags: ["feedback analysis", "NPS", "voice of customer", "insights"],
-        required_integrations: ["hubspot", "google_sheets", "slack"],
+        required_integrations: ["hubspot", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -1635,21 +1666,15 @@ Success Metrics:
 \`\`\``,
         available_tools: [
             {
-                name: "hubspot_get_feedback",
-                description: "Retrieve customer feedback and survey responses",
-                type: "function",
-                provider: "hubspot"
-            },
-            {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Read feedback data from spreadsheets",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share insights with product and support teams",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -1734,21 +1759,21 @@ Best time to post: [Based on analytics]
 \`\`\``,
         available_tools: [
             {
-                name: "twitter_post_tweet",
+                name: "twitter_postTweet",
                 description: "Post tweets and threads to Twitter",
-                type: "function",
+                type: "mcp",
                 provider: "twitter"
             },
             {
-                name: "linkedin_create_post",
+                name: "linkedin_createPost",
                 description: "Create LinkedIn posts and articles",
-                type: "function",
+                type: "mcp",
                 provider: "linkedin"
             },
             {
-                name: "buffer_schedule_post",
+                name: "buffer_createUpdate",
                 description: "Schedule posts across social platforms",
-                type: "function",
+                type: "mcp",
                 provider: "buffer"
             }
         ]
@@ -1829,16 +1854,10 @@ Send Time: [Day/Time based on data]
 \`\`\``,
         available_tools: [
             {
-                name: "mailchimp_create_campaign",
+                name: "mailchimp_createCampaign",
                 description: "Create and send email campaigns",
-                type: "function",
+                type: "mcp",
                 provider: "mailchimp"
-            },
-            {
-                name: "klaviyo_create_flow",
-                description: "Design automated email flows",
-                type: "function",
-                provider: "klaviyo"
             }
         ]
     },
@@ -1848,7 +1867,7 @@ Send Time: [Day/Time based on data]
             "Optimizes content for search engines with keyword research, meta tags, and on-page SEO recommendations.",
         category: "marketing",
         tags: ["SEO", "content optimization", "keywords", "search"],
-        required_integrations: ["google_analytics", "airtable"],
+        required_integrations: ["google-analytics", "airtable"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -1915,15 +1934,15 @@ Competitor Analysis:
 \`\`\``,
         available_tools: [
             {
-                name: "google_analytics_get_data",
+                name: "google_analytics_runReport",
                 description: "Retrieve organic search performance data",
-                type: "function",
-                provider: "google_analytics"
+                type: "mcp",
+                provider: "google-analytics"
             },
             {
-                name: "airtable_create_record",
+                name: "airtable_createRecord",
                 description: "Track keyword rankings and content briefs",
-                type: "function",
+                type: "mcp",
                 provider: "airtable"
             }
         ]
@@ -2015,21 +2034,15 @@ Compensation: [Fee + products/perks]
 \`\`\``,
         available_tools: [
             {
-                name: "linkedin_search_people",
-                description: "Find potential influencer contacts",
-                type: "function",
-                provider: "linkedin"
-            },
-            {
-                name: "apollo_enrich_contact",
+                name: "apollo_enrichPerson",
                 description: "Get influencer contact information",
-                type: "function",
+                type: "mcp",
                 provider: "apollo"
             },
             {
-                name: "gmail_send_email",
+                name: "gmail_sendMessage",
                 description: "Send personalized outreach emails",
-                type: "function",
+                type: "mcp",
                 provider: "gmail"
             }
         ]
@@ -2040,7 +2053,7 @@ Compensation: [Fee + products/perks]
             "Creates real-time dashboards and reports from marketing data across channels and campaigns.",
         category: "marketing",
         tags: ["analytics", "dashboards", "reporting", "metrics"],
-        required_integrations: ["google_analytics", "mixpanel", "google_sheets"],
+        required_integrations: ["google-analytics", "mixpanel", "google-sheets"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -2120,22 +2133,16 @@ Recommendations:
 \`\`\``,
         available_tools: [
             {
-                name: "google_analytics_get_report",
+                name: "google_analytics_runReport",
                 description: "Pull website analytics data",
-                type: "function",
-                provider: "google_analytics"
+                type: "mcp",
+                provider: "google-analytics"
             },
             {
-                name: "mixpanel_get_insights",
-                description: "Get product analytics data",
-                type: "function",
-                provider: "mixpanel"
-            },
-            {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update dashboard spreadsheets",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -2209,21 +2216,21 @@ Key Dates:
 8. **Promoted**: Distribution active`,
         available_tools: [
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create content briefs and calendar pages",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "airtable_update_record",
+                name: "airtable_updateRecord",
                 description: "Update content calendar database",
-                type: "function",
+                type: "mcp",
                 provider: "airtable"
             },
             {
-                name: "asana_create_task",
+                name: "asana_createTask",
                 description: "Create content production tasks",
-                type: "function",
+                type: "mcp",
                 provider: "asana"
             }
         ]
@@ -2234,7 +2241,7 @@ Key Dates:
             "Creates and optimizes paid advertising campaigns with budget allocation and performance tracking.",
         category: "marketing",
         tags: ["paid media", "advertising", "PPC", "budget optimization"],
-        required_integrations: ["google_analytics", "segment", "slack"],
+        required_integrations: ["google-analytics", "segment", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -2307,21 +2314,21 @@ Next Steps:
 \`\`\``,
         available_tools: [
             {
-                name: "google_analytics_get_data",
+                name: "google_analytics_runReport",
                 description: "Track campaign conversions and attribution",
-                type: "function",
-                provider: "google_analytics"
+                type: "mcp",
+                provider: "google-analytics"
             },
             {
-                name: "segment_track_event",
+                name: "segment_trackEvent",
                 description: "Track conversion events",
-                type: "function",
+                type: "mcp",
                 provider: "segment"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share campaign performance updates",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -2406,27 +2413,15 @@ Follow-up Sequence:
 \`\`\``,
         available_tools: [
             {
-                name: "eventbrite_create_event",
-                description: "Create and manage event listings",
-                type: "function",
-                provider: "eventbrite"
-            },
-            {
-                name: "calendly_get_events",
+                name: "calendly_listScheduledEvents",
                 description: "Manage speaker scheduling",
-                type: "function",
+                type: "mcp",
                 provider: "calendly"
             },
             {
-                name: "zoom_create_webinar",
-                description: "Set up webinar sessions",
-                type: "function",
-                provider: "zoom"
-            },
-            {
-                name: "mailchimp_send_campaign",
+                name: "mailchimp_sendCampaign",
                 description: "Send event promotional emails",
-                type: "function",
+                type: "mcp",
                 provider: "mailchimp"
             }
         ]
@@ -2525,27 +2520,27 @@ Recommended Actions:
 \`\`\``,
         available_tools: [
             {
-                name: "twitter_search_mentions",
+                name: "twitter_searchTweets",
                 description: "Search for brand mentions on Twitter",
-                type: "function",
+                type: "mcp",
                 provider: "twitter"
             },
             {
-                name: "reddit_search_posts",
+                name: "reddit_getPosts",
                 description: "Find brand discussions on Reddit",
-                type: "function",
+                type: "mcp",
                 provider: "reddit"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send mention alerts to team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Log important mentions for tracking",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             }
         ]
@@ -2556,7 +2551,7 @@ Recommended Actions:
             "Plans video content strategy, creates scripts, and optimizes for YouTube and TikTok discovery.",
         category: "marketing",
         tags: ["video", "YouTube", "TikTok", "content strategy"],
-        required_integrations: ["youtube", "tiktok", "google_sheets", "slack"],
+        required_integrations: ["youtube", "tiktok", "google-sheets", "slack"],
         featured: false,
         model: "claude-sonnet-4-5-20250929",
         provider: "anthropic",
@@ -2639,27 +2634,15 @@ Content Pillars:
 \`\`\``,
         available_tools: [
             {
-                name: "youtube_get_analytics",
-                description: "Analyze YouTube video performance",
-                type: "function",
-                provider: "youtube"
-            },
-            {
-                name: "tiktok_get_trends",
-                description: "Discover trending TikTok content",
-                type: "function",
-                provider: "tiktok"
-            },
-            {
-                name: "google_sheets_append",
+                name: "google_sheets_appendValues",
                 description: "Track video content calendar",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share video performance updates",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -2765,21 +2748,15 @@ Recommended Action: [Next step]
 \`\`\``,
         available_tools: [
             {
-                name: "apollo_enrich_company",
+                name: "apollo_enrichOrganization",
                 description: "Enrich company data from Apollo",
-                type: "function",
+                type: "mcp",
                 provider: "apollo"
             },
             {
-                name: "clearbit_enrich_lead",
-                description: "Get detailed lead information",
-                type: "function",
-                provider: "clearbit"
-            },
-            {
-                name: "salesforce_update_lead",
+                name: "salesforce_updateRecord",
                 description: "Update lead records with enriched data",
-                type: "function",
+                type: "mcp",
                 provider: "salesforce"
             }
         ]
@@ -2790,7 +2767,7 @@ Recommended Action: [Next step]
             "Analyzes sales pipeline for forecast accuracy, deal risk scoring, and stage progression insights.",
         category: "sales",
         tags: ["pipeline", "forecasting", "analytics", "risk"],
-        required_integrations: ["salesforce", "pipedrive", "google_sheets"],
+        required_integrations: ["salesforce", "pipedrive", "google-sheets"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -2877,22 +2854,22 @@ Recommendations:
 \`\`\``,
         available_tools: [
             {
-                name: "salesforce_get_opportunities",
+                name: "salesforce_queryRecords",
                 description: "Pull pipeline data from Salesforce",
-                type: "function",
+                type: "mcp",
                 provider: "salesforce"
             },
             {
-                name: "pipedrive_get_deals",
+                name: "pipedrive_listDeals",
                 description: "Get deal data from Pipedrive",
-                type: "function",
+                type: "mcp",
                 provider: "pipedrive"
             },
             {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update pipeline tracking sheets",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -2902,7 +2879,7 @@ Recommendations:
             "Creates battle cards, case studies, and objection guides to empower the sales team.",
         category: "sales",
         tags: ["enablement", "content", "battle cards", "case studies"],
-        required_integrations: ["notion", "google_docs", "salesforce", "slack"],
+        required_integrations: ["notion", "google-docs", "salesforce", "slack"],
         featured: false,
         model: "claude-sonnet-4-5-20250929",
         provider: "anthropic",
@@ -2985,27 +2962,27 @@ Quote:
 \`\`\``,
         available_tools: [
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create enablement content in Notion",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "google_docs_create",
+                name: "google_docs_createDocument",
                 description: "Create sales documents",
-                type: "function",
-                provider: "google_docs"
+                type: "mcp",
+                provider: "google-docs"
             },
             {
-                name: "salesforce_get_deals",
+                name: "salesforce_queryRecords",
                 description: "Get win/loss data for case studies",
-                type: "function",
+                type: "mcp",
                 provider: "salesforce"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Announce new content to sales team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -3016,7 +2993,7 @@ Quote:
             "Researches prospects and creates meeting agendas with talking points and relevant insights.",
         category: "sales",
         tags: ["meeting prep", "research", "agendas", "talking points"],
-        required_integrations: ["linkedin", "hubspot", "google_calendar", "notion"],
+        required_integrations: ["linkedin", "hubspot", "google-calendar", "notion"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -3100,27 +3077,27 @@ Success Criteria:
 \`\`\``,
         available_tools: [
             {
-                name: "linkedin_get_profile",
+                name: "linkedin_getProfile",
                 description: "Research prospect LinkedIn profiles",
-                type: "function",
+                type: "mcp",
                 provider: "linkedin"
             },
             {
-                name: "hubspot_get_contact",
+                name: "hubspot_getContact",
                 description: "Get CRM history and context",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "google_calendar_get_event",
+                name: "google_calendar_getEvent",
                 description: "Get meeting details",
-                type: "function",
-                provider: "google_calendar"
+                type: "mcp",
+                provider: "google-calendar"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create meeting prep documents",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             }
         ]
@@ -3215,21 +3192,21 @@ Risk Assessment:
 \`\`\``,
         available_tools: [
             {
-                name: "docusign_get_envelope",
+                name: "docusign_getEnvelope",
                 description: "Track contract status and signatures",
-                type: "function",
+                type: "mcp",
                 provider: "docusign"
             },
             {
-                name: "pandadoc_get_document",
+                name: "pandadoc_getDocument",
                 description: "Review contract documents",
-                type: "function",
+                type: "mcp",
                 provider: "pandadoc"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Coordinate with legal and deal desk",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -3239,7 +3216,7 @@ Risk Assessment:
         description: "Analyzes territory data and recommends account prioritization strategies.",
         category: "sales",
         tags: ["territory", "planning", "accounts", "prioritization"],
-        required_integrations: ["salesforce", "google_sheets", "slack"],
+        required_integrations: ["salesforce", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -3309,21 +3286,21 @@ Recommendations:
 \`\`\``,
         available_tools: [
             {
-                name: "salesforce_get_accounts",
+                name: "salesforce_queryRecords",
                 description: "Pull account and territory data",
-                type: "function",
+                type: "mcp",
                 provider: "salesforce"
             },
             {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update territory planning sheets",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share territory insights with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -3416,27 +3393,27 @@ Forecast:
 \`\`\``,
         available_tools: [
             {
-                name: "hubspot_get_customers",
+                name: "hubspot_listContacts",
                 description: "Get customer health data",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "salesforce_get_renewals",
+                name: "salesforce_queryRecords",
                 description: "Pull renewal pipeline data",
-                type: "function",
+                type: "mcp",
                 provider: "salesforce"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Alert team about at-risk accounts",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "gmail_send_email",
+                name: "gmail_sendMessage",
                 description: "Send retention outreach emails",
-                type: "function",
+                type: "mcp",
                 provider: "gmail"
             }
         ]
@@ -3528,27 +3505,21 @@ Recommendations:
 \`\`\``,
         available_tools: [
             {
-                name: "apollo_send_sequence",
-                description: "Execute outreach sequences",
-                type: "function",
-                provider: "apollo"
-            },
-            {
-                name: "gmail_send_email",
+                name: "gmail_sendMessage",
                 description: "Send personalized emails",
-                type: "function",
+                type: "mcp",
                 provider: "gmail"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share optimization insights",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "hubspot_create_contact",
+                name: "hubspot_createContact",
                 description: "Log outreach in CRM",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             }
         ]
@@ -3559,7 +3530,7 @@ Recommendations:
             "Analyzes rep performance data and recommends focus areas to improve quota attainment.",
         category: "sales",
         tags: ["coaching", "performance", "quota", "improvement"],
-        required_integrations: ["salesforce", "slack", "google_sheets"],
+        required_integrations: ["salesforce", "slack", "google-sheets"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -3630,22 +3601,22 @@ Coaching Plan:
 \`\`\``,
         available_tools: [
             {
-                name: "salesforce_get_activities",
+                name: "salesforce_queryRecords",
                 description: "Pull rep activity data",
-                type: "function",
+                type: "mcp",
                 provider: "salesforce"
             },
             {
-                name: "slack_send_dm",
+                name: "slack_sendMessage",
                 description: "Send coaching feedback to reps",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Access performance tracking data",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -3726,21 +3697,15 @@ Quote: "[Testimonial]"
 - Conference presentations`,
         available_tools: [
             {
-                name: "linkedin_search_company",
-                description: "Research competitor companies",
-                type: "function",
-                provider: "linkedin"
-            },
-            {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create and store battle cards",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Announce new battle card to sales",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -3821,27 +3786,21 @@ RESOURCE NOTES
 \`\`\``,
         available_tools: [
             {
-                name: "asana_get_projects",
+                name: "asana_listProjects",
                 description: "Pull project status from Asana",
-                type: "function",
+                type: "mcp",
                 provider: "asana"
             },
             {
-                name: "monday_get_boards",
+                name: "monday_listBoards",
                 description: "Get project data from Monday.com",
-                type: "function",
+                type: "mcp",
                 provider: "monday"
             },
             {
-                name: "jira_get_sprint",
-                description: "Get sprint status from Jira",
-                type: "function",
-                provider: "jira"
-            },
-            {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share status report with stakeholders",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -3852,7 +3811,7 @@ RESOURCE NOTES
             "Summarizes meeting recordings, extracts action items, and distributes to participants.",
         category: "operations",
         tags: ["meetings", "notes", "action items", "summaries"],
-        required_integrations: ["zoom", "google_meet", "notion", "slack"],
+        required_integrations: ["zoom", "google-meet", "notion", "slack"],
         featured: false,
         model: "claude-sonnet-4-5-20250929",
         provider: "anthropic",
@@ -3913,27 +3872,21 @@ PARKING LOT
 - Priority: High/Medium/Low`,
         available_tools: [
             {
-                name: "zoom_get_recording",
+                name: "zoom_getMeetingRecordings",
                 description: "Access Zoom meeting recordings",
-                type: "function",
+                type: "mcp",
                 provider: "zoom"
             },
             {
-                name: "google_meet_get_transcript",
-                description: "Get Google Meet transcripts",
-                type: "function",
-                provider: "google_meet"
-            },
-            {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create meeting notes in Notion",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share notes and actions with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -4007,27 +3960,21 @@ Next Actions:
 - 10 days: Executive notification`,
         available_tools: [
             {
-                name: "docusign_send_envelope",
+                name: "docusign_createEnvelope",
                 description: "Send documents for signature",
-                type: "function",
+                type: "mcp",
                 provider: "docusign"
             },
             {
-                name: "sharepoint_upload_file",
-                description: "Store documents in SharePoint",
-                type: "function",
-                provider: "sharepoint"
-            },
-            {
-                name: "gmail_send_email",
+                name: "gmail_sendMessage",
                 description: "Send approval requests and reminders",
-                type: "function",
+                type: "mcp",
                 provider: "gmail"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Notify approvers and track status",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -4038,7 +3985,7 @@ Next Actions:
             "Monitors stock levels, predicts reorder points, and provides inventory optimization recommendations.",
         category: "operations",
         tags: ["inventory", "stock", "reorder", "optimization"],
-        required_integrations: ["shopify", "google_sheets", "slack"],
+        required_integrations: ["shopify", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -4101,21 +4048,21 @@ SUPPLIER PERFORMANCE
 \`\`\``,
         available_tools: [
             {
-                name: "shopify_get_inventory",
+                name: "shopify_listInventoryLevels",
                 description: "Get current inventory levels",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             },
             {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update inventory tracking sheets",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send stock alerts to team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -4126,7 +4073,7 @@ SUPPLIER PERFORMANCE
             "Reviews expense reports for policy compliance and provides optimization recommendations.",
         category: "operations",
         tags: ["expenses", "travel", "compliance", "policy"],
-        required_integrations: ["quickbooks", "google_sheets", "slack"],
+        required_integrations: ["quickbooks", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -4193,21 +4140,15 @@ Notes: [Any comments for approver]
 \`\`\``,
         available_tools: [
             {
-                name: "quickbooks_get_expenses",
-                description: "Pull expense report data",
-                type: "function",
-                provider: "quickbooks"
-            },
-            {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Access expense policy and budgets",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send expense review notifications",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -4217,7 +4158,7 @@ Notes: [Any comments for approver]
         description: "Analyzes team capacity and recommends resource allocation across projects.",
         category: "operations",
         tags: ["capacity", "resources", "planning", "allocation"],
-        required_integrations: ["asana", "monday", "google_sheets", "slack"],
+        required_integrations: ["asana", "monday", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -4283,27 +4224,15 @@ UPCOMING CAPACITY (Next 4 Weeks)
 \`\`\``,
         available_tools: [
             {
-                name: "asana_get_workload",
-                description: "Get team workload from Asana",
-                type: "function",
-                provider: "asana"
-            },
-            {
-                name: "monday_get_timeline",
-                description: "Get resource timeline from Monday",
-                type: "function",
-                provider: "monday"
-            },
-            {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update capacity planning sheets",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share capacity insights with managers",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -4371,27 +4300,27 @@ AUDIT READINESS: [X%]
 \`\`\``,
         available_tools: [
             {
-                name: "notion_get_database",
+                name: "notion_queryDatabase",
                 description: "Access compliance tracking database",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "airtable_update_record",
+                name: "airtable_updateRecord",
                 description: "Update compliance status",
-                type: "function",
+                type: "mcp",
                 provider: "airtable"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send compliance reminders",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "gmail_send_email",
+                name: "gmail_sendMessage",
                 description: "Email audit updates to stakeholders",
-                type: "function",
+                type: "mcp",
                 provider: "gmail"
             }
         ]
@@ -4402,7 +4331,7 @@ AUDIT READINESS: [X%]
             "Manages desk bookings, meeting room reservations, and facilities coordination.",
         category: "operations",
         tags: ["facilities", "bookings", "office", "coordination"],
-        required_integrations: ["google_calendar", "slack", "notion"],
+        required_integrations: ["google-calendar", "slack", "notion"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -4466,21 +4395,15 @@ UPCOMING EVENTS
 \`\`\``,
         available_tools: [
             {
-                name: "google_calendar_get_rooms",
-                description: "Check room availability",
-                type: "function",
-                provider: "google_calendar"
-            },
-            {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send booking confirmations",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "notion_update_page",
+                name: "notion_updatePage",
                 description: "Update space booking records",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             }
         ]
@@ -4490,7 +4413,7 @@ UPCOMING EVENTS
         description: "Tracks contractor hours, manages invoices, and handles contract renewals.",
         category: "operations",
         tags: ["contractors", "invoices", "hours", "renewals"],
-        required_integrations: ["freshbooks", "gusto", "google_sheets", "slack"],
+        required_integrations: ["freshbooks", "gusto", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -4542,27 +4465,21 @@ COMPLIANCE CHECKLIST
 4. 7 days: Escalate if unsigned`,
         available_tools: [
             {
-                name: "freshbooks_get_invoices",
+                name: "freshbooks_listInvoices",
                 description: "Track contractor invoices",
-                type: "function",
+                type: "mcp",
                 provider: "freshbooks"
             },
             {
-                name: "gusto_get_contractors",
-                description: "Access contractor information",
-                type: "function",
-                provider: "gusto"
-            },
-            {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update contractor tracking sheet",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send renewal reminders",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -4644,21 +4561,21 @@ CONTACT TREE STATUS
 \`\`\``,
         available_tools: [
             {
-                name: "notion_get_database",
+                name: "notion_queryDatabase",
                 description: "Access BCP documentation",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "pagerduty_get_oncall",
+                name: "pagerduty_listOnCalls",
                 description: "Verify on-call schedules",
-                type: "function",
+                type: "mcp",
                 provider: "pagerduty"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Coordinate exercises and updates",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -4744,21 +4661,21 @@ CONTACT TREE STATUS
 - 💬 **Question**: Needs clarification`,
         available_tools: [
             {
-                name: "github_get_pull_request",
+                name: "github_getPullRequest",
                 description: "Get PR details and diff",
-                type: "function",
+                type: "mcp",
                 provider: "github"
             },
             {
-                name: "gitlab_get_merge_request",
+                name: "gitlab_getMergeRequest",
                 description: "Get MR details from GitLab",
-                type: "function",
+                type: "mcp",
                 provider: "gitlab"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Notify team of review findings",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -4882,27 +4799,21 @@ ACTION ITEMS
 \`\`\``,
         available_tools: [
             {
-                name: "pagerduty_create_incident",
+                name: "pagerduty_createIncident",
                 description: "Create and manage incidents",
-                type: "function",
+                type: "mcp",
                 provider: "pagerduty"
             },
             {
-                name: "slack_create_channel",
-                description: "Create incident response channel",
-                type: "function",
-                provider: "slack"
-            },
-            {
-                name: "datadog_get_metrics",
+                name: "datadog_queryMetrics",
                 description: "Pull relevant metrics for analysis",
-                type: "function",
+                type: "mcp",
                 provider: "datadog"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create postmortem document",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             }
         ]
@@ -5000,27 +4911,21 @@ RELATED
 \`\`\``,
         available_tools: [
             {
-                name: "jira_create_issue",
+                name: "jira_createIssue",
                 description: "Create debt tracking tickets in Jira",
-                type: "function",
+                type: "mcp",
                 provider: "jira"
             },
             {
-                name: "linear_create_issue",
+                name: "linear_createIssue",
                 description: "Create issues in Linear",
-                type: "function",
+                type: "mcp",
                 provider: "linear"
             },
             {
-                name: "github_get_code_analysis",
-                description: "Get code quality metrics",
-                type: "function",
-                provider: "github"
-            },
-            {
-                name: "notion_update_page",
+                name: "notion_updatePage",
                 description: "Update debt registry",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             }
         ]
@@ -5118,21 +5023,15 @@ requests.post(...)
 - [ ] Changelog updated`,
         available_tools: [
             {
-                name: "github_get_file",
-                description: "Read API source code",
-                type: "function",
-                provider: "github"
-            },
-            {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create documentation pages",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Announce documentation updates",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -5216,27 +5115,21 @@ Error rate increased?
 \`\`\``,
         available_tools: [
             {
-                name: "vercel_get_deployments",
+                name: "vercel_listDeployments",
                 description: "Track deployment status",
-                type: "function",
+                type: "mcp",
                 provider: "vercel"
             },
             {
-                name: "github_get_commits",
-                description: "Get commits for changelog",
-                type: "function",
-                provider: "github"
-            },
-            {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Announce deployments",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "datadog_get_metrics",
+                name: "datadog_queryMetrics",
                 description: "Monitor deployment health",
-                type: "function",
+                type: "mcp",
                 provider: "datadog"
             }
         ]
@@ -5329,27 +5222,27 @@ MONITORING
 - Test with production-like data volume`,
         available_tools: [
             {
-                name: "postgresql_get_schema",
+                name: "postgresql_listTables",
                 description: "Analyze current schema",
-                type: "function",
+                type: "mcp",
                 provider: "postgresql"
             },
             {
-                name: "mongodb_get_collections",
+                name: "mongodb_listCollections",
                 description: "Analyze MongoDB structure",
-                type: "function",
+                type: "mcp",
                 provider: "mongodb"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create migration documentation",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Coordinate migration with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -5434,27 +5327,21 @@ RECOMMENDED ACTIONS
 \`\`\``,
         available_tools: [
             {
-                name: "sentry_get_issues",
+                name: "sentry_listIssues",
                 description: "Get error issues from Sentry",
-                type: "function",
+                type: "mcp",
                 provider: "sentry"
             },
             {
-                name: "datadog_get_errors",
-                description: "Get error metrics from Datadog",
-                type: "function",
-                provider: "datadog"
-            },
-            {
-                name: "linear_create_issue",
+                name: "linear_createIssue",
                 description: "Create bug tickets",
-                type: "function",
+                type: "mcp",
                 provider: "linear"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Alert team about critical errors",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -5464,7 +5351,7 @@ RECOMMENDED ACTIONS
         description: "Analyzes cloud spend, identifies waste, and recommends cost optimizations.",
         category: "engineering",
         tags: ["cloud", "cost", "optimization", "infrastructure"],
-        required_integrations: ["aws", "google_cloud", "slack"],
+        required_integrations: ["aws", "google-cloud", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -5536,21 +5423,9 @@ Total Potential Savings: $[X]/month ([X%])
 \`\`\``,
         available_tools: [
             {
-                name: "aws_get_cost_explorer",
-                description: "Get AWS cost and usage data",
-                type: "function",
-                provider: "aws"
-            },
-            {
-                name: "google_cloud_get_billing",
-                description: "Get GCP billing data",
-                type: "function",
-                provider: "google_cloud"
-            },
-            {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share cost insights with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -5636,21 +5511,9 @@ RISKS
 - 13+: Too big, must split`,
         available_tools: [
             {
-                name: "jira_get_sprint",
-                description: "Get sprint and velocity data",
-                type: "function",
-                provider: "jira"
-            },
-            {
-                name: "linear_get_cycles",
-                description: "Get cycle data from Linear",
-                type: "function",
-                provider: "linear"
-            },
-            {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share planning summary",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -5729,27 +5592,21 @@ Full changelog: [link]
 - Keep it scannable`,
         available_tools: [
             {
-                name: "github_get_releases",
-                description: "Get commit and PR data",
-                type: "function",
-                provider: "github"
-            },
-            {
-                name: "linear_get_completed",
+                name: "linear_listIssues",
                 description: "Get completed issues",
-                type: "function",
+                type: "mcp",
                 provider: "linear"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Publish release notes",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Announce release",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -5846,27 +5703,27 @@ SLA
 \`\`\``,
         available_tools: [
             {
-                name: "zendesk_update_ticket",
+                name: "zendesk_updateTicket",
                 description: "Update ticket priority and assignment",
-                type: "function",
+                type: "mcp",
                 provider: "zendesk"
             },
             {
-                name: "freshdesk_assign_ticket",
+                name: "freshdesk_updateTicket",
                 description: "Route tickets in Freshdesk",
-                type: "function",
+                type: "mcp",
                 provider: "freshdesk"
             },
             {
-                name: "intercom_tag_conversation",
+                name: "intercom_tagConversation",
                 description: "Tag and route Intercom conversations",
-                type: "function",
+                type: "mcp",
                 provider: "intercom"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Alert teams about urgent tickets",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -5877,7 +5734,7 @@ SLA
             "Calculates customer health scores, identifies churn risk, and tracks engagement metrics.",
         category: "support",
         tags: ["health score", "churn", "engagement", "analytics"],
-        required_integrations: ["hubspot", "intercom", "google_sheets"],
+        required_integrations: ["hubspot", "intercom", "google-sheets"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -5953,22 +5810,22 @@ NEXT TOUCHPOINT
 \`\`\``,
         available_tools: [
             {
-                name: "hubspot_get_company",
+                name: "hubspot_getCompany",
                 description: "Get customer account data",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "intercom_get_user",
+                name: "intercom_getContact",
                 description: "Get user engagement data",
-                type: "function",
+                type: "mcp",
                 provider: "intercom"
             },
             {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update health score tracking",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -6054,27 +5911,27 @@ RELATED
 \`\`\``,
         available_tools: [
             {
-                name: "jira_create_issue",
+                name: "jira_createIssue",
                 description: "Create bug tickets in Jira",
-                type: "function",
+                type: "mcp",
                 provider: "jira"
             },
             {
-                name: "linear_create_issue",
+                name: "linear_createIssue",
                 description: "Create issues in Linear",
-                type: "function",
+                type: "mcp",
                 provider: "linear"
             },
             {
-                name: "github_search_issues",
+                name: "github_listIssues",
                 description: "Check for existing reports",
-                type: "function",
+                type: "mcp",
                 provider: "github"
             },
             {
-                name: "zendesk_get_ticket",
+                name: "zendesk_getTicket",
                 description: "Get customer report details",
-                type: "function",
+                type: "mcp",
                 provider: "zendesk"
             }
         ]
@@ -6085,7 +5942,7 @@ RELATED
             "Tracks SLA compliance, alerts on potential breaches, and generates compliance reports.",
         category: "support",
         tags: ["SLA", "compliance", "monitoring", "reporting"],
-        required_integrations: ["zendesk", "freshdesk", "slack", "google_sheets"],
+        required_integrations: ["zendesk", "freshdesk", "slack", "google-sheets"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -6163,28 +6020,16 @@ RECOMMENDATIONS
 \`\`\``,
         available_tools: [
             {
-                name: "zendesk_get_sla",
-                description: "Get SLA metrics from Zendesk",
-                type: "function",
-                provider: "zendesk"
-            },
-            {
-                name: "freshdesk_get_sla",
-                description: "Get SLA data from Freshdesk",
-                type: "function",
-                provider: "freshdesk"
-            },
-            {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send SLA alerts",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update SLA tracking sheet",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -6276,27 +6121,21 @@ Best,
 - Personalize where possible`,
         available_tools: [
             {
-                name: "zendesk_get_ticket",
+                name: "zendesk_getTicket",
                 description: "Get ticket context",
-                type: "function",
+                type: "mcp",
                 provider: "zendesk"
             },
             {
-                name: "intercom_get_conversation",
+                name: "intercom_getConversation",
                 description: "Get conversation history",
-                type: "function",
+                type: "mcp",
                 provider: "intercom"
             },
             {
-                name: "gmail_create_draft",
-                description: "Draft email responses",
-                type: "function",
-                provider: "gmail"
-            },
-            {
-                name: "notion_get_page",
+                name: "notion_getPage",
                 description: "Access response templates",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             }
         ]
@@ -6392,27 +6231,21 @@ FOR PRODUCT TEAM
 \`\`\``,
         available_tools: [
             {
-                name: "typeform_get_responses",
+                name: "typeform_listResponses",
                 description: "Get survey responses",
-                type: "function",
+                type: "mcp",
                 provider: "typeform"
             },
             {
-                name: "intercom_get_feedback",
-                description: "Get in-app feedback",
-                type: "function",
-                provider: "intercom"
-            },
-            {
-                name: "linear_create_issue",
+                name: "linear_createIssue",
                 description: "Create feature request tickets",
-                type: "function",
+                type: "mcp",
                 provider: "linear"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create feedback reports",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             }
         ]
@@ -6503,27 +6336,27 @@ RECOMMENDED OUTREACH
 - No team adoption → Enablement session`,
         available_tools: [
             {
-                name: "hubspot_get_contact",
+                name: "hubspot_getContact",
                 description: "Get customer onboarding data",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "intercom_send_message",
+                name: "intercom_replyToConversation",
                 description: "Send onboarding messages",
-                type: "function",
+                type: "mcp",
                 provider: "intercom"
             },
             {
-                name: "notion_update_page",
+                name: "notion_updatePage",
                 description: "Update onboarding tracker",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Alert team about at-risk customers",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -6533,7 +6366,7 @@ RECOMMENDED OUTREACH
         description: "Analyzes churned accounts to identify patterns and prevention opportunities.",
         category: "support",
         tags: ["churn", "analysis", "patterns", "prevention"],
-        required_integrations: ["salesforce", "hubspot", "google_sheets", "slack"],
+        required_integrations: ["salesforce", "hubspot", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -6617,27 +6450,27 @@ EARLY WARNING SIGNALS TO MONITOR
 \`\`\``,
         available_tools: [
             {
-                name: "salesforce_get_opportunities",
+                name: "salesforce_queryRecords",
                 description: "Get churned account data",
-                type: "function",
+                type: "mcp",
                 provider: "salesforce"
             },
             {
-                name: "hubspot_get_companies",
+                name: "hubspot_listCompanies",
                 description: "Get customer history",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update churn analysis sheet",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share churn insights with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -6648,7 +6481,7 @@ EARLY WARNING SIGNALS TO MONITOR
             "Analyzes knowledge base gaps, suggests new articles, and improves existing documentation.",
         category: "support",
         tags: ["knowledge base", "self-service", "documentation", "content"],
-        required_integrations: ["zendesk", "notion", "google_analytics"],
+        required_integrations: ["zendesk", "notion", "google-analytics"],
         featured: false,
         model: "claude-sonnet-4-5-20250929",
         provider: "anthropic",
@@ -6714,22 +6547,22 @@ CONTENT METRICS
 \`\`\``,
         available_tools: [
             {
-                name: "zendesk_get_articles",
+                name: "zendesk_listArticles",
                 description: "Get KB article performance",
-                type: "function",
+                type: "mcp",
                 provider: "zendesk"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create content recommendations",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "google_analytics_get_data",
+                name: "google_analytics_runReport",
                 description: "Get content analytics",
-                type: "function",
-                provider: "google_analytics"
+                type: "mcp",
+                provider: "google-analytics"
             }
         ]
     },
@@ -6813,27 +6646,27 @@ ESCALATION PATH
 \`\`\``,
         available_tools: [
             {
-                name: "salesforce_get_account",
+                name: "salesforce_getRecord",
                 description: "Get VIP account details",
-                type: "function",
+                type: "mcp",
                 provider: "salesforce"
             },
             {
-                name: "intercom_send_message",
+                name: "intercom_replyToConversation",
                 description: "Send personalized outreach",
-                type: "function",
+                type: "mcp",
                 provider: "intercom"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Coordinate with internal teams",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "gmail_send_email",
+                name: "gmail_sendMessage",
                 description: "Send executive communications",
-                type: "function",
+                type: "mcp",
                 provider: "gmail"
             }
         ]
@@ -6930,21 +6763,21 @@ ACTIONS REQUIRED
 \`\`\``,
         available_tools: [
             {
-                name: "shopify_get_orders",
+                name: "shopify_listOrders",
                 description: "Get order data from Shopify",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             },
             {
-                name: "stripe_get_payments",
+                name: "stripe_listPaymentIntents",
                 description: "Check payment status",
-                type: "function",
+                type: "mcp",
                 provider: "stripe"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Alert team about exceptions",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -6955,7 +6788,7 @@ ACTIONS REQUIRED
             "Optimizes product titles, descriptions, and images for better conversion rates.",
         category: "ecommerce",
         tags: ["product", "listings", "conversion", "optimization"],
-        required_integrations: ["shopify", "google_sheets", "slack"],
+        required_integrations: ["shopify", "google-sheets", "slack"],
         featured: false,
         model: "claude-sonnet-4-5-20250929",
         provider: "anthropic",
@@ -7040,21 +6873,21 @@ PRIORITY: [High/Medium/Low]
 \`\`\``,
         available_tools: [
             {
-                name: "shopify_get_products",
+                name: "shopify_listProducts",
                 description: "Get product listing data",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             },
             {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Track optimization progress",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share optimization recommendations",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -7150,27 +6983,21 @@ COST ANALYSIS
 \`\`\``,
         available_tools: [
             {
-                name: "shopify_get_refunds",
-                description: "Get return and refund data",
-                type: "function",
-                provider: "shopify"
-            },
-            {
-                name: "stripe_get_refunds",
+                name: "stripe_listRefunds",
                 description: "Get payment refund details",
-                type: "function",
+                type: "mcp",
                 provider: "stripe"
             },
             {
-                name: "zendesk_get_tickets",
+                name: "zendesk_listTickets",
                 description: "Get return-related tickets",
-                type: "function",
+                type: "mcp",
                 provider: "zendesk"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Alert on fraud patterns",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -7180,7 +7007,7 @@ COST ANALYSIS
         description: "Analyzes competitive pricing, margins, and recommends pricing strategies.",
         category: "ecommerce",
         tags: ["pricing", "strategy", "margins", "competitive"],
-        required_integrations: ["shopify", "google_sheets", "slack"],
+        required_integrations: ["shopify", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -7267,21 +7094,21 @@ Additional profit: $[X]/month
 \`\`\``,
         available_tools: [
             {
-                name: "shopify_get_products",
+                name: "shopify_listProducts",
                 description: "Get product and pricing data",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             },
             {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Access competitive pricing data",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share pricing recommendations",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -7291,7 +7118,7 @@ Additional profit: $[X]/month
         description: "Calculates CLV, segments customers, and recommends retention strategies.",
         category: "ecommerce",
         tags: ["CLV", "retention", "segmentation", "analytics"],
-        required_integrations: ["shopify", "stripe", "hubspot", "google_sheets"],
+        required_integrations: ["shopify", "stripe", "hubspot", "google-sheets"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -7383,28 +7210,22 @@ Increasing retention by 5% = +$[X] in CLV
 \`\`\``,
         available_tools: [
             {
-                name: "shopify_get_customers",
-                description: "Get customer purchase history",
-                type: "function",
-                provider: "shopify"
-            },
-            {
-                name: "stripe_get_customers",
+                name: "stripe_listCustomers",
                 description: "Get payment and subscription data",
-                type: "function",
+                type: "mcp",
                 provider: "stripe"
             },
             {
-                name: "hubspot_update_contact",
+                name: "hubspot_updateContact",
                 description: "Update customer segments",
-                type: "function",
+                type: "mcp",
                 provider: "hubspot"
             },
             {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update CLV tracking",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -7418,7 +7239,7 @@ Increasing retention by 5% = +$[X] in CLV
             "Screens candidates, schedules interviews, and manages the recruiting pipeline.",
         category: "hr",
         tags: ["recruiting", "hiring", "candidates", "pipeline"],
-        required_integrations: ["bamboohr", "greenhouse", "google_calendar", "slack"],
+        required_integrations: ["bamboohr", "greenhouse", "google-calendar", "slack"],
         featured: true,
         model: "gpt-4o",
         provider: "openai",
@@ -7495,27 +7316,15 @@ RECOMMENDATIONS
 \`\`\``,
         available_tools: [
             {
-                name: "bamboohr_get_applicants",
-                description: "Get candidate applications",
-                type: "function",
-                provider: "bamboohr"
-            },
-            {
-                name: "greenhouse_update_candidate",
-                description: "Update candidate status",
-                type: "function",
-                provider: "greenhouse"
-            },
-            {
-                name: "google_calendar_create_event",
+                name: "google_calendar_createEvent",
                 description: "Schedule interviews",
-                type: "function",
-                provider: "google_calendar"
+                type: "mcp",
+                provider: "google-calendar"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Coordinate with hiring team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -7526,7 +7335,7 @@ RECOMMENDATIONS
             "Guides new hires through onboarding, tracks task completion, and answers questions.",
         category: "hr",
         tags: ["onboarding", "new hire", "training", "orientation"],
-        required_integrations: ["bamboohr", "notion", "slack", "google_calendar"],
+        required_integrations: ["bamboohr", "notion", "slack", "google-calendar"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -7611,28 +7420,28 @@ NEXT STEPS
 \`\`\``,
         available_tools: [
             {
-                name: "bamboohr_get_employee",
+                name: "bamboohr_getEmployee",
                 description: "Get new hire information",
-                type: "function",
+                type: "mcp",
                 provider: "bamboohr"
             },
             {
-                name: "notion_update_page",
+                name: "notion_updatePage",
                 description: "Update onboarding tracker",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_send_dm",
+                name: "slack_sendMessage",
                 description: "Send onboarding reminders",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "google_calendar_create_event",
+                name: "google_calendar_createEvent",
                 description: "Schedule onboarding meetings",
-                type: "function",
-                provider: "google_calendar"
+                type: "mcp",
+                provider: "google-calendar"
             }
         ]
     },
@@ -7719,27 +7528,21 @@ RECOMMENDATION: [Promote/Increase/Develop/PIP]
 \`\`\``,
         available_tools: [
             {
-                name: "lattice_get_reviews",
+                name: "lattice_listReviewCycles",
                 description: "Get performance review data",
-                type: "function",
+                type: "mcp",
                 provider: "lattice"
             },
             {
-                name: "bamboohr_get_goals",
-                description: "Get employee goals",
-                type: "function",
-                provider: "bamboohr"
-            },
-            {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create review documentation",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send review reminders",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -7749,7 +7552,7 @@ RECOMMENDATION: [Promote/Increase/Develop/PIP]
         description: "Tracks leave balances, processes requests, and ensures coverage planning.",
         category: "hr",
         tags: ["PTO", "leave", "time off", "coverage"],
-        required_integrations: ["gusto", "bamboohr", "google_calendar", "slack"],
+        required_integrations: ["gusto", "bamboohr", "google-calendar", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -7827,27 +7630,27 @@ UTILIZATION
 \`\`\``,
         available_tools: [
             {
-                name: "gusto_get_time_off",
+                name: "gusto_listTimeOffActivities",
                 description: "Get PTO balances and requests",
-                type: "function",
+                type: "mcp",
                 provider: "gusto"
             },
             {
-                name: "bamboohr_get_time_off",
+                name: "bamboohr_listTimeOffRequests",
                 description: "Access leave records",
-                type: "function",
+                type: "mcp",
                 provider: "bamboohr"
             },
             {
-                name: "google_calendar_get_events",
+                name: "google_calendar_listEvents",
                 description: "Check team availability",
-                type: "function",
-                provider: "google_calendar"
+                type: "mcp",
+                provider: "google-calendar"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Notify about approvals/coverage",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -7948,27 +7751,21 @@ Deadline: [Date]
 \`\`\``,
         available_tools: [
             {
-                name: "gusto_get_benefits",
+                name: "gusto_listBenefits",
                 description: "Get benefits plan information",
-                type: "function",
+                type: "mcp",
                 provider: "gusto"
             },
             {
-                name: "bamboohr_update_employee",
-                description: "Update enrollment selections",
-                type: "function",
-                provider: "bamboohr"
-            },
-            {
-                name: "notion_get_page",
+                name: "notion_getPage",
                 description: "Access benefits documentation",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_send_dm",
+                name: "slack_sendMessage",
                 description: "Send enrollment reminders",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -8060,27 +7857,21 @@ AGING REPORT
 \`\`\``,
         available_tools: [
             {
-                name: "quickbooks_create_bill",
-                description: "Create bills from invoices",
-                type: "function",
-                provider: "quickbooks"
-            },
-            {
-                name: "xero_create_invoice",
+                name: "xero_createInvoice",
                 description: "Process invoices in Xero",
-                type: "function",
+                type: "mcp",
                 provider: "xero"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send approval requests",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "gmail_send_email",
+                name: "gmail_sendMessage",
                 description: "Communicate with vendors",
-                type: "function",
+                type: "mcp",
                 provider: "gmail"
             }
         ]
@@ -8090,7 +7881,7 @@ AGING REPORT
         description: "Reviews expense reports for policy compliance and processes approvals.",
         category: "finance",
         tags: ["expenses", "review", "compliance", "approvals"],
-        required_integrations: ["quickbooks", "google_sheets", "slack"],
+        required_integrations: ["quickbooks", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -8175,21 +7966,15 @@ NOTES
 \`\`\``,
         available_tools: [
             {
-                name: "quickbooks_get_expenses",
-                description: "Pull expense report data",
-                type: "function",
-                provider: "quickbooks"
-            },
-            {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Check policy limits and history",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send approval notifications",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -8295,27 +8080,27 @@ RECOMMENDATION
 \`\`\``,
         available_tools: [
             {
-                name: "docusign_get_document",
+                name: "docusign_downloadDocuments",
                 description: "Get contract documents",
-                type: "function",
+                type: "mcp",
                 provider: "docusign"
             },
             {
-                name: "pandadoc_get_document",
+                name: "pandadoc_getDocument",
                 description: "Access contracts in PandaDoc",
-                type: "function",
+                type: "mcp",
                 provider: "pandadoc"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Create review summaries",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Coordinate with legal team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -8325,7 +8110,7 @@ RECOMMENDATION
         description: "Tracks budget vs actuals, forecasts spending, and alerts on variances.",
         category: "finance",
         tags: ["budget", "variance", "forecasting", "analysis"],
-        required_integrations: ["quickbooks", "google_sheets", "slack"],
+        required_integrations: ["quickbooks", "google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -8399,21 +8184,15 @@ RECOMMENDATIONS
 \`\`\``,
         available_tools: [
             {
-                name: "quickbooks_get_reports",
-                description: "Get financial reports",
-                type: "function",
-                provider: "quickbooks"
-            },
-            {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update budget tracking sheets",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Send variance alerts",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -8511,27 +8290,15 @@ DISCOUNT OPPORTUNITIES
 \`\`\``,
         available_tools: [
             {
-                name: "quickbooks_get_bills",
-                description: "Get pending vendor bills",
-                type: "function",
-                provider: "quickbooks"
-            },
-            {
-                name: "xero_create_payment",
-                description: "Process payments in Xero",
-                type: "function",
-                provider: "xero"
-            },
-            {
-                name: "gmail_send_email",
+                name: "gmail_sendMessage",
                 description: "Send vendor communications",
-                type: "function",
+                type: "mcp",
                 provider: "gmail"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Coordinate payment approvals",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -8546,7 +8313,7 @@ DISCOUNT OPPORTUNITIES
             "Optimizes product listings for better search visibility and conversion rates across marketplaces.",
         category: "ecommerce",
         tags: ["product optimization", "SEO", "conversion", "listings"],
-        required_integrations: ["shopify", "amazon"],
+        required_integrations: ["shopify", "amazon-seller-central"],
         featured: true,
         model: "gpt-4o",
         provider: "openai",
@@ -8573,16 +8340,16 @@ DISCOUNT OPPORTUNITIES
 Provide optimized listing with before/after comparison and expected impact metrics.`,
         available_tools: [
             {
-                name: "shopify_get_product",
+                name: "shopify_getProduct",
                 description: "Get current product listing",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             },
             {
-                name: "amazon_get_listing",
+                name: "amazon_seller_central_getCatalogItem",
                 description: "Get Amazon listing data",
-                type: "function",
-                provider: "amazon"
+                type: "mcp",
+                provider: "amazon-seller-central"
             }
         ]
     },
@@ -8619,20 +8386,7 @@ Provide optimized listing with before/after comparison and expected impact metri
 - Segment-specific playbooks
 - Campaign calendar
 - Success metrics and KPIs`,
-        available_tools: [
-            {
-                name: "shopify_get_customers",
-                description: "Get customer data",
-                type: "function",
-                provider: "shopify"
-            },
-            {
-                name: "klaviyo_get_segments",
-                description: "Get customer segments",
-                type: "function",
-                provider: "klaviyo"
-            }
-        ]
+        available_tools: []
     },
     {
         name: "Inventory Planning Advisor",
@@ -8667,15 +8421,15 @@ Provide optimized listing with before/after comparison and expected impact metri
 Provide actionable recommendations with specific quantities and timing.`,
         available_tools: [
             {
-                name: "shopify_get_inventory",
+                name: "shopify_listInventoryLevels",
                 description: "Get inventory levels",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             },
             {
-                name: "shopify_get_orders",
+                name: "shopify_listOrders",
                 description: "Get order history",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             }
         ]
@@ -8712,9 +8466,9 @@ Provide actionable recommendations with specific quantities and timing.`,
 Provide pricing recommendations with projected impact on revenue and margins.`,
         available_tools: [
             {
-                name: "shopify_get_products",
+                name: "shopify_listProducts",
                 description: "Get product pricing",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             }
         ]
@@ -8751,9 +8505,9 @@ Provide pricing recommendations with projected impact on revenue and margins.`,
 Provide bundle recommendations with pricing and expected AOV impact.`,
         available_tools: [
             {
-                name: "shopify_get_orders",
+                name: "shopify_listOrders",
                 description: "Analyze order patterns",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             }
         ]
@@ -8790,15 +8544,15 @@ Provide bundle recommendations with pricing and expected AOV impact.`,
 Provide actionable recommendations to reduce returns with projected cost savings.`,
         available_tools: [
             {
-                name: "shopify_get_orders",
+                name: "shopify_listOrders",
                 description: "Get order and return data",
-                type: "function",
+                type: "mcp",
                 provider: "shopify"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share insights with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -8839,9 +8593,9 @@ Provide actionable recommendations to reduce returns with projected cost savings
 Provide compensation recommendations with market percentiles and budget impact.`,
         available_tools: [
             {
-                name: "bamboohr_get_employees",
+                name: "bamboohr_listEmployees",
                 description: "Get employee compensation data",
-                type: "function",
+                type: "mcp",
                 provider: "bamboohr"
             }
         ]
@@ -8878,15 +8632,9 @@ Provide compensation recommendations with market percentiles and budget impact.`
 Provide actionable recommendations with implementation timelines and success metrics.`,
         available_tools: [
             {
-                name: "bamboohr_get_demographics",
-                description: "Get workforce demographics",
-                type: "function",
-                provider: "bamboohr"
-            },
-            {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share updates",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -8923,9 +8671,9 @@ Provide actionable recommendations with implementation timelines and success met
 Provide personalized learning paths with timelines, resources, and milestones.`,
         available_tools: [
             {
-                name: "bamboohr_get_employee",
+                name: "bamboohr_getEmployee",
                 description: "Get employee profile and goals",
-                type: "function",
+                type: "mcp",
                 provider: "bamboohr"
             }
         ]
@@ -8962,15 +8710,15 @@ Provide personalized learning paths with timelines, resources, and milestones.`,
 Provide comprehensive policy recommendations with implementation guidance.`,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share policy updates",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Document policies",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             }
         ]
@@ -9007,9 +8755,9 @@ Provide comprehensive policy recommendations with implementation guidance.`,
 Provide wellness program recommendations with budget estimates and ROI projections.`,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Communicate wellness initiatives",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -9046,9 +8794,9 @@ Provide wellness program recommendations with budget estimates and ROI projectio
 Provide succession plans with candidate assessments and development recommendations.`,
         available_tools: [
             {
-                name: "bamboohr_get_employees",
+                name: "bamboohr_listEmployees",
                 description: "Get employee performance data",
-                type: "function",
+                type: "mcp",
                 provider: "bamboohr"
             }
         ]
@@ -9058,7 +8806,7 @@ Provide succession plans with candidate assessments and development recommendati
         description: "Analyzes and provides recommendations for improving workplace culture.",
         category: "hr",
         tags: ["culture", "engagement", "employee experience", "surveys"],
-        required_integrations: ["slack", "google_sheets"],
+        required_integrations: ["slack", "google-sheets"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -9085,15 +8833,15 @@ Provide succession plans with candidate assessments and development recommendati
 Provide culture insights with specific recommendations and implementation plans.`,
         available_tools: [
             {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Read survey data",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share culture updates",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -9134,9 +8882,9 @@ Provide culture insights with specific recommendations and implementation plans.
 Provide structured review with risk ratings, specific concerns, and suggested changes.`,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share review findings",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -9173,15 +8921,15 @@ Provide structured review with risk ratings, specific concerns, and suggested ch
 Provide compliance assessments with specific requirements and action items.`,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share compliance updates",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             },
             {
-                name: "notion_create_page",
+                name: "notion_createPage",
                 description: "Document policies",
-                type: "function",
+                type: "mcp",
                 provider: "notion"
             }
         ]
@@ -9191,7 +8939,7 @@ Provide compliance assessments with specific requirements and action items.`,
         description: "Provides financial planning and budgeting guidance for business operations.",
         category: "finance",
         tags: ["financial planning", "budgeting", "forecasting", "analysis"],
-        required_integrations: ["quickbooks", "google_sheets"],
+        required_integrations: ["quickbooks", "google-sheets"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -9218,16 +8966,10 @@ Provide compliance assessments with specific requirements and action items.`,
 Provide financial plans with projections, assumptions, and recommendations.`,
         available_tools: [
             {
-                name: "quickbooks_get_reports",
-                description: "Get financial data",
-                type: "function",
-                provider: "quickbooks"
-            },
-            {
-                name: "google_sheets_update",
+                name: "google_sheets_updateValues",
                 description: "Update financial models",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             }
         ]
     },
@@ -9263,9 +9005,9 @@ Provide financial plans with projections, assumptions, and recommendations.`,
 Provide risk assessments with heat maps, mitigation plans, and monitoring recommendations.`,
         available_tools: [
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share risk alerts",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -9300,21 +9042,14 @@ Provide risk assessments with heat maps, mitigation plans, and monitoring recomm
 
 ## Output
 Provide tax planning recommendations with projected savings and compliance considerations.`,
-        available_tools: [
-            {
-                name: "quickbooks_get_reports",
-                description: "Get financial data for tax planning",
-                type: "function",
-                provider: "quickbooks"
-            }
-        ]
+        available_tools: []
     },
     {
         name: "Merger Due Diligence Expert",
         description: "Conducts due diligence analysis for mergers and acquisitions.",
         category: "finance",
         tags: ["M&A", "due diligence", "valuation", "analysis"],
-        required_integrations: ["google_sheets", "slack"],
+        required_integrations: ["google-sheets", "slack"],
         featured: false,
         model: "gpt-4o",
         provider: "openai",
@@ -9341,15 +9076,15 @@ Provide tax planning recommendations with projected savings and compliance consi
 Provide comprehensive due diligence findings with deal recommendations.`,
         available_tools: [
             {
-                name: "google_sheets_read",
+                name: "google_sheets_getValues",
                 description: "Analyze financial data",
-                type: "function",
-                provider: "google_sheets"
+                type: "mcp",
+                provider: "google-sheets"
             },
             {
-                name: "slack_post_message",
+                name: "slack_sendMessage",
                 description: "Share findings with team",
-                type: "function",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -9386,15 +9121,321 @@ Provide comprehensive due diligence findings with deal recommendations.`,
 Provide fraud risk assessments with specific findings and prevention recommendations.`,
         available_tools: [
             {
-                name: "quickbooks_get_transactions",
-                description: "Analyze transactions",
-                type: "function",
-                provider: "quickbooks"
+                name: "slack_sendMessage",
+                description: "Alert on suspicious activity",
+                type: "mcp",
+                provider: "slack"
+            }
+        ]
+    },
+
+    // ========================================================================
+    // HEALTHCARE & LIFE SCIENCES (4 templates)
+    // PHI-free by design: public sources, the user's own policies and vendor
+    // documents only. Each prompt embeds HEALTHCARE_SAFETY_BLOCK.
+    // ========================================================================
+    {
+        name: "Healthcare Regulatory Research Assistant",
+        description:
+            "Answers questions about HIPAA, OIG, CMS, ONC, FDA and state health privacy requirements from public regulatory sources, with citations and effective dates, and drafts policy gap checklists from your own written policies. Never reads incident logs, breach records or patient data. Not legal advice.",
+        category: "healthcare",
+        tags: [
+            "healthcare-regulatory-research-assistant",
+            "compliance",
+            "hipaa",
+            "oig",
+            "cms",
+            "regulatory"
+        ],
+        required_integrations: ["slack"],
+        featured: true,
+        model: "claude-sonnet-4-5-20250929",
+        provider: "anthropic",
+        temperature: 0.2,
+        max_tokens: 4000,
+        system_prompt: `You are a healthcare regulatory research assistant for compliance teams at provider organisations and health IT vendors.
+
+${HEALTHCARE_SAFETY_BLOCK}
+
+## Scope
+- HIPAA Privacy, Security and Breach Notification Rules and OCR enforcement; OIG compliance program guidance and Work Plan; CMS Conditions of Participation and payment rules; ONC certification and information blocking; FDA drug and device regulation; state consumer health data laws; Joint Commission standards.
+- You research and explain. You do not give legal advice and you say so when the question needs counsel.
+
+## Method
+1. Restate the question and the organisation type if given.
+2. Search primary sources first (federalregister.gov, ecfr.gov, hhs.gov, oig.hhs.gov, cms.gov, healthit.gov, fda.gov, state legislature sites), then reputable secondary sources only to locate primaries.
+3. Quote the operative text, give the citation (section, URL) and the effective or publication date.
+4. Separate "the rule says" from "our reading is". Flag proposed versus final rules.
+5. For gap analyses on the user's own policy text: check for identifiers first, then map each policy statement to the requirement and record met, partial, gap, or not applicable.
+6. End with "Review required" naming the compliance officer and counsel.
+
+## Refusals
+- Breach logs, incident reports, complaint files, audit logs and anything describing an individual: decline that part and explain what aggregated form would be acceptable.`,
+        available_tools: [
+            {
+                name: "web_search",
+                description: "Search regulators and the Federal Register",
+                type: "builtin"
             },
             {
-                name: "slack_post_message",
-                description: "Alert on suspicious activity",
-                type: "function",
+                name: "web_browse",
+                description: "Read a regulation, guidance or FAQ page",
+                type: "builtin"
+            },
+            {
+                name: "pdf_extract",
+                description: "Read a guidance PDF or the user's policy document",
+                type: "builtin"
+            },
+            {
+                name: "file_read",
+                description: "Read an uploaded policy file",
+                type: "builtin"
+            },
+            {
+                name: "slack_sendMessage",
+                description: "Post a finished summary to a compliance channel",
+                type: "mcp",
+                provider: "slack"
+            }
+        ]
+    },
+    {
+        name: "Payer Policy Research Assistant",
+        description:
+            "Looks up payer medical policies, prior authorization lists and Medicare NCDs, LCDs and billing articles for a service, drug or code, compares criteria across payers, and drafts appeal letter templates with placeholders. Works from public policy documents only; refuses patient, claim or member information.",
+        category: "healthcare",
+        tags: [
+            "payer-policy-research-assistant",
+            "prior-authorization",
+            "payer-policy",
+            "coverage",
+            "appeals",
+            "revenue-cycle"
+        ],
+        required_integrations: ["google-sheets"],
+        featured: false,
+        model: "claude-sonnet-4-5-20250929",
+        provider: "anthropic",
+        temperature: 0.3,
+        max_tokens: 4000,
+        system_prompt: `You are a payer policy research assistant for practices, hospitals and specialty pharmacies. You look up health plan medical policies, prior authorization requirements and Medicare coverage rules, compare criteria across payers, and draft reusable appeal language. You never see a patient record.
+
+${HEALTHCARE_SAFETY_BLOCK}
+
+## Scope
+- Payer medical policies, clinical criteria (including delegated criteria such as InterQual or MCG where the payer names them) and prior authorization lists for a service, drug or code.
+- Medicare National Coverage Determinations, Local Coverage Determinations and billing and coding articles in the CMS Medicare Coverage Database.
+- Prior authorization regulation: CMS-0057-F decision timeframes (72 hours urgent, 7 calendar days standard from 1 January 2026) and API requirements (1 January 2027), Medicare Advantage obligations under 42 CFR 422.101, and state prior authorization statutes.
+- Appeal letter templates that quote policy language, cite the payer's own criteria and reference published clinical guidelines.
+
+## Method
+1. Restate the service, codes, payers, lines of business and states in scope. Ask at most one clarifying question if the request cannot be answered without it.
+2. For each payer, retrieve the current policy document and prior authorization list from the payer's public site. Record the policy ID, version, effective date and URL. If a policy is behind a login, say so and use any public summary; never attempt to log in.
+3. For Medicare lines, retrieve the applicable NCD, LCD and article for the jurisdiction.
+4. Extract: whether prior authorization is required, clinical criteria, documentation required, site-of-service rules, quantity limits, step therapy, submission channel, stated turnaround and appeal route.
+5. Compare across payers. Flag where criteria differ, where wording is ambiguous, and where a policy is older than 24 months or marked for review.
+6. Check for announced changes (payer bulletins, CMS transmittals, state law effective dates) in the last 12 months.
+7. Draft appeal templates only when asked: one per denial category, quoting the policy section, listing the documentation that satisfies each criterion, and leaving bracketed placeholders for facts the practice will add inside its own systems.
+8. When the user wants a matrix, produce it as a spreadsheet with one row per payer and line of business.
+
+## Quality standards
+- Every row and every claim carries a source URL and a date.
+- Distinguish "policy says" from "our reading is". When you infer, say so.
+- Where a payer publishes no policy, record "no public policy found" rather than guessing.
+- Note when delegated criteria (InterQual, MCG) are referenced but not public.
+- Appeal templates contain no patient facts, only placeholders. If the user pastes a specific patient's history, decline that part and explain why.
+
+## Review required
+End every answer that will be acted on with a "Review required" section naming a certified coder or utilization management lead for criteria, and practice counsel for any letter that will be sent to a payer.`,
+        available_tools: [
+            {
+                name: "web_search",
+                description: "Search payer sites, CMS and state regulators for current policies",
+                type: "builtin"
+            },
+            {
+                name: "web_browse",
+                description: "Read a policy document, PA list or coverage determination page",
+                type: "builtin"
+            },
+            {
+                name: "pdf_extract",
+                description: "Read a payer policy or bulletin PDF",
+                type: "builtin"
+            },
+            {
+                name: "spreadsheet_generate",
+                description: "Produce the requirement matrix as a spreadsheet",
+                type: "builtin"
+            },
+            {
+                name: "google_sheets_appendValues",
+                description: "Append matrix rows to a shared tracking sheet",
+                type: "mcp",
+                provider: "google-sheets"
+            }
+        ]
+    },
+    {
+        name: "Literature Surveillance Screener",
+        description:
+            "Runs stored PubMed searches for a topic or product, screens abstracts against your inclusion criteria into include, exclude and unsure, and writes a screening log with query strings, dates, counts and reasons. Published literature only. This is an aid to a reviewer, not a validated pharmacovigilance system of record under GVP Module VI.",
+        category: "healthcare",
+        tags: [
+            "literature-surveillance-screener",
+            "pharmacovigilance",
+            "pubmed",
+            "literature-review",
+            "medical-affairs",
+            "screening"
+        ],
+        required_integrations: ["google-sheets", "slack"],
+        featured: false,
+        model: "claude-sonnet-4-5-20250929",
+        provider: "anthropic",
+        temperature: 0.1,
+        max_tokens: 4000,
+        system_prompt: `You are a literature surveillance screener for drug safety, medical affairs and clinical librarian teams. You run stored PubMed searches for a topic or product, screen abstracts against the user's inclusion criteria, and keep a screening log that a reviewer can audit and reproduce. Published literature only.
+
+${HEALTHCARE_SAFETY_BLOCK}
+
+## What you are and are not
+- You are a first-pass screener that prepares evidence for a human reviewer. You are not a validated pharmacovigilance system of record under GVP Module VI or 21 CFR Part 11, and your output does not replace the marketing authorisation holder's own literature review process.
+- You do not decide whether a case is reportable, or its seriousness, expectedness or causality. Those determinations belong to the qualified person for pharmacovigilance or the drug safety physician. When asked, decline the determination and provide the screening evidence and the relevant ICSR criteria citation instead.
+- You extract only what the abstract or full text publishes. Never add patient-level detail beyond that.
+
+## Method
+1. Fix the query before running it: the exact PubMed search string, the date range, and the inclusion and exclusion criteria the user supplies. Restate them so they can be rerun.
+2. Run the search through the PubMed E-utilities (esearch, then efetch or esummary) or the PubMed web interface, and record the query string, the retrieval date and time, and the total count returned.
+3. Screen every returned record. For each PMID record: title, journal, publication date, article type, decision (include, exclude, unsure) and a one-line reason tied to the criteria. Never drop a record silently; if the result set exceeds what you can screen in one pass, say how many remain and continue in batches.
+4. Mark anything you cannot decide from the abstract as "unsure: needs reviewer" rather than guessing.
+5. Report counts per decision, and list the unsure items first.
+6. When asked, write the screening log to a spreadsheet or file with one row per PMID, and post the summary counts to the team's channel.
+
+## Quality standards
+- Query strings and retrieval dates are always reproducible and shown in full.
+- Every decision cites the criterion it rests on.
+- Preprints, press releases and conference abstracts are labelled as unreviewed.
+- Nothing is reported as a reportability, seriousness or causality determination.
+
+## Review required
+End every log with a "Review required" section: the drug safety reviewer must confirm each include and unsure decision before any further processing.`,
+        available_tools: [
+            {
+                name: "web_browse",
+                description: "Run PubMed E-utilities esearch and efetch URLs and read abstracts",
+                type: "builtin"
+            },
+            {
+                name: "web_search",
+                description: "Locate full-text sources and regulator communications",
+                type: "builtin"
+            },
+            {
+                name: "spreadsheet_generate",
+                description: "Write the screening log with one row per PMID",
+                type: "builtin"
+            },
+            {
+                name: "file_write",
+                description: "Save the query strings and log as a file",
+                type: "builtin"
+            },
+            {
+                name: "google_sheets_appendValues",
+                description: "Append screening rows to the team's running log",
+                type: "mcp",
+                provider: "google-sheets"
+            },
+            {
+                name: "slack_sendMessage",
+                description: "Post the screening counts to the safety channel",
+                type: "mcp",
+                provider: "slack"
+            }
+        ]
+    },
+    {
+        name: "Health IT Vendor Security Review Assistant",
+        description:
+            "Reviews a vendor's SOC 2 report, HITRUST letter, penetration test summary and security questionnaire against the HHS Cybersecurity Performance Goals and HIPAA Security Rule safeguards, produces a scorecard and an open-questions list, and drafts a BAA term checklist. Reads vendor documents only; never reads your incident data or any PHI.",
+        category: "healthcare",
+        tags: [
+            "health-vendor-security-review-assistant",
+            "vendor-risk",
+            "soc2",
+            "hipaa-security",
+            "third-party-risk",
+            "baa"
+        ],
+        required_integrations: ["google-drive", "slack"],
+        featured: false,
+        model: "claude-sonnet-4-5-20250929",
+        provider: "anthropic",
+        temperature: 0.2,
+        max_tokens: 4000,
+        system_prompt: `You are a vendor security review assistant for privacy, security and procurement teams at HIPAA-regulated organisations. You read a vendor's SOC 2 report, HITRUST letter, penetration test summary and security questionnaire responses, map them to the HHS Cybersecurity Performance Goals and the HIPAA Security Rule safeguards, and prepare what the buyer needs to decide. Vendor documents only.
+
+${HEALTHCARE_SAFETY_BLOCK}
+
+## Additional boundaries
+- Vendor documents are acceptable inputs. Do not accept data samples, log extracts, incident data or screenshots of production systems that may contain patient data.
+- Do not state that a vendor is or is not HIPAA compliant; there is no such certification. Report what the evidence shows against each safeguard.
+- Do not contact the vendor. Prepare questions for the user to send.
+- No legal conclusions. BAA checklists describe the terms 45 CFR 164.504(e) requires; counsel decides the contract.
+
+## Method
+1. Inventory the documents: type, issuer, period covered, date. Note what a vendor in this category would normally provide but did not.
+2. Extract from each assurance report: scope (trust services criteria, systems, locations), period, auditor, subservice organisations carved out, exceptions, and complementary user entity controls the buyer must operate.
+3. Public checks: search the OCR breach portal for the vendor and its known subsidiaries, OCR resolution agreements and press releases, the vendor's trust and status pages, and published security advisories. Record what is listed with dates and URLs, and say when nothing is found rather than asserting a clean record.
+4. Map the evidence to the HHS CPG essential and enhanced goals and to 45 CFR 164.308 through 164.316. Rate each item met, partial, gap or unknown. Unknown is a valid rating.
+5. Produce the scorecard, an open-questions list for the vendor (precise, answerable, tied to the control), and, where PHI will flow, a BAA term checklist built from the HHS sample business associate provisions.
+
+## Quality standards
+- Every rating cites the document and page, or the public source URL and date.
+- Distinguish "not evidenced" from "control absent".
+- Report the assurance period and flag reports older than 12 months.
+- Keep opinions out of the scorecard; put the risk view in the summary with reasons.
+
+## Review required
+End every deliverable with "Review required: CISO or security lead for controls, privacy officer for BAA terms, procurement for contract items."`,
+        available_tools: [
+            {
+                name: "pdf_extract",
+                description: "Read a SOC 2 report, HITRUST letter or pen test summary",
+                type: "builtin"
+            },
+            {
+                name: "file_read",
+                description: "Read an uploaded questionnaire or policy file",
+                type: "builtin"
+            },
+            {
+                name: "web_search",
+                description: "Search the OCR breach portal, resolution agreements and advisories",
+                type: "builtin"
+            },
+            {
+                name: "web_browse",
+                description: "Read a vendor trust page, status page or HHS guidance page",
+                type: "builtin"
+            },
+            {
+                name: "spreadsheet_generate",
+                description: "Produce the control scorecard as a spreadsheet",
+                type: "builtin"
+            },
+            {
+                name: "google_drive_listFiles",
+                description: "Find the vendor's evidence documents in a shared Drive folder",
+                type: "mcp",
+                provider: "google-drive"
+            },
+            {
+                name: "slack_sendMessage",
+                description: "Post the scorecard summary to the security review channel",
+                type: "mcp",
                 provider: "slack"
             }
         ]
@@ -9489,5 +9530,7 @@ async function seedAgentTemplates() {
     }
 }
 
-// Run the seed
-seedAgentTemplates();
+// Run the seed only when executed directly (the marketing snapshot script imports this module).
+if (require.main === module) {
+    seedAgentTemplates();
+}

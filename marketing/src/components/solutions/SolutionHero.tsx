@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import React from "react";
+import { BOOK_DEMO_URL } from "../../lib/links";
 import type { SolutionCategory } from "../../data/solutions";
 
 interface SolutionHeroProps {
@@ -55,18 +56,12 @@ export const SolutionHero: React.FC<SolutionHeroProps> = ({ solution }) => {
                     className="flex flex-col sm:flex-row gap-4 justify-center"
                 >
                     <a
-                        href={import.meta.env.VITE_APP_URL || "http://localhost:8400"}
-                        className="px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200 shadow-lg"
-                    >
-                        Start Building Free
-                    </a>
-                    <a
-                        href="https://cal.com/naib-baghirov-o5surn/30min"
+                        href={BOOK_DEMO_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-8 py-4 bg-secondary hover:bg-accent border border-border rounded-lg font-semibold transition-all duration-200"
+                        className="px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200"
                     >
-                        Schedule a Demo
+                        Book a demo
                     </a>
                 </motion.div>
             </div>

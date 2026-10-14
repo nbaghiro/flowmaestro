@@ -1,0 +1,78 @@
+/* Pricing page pieces that the landing stylesheet does not cover. Scoped under .lp. */
+
+.lp .range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: #1f1f25;
+    outline: none;
+    cursor: pointer;
+}
+.lp .range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fafafa;
+    border: 3px solid #0b0b0d;
+    box-shadow: 0 0 0 1px #4a4a52;
+    cursor: pointer;
+}
+.lp .range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fafafa;
+    border: 3px solid #0b0b0d;
+    box-shadow: 0 0 0 1px #4a4a52;
+    cursor: pointer;
+}
+.lp .range:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+.lp .range:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+
+.lp .limits {
+    width: 100%;
+    min-width: 440px;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+.lp .limits th {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6f6f78;
+    text-align: right;
+    padding: 0 0 10px 12px;
+}
+.lp .limits th:first-child {
+    text-align: left;
+    padding-left: 0;
+}
+.lp .limits td {
+    padding: 10px 0 10px 12px;
+    border-top: 1px solid #1f1f25;
+    text-align: right;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 13px;
+    color: #fafafa;
+    white-space: nowrap;
+}
+.lp .limits td:first-child {
+    text-align: left;
+    padding-left: 0;
+    font-family: inherit;
+    font-size: 14px;
+    color: #9b9ba3;
+}
+.lp .limits tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}

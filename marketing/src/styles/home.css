@@ -1,0 +1,992 @@
+/* Landing page styles, ported from the final marketing design board. Everything is scoped under .lp. */
+
+.lp .wrap {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+/* A product preview wider than the text column: centred on the column, up to 1360px,
+   so the 1440px screens inside stay close to native size on large displays. */
+.lp .bleed {
+    width: min(1360px, calc(100vw - 64px));
+    max-width: none;
+    flex-shrink: 0;
+    align-self: center;
+}
+.lp .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 46px;
+    padding: 0 22px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    cursor: pointer;
+    font-family: inherit;
+    border: 0;
+    white-space: nowrap;
+}
+.lp .btn-solid {
+    background: #fafafa;
+    color: #0b0b0d;
+}
+.lp .btn-solid:hover {
+    color: #0b0b0d;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 30px -10px rgba(255, 255, 255, 0.35);
+}
+.lp .btn-ghost {
+    color: #fafafa;
+    border: 1px solid #2a2a30;
+    background: #121216;
+}
+.lp .btn-ghost:hover {
+    border-color: #4a4a52;
+}
+.lp .tile {
+    position: relative;
+    background:
+        linear-gradient(#121216, #121216) padding-box,
+        linear-gradient(
+                160deg,
+                rgba(255, 255, 255, 0.14),
+                rgba(255, 255, 255, 0.03) 45%,
+                #fafafa 140%
+            )
+            border-box;
+    border: 1px solid transparent;
+    border-radius: 20px;
+    padding: 24px;
+    overflow: hidden;
+    transition: transform 0.25s ease;
+    color: #fafafa;
+    text-decoration: none;
+}
+.lp .tile:hover {
+    transform: translateY(-3px);
+}
+.lp .tile::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 20px;
+    background: radial-gradient(
+        240px circle at var(--mx, 50%) var(--my, 0%),
+        rgba(255, 255, 255, 0.08),
+        transparent 60%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.lp .tile:hover::after {
+    opacity: 1;
+}
+.lp .bento {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+}
+.lp .bento > .reveal {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.lp .bento > .reveal > .tile {
+    flex: 1;
+}
+.lp .span2 {
+    grid-column: span 2;
+}
+.lp .span3 {
+    grid-column: span 3;
+}
+.lp .span4 {
+    grid-column: span 4;
+}
+.lp .span6 {
+    grid-column: span 6;
+}
+@media (max-width: 860px) {
+    .lp .span2,
+    .lp .span3,
+    .lp .span4 {
+        grid-column: span 6;
+    }
+}
+.lp .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+        opacity 0.7s ease,
+        transform 0.7s ease;
+}
+.lp .reveal.in {
+    opacity: 1;
+    transform: none;
+}
+.lp .rise {
+    animation: lp-rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.lp .d1 {
+    animation-delay: 0.05s;
+}
+.lp .d2 {
+    animation-delay: 0.15s;
+}
+.lp .d3 {
+    animation-delay: 0.28s;
+}
+.lp .d4 {
+    animation-delay: 0.42s;
+}
+@keyframes lp-rise {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+.lp .media {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    border-radius: 20px;
+    border: 1px solid #2a2a30;
+    background: #0e0e12;
+    overflow: hidden;
+}
+.lp .media .embed {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1440px;
+    height: 810px;
+    transform-origin: 0 0;
+}
+.lp .roll {
+    position: relative;
+    overflow: hidden;
+    padding: 8px 0;
+    -webkit-mask-image: linear-gradient(
+        90deg,
+        transparent,
+        #000 128px,
+        #000 calc(100% - 128px),
+        transparent
+    );
+    mask-image: linear-gradient(
+        90deg,
+        transparent,
+        #000 128px,
+        #000 calc(100% - 128px),
+        transparent
+    );
+}
+.lp .logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: #121216;
+    border: 1px solid #2a2a30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 48px;
+    flex: none;
+    transition: border-color 0.2s ease;
+}
+.lp .logo:hover {
+    border-color: #4a4a52;
+}
+.lp .logo img {
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    object-fit: contain;
+    display: block;
+    filter: brightness(0.9);
+    transition: filter 0.2s ease;
+}
+.lp .logo:hover img {
+    filter: brightness(1.1);
+}
+.lp .marquee {
+    display: flex;
+    width: max-content;
+    animation: lp-marquee 44s linear infinite;
+}
+.lp .marquee.rev {
+    animation-direction: reverse;
+    animation-duration: 52s;
+}
+@keyframes lp-marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+.lp .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #2a2a30;
+    font-size: 12px;
+    color: #c6c6cc;
+    background: #0e0e12;
+    white-space: nowrap;
+}
+.lp .stage {
+    position: relative;
+    width: 100%;
+    border-radius: 14px;
+    background: #0e0e12;
+    border: 1px solid #1f1f25;
+    overflow: hidden;
+}
+.lp .stage.dotgrid {
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1.4px);
+    background-size: 16px 16px;
+}
+.lp .fx {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 635px;
+    height: 150px;
+}
+.lp .fxnode {
+    position: absolute;
+    width: 124px;
+    height: 44px;
+    border-radius: 10px;
+    background: #121216;
+    border: 1px solid #2a2a30;
+    padding: 5px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fafafa;
+}
+.lp .fxnode .k {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 9px;
+    color: #6f6f78;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+}
+.lp .hit {
+    animation: lp-hit 7s infinite;
+}
+@keyframes lp-hit {
+    0% {
+        border-color: #2a2a30;
+        box-shadow: none;
+    }
+    4% {
+        border-color: #fafafa;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16);
+    }
+    16%,
+    100% {
+        border-color: #2a2a30;
+        box-shadow: none;
+    }
+}
+.lp .drop {
+    position: absolute;
+    left: 495px;
+    top: 53px;
+    animation: lp-drop 7s infinite;
+}
+.lp .drop .node {
+    position: static;
+}
+@keyframes lp-drop {
+    0% {
+        transform: translate(70px, -70px) rotate(5deg);
+        opacity: 0;
+    }
+    4% {
+        opacity: 1;
+    }
+    12% {
+        transform: none;
+        opacity: 1;
+    }
+    94% {
+        transform: none;
+        opacity: 1;
+    }
+    100% {
+        transform: translate(70px, -70px) rotate(5deg);
+        opacity: 0;
+    }
+}
+.lp .cur {
+    position: absolute;
+    right: -8px;
+    bottom: -12px;
+    opacity: 0;
+    animation: lp-cur 7s infinite;
+}
+@keyframes lp-cur {
+    0% {
+        opacity: 0;
+    }
+    4%,
+    12% {
+        opacity: 1;
+    }
+    18%,
+    100% {
+        opacity: 0;
+    }
+}
+.lp .e3 {
+    stroke-dasharray: 41;
+    stroke-dashoffset: 41;
+    animation: lp-draw 7s infinite;
+}
+@keyframes lp-draw {
+    0%,
+    12% {
+        stroke-dashoffset: 41;
+    }
+    17%,
+    94% {
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dashoffset: 41;
+    }
+}
+.lp .runchip {
+    gap: 6px;
+    font-size: 11px;
+    animation: lp-run 7s infinite;
+}
+@keyframes lp-run {
+    0%,
+    17% {
+        background: #0e0e12;
+        color: #c6c6cc;
+        border-color: #2a2a30;
+    }
+    20%,
+    30% {
+        background: #fafafa;
+        color: #0b0b0d;
+        border-color: #fafafa;
+    }
+    36%,
+    100% {
+        background: #0e0e12;
+        color: #c6c6cc;
+        border-color: #2a2a30;
+    }
+}
+.lp .ecg {
+    stroke-dasharray: 28 100;
+    stroke-dashoffset: 128;
+    animation: lp-ecg 2.6s linear infinite;
+}
+@keyframes lp-ecg {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+.lp .logline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    color: #9b9ba3;
+    opacity: 0;
+    animation: lp-line 6s infinite;
+}
+.lp .logline i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex: none;
+}
+@keyframes lp-line {
+    0% {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    6% {
+        opacity: 1;
+        transform: none;
+    }
+    82% {
+        opacity: 1;
+    }
+    90%,
+    100% {
+        opacity: 0;
+    }
+}
+.lp .pop {
+    opacity: 0;
+    animation: lp-pop 6s infinite;
+}
+@keyframes lp-pop {
+    0% {
+        opacity: 0;
+        transform: translateY(4px) scale(0.96);
+    }
+    5% {
+        opacity: 1;
+        transform: none;
+    }
+    86% {
+        opacity: 1;
+    }
+    93%,
+    100% {
+        opacity: 0;
+    }
+}
+.lp .w {
+    opacity: 0;
+    animation: lp-word 6s infinite;
+}
+@keyframes lp-word {
+    0% {
+        opacity: 0;
+    }
+    3% {
+        opacity: 1;
+    }
+    86% {
+        opacity: 1;
+    }
+    93%,
+    100% {
+        opacity: 0;
+    }
+}
+.lp .caret {
+    display: inline-block;
+    width: 2px;
+    height: 13px;
+    background: #fafafa;
+    vertical-align: -2px;
+    margin-left: 2px;
+    animation: lp-caret 0.8s step-end infinite;
+}
+@keyframes lp-caret {
+    50% {
+        opacity: 0;
+    }
+}
+.lp .pbar {
+    height: 6px;
+    border-radius: 999px;
+    background: #1f1f25;
+    overflow: hidden;
+}
+.lp .pbar i {
+    display: block;
+    height: 100%;
+    background: #fafafa;
+    border-radius: 999px;
+    animation: lp-persona 8s ease-in-out infinite;
+}
+@keyframes lp-persona {
+    0% {
+        width: 0;
+    }
+    35% {
+        width: 62%;
+    }
+    55% {
+        width: 62%;
+    }
+    70% {
+        width: 100%;
+    }
+    100% {
+        width: 100%;
+    }
+}
+.lp .approve {
+    opacity: 0;
+    animation: lp-approve 8s infinite;
+}
+@keyframes lp-approve {
+    0%,
+    33% {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    36%,
+    54% {
+        opacity: 1;
+        transform: none;
+    }
+    57%,
+    100% {
+        opacity: 0;
+    }
+}
+.lp .file {
+    opacity: 0;
+    animation: lp-file 8s infinite;
+}
+@keyframes lp-file {
+    0%,
+    70% {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    74%,
+    95% {
+        opacity: 1;
+        transform: none;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+.lp .gauge {
+    stroke-dasharray: 0 100;
+    transition: stroke-dasharray 1.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.lp .in .gauge {
+    stroke-dasharray: 34 100;
+}
+.lp .seg {
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+    gap: 2px;
+    background: #1f1f25;
+}
+.lp .seg i {
+    display: block;
+    height: 100%;
+    width: 0;
+    transition: width 1.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.lp .in .seg i {
+    width: var(--w);
+}
+.lp .dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: 1px;
+}
+.lp .tabs {
+    display: inline-flex;
+    gap: 4px;
+    border: 1px solid #2a2a30;
+    border-radius: 999px;
+    padding: 4px;
+    background: #0e0e12;
+    max-width: 100%;
+    overflow-x: auto;
+}
+.lp .tab {
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    color: #9b9ba3;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.lp .tab.on {
+    background: #fafafa;
+    color: #0b0b0d;
+}
+.lp .faq {
+    border: 1px solid #2a2a30;
+    border-radius: 14px;
+    background: #121216;
+}
+.lp .faq summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 18px 20px;
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+.lp .faq summary::-webkit-details-marker {
+    display: none;
+}
+.lp .faq summary::after {
+    content: "+";
+    color: #9b9ba3;
+    font-size: 20px;
+    line-height: 1;
+}
+.lp .faq[open] summary::after {
+    content: "–";
+}
+.lp .faq p {
+    padding: 0 20px 18px;
+    color: #9b9ba3;
+    font-size: 14px;
+    line-height: 1.6;
+}
+.lp .sec {
+    padding: 0 0 96px;
+}
+.lp .h2 {
+    text-align: center;
+    font-size: 40px;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    margin-bottom: 12px;
+}
+.lp .lead {
+    text-align: center;
+    color: #9b9ba3;
+    font-size: 16px;
+    max-width: 520px;
+    margin: 0 auto 36px;
+    line-height: 1.5;
+}
+@media (max-width: 640px) {
+    .lp .h2 {
+        font-size: 32px;
+    }
+    .lp .sec {
+        padding-bottom: 72px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .lp .rise,
+    .lp .hit,
+    .lp .drop,
+    .lp .cur,
+    .lp .e3,
+    .lp .runchip,
+    .lp .ecg,
+    .lp .logline,
+    .lp .pop,
+    .lp .w,
+    .lp .caret,
+    .lp .pbar i,
+    .lp .approve,
+    .lp .file,
+    .lp .marquee {
+        animation: none !important;
+    }
+    .lp .logline,
+    .lp .pop,
+    .lp .w,
+    .lp .approve,
+    .lp .file,
+    .lp .drop {
+        opacity: 1;
+    }
+    .lp .reveal {
+        opacity: 1;
+        transform: none;
+    }
+    .lp .pbar i {
+        width: 100%;
+    }
+}
+
+/* Hero headline: large, medium weight, tight, in the manner of the reference. */
+.lp .h1 {
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 0.98;
+}
+.lp .btn-lg {
+    height: 54px;
+    padding: 0 10px 0 26px;
+    font-size: 16px;
+    gap: 12px;
+}
+.lp .btn-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #0b0b0d;
+    color: #fafafa;
+}
+
+/* Constellation figures beside the hero headline. */
+.lp .cst {
+    position: absolute;
+    top: 150px;
+    width: 320px;
+    height: 560px;
+    pointer-events: none;
+    overflow: visible;
+}
+.lp .cst-l {
+    left: max(8px, calc(50% - 760px));
+}
+.lp .cst-r {
+    right: max(8px, calc(50% - 760px));
+}
+@media (max-width: 1279px) {
+    .lp .cst {
+        display: none;
+    }
+}
+.lp .cst .ln {
+    stroke: #fafafa;
+    stroke-opacity: 0.28;
+    stroke-width: 0.7;
+    fill: none;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: lp-draw 2s ease-out forwards;
+}
+.lp .cst .sil {
+    stroke: #fafafa;
+    stroke-opacity: 0.3;
+    stroke-width: 1.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: lp-draw 2.6s ease-out forwards;
+}
+.lp .cst .sil.soft {
+    stroke-opacity: 0.15;
+    stroke-width: 0.9;
+}
+.lp .cst .st {
+    fill: #fafafa;
+    animation: lp-twinkle 3.4s ease-in-out infinite alternate;
+}
+.lp .cst .glow {
+    fill: #fafafa;
+    opacity: 0.12;
+}
+/* motion: breathing, the baton beating time, the dancer's arm, hair and skirt swaying */
+.lp .cst .fig,
+.lp .cst .arm-r,
+.lp .cst .arm-l,
+.lp .cst .hand,
+.lp .cst .hair,
+.lp .cst .skirt,
+.lp .cst .tails {
+    transform-box: view-box;
+}
+.lp .cst .breathe {
+    transform-origin: 160px 540px;
+    animation: cst-breathe 6.5s ease-in-out infinite;
+}
+.lp .cst-l .arm-r {
+    transform-origin: 208px 178px;
+    animation: cst-reach 5.2s ease-in-out infinite;
+}
+.lp .cst-l .hand {
+    transform-origin: 266px 104px;
+    animation: cst-wave-hand 2.6s ease-in-out infinite;
+}
+.lp .cst-l .arm-l {
+    transform-origin: 128px 194px;
+    animation: cst-hold 3.6s ease-in-out infinite;
+}
+.lp .cst-l .tails {
+    transform-origin: 146px 296px;
+    animation: cst-drift 6s ease-in-out infinite;
+}
+.lp .cst-r .arm-r {
+    transform-origin: 198px 176px;
+    animation: cst-reach 5.2s ease-in-out infinite;
+}
+.lp .cst-r .arm-l {
+    transform-origin: 138px 178px;
+    animation: cst-hold 5.2s ease-in-out infinite reverse;
+}
+.lp .cst-r .hair {
+    transform-origin: 186px 104px;
+    animation: cst-wave 4.2s ease-in-out infinite;
+}
+.lp .cst-r .skirt {
+    transform-origin: 168px 266px;
+    animation: cst-sway 5.2s ease-in-out infinite;
+}
+@keyframes cst-breathe {
+    0%,
+    100% {
+        transform: scaleY(1);
+    }
+    50% {
+        transform: scaleY(1.008);
+    }
+}
+@keyframes cst-hold {
+    0%,
+    100% {
+        transform: rotate(1deg);
+    }
+    50% {
+        transform: rotate(-1.5deg);
+    }
+}
+@keyframes cst-wave-hand {
+    0%,
+    100% {
+        transform: rotate(-7deg);
+    }
+    50% {
+        transform: rotate(7deg);
+    }
+}
+@keyframes cst-drift {
+    0%,
+    100% {
+        transform: skewX(-0.8deg);
+    }
+    50% {
+        transform: skewX(0.8deg);
+    }
+}
+@keyframes cst-reach {
+    0%,
+    100% {
+        transform: rotate(-4deg);
+    }
+    50% {
+        transform: rotate(5deg);
+    }
+}
+@keyframes cst-wave {
+    0%,
+    100% {
+        transform: rotate(-2.5deg);
+    }
+    50% {
+        transform: rotate(2.5deg);
+    }
+}
+@keyframes cst-sway {
+    0%,
+    100% {
+        transform: skewX(-2deg);
+    }
+    50% {
+        transform: skewX(2deg);
+    }
+}
+@keyframes lp-draw {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+@keyframes lp-twinkle {
+    from {
+        opacity: 0.3;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Isometric diagram of what connects through FlowMaestro. */
+.lp .iso {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-width: 820px;
+}
+.lp .iso text {
+    font-family: inherit;
+}
+.lp .iso .lbl {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    fill: #6f6f78;
+}
+.lp .iso .name {
+    font-size: 19px;
+    font-weight: 500;
+    fill: #c6c6cc;
+}
+.lp .iso .title {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    fill: #fafafa;
+}
+.lp .iso .sub {
+    font-size: 13px;
+    fill: #6f6f78;
+}
+.lp .iso .wire {
+    fill: none;
+    stroke: #fafafa;
+    stroke-opacity: 0.2;
+    stroke-width: 1;
+}
+.lp .iso .dash {
+    fill: none;
+    stroke: #fafafa;
+    stroke-opacity: 0.32;
+    stroke-width: 1;
+    stroke-dasharray: 4 5;
+}
+.lp .iso .arrow {
+    fill: none;
+    stroke: #fafafa;
+    stroke-opacity: 0.5;
+    stroke-width: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+    .lp .iso .pkt {
+        display: none;
+    }
+    .lp .cst .ln,
+    .lp .cst .sil {
+        animation: none;
+        stroke-dashoffset: 0;
+    }
+    .lp .cst .st,
+    .lp .cst .fig,
+    .lp .cst .arm-r,
+    .lp .cst .arm-l,
+    .lp .cst .hand,
+    .lp .cst .hair,
+    .lp .cst .skirt,
+    .lp .cst .tails {
+        animation: none;
+    }
+}

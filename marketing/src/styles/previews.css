@@ -1,0 +1,490 @@
+/* Product preview screens shown on the landing page, drawn at 1440 by 810 and scaled by ScaledFrame. */
+
+.pv {
+    width: 1440px;
+    height: 810px;
+    background: #0b0b0d;
+    color: #fafafa;
+    font-family: "Inter", system-ui, sans-serif;
+    overflow: hidden;
+    display: grid;
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: left;
+}
+.pv * {
+    box-sizing: border-box;
+}
+.pv p,
+.pv h1 {
+    margin: 0;
+}
+.pv .mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+.pv .rail {
+    border-right: 1px solid #18181c;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: #0b0b0d;
+}
+.pv .rail .ws {
+    margin-bottom: 14px;
+    white-space: nowrap;
+    padding: 6px 8px;
+    color: #fafafa;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.pv .ri {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #9b9ba3;
+}
+.pv .ri.on {
+    background: #161619;
+    color: #fafafa;
+}
+.pv .ri.add {
+    color: #6f6f78;
+    border: 1px dashed #2a2a30;
+}
+.pv .ri .n {
+    margin-left: auto;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    color: #6f6f78;
+}
+.pv .credits {
+    padding: 8px 10px;
+    font-size: 11px;
+    color: #6f6f78;
+    display: flex;
+    justify-content: space-between;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+.pv .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1px solid #2a2a30;
+    font-size: 11px;
+    color: #c6c6cc;
+    background: #0e0e12;
+    white-space: nowrap;
+}
+.pv .chip.lg {
+    padding: 9px 14px;
+    font-size: 13px;
+    gap: 8px;
+}
+.pv .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+}
+.pv .b1 {
+    background: #fafafa;
+    color: #0b0b0d;
+}
+.pv .b2 {
+    background: #161619;
+    color: #fafafa;
+    border: 1px solid #2a2a30;
+}
+.pv .b3 {
+    background: transparent;
+    color: #9b9ba3;
+}
+.pv .dotfield {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.2) 1px, transparent 1.6px);
+    background-size: 16px 16px;
+    -webkit-mask-image: radial-gradient(45% 55% at 50% 30%, #000 10%, transparent 72%);
+    mask-image: radial-gradient(45% 55% at 50% 30%, #000 10%, transparent 72%);
+}
+.pv .block {
+    background: #121216;
+    border: 1px solid #2a2a30;
+    border-radius: 16px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.pv .composer {
+    position: relative;
+    width: 100%;
+    max-width: 760px;
+    border-radius: 18px;
+    background: #121216;
+    border: 1px solid #2a2a30;
+}
+.pv .bubble {
+    align-self: flex-end;
+    max-width: 72%;
+    background: #161619;
+    border: 1px solid #2a2a30;
+    padding: 12px 16px;
+    border-radius: 16px 16px 4px 16px;
+    font-size: 15px;
+    line-height: 1.5;
+}
+.pv .step {
+    display: flex;
+    align-items: center;
+}
+.pv .step span {
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: #0e0e12;
+    border: 1px solid #2a2a30;
+    font-size: 13px;
+    color: #fafafa;
+    white-space: nowrap;
+}
+.pv .step i {
+    display: block;
+    width: 20px;
+    height: 1px;
+    background: #2a2a30;
+    flex: none;
+}
+.pv .alt {
+    font-size: 13px;
+    color: #6f6f78;
+}
+.pv .alt u {
+    color: #9b9ba3;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: #2a2a30;
+}
+.pv .alt b {
+    color: #fafafa;
+    font-weight: 400;
+}
+.pv .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background: #fafafa;
+    vertical-align: middle;
+    margin-left: 2px;
+    animation: pv-caret 0.8s step-end infinite;
+}
+@keyframes pv-caret {
+    50% {
+        opacity: 0;
+    }
+}
+.pv .card {
+    border-radius: 16px;
+    background: #121216;
+    border: 1px solid #2a2a30;
+}
+.pv .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.pv .field .lb {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 10px;
+    color: #6f6f78;
+    letter-spacing: 0.08em;
+}
+.pv .field .v {
+    min-height: 34px;
+    border-radius: 8px;
+    background: #0e0e12;
+    border: 1px solid #2a2a30;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 13px;
+    color: #c6c6cc;
+}
+.pv .tool {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #0e0e12;
+    border: 1px solid #2a2a30;
+    font-size: 12px;
+}
+/* Workflow canvas */
+.pv .ico {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9b9ba3;
+}
+.pv .ico.on {
+    color: #fafafa;
+    background: #161619;
+}
+.pv .zoom {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1340px;
+    height: 720px;
+    transform: scale(0.8);
+    transform-origin: 0 0;
+}
+.pv .canvasdots {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.14) 1px, transparent 1.5px);
+    background-size: 10px 10px;
+}
+.pv .node {
+    position: absolute;
+    width: 260px;
+    background: #121216;
+    border: 1px solid #2a2a30;
+    border-radius: 12px;
+    font-size: 12px;
+    box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.8);
+}
+.pv .node.sel {
+    border-color: #fafafa;
+    box-shadow:
+        0 0 0 1px #fafafa,
+        0 10px 30px -18px rgba(0, 0, 0, 0.8);
+}
+.pv .node .hd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #1f1f25;
+    height: 44px;
+}
+.pv .node .ic {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1f1f25;
+    color: #c6c6cc;
+}
+.pv .node .lb {
+    font-weight: 600;
+    font-size: 13px;
+    color: #fafafa;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pv .node .st {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+    background: #4a4a52;
+}
+.pv .node .st.ok {
+    background: #34d399;
+}
+.pv .node .st.run {
+    background: #fafafa;
+    animation: pv-pulse 1.2s ease-in-out infinite;
+}
+@keyframes pv-pulse {
+    50% {
+        opacity: 0.35;
+    }
+}
+.pv .node .bd {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    color: #9b9ba3;
+}
+.pv .node .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    white-space: nowrap;
+}
+.pv .node .row b {
+    color: #c6c6cc;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pv .node .pvw {
+    color: #6f6f78;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
+}
+.pv .h {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #0b0b0d;
+    border: 2px solid #4a4a52;
+}
+.pv .h.in {
+    left: -7px;
+    top: 50%;
+    margin-top: -5px;
+}
+.pv .h.out {
+    right: -6px;
+    top: 50%;
+    margin-top: -5px;
+}
+.pv .h.t {
+    right: -6px;
+    top: 35%;
+    margin-top: -5px;
+}
+.pv .h.f {
+    right: -6px;
+    top: 65%;
+    margin-top: -5px;
+}
+.pv .edge {
+    stroke: #4a4a52;
+    stroke-width: 1.5;
+    fill: none;
+}
+.pv .edge.sel {
+    stroke: #fafafa;
+    stroke-width: 2;
+}
+.pv .ctl {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9b9ba3;
+    border-bottom: 1px solid #2a2a30;
+    font-size: 14px;
+}
+.pv .ctl:last-child {
+    border-bottom: 0;
+}
+/* Agent threads */
+.pv .thread {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #9b9ba3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pv .thread.on {
+    background: #161619;
+    color: #fafafa;
+}
+/* Knowledge base */
+.pv table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.pv th {
+    text-align: left;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 500;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: #6f6f78;
+    padding: 0 12px 10px;
+}
+.pv td {
+    padding: 12px;
+    border-top: 1px solid #1f1f25;
+    color: #c6c6cc;
+    vertical-align: middle;
+}
+.pv tr.sel td {
+    background: #121216;
+}
+.pv td:first-child {
+    color: #fafafa;
+    font-weight: 500;
+}
+.pv .bar {
+    height: 4px;
+    border-radius: 999px;
+    background: #1f1f25;
+    overflow: hidden;
+    width: 90px;
+}
+.pv .bar i {
+    display: block;
+    height: 100%;
+    background: #4a4a52;
+}
+.pv .chunk {
+    background: #0e0e12;
+    border: 1px solid #2a2a30;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #c6c6cc;
+}
+.pv .chunk b {
+    display: block;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 500;
+    font-size: 10px;
+    color: #6f6f78;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+}
+.pv .chunk mark {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fafafa;
+    border-radius: 3px;
+    padding: 0 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .pv .cursor,
+    .pv .node .st.run {
+        animation: none;
+    }
+}

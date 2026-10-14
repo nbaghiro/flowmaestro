@@ -3,21 +3,11 @@ import React from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { ThemeProvider } from "./hooks/useTheme";
-import { AboutPage } from "./pages/AboutPage";
-import { BlogDetailPage } from "./pages/BlogDetailPage";
-import { BlogPage } from "./pages/BlogPage";
-import { CareersPage } from "./pages/CareersPage";
-import { CaseStudiesPage } from "./pages/CaseStudiesPage";
-import { CaseStudyDetailPage } from "./pages/CaseStudyDetailPage";
 import { ChangelogPage } from "./pages/ChangelogPage";
-import { CommunityPage } from "./pages/CommunityPage";
-import { ContactPage } from "./pages/ContactPage";
 import { CookiesPage } from "./pages/CookiesPage";
-import { DocsPage } from "./pages/DocsPage";
 import { HelpPage } from "./pages/HelpPage";
 import { Home } from "./pages/Home";
 import { IntegrationsPage } from "./pages/IntegrationsPage";
-import { JobDetailPage } from "./pages/JobDetailPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PricingPage } from "./pages/PricingPage";
 import { PrivacyPage } from "./pages/PrivacyPage";
@@ -56,20 +46,8 @@ const App: React.FC = () => {
                         <Route path="/solutions/:category" element={<SolutionPage />} />
                         <Route path="/integrations" element={<IntegrationsPage />} />
                         <Route path="/pricing" element={<PricingPage />} />
-                        <Route path="/case-studies" element={<CaseStudiesPage />} />
-                        <Route path="/case-studies/:slug" element={<CaseStudyDetailPage />} />
-                        {/* Company pages */}
-                        <Route path="/about" element={<AboutPage />} />
-                        <Route path="/blog" element={<BlogPage />} />
-                        <Route path="/blog/:slug" element={<BlogDetailPage />} />
-                        <Route path="/careers" element={<CareersPage />} />
-                        <Route path="/careers/:jobId" element={<JobDetailPage />} />
-                        <Route path="/contact" element={<ContactPage />} />
                         <Route path="/security" element={<SecurityPage />} />
-                        {/* Resources pages */}
-                        <Route path="/docs" element={<DocsPage />} />
                         <Route path="/changelog" element={<ChangelogPage />} />
-                        <Route path="/community" element={<CommunityPage />} />
                         <Route path="/help" element={<HelpPage />} />
                         <Route path="/templates" element={<TemplatesPage />} />
                         {/* Legal pages */}

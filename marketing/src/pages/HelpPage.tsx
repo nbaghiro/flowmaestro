@@ -3,8 +3,9 @@ import {
     Search,
     ChevronDown,
     BookOpen,
-    MessageSquare,
-    Mail,
+    History,
+    LayoutTemplate,
+    CalendarCheck,
     Rocket,
     Workflow,
     Plug,
@@ -18,6 +19,7 @@ import { Footer } from "../components/Footer";
 import { Navigation } from "../components/Navigation";
 import { faqCategories, type FAQItem } from "../data/faq";
 import { OtherPagesEvents } from "../lib/analytics";
+import { BOOK_DEMO_URL } from "../lib/links";
 
 const categoryIcons: Record<string, React.ElementType> = {
     "getting-started": Rocket,
@@ -135,17 +137,6 @@ export const HelpPage: React.FC = () => {
         return openQuestions.has(`${categoryId}-${questionIndex}`);
     };
 
-    const handleDocsClick = () => {
-        OtherPagesEvents.docsLinkClicked({
-            referringPage: "/help",
-            docSection: undefined
-        });
-    };
-
-    const handleCommunityClick = () => {
-        OtherPagesEvents.communityLinkClicked({ platform: "discord" });
-    };
-
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             <div className="fixed inset-0 grid-pattern opacity-50 pointer-events-none" />
@@ -187,63 +178,61 @@ export const HelpPage: React.FC = () => {
                 <section className="py-8 px-4 sm:px-6 lg:px-8">
                     <div className="max-w-6xl mx-auto">
                         <div className="grid md:grid-cols-3 gap-4">
-                            <motion.a
+                            <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4 }}
-                                href={
-                                    import.meta.env.VITE_DOCS_URL || "https://docs.flowmaestro.ai"
-                                }
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={handleDocsClick}
-                                className="p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-colors group"
+                                transition={{ duration: 0.4, delay: 0 }}
                             >
-                                <BookOpen className="w-8 h-8 text-primary-400 mb-3" />
-                                <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary-400 transition-colors">
-                                    Documentation
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Comprehensive guides and API reference
-                                </p>
-                            </motion.a>
-
-                            <motion.a
+                                <Link
+                                    to="/templates"
+                                    className="block p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-colors group"
+                                >
+                                    <LayoutTemplate className="w-8 h-8 text-primary-400 mb-3" />
+                                    <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary-400 transition-colors">
+                                        Templates
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Workflow and agent templates, ready to run
+                                    </p>
+                                </Link>
+                            </motion.div>
+                            <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.4, delay: 0.1 }}
-                                href="https://discord.gg/zHCkfBeP"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={handleCommunityClick}
-                                className="p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-colors group"
                             >
-                                <MessageSquare className="w-8 h-8 text-primary-400 mb-3" />
-                                <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary-400 transition-colors">
-                                    Community
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Join discussions and get help from others
-                                </p>
-                            </motion.a>
-
+                                <Link
+                                    to="/changelog"
+                                    className="block p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-colors group"
+                                >
+                                    <History className="w-8 h-8 text-primary-400 mb-3" />
+                                    <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary-400 transition-colors">
+                                        Changelog
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        What shipped, release by release
+                                    </p>
+                                </Link>
+                            </motion.div>
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.4, delay: 0.2 }}
                             >
-                                <Link
-                                    to="/contact"
+                                <a
+                                    href={BOOK_DEMO_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className="block p-6 rounded-xl bg-card border border-stroke hover:border-primary-500/50 transition-colors group"
                                 >
-                                    <Mail className="w-8 h-8 text-primary-400 mb-3" />
+                                    <CalendarCheck className="w-8 h-8 text-primary-400 mb-3" />
                                     <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary-400 transition-colors">
-                                        Contact Support
+                                        Book a demo
                                     </h3>
                                     <p className="text-sm text-muted-foreground">
-                                        Reach out to our support team directly
+                                        A 30-minute walkthrough on one of your processes
                                     </p>
-                                </Link>
+                                </a>
                             </motion.div>
                         </div>
                     </div>
@@ -374,18 +363,14 @@ export const HelpPage: React.FC = () => {
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                 <a
-                                    href="mailto:support@flowmaestro.ai"
+                                    href={BOOK_DEMO_URL}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className="btn-primary inline-flex items-center justify-center gap-2"
                                 >
-                                    <Mail className="w-4 h-4" />
-                                    Email Support
+                                    <CalendarCheck className="w-4 h-4" />
+                                    Book a demo
                                 </a>
-                                <Link
-                                    to="/contact"
-                                    className="btn-secondary inline-flex items-center justify-center"
-                                >
-                                    Contact Us
-                                </Link>
                             </div>
                         </motion.div>
                     </div>

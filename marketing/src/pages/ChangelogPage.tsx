@@ -114,7 +114,7 @@ const typeConfig = {
     feature: { icon: Sparkles, color: "text-green-400", bg: "bg-green-400/10", label: "New" },
     improvement: { icon: Zap, color: "text-blue-400", bg: "bg-blue-400/10", label: "Improved" },
     fix: { icon: Bug, color: "text-yellow-400", bg: "bg-yellow-400/10", label: "Fixed" },
-    security: { icon: Shield, color: "text-purple-400", bg: "bg-purple-400/10", label: "Security" }
+    security: { icon: Shield, color: "text-foreground", bg: "bg-foreground/10", label: "Security" }
 };
 
 export const ChangelogPage: React.FC = () => {

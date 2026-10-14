@@ -1,209 +1,136 @@
-import { Github, Linkedin, Mail, Twitter } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
-import { NavigationEvents, OtherPagesEvents } from "../lib/analytics";
+import { EngagementEvents, NavigationEvents } from "../lib/analytics";
+import { BOOK_DEMO_URL } from "../lib/links";
+import { PixelMark } from "./brand/PixelMark";
+
+interface FooterLink {
+    label: string;
+    href: string;
+}
+
+interface FooterColumn {
+    title: string;
+    category: string;
+    links: FooterLink[];
+}
+
+// Every footer link stays on this site; the demo booking is the one outside destination.
+const COLUMNS: FooterColumn[] = [
+    {
+        title: "PRODUCT",
+        category: "product",
+        links: [
+            { label: "Workflows", href: "/#product" },
+            { label: "Agents", href: "/#product" },
+            { label: "Personas", href: "/#product" },
+            { label: "Integrations", href: "/integrations" },
+            { label: "Templates", href: "/templates" },
+            { label: "Pricing", href: "/pricing" }
+        ]
+    },
+    {
+        title: "SOLUTIONS",
+        category: "solutions",
+        links: [
+            { label: "Sales", href: "/solutions/sales" },
+            { label: "Marketing", href: "/solutions/marketing" },
+            { label: "Support", href: "/solutions/support" },
+            { label: "Engineering", href: "/solutions/engineering" },
+            { label: "Operations", href: "/solutions/operations" }
+        ]
+    },
+    {
+        title: "RESOURCES",
+        category: "resources",
+        links: [
+            { label: "Help center", href: "/help" },
+            { label: "Changelog", href: "/changelog" },
+            { label: "Security", href: "/security" }
+        ]
+    },
+    {
+        title: "LEGAL",
+        category: "legal",
+        links: [
+            { label: "Privacy", href: "/privacy" },
+            { label: "Terms", href: "/terms" },
+            { label: "Cookies", href: "/cookies" }
+        ]
+    }
+];
 
 export const Footer: React.FC = () => {
-    const handleSocialClick = (socialPlatform: string) => {
-        NavigationEvents.footerSocialClicked({ socialPlatform });
-    };
-
-    const handleLinkClick = (linkCategory: string, linkTarget: string) => {
+    const handleLinkClick = (linkCategory: string, linkTarget: string): void => {
         NavigationEvents.footerLinkClicked({ linkCategory, linkTarget });
     };
 
-    const handleDocsClick = () => {
-        OtherPagesEvents.docsLinkClicked({
-            referringPage: window.location.pathname,
-            docSection: undefined
-        });
+    const handleDemoClick = (): void => {
+        EngagementEvents.demoRequested({ referringPage: "footer" });
     };
 
-    const currentYear = new Date().getFullYear();
+    const linkClass = "text-sm text-[#8b8b94] hover:text-foreground transition-colors";
+    const year = new Date().getFullYear();
 
     return (
-        <footer className="relative bg-background border-t border-border">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                    {/* Brand */}
-                    <div className="col-span-1 md:col-span-2">
-                        <div className="text-2xl font-bold gradient-text mb-4">FlowMaestro</div>
-                        <p className="text-muted-foreground mb-4 max-w-md">
-                            Enterprise workflow automation, simplified. Build powerful workflows
-                            without code.
+        <footer className="border-t border-line pt-12 pb-9 mt-auto">
+            <div className="w-full max-w-[1080px] mx-auto px-6">
+                <div
+                    className="grid gap-7"
+                    style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}
+                >
+                    <div className="flex flex-col gap-3 sm:col-span-2 lg:col-span-1">
+                        <span className="flex items-center gap-2 font-bold">
+                            <PixelMark size={24} />
+                            FlowMaestro
+                        </span>
+                        <p className="text-dim text-[13px] leading-normal max-w-[220px]">
+                            Workflows, agents and personas on one platform.
                         </p>
-                        <div className="flex gap-4">
-                            <a
-                                href="https://github.com/nbaghiro/flowmaestro"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => handleSocialClick("github")}
-                                className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
-                            >
-                                <Github className="w-5 h-5" />
-                            </a>
-                            {/* TODO: Update to company X/Twitter account when available */}
-                            <a
-                                href="https://x.com/nbaghiro"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => handleSocialClick("twitter")}
-                                className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
-                            >
-                                <Twitter className="w-5 h-5" />
-                            </a>
-                            <a
-                                href="https://www.linkedin.com/company/flowmaestro/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => handleSocialClick("linkedin")}
-                                className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
-                            >
-                                <Linkedin className="w-5 h-5" />
-                            </a>
-                            <a
-                                href="mailto:support@flowmaestro.ai"
-                                onClick={() => handleSocialClick("email")}
-                                className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
-                            >
-                                <Mail className="w-5 h-5" />
-                            </a>
-                            <a
-                                href="https://discord.gg/zHCkfBeP"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={() => handleSocialClick("discord")}
-                                className="w-10 h-10 rounded-lg bg-secondary hover:bg-accent border border-border flex items-center justify-center transition-colors text-foreground"
-                            >
-                                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-                                </svg>
-                            </a>
+                        <a
+                            href={BOOK_DEMO_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={handleDemoClick}
+                            className="mt-1 inline-flex w-fit items-center h-9 px-4 rounded-full text-sm font-semibold bg-foreground text-background hover:opacity-90 transition-opacity"
+                        >
+                            Book a demo
+                        </a>
+                    </div>
+                    {COLUMNS.map((column) => (
+                        <div key={column.category} className="flex flex-col gap-2">
+                            <p className="font-mono text-[11px] text-dim mb-1">{column.title}</p>
+                            {column.links.map((link) => {
+                                const target = link.label.toLowerCase().replace(/\s+/g, "-");
+                                if (link.href.includes("#")) {
+                                    return (
+                                        <a
+                                            key={link.label}
+                                            href={link.href}
+                                            onClick={() => handleLinkClick(column.category, target)}
+                                            className={linkClass}
+                                        >
+                                            {link.label}
+                                        </a>
+                                    );
+                                }
+                                return (
+                                    <Link
+                                        key={link.label}
+                                        to={link.href}
+                                        onClick={() => handleLinkClick(column.category, target)}
+                                        className={linkClass}
+                                    >
+                                        {link.label}
+                                    </Link>
+                                );
+                            })}
                         </div>
-                    </div>
-
-                    {/* Product */}
-                    <div>
-                        <h3 className="font-semibold mb-4 text-foreground">Product</h3>
-                        <ul className="space-y-2 text-muted-foreground">
-                            <li>
-                                <a
-                                    href="#"
-                                    onClick={() => handleLinkClick("product", "features")}
-                                    className="hover:text-foreground transition-colors"
-                                >
-                                    Features
-                                </a>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/integrations"
-                                    onClick={() => handleLinkClick("product", "integrations")}
-                                    className="hover:text-foreground transition-colors"
-                                >
-                                    Integrations
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/pricing"
-                                    onClick={() => handleLinkClick("product", "pricing")}
-                                    className="hover:text-foreground transition-colors"
-                                >
-                                    Pricing
-                                </Link>
-                            </li>
-                            <li>
-                                <a
-                                    href={
-                                        import.meta.env.VITE_DOCS_URL ||
-                                        "https://docs.flowmaestro.ai"
-                                    }
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={() => {
-                                        handleLinkClick("product", "documentation");
-                                        handleDocsClick();
-                                    }}
-                                    className="hover:text-foreground transition-colors"
-                                >
-                                    Documentation
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    {/* Company */}
-                    <div>
-                        <h3 className="font-semibold mb-4 text-foreground">Company</h3>
-                        <ul className="space-y-2 text-muted-foreground">
-                            <li>
-                                <Link
-                                    to="/about"
-                                    onClick={() => handleLinkClick("company", "about")}
-                                    className="hover:text-foreground transition-colors"
-                                >
-                                    About
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/blog"
-                                    onClick={() => handleLinkClick("company", "blog")}
-                                    className="hover:text-foreground transition-colors"
-                                >
-                                    Blog
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/careers"
-                                    onClick={() => handleLinkClick("company", "careers")}
-                                    className="hover:text-foreground transition-colors"
-                                >
-                                    Careers
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
-                                    to="/contact"
-                                    onClick={() => handleLinkClick("company", "contact")}
-                                    className="hover:text-foreground transition-colors"
-                                >
-                                    Contact
-                                </Link>
-                            </li>
-                        </ul>
-                    </div>
+                    ))}
                 </div>
-
-                {/* Bottom */}
-                <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-                    <p>© {currentYear} FlowMaestro. All rights reserved.</p>
-                    <div className="flex gap-6">
-                        <Link
-                            to="/privacy"
-                            onClick={() => handleLinkClick("legal", "privacy")}
-                            className="hover:text-foreground transition-colors"
-                        >
-                            Privacy Policy
-                        </Link>
-                        <Link
-                            to="/terms"
-                            onClick={() => handleLinkClick("legal", "terms")}
-                            className="hover:text-foreground transition-colors"
-                        >
-                            Terms of Service
-                        </Link>
-                        <Link
-                            to="/cookies"
-                            onClick={() => handleLinkClick("legal", "cookies")}
-                            className="hover:text-foreground transition-colors"
-                        >
-                            Cookie Policy
-                        </Link>
-                    </div>
-                </div>
+                <p className="font-mono text-[11px] text-dim mt-10">
+                    © {year} FlowMaestro. All rights reserved.
+                </p>
             </div>
         </footer>
     );

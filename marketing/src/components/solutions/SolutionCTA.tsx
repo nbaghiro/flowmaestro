@@ -2,6 +2,7 @@ import { motion, useInView } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import React from "react";
 import { SolutionsPageEvents } from "../../lib/analytics";
+import { BOOK_DEMO_URL } from "../../lib/links";
 import type { SolutionCategory } from "../../data/solutions";
 
 interface SolutionCTAProps {
@@ -40,27 +41,20 @@ export const SolutionCTA: React.FC<SolutionCTAProps> = ({ solution }) => {
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <a
-                            href={import.meta.env.VITE_APP_URL || "http://localhost:8400"}
-                            onClick={() => handleCtaClick("get_started")}
-                            className="group px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg"
-                        >
-                            Get Started Free
-                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                        </a>
-                        <a
-                            href="https://cal.com/naib-baghirov-o5surn/30min"
+                            href={BOOK_DEMO_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() => handleCtaClick("schedule_demo")}
-                            className="px-8 py-4 bg-card hover:bg-accent border border-border rounded-lg font-semibold transition-all duration-200 text-foreground"
+                            className="group px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2"
                         >
-                            Schedule a Demo
+                            Book a demo
+                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </a>
                     </div>
 
                     {/* Trust indicators */}
                     <p className="text-sm text-muted-foreground mt-10">
-                        No credit card required · Free 14-day trial · Cancel anytime
+                        30 minutes · bring a process you want to automate
                     </p>
                 </motion.div>
             </div>

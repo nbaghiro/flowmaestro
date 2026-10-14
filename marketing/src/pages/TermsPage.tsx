@@ -302,12 +302,7 @@ export const TermsPage: React.FC = () => {
                                 </p>
                                 <p className="mt-2">
                                     <strong>Email:</strong>{" "}
-                                    <a
-                                        href="mailto:legal@flowmaestro.ai"
-                                        className="text-primary-400 hover:text-primary-300"
-                                    >
-                                        legal@flowmaestro.ai
-                                    </a>
+                                    <span className="text-foreground">legal@flowmaestro.ai</span>
                                 </p>
                             </section>
                         </div>

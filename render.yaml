@@ -1,0 +1,26 @@
+# Render blueprint for the marketing site only. The app, API and workers are not deployed here.
+services:
+    - type: web
+      name: flowmaestro-marketing
+      runtime: static
+      # Only the marketing workspace is installed; lifecycle scripts are skipped so the root husky
+      # prepare step does not run on the build machine.
+      buildCommand: npm ci --include=dev --workspace=@flowmaestro/marketing --ignore-scripts && npm run build --workspace=@flowmaestro/marketing
+      staticPublishPath: marketing/dist
+      routes:
+          - type: rewrite
+            source: /*
+            destination: /index.html
+      headers:
+          - path: /assets/*
+            name: Cache-Control
+            value: public, max-age=31536000, immutable
+      envVars:
+          - key: NODE_VERSION
+            value: "22"
+          - key: VITE_BOOK_DEMO_URL
+            value: https://cal.com/naib-baghirov-o5surn/30min
+          - key: VITE_POSTHOG_KEY
+            sync: false
+          - key: VITE_POSTHOG_HOST
+            sync: false

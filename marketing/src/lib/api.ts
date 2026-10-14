@@ -1,219 +1,283 @@
 /**
- * API Client for FlowMaestro Marketing Site
+ * Template data for the marketing site.
  *
- * Fetches public template data from the backend API.
+ * The site deploys on its own, so it ships with a snapshot of the seeded workflow and agent
+ * templates and serves every list from it. When VITE_API_URL is set, the live API is tried
+ * first and the snapshot is the fallback.
  */
 
-import type {
-    Template,
-    TemplateListParams,
-    TemplateListResponse,
-    AgentTemplate,
-    AgentTemplateListParams,
-    AgentTemplateListResponse,
-    CategoryInfo,
-    BlogListParams,
-    BlogListResponse,
-    BlogPostWithRelated,
-    BlogCategoryWithCount
+import {
+    TEMPLATE_CATEGORY_META,
+    type AgentTemplate,
+    type AgentTemplateListParams,
+    type AgentTemplateListResponse,
+    type CategoryInfo,
+    type Template,
+    type TemplateCategory,
+    type TemplateListParams,
+    type TemplateListResponse
 } from "@flowmaestro/shared";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8401";
+const API_BASE_URL: string = import.meta.env.VITE_API_URL || "";
+const FETCH_TIMEOUT_MS = 4000;
 
-/**
- * Fetch wrapper with error handling
- */
-async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...options?.headers
-        }
-    });
-
-    return response;
+interface ApiResult<T> {
+    success: boolean;
+    data: T;
+    error?: string;
 }
 
-// ===== Workflow Templates =====
+interface SnapshotWorkflow {
+    id: string;
+    name: string;
+    description: string;
+    category: string;
+    tags: string[];
+    required_integrations: string[];
+    featured: boolean;
+    order: number;
+    definition: Template["definition"];
+}
 
-/**
- * Get workflow templates with pagination
- */
+interface SnapshotAgent {
+    id: string;
+    name: string;
+    description: string;
+    category: string;
+    tags: string[];
+    required_integrations: string[];
+    featured: boolean;
+    order: number;
+    model: string;
+    provider: AgentTemplate["provider"];
+    temperature: number;
+    max_tokens: number;
+    system_prompt: string;
+    available_tools: AgentTemplate["available_tools"];
+}
+
+interface Snapshot {
+    generatedAt: string;
+    workflows: SnapshotWorkflow[];
+    agents: SnapshotAgent[];
+}
+
+// The snapshot is a few hundred kilobytes, so it loads on first use as its own chunk.
+let snapshotPromise: Promise<Snapshot> | null = null;
+
+function loadSnapshot(): Promise<Snapshot> {
+    if (!snapshotPromise) {
+        snapshotPromise = import("../data/templates.snapshot.json").then(
+            (module) => module.default as unknown as Snapshot
+        );
+    }
+    return snapshotPromise;
+}
+
+function snapshotDate(snapshot: Snapshot): string {
+    return `${snapshot.generatedAt}T00:00:00.000Z`;
+}
+
+// ===== Snapshot adapters =====
+
+function toTemplate(item: SnapshotWorkflow, date: string): Template {
+    return {
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        definition: item.definition,
+        category: item.category as TemplateCategory,
+        tags: item.tags,
+        icon: null,
+        color: null,
+        preview_image_url: null,
+        author_name: "FlowMaestro",
+        author_avatar_url: null,
+        view_count: 0,
+        use_count: 0,
+        featured: item.featured,
+        required_integrations: item.required_integrations,
+        version: "1.0.0",
+        created_at: date,
+        updated_at: date
+    };
+}
+
+function toAgentTemplate(item: SnapshotAgent, date: string): AgentTemplate {
+    return {
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        system_prompt: item.system_prompt,
+        model: item.model,
+        provider: item.provider,
+        temperature: item.temperature,
+        max_tokens: item.max_tokens,
+        available_tools: item.available_tools,
+        category: item.category as AgentTemplate["category"],
+        tags: item.tags,
+        icon: null,
+        color: null,
+        author_name: "FlowMaestro",
+        author_avatar_url: null,
+        view_count: 0,
+        use_count: 0,
+        featured: item.featured,
+        required_integrations: item.required_integrations,
+        version: "1.0.0",
+        created_at: date,
+        updated_at: date
+    };
+}
+
+interface Listable {
+    name: string;
+    description: string;
+    category: string;
+    tags: string[];
+    featured: boolean;
+    order: number;
+}
+
+interface ListFilters {
+    category?: string;
+    tags?: string[];
+    featured?: boolean;
+    search?: string;
+    limit?: number;
+    offset?: number;
+}
+
+function matches(item: Listable, filters: ListFilters): boolean {
+    if (filters.category && item.category !== filters.category) return false;
+    if (filters.featured !== undefined && item.featured !== filters.featured) return false;
+    if (filters.tags && filters.tags.length > 0) {
+        const tags = new Set(item.tags.map((tag) => tag.toLowerCase()));
+        if (!filters.tags.some((tag) => tags.has(tag.toLowerCase()))) return false;
+    }
+    if (filters.search) {
+        const needle = filters.search.toLowerCase();
+        const haystack = `${item.name} ${item.description} ${item.tags.join(" ")}`.toLowerCase();
+        if (!haystack.includes(needle)) return false;
+    }
+    return true;
+}
+
+function page<T extends Listable, R>(
+    items: T[],
+    filters: ListFilters,
+    map: (item: T) => R
+): { items: R[]; total: number; page: number; pageSize: number; hasMore: boolean } {
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : 20;
+    const offset = filters.offset && filters.offset > 0 ? filters.offset : 0;
+    const filtered = items
+        .filter((item) => matches(item, filters))
+        .sort((a, b) => Number(b.featured) - Number(a.featured) || a.order - b.order);
+    const slice = filtered.slice(offset, offset + limit).map(map);
+    return {
+        items: slice,
+        total: filtered.length,
+        page: Math.floor(offset / limit) + 1,
+        pageSize: limit,
+        hasMore: offset + limit < filtered.length
+    };
+}
+
+function categoriesOf(items: Listable[]): CategoryInfo[] {
+    const counts = new Map<string, number>();
+    for (const item of items) counts.set(item.category, (counts.get(item.category) ?? 0) + 1);
+    return [...counts.entries()]
+        .map(([category, count]) => {
+            const meta = TEMPLATE_CATEGORY_META[category as TemplateCategory];
+            return {
+                category: category as TemplateCategory,
+                count,
+                label: meta?.label ?? category,
+                icon: meta?.icon ?? "",
+                color: meta?.color ?? ""
+            };
+        })
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+// ===== Live API (optional) =====
+
+async function fromApi<T>(path: string, query?: URLSearchParams): Promise<ApiResult<T> | null> {
+    if (!API_BASE_URL) return null;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+        const suffix = query && query.toString() ? `?${query.toString()}` : "";
+        const response = await fetch(`${API_BASE_URL}${path}${suffix}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal
+        });
+        if (!response.ok) return null;
+        return (await response.json()) as ApiResult<T>;
+    } catch {
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+function listQuery(params?: TemplateListParams | AgentTemplateListParams): URLSearchParams {
+    const query = new URLSearchParams();
+    if (params?.category) query.set("category", params.category);
+    if (params?.tags && params.tags.length > 0) query.set("tags", params.tags.join(","));
+    if (params?.featured !== undefined) query.set("featured", String(params.featured));
+    if (params?.search) query.set("search", params.search);
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.offset) query.set("offset", String(params.offset));
+    return query;
+}
+
+// ===== Workflow templates =====
+
 export async function getTemplates(
     params?: TemplateListParams
-): Promise<{ success: boolean; data: TemplateListResponse; error?: string }> {
-    const queryParams = new URLSearchParams();
-
-    if (params?.category) queryParams.set("category", params.category);
-    if (params?.tags && params.tags.length > 0) queryParams.set("tags", params.tags.join(","));
-    if (params?.featured !== undefined) queryParams.set("featured", params.featured.toString());
-    if (params?.search) queryParams.set("search", params.search);
-    if (params?.sortBy) queryParams.set("sortBy", params.sortBy);
-    if (params?.limit) queryParams.set("limit", params.limit.toString());
-    if (params?.offset) queryParams.set("offset", params.offset.toString());
-
-    const url = `${API_BASE_URL}/templates${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-
-    const response = await apiFetch(url, {
-        method: "GET"
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
+): Promise<ApiResult<TemplateListResponse>> {
+    const query = listQuery(params);
+    if (params?.sortBy) query.set("sortBy", params.sortBy);
+    const live = await fromApi<TemplateListResponse>("/templates", query);
+    if (live) return live;
+    const snapshot = await loadSnapshot();
+    const date = snapshotDate(snapshot);
+    return {
+        success: true,
+        data: page(snapshot.workflows, params ?? {}, (item) => toTemplate(item, date))
+    };
 }
 
-/**
- * Get workflow template categories with counts
- */
-export async function getTemplateCategories(): Promise<{
-    success: boolean;
-    data: CategoryInfo[];
-    error?: string;
-}> {
-    const response = await apiFetch(`${API_BASE_URL}/templates/categories`, {
-        method: "GET"
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
+export async function getTemplateCategories(): Promise<ApiResult<CategoryInfo[]>> {
+    const live = await fromApi<CategoryInfo[]>("/templates/categories");
+    if (live) return live;
+    const snapshot = await loadSnapshot();
+    return { success: true, data: categoriesOf(snapshot.workflows) };
 }
 
-// ===== Agent Templates =====
+// ===== Agent templates =====
 
-/**
- * Get agent templates with pagination
- */
 export async function getAgentTemplates(
     params?: AgentTemplateListParams
-): Promise<{ success: boolean; data: AgentTemplateListResponse; error?: string }> {
-    const queryParams = new URLSearchParams();
-
-    if (params?.category) queryParams.set("category", params.category);
-    if (params?.tags && params.tags.length > 0) queryParams.set("tags", params.tags.join(","));
-    if (params?.featured !== undefined) queryParams.set("featured", params.featured.toString());
-    if (params?.search) queryParams.set("search", params.search);
-    if (params?.limit) queryParams.set("limit", params.limit.toString());
-    if (params?.offset) queryParams.set("offset", params.offset.toString());
-
-    const url = `${API_BASE_URL}/agent-templates${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-
-    const response = await apiFetch(url, {
-        method: "GET"
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
+): Promise<ApiResult<AgentTemplateListResponse>> {
+    const live = await fromApi<AgentTemplateListResponse>("/agent-templates", listQuery(params));
+    if (live) return live;
+    const snapshot = await loadSnapshot();
+    const date = snapshotDate(snapshot);
+    return {
+        success: true,
+        data: page(snapshot.agents, params ?? {}, (item) => toAgentTemplate(item, date))
+    };
 }
 
-/**
- * Get agent template categories with counts
- */
-export async function getAgentTemplateCategories(): Promise<{
-    success: boolean;
-    data: CategoryInfo[];
-    error?: string;
-}> {
-    const response = await apiFetch(`${API_BASE_URL}/agent-templates/categories`, {
-        method: "GET"
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
-}
-
-// ===== Blog Posts =====
-
-/**
- * Get blog posts with pagination
- */
-export async function getBlogPosts(
-    params?: BlogListParams
-): Promise<{ success: boolean; data: BlogListResponse; error?: string }> {
-    const queryParams = new URLSearchParams();
-
-    if (params?.category) queryParams.set("category", params.category);
-    if (params?.tags && params.tags.length > 0) queryParams.set("tags", params.tags.join(","));
-    if (params?.search) queryParams.set("search", params.search);
-    if (params?.limit) queryParams.set("limit", params.limit.toString());
-    if (params?.offset) queryParams.set("offset", params.offset.toString());
-
-    const url = `${API_BASE_URL}/public/blog${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-
-    const response = await apiFetch(url, {
-        method: "GET"
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
-}
-
-/**
- * Get a single blog post by slug
- */
-export async function getBlogPost(
-    slug: string
-): Promise<{ success: boolean; data: BlogPostWithRelated; error?: string }> {
-    const response = await apiFetch(`${API_BASE_URL}/public/blog/${slug}`, {
-        method: "GET"
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
-}
-
-/**
- * Get blog categories with counts
- */
-export async function getBlogCategories(): Promise<{
-    success: boolean;
-    data: BlogCategoryWithCount[];
-    error?: string;
-}> {
-    const response = await apiFetch(`${API_BASE_URL}/public/blog/categories`, {
-        method: "GET"
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
+export async function getAgentTemplateCategories(): Promise<ApiResult<CategoryInfo[]>> {
+    const live = await fromApi<CategoryInfo[]>("/agent-templates/categories");
+    if (live) return live;
+    const snapshot = await loadSnapshot();
+    return { success: true, data: categoriesOf(snapshot.agents) };
 }
 
 // Re-export types for convenience
-export type {
-    Template,
-    TemplateListParams,
-    AgentTemplate,
-    AgentTemplateListParams,
-    CategoryInfo,
-    BlogListParams,
-    BlogPostWithRelated,
-    BlogCategoryWithCount
-};
+export type { Template, TemplateListParams, AgentTemplate, AgentTemplateListParams, CategoryInfo };
