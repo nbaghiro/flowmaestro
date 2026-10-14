@@ -1044,3 +1044,42 @@
         animation: none;
     }
 }
+
+/* Mini pipelines and template maps on the home tiles */
+.lp .mpwire {
+    animation: lp-wire 7s infinite;
+}
+.lp .tmap {
+    display: block;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+.lp .tmap .tmhit {
+    animation: lp-ok-fill 7s infinite;
+}
+@keyframes lp-ok-fill {
+    0%,
+    3% {
+        fill: #3a3a42;
+    }
+    5%,
+    92% {
+        fill: #34d399;
+    }
+    100% {
+        fill: #3a3a42;
+    }
+}
+.lp .tile .foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    color: #6f6f78;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.lp .tile .foot span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

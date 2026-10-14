@@ -1,5 +1,6 @@
 import { useInView } from "framer-motion";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import { useFitScene } from "../../hooks/useFitScene";
 import { HomePageEvents } from "../../lib/analytics";
 import { Reveal } from "./Reveal";
 import { Tile } from "./Tile";
@@ -14,29 +15,6 @@ const Title: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 const SCENE_W = 635;
 const SCENE_H = 150;
-
-/** Scales the fixed-size builder scene to the width of its stage, centred, up to `max`. */
-function useFitScene(max: number): [React.RefObject<HTMLDivElement>, number, number] {
-    const ref = useRef<HTMLDivElement>(null);
-    const [scale, setScale] = useState(1);
-    const [offset, setOffset] = useState(0);
-    useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-        const update = (): void => {
-            const width = el.clientWidth;
-            if (!width) return;
-            const next = Math.min(max, width / SCENE_W);
-            setScale(next);
-            setOffset(Math.max(0, (width - SCENE_W * next) / 2));
-        };
-        update();
-        const observer = new ResizeObserver(update);
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [max]);
-    return [ref, scale, offset];
-}
 
 const STREAMED_WORDS = [
     "Three",
@@ -54,7 +32,7 @@ const STREAMED_WORDS = [
 
 /** The seven feature tiles with their looping animations. */
 export const FeatureBento: React.FC = () => {
-    const [stageRef, sceneScale, sceneOffset] = useFitScene(1.45);
+    const [stageRef, sceneScale, sceneOffset] = useFitScene(SCENE_W, 1.45);
     const ref = useRef<HTMLElement>(null);
     const inView = useInView(ref, { once: true, margin: "-100px" });
     const tracked = useRef(false);
