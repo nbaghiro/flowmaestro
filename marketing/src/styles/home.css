@@ -321,7 +321,7 @@
 }
 @keyframes lp-drop {
     0% {
-        transform: translate(70px, -70px) rotate(5deg);
+        transform: translate(-6px, -78px) rotate(-3deg);
         opacity: 0;
     }
     4% {
@@ -363,7 +363,61 @@
 .lp .e3 {
     stroke-dasharray: 41;
     stroke-dashoffset: 41;
-    animation: lp-draw 7s infinite;
+    animation:
+        lp-draw 7s infinite,
+        lp-wire 7s infinite 3.6s;
+}
+/* each node shows a status dot that turns green as the run reaches it */
+.lp .fxnode::after {
+    content: "";
+    position: absolute;
+    right: 9px;
+    top: 9px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3a3a42;
+}
+.lp .hit::after {
+    animation: lp-ok 7s infinite;
+    animation-delay: inherit;
+}
+@keyframes lp-ok {
+    0%,
+    3% {
+        background: #3a3a42;
+        box-shadow: none;
+    }
+    5%,
+    92% {
+        background: #34d399;
+        box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.18);
+    }
+    100% {
+        background: #3a3a42;
+        box-shadow: none;
+    }
+}
+/* wires brighten once the run has passed along them */
+.lp .wire1 {
+    animation: lp-wire 7s infinite 1.5s;
+}
+.lp .wire2 {
+    animation: lp-wire 7s infinite 2.6s;
+}
+@keyframes lp-wire {
+    0%,
+    2% {
+        stroke: #4a4a52;
+    }
+    6%,
+    72% {
+        stroke: #c6c6cc;
+    }
+    80%,
+    100% {
+        stroke: #4a4a52;
+    }
 }
 @keyframes lp-draw {
     0%,

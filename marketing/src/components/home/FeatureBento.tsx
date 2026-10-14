@@ -1,5 +1,5 @@
 import { useInView } from "framer-motion";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { HomePageEvents } from "../../lib/analytics";
 import { Reveal } from "./Reveal";
 import { Tile } from "./Tile";
@@ -11,6 +11,32 @@ const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 const Title: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <h3 className="text-[22px] font-semibold">{children}</h3>
 );
+
+const SCENE_W = 635;
+const SCENE_H = 150;
+
+/** Scales the fixed-size builder scene to the width of its stage, centred, up to `max`. */
+function useFitScene(max: number): [React.RefObject<HTMLDivElement>, number, number] {
+    const ref = useRef<HTMLDivElement>(null);
+    const [scale, setScale] = useState(1);
+    const [offset, setOffset] = useState(0);
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const update = (): void => {
+            const width = el.clientWidth;
+            if (!width) return;
+            const next = Math.min(max, width / SCENE_W);
+            setScale(next);
+            setOffset(Math.max(0, (width - SCENE_W * next) / 2));
+        };
+        update();
+        const observer = new ResizeObserver(update);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [max]);
+    return [ref, scale, offset];
+}
 
 const STREAMED_WORDS = [
     "Three",
@@ -28,6 +54,7 @@ const STREAMED_WORDS = [
 
 /** The seven feature tiles with their looping animations. */
 export const FeatureBento: React.FC = () => {
+    const [stageRef, sceneScale, sceneOffset] = useFitScene(1.45);
     const ref = useRef<HTMLElement>(null);
     const inView = useInView(ref, { once: true, margin: "-100px" });
     const tracked = useRef(false);
@@ -62,8 +89,18 @@ export const FeatureBento: React.FC = () => {
                                 run
                             </span>
                         </div>
-                        <div className="stage dotgrid mt-auto" style={{ height: 150 }}>
-                            <div className="fx">
+                        <div
+                            ref={stageRef}
+                            className="stage dotgrid mt-auto"
+                            style={{ height: SCENE_H * sceneScale }}
+                        >
+                            <div
+                                className="fx"
+                                style={{
+                                    transform: `translateX(${sceneOffset}px) scale(${sceneScale})`,
+                                    transformOrigin: "0 0"
+                                }}
+                            >
                                 <svg
                                     width="635"
                                     height="150"
@@ -71,14 +108,41 @@ export const FeatureBento: React.FC = () => {
                                     className="absolute left-0 top-0"
                                     aria-hidden="true"
                                 >
-                                    <path d="M124 75 H165" stroke="#4a4a52" strokeWidth="1.5" />
-                                    <path d="M289 75 H330" stroke="#4a4a52" strokeWidth="1.5" />
+                                    <path
+                                        className="wire1"
+                                        d="M124 75 H165"
+                                        stroke="#4a4a52"
+                                        strokeWidth="1.5"
+                                    />
+                                    <path
+                                        className="wire2"
+                                        d="M289 75 H330"
+                                        stroke="#4a4a52"
+                                        strokeWidth="1.5"
+                                    />
                                     <path
                                         className="e3"
                                         d="M454 75 H495"
                                         stroke="#4a4a52"
                                         strokeWidth="1.5"
                                     />
+                                    <circle r="10" fill="#fafafa" opacity="0.16">
+                                        <animateMotion
+                                            dur="7s"
+                                            repeatCount="indefinite"
+                                            path="M124 75 H495"
+                                            keyPoints="0;0;1;1"
+                                            keyTimes="0;0.2;0.55;1"
+                                            calcMode="linear"
+                                        />
+                                        <animate
+                                            attributeName="opacity"
+                                            values="0;0;0.16;0.16;0;0"
+                                            keyTimes="0;0.19;0.2;0.55;0.57;1"
+                                            dur="7s"
+                                            repeatCount="indefinite"
+                                        />
+                                    </circle>
                                     <circle r="4" fill="#fafafa">
                                         <animateMotion
                                             dur="7s"
@@ -117,7 +181,7 @@ export const FeatureBento: React.FC = () => {
                                 </div>
                                 <div className="drop">
                                     <div className="fxnode hit" style={{ animationDelay: "3.85s" }}>
-                                        <span className="k">ACTION</span>HubSpot · create deal
+                                        <span className="k">ACTION · HUBSPOT</span>Create deal
                                     </div>
                                     <svg
                                         className="cur"
