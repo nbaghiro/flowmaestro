@@ -152,7 +152,8 @@ export const AppWorkflowPreview: React.FC = () => (
 
         <section style={{ position: "relative", overflow: "hidden", background: "#0b0b0d" }}>
             <div className="canvasdots" />
-            <div className="zoom">
+            {/* the graph is drawn in the top left of its 1340 by 720 space; offset it so it sits centred in the canvas */}
+            <div className="zoom" style={{ top: 170, left: 22 }}>
                 <svg
                     width="1340"
                     height="720"
