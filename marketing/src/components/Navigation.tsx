@@ -139,7 +139,7 @@ export const Navigation: React.FC = () => {
                         href="/"
                         className="flex items-center gap-2.5 text-foreground font-bold text-[17px]"
                     >
-                        <PixelMark size={24} />
+                        <PixelMark size={24} variant="monogram" />
                         FlowMaestro
                     </a>
 

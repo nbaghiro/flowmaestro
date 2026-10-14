@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "../../lib/utils";
+import { PixelMark } from "../brand/PixelMark";
 import {
-    FmMark,
     IconAgents,
     IconChat,
     IconChevronDown,
@@ -49,7 +49,7 @@ export const PreviewRail: React.FC<PreviewRailProps> = ({
 }) => (
     <nav className="rail">
         <div className="ws">
-            <FmMark size={24} />
+            <PixelMark size={24} variant="monogram" />
             Personal Workspace
             {chevron && (
                 <IconChevronDown size={12} color="#6f6f78" strokeWidth={2.5} className="ml-auto" />

@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "../../lib/utils";
+import { PixelMark } from "../brand/PixelMark";
 import {
-    FmMark,
     IconBolt,
     IconBranch,
     IconChat,
@@ -92,7 +92,7 @@ export const AppWorkflowPreview: React.FC = () => (
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <FmMark size={24} />
+                <PixelMark size={24} variant="monogram" />
                 <span style={{ color: "#9b9ba3", fontSize: 13 }}>Workflows</span>
                 <span style={{ color: "#4a4a52" }}>/</span>
                 <span style={{ fontWeight: 600, fontSize: 14 }}>PR summaries to Slack</span>

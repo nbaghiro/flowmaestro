@@ -98,6 +98,105 @@ const FRAMES: string[][] = [
     })
 ];
 
+/**
+ * The FM monogram: pixel F in white and M in grey over a dark baseline. Used where the mark
+ * is small, in header bars and the favicon. A glint sweeps across the letters when live.
+ */
+const MONOGRAM_FRAMES: string[][] = [
+    [
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "..GGWWWWWW.GG........GG.",
+        "..GWWWWWWW.GGG......GGG.",
+        "..WW.......GGGG....GGGG.",
+        "..WW.......GG.GG..GG.GG.",
+        "..WW.......GG..GGGG..GG.",
+        "..WWWWWW...GG...GG...GG.",
+        "..WWWWWW...GG...GG...GG.",
+        "..WW.......GG........GG.",
+        "..WW.......GG........GG.",
+        "..WW.......GG........GG.",
+        "..WW.......GG........GG.",
+        "..WW.......GG........GG.",
+        "........................",
+        "..DDDDDDDDDDDDDDDDDDDDD.",
+        "........................",
+        "........................",
+        "........................",
+        "........................"
+    ],
+    [
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "..WWWWWWWW.WG........GG.",
+        "..WWWWWWWG.GGG......GGG.",
+        "..WW.......GGGG....GGGG.",
+        "..WW.......GG.GG..GG.GG.",
+        "..WW.......GG..GGGG..GG.",
+        "..WWWGGW...GG...GG...GG.",
+        "..WWGGWW...GG...GG...GG.",
+        "..WG.......GG........GG.",
+        "..GG.......GG........GG.",
+        "..GW.......GG........GG.",
+        "..WW.......GG........GG.",
+        "..WW.......GG........GG.",
+        "........................",
+        "..DDDDDDDDDDDDDDDDDDDDD.",
+        "........................",
+        "........................",
+        "........................",
+        "........................"
+    ],
+    [
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+        "..WWWWWWWW.GG........GG.",
+        "..WWWWWWWW.GGG......GGG.",
+        "..WW.......GGGG....GGGG.",
+        "..WW.......GG.GW..GG.GG.",
+        "..WW.......GG..WGGG..GG.",
+        "..WWWWWW...GG...GG...GG.",
+        "..WWWWWW...GW...GG...GG.",
+        "..WW.......WW........GG.",
+        "..WW.......WG........GG.",
+        "..WW.......GG........GG.",
+        "..WW.......GG........GG.",
+        "..WW.......GG........GG.",
+        "........................",
+        "..DDDDDDDDDDDDDDDDDDDDD.",
+        "........................",
+        "........................",
+        "........................",
+        "........................"
+    ]
+];
+
+export const MONOGRAM = MONOGRAM_FRAMES;
+export type MarkVariant = "conductor" | "monogram";
+export type MarkTone = "light" | "ink";
+
+const INK: Record<string, string> = {
+    W: "#0b0b0d",
+    G: "#55555e",
+    D: "#a7a7b0"
+};
+
+function framesFor(variant: MarkVariant): string[][] {
+    return variant === "monogram" ? MONOGRAM_FRAMES : FRAMES;
+}
+
 export const PIXEL_FRAMES = FRAMES;
 export const PIXEL_GRID = 24;
 
@@ -107,11 +206,12 @@ export interface PixelCell {
     fill: string;
 }
 
-export function pixelCells(frame: string[]): PixelCell[] {
+export function pixelCells(frame: string[], tone: MarkTone = "light"): PixelCell[] {
+    const palette = tone === "ink" ? INK : PALETTE;
     const cells: PixelCell[] = [];
     frame.forEach((row, y) => {
         for (let x = 0; x < row.length; x++) {
-            const fill = PALETTE[row[x]];
+            const fill = palette[row[x]];
             if (fill) cells.push({ x, y, fill });
         }
     });
@@ -121,10 +221,20 @@ export function pixelCells(frame: string[]): PixelCell[] {
 interface PixelMarkProps {
     size?: number;
     live?: boolean;
+    /** "conductor" is the character for large placements; "monogram" is the FM for small ones. */
+    variant?: MarkVariant;
+    /** "ink" draws the mark for light surfaces. */
+    tone?: MarkTone;
     className?: string;
 }
 
-export const PixelMark: React.FC<PixelMarkProps> = ({ size = 24, live = false, className }) => (
+export const PixelMark: React.FC<PixelMarkProps> = ({
+    size = 24,
+    live = false,
+    variant = "conductor",
+    tone = "light",
+    className
+}) => (
     <svg
         width={size}
         height={size}
@@ -133,9 +243,9 @@ export const PixelMark: React.FC<PixelMarkProps> = ({ size = 24, live = false, c
         className={cn("pm", live && "live", className)}
         aria-hidden="true"
     >
-        {FRAMES.map((frame, index) => (
+        {framesFor(variant).map((frame, index) => (
             <g key={index} className={`f f${index + 1}`}>
-                {pixelCells(frame).map((cell) => (
+                {pixelCells(frame, tone).map((cell) => (
                     <rect
                         key={`${cell.x}-${cell.y}`}
                         x={cell.x}
