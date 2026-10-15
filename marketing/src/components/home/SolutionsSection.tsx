@@ -2,10 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import React from "react";
 import { Link } from "react-router-dom";
 import { getTemplateCategories } from "../../lib/api";
-import { MiniPipeline } from "./MiniPipeline";
 import { Reveal } from "./Reveal";
+import { ProviderLogo } from "./TemplateRecipe";
 import { useTileGlow } from "./Tile";
-import type { PipelineStep } from "./MiniPipeline";
 
 interface Team {
     name: string;
@@ -13,7 +12,8 @@ interface Team {
     href: string;
     /** Template category whose count is shown in the footer. */
     category: string;
-    steps: PipelineStep[];
+    /** The apps the team's templates lean on. */
+    apps: Array<{ name: string; domain: string }>;
 }
 
 const TEAMS: Team[] = [
@@ -22,10 +22,11 @@ const TEAMS: Team[] = [
         text: "Enrich, qualify, route, follow up.",
         href: "/solutions/sales",
         category: "sales",
-        steps: [
-            { k: "TRIGGER", v: "New lead" },
-            { k: "AGENT", v: "Enrich + qualify" },
-            { k: "ACTION · HUBSPOT", v: "Route to rep" }
+        apps: [
+            { name: "HubSpot", domain: "hubspot.com" },
+            { name: "Salesforce", domain: "salesforce.com" },
+            { name: "Apollo", domain: "apollo.io" },
+            { name: "Slack", domain: "slack.com" }
         ]
     },
     {
@@ -33,10 +34,11 @@ const TEAMS: Team[] = [
         text: "Content, campaigns, cross-platform analytics.",
         href: "/solutions/marketing",
         category: "marketing",
-        steps: [
-            { k: "INPUT", v: "Campaign brief" },
-            { k: "AGENT", v: "Draft the posts" },
-            { k: "ACTION · LINKEDIN", v: "Publish" }
+        apps: [
+            { name: "LinkedIn", domain: "linkedin.com" },
+            { name: "X", domain: "x.com" },
+            { name: "Instagram", domain: "instagram.com" },
+            { name: "Notion", domain: "notion.so" }
         ]
     },
     {
@@ -44,10 +46,11 @@ const TEAMS: Team[] = [
         text: "Triage, answer, escalate with context.",
         href: "/solutions/support",
         category: "support",
-        steps: [
-            { k: "TRIGGER · ZENDESK", v: "New ticket" },
-            { k: "KNOWLEDGE", v: "Find the answer" },
-            { k: "CONDITION", v: "Escalate?" }
+        apps: [
+            { name: "Zendesk", domain: "zendesk.com" },
+            { name: "Intercom", domain: "intercom.com" },
+            { name: "Gmail", domain: "gmail.com" },
+            { name: "Slack", domain: "slack.com" }
         ]
     },
     {
@@ -55,10 +58,11 @@ const TEAMS: Team[] = [
         text: "PR review, incident summaries, release notes.",
         href: "/solutions/engineering",
         category: "engineering",
-        steps: [
-            { k: "TRIGGER · GITHUB", v: "PR opened" },
-            { k: "AGENT", v: "Review the diff" },
-            { k: "ACTION · SLACK", v: "Post summary" }
+        apps: [
+            { name: "GitHub", domain: "github.com" },
+            { name: "Linear", domain: "linear.app" },
+            { name: "Datadog", domain: "datadoghq.com" },
+            { name: "Slack", domain: "slack.com" }
         ]
     },
     {
@@ -66,10 +70,11 @@ const TEAMS: Team[] = [
         text: "Meeting prep, reporting, data sync.",
         href: "/solutions/operations",
         category: "operations",
-        steps: [
-            { k: "SCHEDULE", v: "Mon 08:00" },
-            { k: "INTEGRATION · CALENDAR", v: "Pull meetings" },
-            { k: "AGENT", v: "Prep the notes" }
+        apps: [
+            { name: "Google Calendar", domain: "google.com" },
+            { name: "Asana", domain: "asana.com" },
+            { name: "Airtable", domain: "airtable.com" },
+            { name: "Slack", domain: "slack.com" }
         ]
     },
     {
@@ -77,22 +82,16 @@ const TEAMS: Team[] = [
         text: "Regulatory, payer policy, compliance research. PHI-free.",
         href: "/templates",
         category: "healthcare",
-        steps: [
-            { k: "SCHEDULE", v: "Weekly" },
-            { k: "AGENT", v: "Regulatory digest" },
-            { k: "ACTION · EMAIL", v: "Send to team" }
+        apps: [
+            { name: "Gmail", domain: "gmail.com" },
+            { name: "Notion", domain: "notion.so" },
+            { name: "DocuSign", domain: "docusign.com" },
+            { name: "Slack", domain: "slack.com" }
         ]
     }
 ];
 
-const TeamTile: React.FC<Team & { count?: number; delay: number }> = ({
-    name,
-    text,
-    href,
-    steps,
-    count,
-    delay
-}) => {
+const TeamTile: React.FC<Team & { count?: number }> = ({ name, text, href, apps, count }) => {
     const onMouseMove = useTileGlow();
     return (
         <Reveal className="span2">
@@ -101,8 +100,10 @@ const TeamTile: React.FC<Team & { count?: number; delay: number }> = ({
                     <h3 className="text-[17px] font-semibold mb-1">{name}</h3>
                     <p className="text-sm text-muted-foreground">{text}</p>
                 </div>
-                <div className="mt-auto">
-                    <MiniPipeline steps={steps} delay={delay} />
+                <div className="mt-auto flex gap-2">
+                    {apps.map((app) => (
+                        <ProviderLogo key={app.domain} domain={app.domain} name={app.name} />
+                    ))}
                 </div>
                 <div className="foot">
                     <span>{count !== undefined ? `${count} templates` : "templates"}</span>
@@ -132,13 +133,8 @@ export const SolutionsSection: React.FC = () => {
                     <h2 className="h2">Built for every team.</h2>
                 </Reveal>
                 <div className="bento mt-7">
-                    {TEAMS.map((team, index) => (
-                        <TeamTile
-                            key={team.name}
-                            {...team}
-                            count={counts.get(team.category)}
-                            delay={index * 0.9}
-                        />
+                    {TEAMS.map((team) => (
+                        <TeamTile key={team.name} {...team} count={counts.get(team.category)} />
                     ))}
                 </div>
             </div>

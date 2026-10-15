@@ -1045,29 +1045,110 @@
     }
 }
 
-/* Mini pipelines and template maps on the home tiles */
-.lp .mpwire {
-    animation: lp-wire 7s infinite;
+/* Template recipes and team logos on the home tiles */
+.lp .recipe {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 2px 0;
 }
-.lp .tmap {
-    display: block;
+.lp .recipe::before {
+    content: "";
+    position: absolute;
+    left: 3.5px;
+    top: 18px;
+    bottom: 18px;
+    width: 1px;
+    background: #2a2a30;
+}
+.lp .rstep {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0 6px 20px;
+    min-width: 0;
+}
+.lp .rdot {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background: #3a3a42;
+    box-shadow: 0 0 0 3px #121216;
+}
+.lp .rdot.hit {
+    animation: lp-ok 7s infinite;
+}
+.lp .ric {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #1f1f25;
+    color: #c6c6cc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    overflow: hidden;
+}
+.lp .ric img {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    object-fit: contain;
+}
+.lp .rtxt {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+.lp .rtxt .k {
     font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6f6f78;
 }
-.lp .tmap .tmhit {
-    animation: lp-ok-fill 7s infinite;
+.lp .rtxt .t {
+    font-size: 13px;
+    font-weight: 500;
+    color: #fafafa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-@keyframes lp-ok-fill {
-    0%,
-    3% {
-        fill: #3a3a42;
-    }
-    5%,
-    92% {
-        fill: #34d399;
-    }
-    100% {
-        fill: #3a3a42;
-    }
+.lp .rmore {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    color: #6f6f78;
+    padding: 6px 0 0 20px;
+}
+.lp .plogo {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    background: #0e0e12;
+    border: 1px solid #2a2a30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    transition: border-color 0.2s ease;
+}
+.lp .tile:hover .plogo {
+    border-color: #4a4a52;
+}
+.lp .plogo img {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    object-fit: contain;
+    filter: brightness(0.9);
 }
 .lp .tile .foot {
     display: flex;

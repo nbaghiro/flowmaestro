@@ -5,14 +5,14 @@ import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
 import type { Template } from "@flowmaestro/shared";
 import { getTemplates } from "../../lib/api";
 import { Reveal } from "./Reveal";
-import { TemplateMap } from "./TemplateMap";
+import { TemplateRecipe } from "./TemplateRecipe";
 import { useTileGlow } from "./Tile";
-import type { MapDefinition } from "./TemplateMap";
+import type { RecipeDefinition } from "./TemplateRecipe";
 
 interface FeaturedTemplate {
     category: string;
     name: string;
-    definition?: MapDefinition;
+    definition?: RecipeDefinition;
     nodeCount: number;
     integrations: string[];
 }
@@ -35,7 +35,7 @@ const FALLBACK: FeaturedTemplate[] = [
     }
 ];
 
-function countNodes(definition: MapDefinition | undefined): number {
+function countNodes(definition: RecipeDefinition | undefined): number {
     if (!definition?.nodes) return 0;
     const nodes = Array.isArray(definition.nodes)
         ? definition.nodes
@@ -48,7 +48,7 @@ function pickFeatured(templates: Template[]): FeaturedTemplate[] {
     const used = new Set<string>();
     const take = (template: Template): void => {
         used.add(template.id);
-        const definition = template.definition as unknown as MapDefinition;
+        const definition = template.definition as unknown as RecipeDefinition;
         picked.push({
             category: (
                 TEMPLATE_CATEGORY_META[template.category]?.label ?? template.category
@@ -90,11 +90,11 @@ const TemplateTile: React.FC<FeaturedTemplate & { delay: number }> = ({
                     <p className="font-mono text-[11px] text-dim mb-[6px]">{category}</p>
                     <p className="font-semibold leading-snug">{name}</p>
                 </div>
-                <div className="stage dotgrid mt-auto" style={{ padding: 6 }}>
+                <div className="mt-auto">
                     {definition ? (
-                        <TemplateMap definition={definition} delay={delay} />
+                        <TemplateRecipe definition={definition} delay={delay} />
                     ) : (
-                        <div style={{ aspectRatio: "320 / 118" }} />
+                        <div style={{ height: 176 }} />
                     )}
                 </div>
                 {meta.length > 0 && (
