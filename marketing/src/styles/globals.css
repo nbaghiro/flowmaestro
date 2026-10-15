@@ -182,11 +182,11 @@
 
 /* React Flow canvas background */
 .react-flow {
-    background-color: hsl(0 0% 94%);
+    background-color: #0b0b0d;
 }
 
 .dark .react-flow {
-    background-color: hsl(0 0% 12%);
+    background-color: #0b0b0d;
 }
 
 /* Node styling - remove React Flow defaults but keep width/height intact */
@@ -226,23 +226,23 @@
 
 /* Edge styles - ensure visibility */
 .react-flow__edge-path {
-    stroke: #9ca3af;
+    stroke: #4a4a52;
     stroke-width: 1.5px;
 }
 
 .dark .react-flow__edge-path {
-    stroke: #6b7280;
+    stroke: #4a4a52;
     stroke-width: 1.5px;
 }
 
 /* Ensure edges are visible in workflow previews */
 .workflow-preview .react-flow__edge-path {
-    stroke: #9ca3af;
+    stroke: #4a4a52;
     stroke-width: 1.5px;
 }
 
 .dark .workflow-preview .react-flow__edge-path {
-    stroke: #6b7280;
+    stroke: #4a4a52;
     stroke-width: 1.5px;
 }
 
@@ -364,4 +364,69 @@
     .pm.live .f1 {
         opacity: 1;
     }
+}
+
+/* Template canvas previews, in the product preview's node style */
+.pv-node {
+    width: 260px;
+    background: #121216;
+    border: 1px solid #2a2a30;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #9b9ba3;
+    box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.8);
+    font-family: "Inter", system-ui, sans-serif;
+}
+.pv-node .hd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #1f1f25;
+    height: 44px;
+}
+.pv-node .ic {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1f1f25;
+    color: #c6c6cc;
+}
+.pv-node .lb {
+    font-weight: 600;
+    font-size: 13px;
+    color: #fafafa;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pv-node .st {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+    background: #4a4a52;
+}
+.pv-node .bd {
+    padding: 10px 12px;
+}
+.pv-node .bd .flex.items-center.justify-between {
+    gap: 10px;
+    white-space: nowrap;
+}
+.pv-node .fm-mono,
+.fm-mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+.react-flow__handle.pv-h {
+    width: 10px;
+    height: 10px;
+    background: #0b0b0d;
+    border: 2px solid #4a4a52;
+    border-radius: 50%;
 }

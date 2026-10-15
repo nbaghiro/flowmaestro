@@ -71,17 +71,6 @@ interface WorkflowCanvasPreviewProps {
 // Node type to category mapping
 type NodeCategory = "ai" | "logic" | "inputs" | "outputs" | "utils" | "integrations" | "data";
 
-// Category colors - matching frontend exactly
-const categoryColors: Record<NodeCategory, { light: string; dark: string }> = {
-    inputs: { light: "#059669", dark: "#10b981" }, // emerald
-    outputs: { light: "#ef4444", dark: "#f87171" }, // red
-    ai: { light: "#3b82f6", dark: "#60a5fa" }, // blue
-    integrations: { light: "#f97316", dark: "#fb923c" }, // orange
-    logic: { light: "#a855f7", dark: "#c084fc" }, // purple
-    utils: { light: "#78716c", dark: "#a8a29e" }, // stone
-    data: { light: "#14b8a6", dark: "#2dd4bf" } // teal
-};
-
 const nodeTypeConfig: Record<string, { icon: LucideIcon; category: NodeCategory; label: string }> =
     {
         trigger: { icon: Zap, category: "inputs", label: "Trigger" },
@@ -172,8 +161,6 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
         label: data.type
     };
     const Icon = config.icon;
-    const colors = categoryColors[config.category];
-    const categoryColor = data.isDark ? colors.dark : colors.light;
 
     // Generate preview content based on node type
     const renderContent = () => {
@@ -187,17 +174,17 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
                 : "No prompt configured";
 
             return (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-[5px]">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Provider:</span>
-                        <span className="text-xs font-medium text-foreground">{provider}</span>
+                        <span className="text-[#9b9ba3]">Provider</span>
+                        <span className="font-medium text-[#c6c6cc]">{provider}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Model:</span>
-                        <span className="text-xs font-medium text-foreground">{model}</span>
+                        <span className="text-[#9b9ba3]">Model</span>
+                        <span className="font-medium text-[#c6c6cc]">{model}</span>
                     </div>
-                    <div className="pt-1.5 mt-1.5 border-t border-border">
-                        <div className="text-xs text-muted-foreground italic line-clamp-2">
+                    <div>
+                        <div className="line-clamp-2 leading-[1.4] text-[#6f6f78]">
                             {promptPreview}
                         </div>
                     </div>
@@ -211,16 +198,14 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
             const operation = (data.operation as string) || "Analyze";
 
             return (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-[5px]">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Operation:</span>
-                        <span className="text-xs font-medium text-foreground capitalize">
-                            {operation}
-                        </span>
+                        <span className="text-[#9b9ba3]">Operation</span>
+                        <span className="font-medium text-[#c6c6cc] capitalize">{operation}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Model:</span>
-                        <span className="text-xs font-medium text-foreground">{model}</span>
+                        <span className="text-[#9b9ba3]">Model</span>
+                        <span className="font-medium text-[#c6c6cc]">{model}</span>
                     </div>
                 </div>
             );
@@ -233,18 +218,14 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
                 (data.inputVariable as string) || (data.variableName as string) || "userInput";
 
             return (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-[5px]">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Type:</span>
-                        <span className="text-xs font-medium text-foreground capitalize">
-                            {inputType}
-                        </span>
+                        <span className="text-[#9b9ba3]">Type</span>
+                        <span className="font-medium text-[#c6c6cc] capitalize">{inputType}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Variable:</span>
-                        <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">
-                            ${variableName}
-                        </span>
+                        <span className="text-[#9b9ba3]">Variable</span>
+                        <span className="fm-mono font-medium text-[#c6c6cc]">${variableName}</span>
                     </div>
                 </div>
             );
@@ -258,15 +239,13 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
             const valuePreview = value.substring(0, 60) + (value.length > 60 ? "..." : "");
 
             return (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-[5px]">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Format:</span>
-                        <span className="text-xs font-medium text-foreground uppercase">
-                            {format}
-                        </span>
+                        <span className="text-[#9b9ba3]">Format</span>
+                        <span className="font-medium text-[#c6c6cc] uppercase">{format}</span>
                     </div>
-                    <div className="pt-1.5 mt-1.5 border-t border-border">
-                        <div className="text-xs text-muted-foreground italic line-clamp-2">
+                    <div>
+                        <div className="line-clamp-2 leading-[1.4] text-[#6f6f78]">
                             {valuePreview}
                         </div>
                     </div>
@@ -280,16 +259,14 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
             const url = (data.url as string) || "https://api.example.com";
 
             return (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-[5px]">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Method:</span>
+                        <span className="text-[#9b9ba3]">Method</span>
                         <span className="text-xs font-medium font-mono text-foreground">
                             {method}
                         </span>
                     </div>
-                    <div className="text-xs font-mono bg-muted/50 px-1.5 py-1 rounded truncate text-foreground">
-                        {url}
-                    </div>
+                    <div className="fm-mono truncate text-[#c6c6cc]">{url}</div>
                 </div>
             );
         }
@@ -300,15 +277,13 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
             const description = (data.description as string) || "";
 
             return (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-[5px]">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Type:</span>
-                        <span className="text-xs font-medium text-foreground capitalize">
-                            {triggerType}
-                        </span>
+                        <span className="text-[#9b9ba3]">Type</span>
+                        <span className="font-medium text-[#c6c6cc] capitalize">{triggerType}</span>
                     </div>
                     {description && (
-                        <div className="text-xs text-muted-foreground line-clamp-2">
+                        <div className="line-clamp-2 leading-[1.4] text-[#6f6f78]">
                             {description}
                         </div>
                     )}
@@ -323,17 +298,15 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
             const action = (data.action as string) || (data.operationType as string) || "";
 
             return (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-[5px]">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Provider:</span>
-                        <span className="text-xs font-medium text-foreground capitalize">
-                            {provider}
-                        </span>
+                        <span className="text-[#9b9ba3]">Provider</span>
+                        <span className="font-medium text-[#c6c6cc] capitalize">{provider}</span>
                     </div>
                     {action && (
                         <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Action:</span>
-                            <span className="text-xs font-medium text-foreground">{action}</span>
+                            <span className="text-[#9b9ba3]">Action</span>
+                            <span className="font-medium text-[#c6c6cc]">{action}</span>
                         </div>
                     )}
                 </div>
@@ -346,14 +319,14 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
             const provider = (data.provider as string) || "openai";
 
             return (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-[5px]">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Provider:</span>
-                        <span className="text-xs font-medium text-foreground">{provider}</span>
+                        <span className="text-[#9b9ba3]">Provider</span>
+                        <span className="font-medium text-[#c6c6cc]">{provider}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Routes:</span>
-                        <span className="text-xs font-medium text-foreground">{routes.length}</span>
+                        <span className="text-[#9b9ba3]">Routes</span>
+                        <span className="font-medium text-[#c6c6cc]">{routes.length}</span>
                     </div>
                 </div>
             );
@@ -364,70 +337,33 @@ function PreviewNode({ data }: { data: PreviewNodeData }) {
             const operation = (data.operation as string) || "transform";
 
             return (
-                <div className="space-y-2">
+                <div className="flex flex-col gap-[5px]">
                     <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Operation:</span>
-                        <span className="text-xs font-medium text-foreground capitalize">
-                            {operation}
-                        </span>
+                        <span className="text-[#9b9ba3]">Operation</span>
+                        <span className="font-medium text-[#c6c6cc] capitalize">{operation}</span>
                     </div>
                 </div>
             );
         }
 
         // Default content for other node types - show config label
-        return (
-            <div className="text-xs text-muted-foreground">
-                Configure {config.label.toLowerCase()}...
-            </div>
-        );
+        return <div className="text-[#6f6f78]">{config.label}</div>;
     };
 
     return (
-        <div
-            className="flex flex-col bg-card rounded-md overflow-hidden border border-border"
-            style={{
-                width: "100%",
-                height: "100%",
-                borderLeftWidth: "4px",
-                borderLeftColor: categoryColor,
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-            }}
-        >
-            {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/50">
-                <div className="flex items-center gap-2">
-                    <div
-                        className="p-1 rounded flex items-center justify-center"
-                        style={{ backgroundColor: `${categoryColor}20` }}
-                    >
-                        <Icon className="w-3.5 h-3.5" style={{ color: categoryColor }} />
-                    </div>
-                    <span className="font-medium text-xs text-foreground truncate max-w-[150px]">
-                        {data.label || config.label}
-                    </span>
-                </div>
-                <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-500 flex-shrink-0" />
+        <div className="pv-node">
+            <div className="hd">
+                <span className="ic">
+                    <Icon className="h-[13px] w-[13px]" strokeWidth={2.2} />
+                </span>
+                <span className="lb">{data.label || config.label}</span>
+                <span className="st" />
             </div>
-
-            {/* Content */}
-            <div className="flex-1 px-3 py-2 bg-card overflow-hidden">{renderContent()}</div>
-
-            {/* Handles with explicit default IDs */}
+            <div className="bd">{renderContent()}</div>
             {data.type !== "trigger" && (
-                <Handle
-                    type="target"
-                    position={Position.Left}
-                    id="target"
-                    className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
-                />
+                <Handle type="target" position={Position.Left} id="target" className="pv-h" />
             )}
-            <Handle
-                type="source"
-                position={Position.Right}
-                id="source"
-                className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
-            />
+            <Handle type="source" position={Position.Right} id="source" className="pv-h" />
         </div>
     );
 }
@@ -476,13 +412,27 @@ export function WorkflowCanvasPreview({
             }));
         }
 
+        nodeEntries = nodeEntries.filter((node) => node.type !== "comment");
+        // Previews show the start of the graph, so long templates stay legible at card size
+        const MAX_NODES = 7;
+        if (nodeEntries.length > MAX_NODES) {
+            nodeEntries = [...nodeEntries]
+                .sort((a, b) => (a.position?.x ?? 0) - (b.position?.x ?? 0))
+                .slice(0, MAX_NODES);
+        }
+        const shown = new Set(nodeEntries.map((node) => node.id));
+        const xs = nodeEntries.map((node) => node.position?.x ?? 0);
+        const spread = xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+        // Some templates store positions thousands of pixels apart; lay those out left to right
+        const relayout = spread > nodeEntries.length * 600;
+
         const flowNodes: Node[] = nodeEntries.map((node, index) => ({
             id: node.id,
             type: node.type in previewNodeTypes ? node.type : "default",
-            position: node.position || {
-                x: 100 + (index % 4) * 250,
-                y: 100 + Math.floor(index / 4) * 150
-            },
+            position:
+                relayout || !node.position
+                    ? { x: index * 320, y: (index % 2) * 60 }
+                    : node.position,
             data: {
                 label:
                     (node.data?.label as string) ||
@@ -495,26 +445,28 @@ export function WorkflowCanvasPreview({
                 ...node.config
             },
             // Fixed dimensions for consistent sizing in previews - match frontend
-            style: { width: 260, height: 160 }
+            style: { width: 260, height: 120 }
         }));
 
         // Map all edges to use our simplified handle IDs ("source" and "target")
         // This ensures edges connect regardless of the original sourceHandle/targetHandle values
-        const flowEdges: Edge[] = (definition.edges || []).map((edge) => ({
-            id: edge.id || `${edge.source}-${edge.target}`,
-            source: edge.source,
-            target: edge.target,
-            sourceHandle: "source",
-            targetHandle: "target"
-        }));
+        const flowEdges: Edge[] = (definition.edges || [])
+            .filter((edge) => shown.has(edge.source) && shown.has(edge.target))
+            .map((edge) => ({
+                id: edge.id || `${edge.source}-${edge.target}`,
+                source: edge.source,
+                target: edge.target,
+                sourceHandle: "source",
+                targetHandle: "target"
+            }));
 
         return { nodes: flowNodes, edges: flowEdges };
     }, [definition, isDark]);
 
     if (nodes.length === 0) {
         return (
-            <div className={cn(height, "bg-muted/50 flex items-center justify-center", className)}>
-                <span className="text-xs text-muted-foreground">No preview available</span>
+            <div className={cn(height, "bg-[#0b0b0d] flex items-center justify-center", className)}>
+                <span className="text-[#9b9ba3]">No preview available</span>
             </div>
         );
     }
@@ -523,8 +475,7 @@ export function WorkflowCanvasPreview({
         <div
             className={cn(
                 height,
-                "workflow-preview relative overflow-hidden",
-                isDark ? "bg-[hsl(0,0%,12%)]" : "bg-[hsl(0,0%,94%)]",
+                "workflow-preview relative overflow-hidden bg-[#0b0b0d]",
                 className
             )}
         >
@@ -535,11 +486,11 @@ export function WorkflowCanvasPreview({
                 connectionMode={ConnectionMode.Loose}
                 defaultEdgeOptions={{
                     type: "default",
-                    style: { stroke: isDark ? "#6b7280" : "#9ca3af", strokeWidth: 1.5 }
+                    style: { stroke: "#4a4a52", strokeWidth: 1.5 }
                 }}
                 fitView
-                fitViewOptions={{ padding: 0.15 }}
-                minZoom={0.1}
+                fitViewOptions={{ padding: 0.12 }}
+                minZoom={0.02}
                 maxZoom={1}
                 nodesDraggable={false}
                 nodesConnectable={false}
@@ -552,7 +503,11 @@ export function WorkflowCanvasPreview({
                 proOptions={{ hideAttribution: true }}
                 className="pointer-events-none"
             >
-                <ZoomCompensatedBackground baseGap={16} baseSize={1} />
+                <ZoomCompensatedBackground
+                    baseGap={16}
+                    baseSize={1}
+                    color="rgba(255, 255, 255, 0.14)"
+                />
             </Flow>
         </div>
     );

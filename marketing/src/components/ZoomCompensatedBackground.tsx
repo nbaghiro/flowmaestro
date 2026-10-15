@@ -7,6 +7,8 @@ interface ZoomCompensatedBackgroundProps {
     baseGap?: number;
     minSize?: number;
     maxSize?: number;
+    /** Fixed dot colour; when omitted the theme's --canvas-dots is used. */
+    color?: string;
 }
 
 /**
@@ -21,7 +23,8 @@ export function ZoomCompensatedBackground({
     baseSize = 1,
     baseGap = 12,
     minSize = 0.5,
-    maxSize = 15
+    maxSize = 15,
+    color
 }: ZoomCompensatedBackgroundProps) {
     const { zoom } = useViewport();
     const { theme } = useTheme();
@@ -53,7 +56,7 @@ export function ZoomCompensatedBackground({
             variant={BackgroundVariant.Dots}
             size={compensatedSize}
             gap={compensatedGap}
-            color={dotColor}
+            color={color ?? dotColor}
         />
     );
 }
