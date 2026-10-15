@@ -247,7 +247,7 @@ export const ArchitectureSection: React.FC = () => (
                     <text className="title" x="600" y="64" textAnchor="middle">
                         FlowMaestro
                     </text>
-                    <text className="lbl" x="600" y="94" textAnchor="middle">
+                    <text className="lbl tagline" x="600" y="94" textAnchor="middle">
                         DRAFTS · RUNS DURABLY · METERS EVERY CALL
                     </text>
                     <Chip cx={600} cy={250} size={150} strong>

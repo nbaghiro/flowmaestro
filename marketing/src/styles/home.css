@@ -1083,3 +1083,26 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* On phones the isometric drawing scales to the viewport instead of scrolling sideways.
+   Names and the title grow in SVG units so they still read after the scale-down; the
+   small mono labels tighten and the sublabels hide so nothing collides. */
+@media (max-width: 760px) {
+    .lp .iso {
+        min-width: 0;
+    }
+    .lp .iso .lbl {
+        font-size: 17px;
+        letter-spacing: 0.08em;
+    }
+    .lp .iso .name {
+        font-size: 30px;
+    }
+    .lp .iso .title {
+        font-size: 38px;
+    }
+    .lp .iso .sub,
+    .lp .iso .tagline {
+        display: none;
+    }
+}
